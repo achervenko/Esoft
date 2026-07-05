@@ -1,0 +1,43 @@
+model Manufacturer {
+  id        Int         @id @default(autoincrement())
+  name      String      @unique @db.VarChar(128)
+  equipment Equipment[]
+
+  @@map("manufacturers")
+}
+
+model Country {
+  id        Int         @id @default(autoincrement())
+  name      String      @unique @db.VarChar(128)
+  equipment Equipment[]
+
+  @@map("countries")
+}
+
+model Workshop {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique @db.VarChar(128)
+  sections Section[]
+
+  @@map("workshops")
+}
+
+model Section {
+  id         Int         @id @default(autoincrement())
+  workshopId Int         @map("workshop_id")
+  workshop   Workshop    @relation(fields: [workshopId], references: [id], onDelete: Restrict)
+  name       String      @db.VarChar(128)
+  equipment  Equipment[]
+
+  @@unique([workshopId, name], map: "uq_sections_workshop_name")
+  @@index([workshopId], map: "idx_sections_workshop_id")
+  @@map("sections")
+}
+
+model Operation {
+  id        Int         @id @default(autoincrement())
+  name      String      @unique @db.VarChar(128)
+  equipment Equipment[]
+
+  @@map("operations")
+}

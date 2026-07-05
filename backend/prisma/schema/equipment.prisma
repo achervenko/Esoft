@@ -1,0 +1,41 @@
+enum EquipmentStatus {
+  ACTIVE      @map("active")
+  RESERVE     @map("reserve")
+  REPAIR      @map("repair")
+  MAINTENANCE @map("maintenance")
+  WRITTEN_OFF @map("written_off")
+
+  @@map("equipment_status")
+}
+
+model Equipment {
+  id                    Int                @id @default(autoincrement())
+  inventoryNumber       String             @unique @map("inventory_number") @db.VarChar(64)
+  serialNumber          String?            @map("serial_number") @db.VarChar(128)
+  name                  String             @db.VarChar(128)
+  brand                 String?            @db.VarChar(128)
+  model                 String?            @db.VarChar(128)
+  specifications        String?
+  manufacturerId        Int?               @map("manufacturer_id")
+  manufacturer          Manufacturer?      @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
+  countryId             Int?               @map("country_id")
+  country               Country?           @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  manufactureYear       Int?               @map("manufacture_year") @db.SmallInt
+  commissioningDate     DateTime?          @map("commissioning_date") @db.Date
+  sectionId             Int                @map("section_id")
+  section               Section            @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  responsibleEmployeeId Int?               @map("responsible_employee_id")
+  responsibleEmployee   Employee?          @relation("EquipmentResponsibleEmployee", fields: [responsibleEmployeeId], references: [id], onDelete: SetNull)
+  status                EquipmentStatus    @default(ACTIVE)
+  operationId           Int?               @map("operation_id")
+  operation             Operation?         @relation(fields: [operationId], references: [id], onDelete: SetNull)
+  history               EquipmentHistory[]
+  notes                 String?
+
+  @@index([serialNumber], map: "idx_equipment_serial_number")
+  @@index([status], map: "idx_equipment_status")
+  @@index([sectionId], map: "idx_equipment_section_id")
+  @@index([responsibleEmployeeId], map: "idx_equipment_responsible_employee_id")
+  @@index([operationId], map: "idx_equipment_operation_id")
+  @@map("equipment")
+}

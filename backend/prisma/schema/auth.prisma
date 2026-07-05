@@ -1,28 +1,27 @@
-
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-}
-
 model User {
-  id              String    @id
-  name            String
-  email           String
-  emailVerified   Boolean   @default(false)
-  image           String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  username        String?
-  displayUsername String?
-  role            String?
-  banned          Boolean?  @default(false)
-  banReason       String?
-  banExpires      DateTime?
-  sessions        Session[]
-  accounts        Account[]
+  id                      String             @id
+  name                    String
+  email                   String
+  emailVerified           Boolean            @default(false)
+  image                   String?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+  username                String?
+  displayUsername         String?
+  role                    String?
+  banned                  Boolean?           @default(false)
+  banReason               String?
+  banExpires              DateTime?
+  lastName                String?            @map("last_name") @db.VarChar(64)
+  firstName               String?            @map("first_name") @db.VarChar(64)
+  middleName              String?            @map("middle_name") @db.VarChar(64)
+  position                String?            @db.VarChar(64)
+  lastLoginAt             DateTime?          @map("last_login_at")
+  sessions                Session[]
+  accounts                Account[]
+  auditLogs               AuditLog[]
+  employeeUser            EmployeeUser?
+  equipmentHistoryChanges EquipmentHistory[]
 
   @@unique([email])
   @@unique([username])

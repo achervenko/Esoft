@@ -21,7 +21,13 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  plugins: [username(), admin()],
+  plugins: [
+    username(),
+    admin({
+      defaultRole: 'operator',
+      adminRoles: ['admin'],
+    }),
+  ],
 });
 
 export type Auth = typeof auth;
