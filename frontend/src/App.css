@@ -6,6 +6,11 @@
   overflow: hidden;
 }
 
+.empty-page {
+  min-height: 100svh;
+  background: #ffffff;
+}
+
 .auth-visual {
   min-height: 100svh;
   display: grid;

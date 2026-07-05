@@ -11,6 +11,7 @@ function App() {
   const [remember, setRemember] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
@@ -25,10 +26,10 @@ function App() {
   );
 
   const eyeTransform = showPassword
+    ? 'scaleY(0.1)'
+    : isBlinking
       ? 'scaleY(0.1)'
-      : isBlinking
-        ? 'scaleY(0.1)'
-        : `translate(${eyeOffset.x}px, ${eyeOffset.y}px)`;
+      : `translate(${eyeOffset.x}px, ${eyeOffset.y}px)`;
 
   const blinkEyes = () => {
     if (showPassword) {
@@ -48,6 +49,7 @@ function App() {
 
     const distanceFromCenter =
       (event.clientX - window.innerWidth / 2) / (window.innerWidth / 2);
+
     setYellowMouth({
       x: distanceFromCenter * 30,
       rotate: distanceFromCenter * 10,
@@ -90,13 +92,20 @@ function App() {
 
       setMessage('Вход выполнен.');
       setIsShaking(true);
-      window.setTimeout(() => setIsShaking(false), 600);
+      window.setTimeout(() => {
+        setIsShaking(false);
+        setIsAuthenticated(true);
+      }, 600);
     } catch {
       setError('Сервер авторизации недоступен. Проверьте backend.');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (isAuthenticated) {
+    return <main className="empty-page" aria-label="Пустая страница" />;
+  }
 
   return (
     <main className="auth-shell" onMouseMove={handleMouseMove}>
@@ -110,6 +119,7 @@ function App() {
               <span style={{ transform: eyeTransform }} />
             </span>
           </div>
+
           <div className="black-box">
             <span className="black-eye black-eye-left">
               <span style={{ transform: eyeTransform }} />
@@ -118,6 +128,7 @@ function App() {
               <span style={{ transform: eyeTransform }} />
             </span>
           </div>
+
           <div className="yellow-box">
             <span className="yellow-eye" style={{ transform: eyeTransform }} />
             <span
@@ -127,6 +138,7 @@ function App() {
               }}
             />
           </div>
+
           <div className="orange-box">
             <span className="orange-eye orange-eye-left" style={{ transform: eyeTransform }} />
             <span className="orange-eye orange-eye-right" style={{ transform: eyeTransform }} />
@@ -149,8 +161,8 @@ function App() {
               <input
                 autoComplete="username"
                 name="login"
-                onFocus={blinkEyes}
                 onChange={(event) => setLogin(event.target.value)}
+                onFocus={blinkEyes}
                 placeholder="Логин"
                 type="text"
                 value={login}
@@ -162,8 +174,8 @@ function App() {
                 <input
                   autoComplete="current-password"
                   name="password"
-                  onFocus={blinkEyes}
                   onChange={(event) => setPassword(event.target.value)}
+                  onFocus={blinkEyes}
                   placeholder="Пароль"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
@@ -187,9 +199,9 @@ function App() {
               type="button"
             >
               <span
+                aria-hidden="true"
                 className="remember-pin-indicator"
                 data-checked={remember ? '' : undefined}
-                aria-hidden="true"
               >
                 <span />
               </span>
