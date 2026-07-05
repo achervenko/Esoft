@@ -13,7 +13,6 @@ model Equipment {
   inventoryNumber       String             @unique @map("inventory_number") @db.VarChar(64)
   serialNumber          String?            @map("serial_number") @db.VarChar(128)
   name                  String             @db.VarChar(128)
-  brand                 String?            @db.VarChar(128)
   model                 String?            @db.VarChar(128)
   specifications        String?
   manufacturerId        Int?               @map("manufacturer_id")

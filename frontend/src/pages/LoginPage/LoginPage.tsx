@@ -4,8 +4,11 @@ import { LoginForm } from './LoginForm';
 import { MonsterIllustration } from './MonsterIllustration';
 import './LoginPage.css';
 
-export function LoginPage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+type LoginPageProps = {
+  onAuthenticated: () => void;
+};
+
+export function LoginPage({ onAuthenticated }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
   const [yellowMouth, setYellowMouth] = useState({ x: 0, rotate: 0 });
@@ -45,10 +48,6 @@ export function LoginPage() {
     setOrangeMouthY((event.clientY / window.innerHeight - 0.5) * 8);
   };
 
-  if (isAuthenticated) {
-    return <main className="empty-page" aria-label="Пустая страница" />;
-  }
-
   return (
     <main className="auth-shell" onMouseMove={handleMouseMove}>
       <MonsterIllustration
@@ -59,7 +58,7 @@ export function LoginPage() {
       />
 
       <LoginForm
-        onAuthenticated={() => setIsAuthenticated(true)}
+        onAuthenticated={onAuthenticated}
         onFocusField={blinkEyes}
         onSuccessfulLogin={() => {
           setIsShaking(true);

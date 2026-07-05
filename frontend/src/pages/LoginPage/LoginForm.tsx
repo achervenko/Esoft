@@ -130,7 +130,7 @@ export function LoginForm({
             >
               <span />
             </span>
-            <span>Запомнить пароль</span>
+            <span>Запомнить вход</span>
           </button>
 
           {error && <p className="form-message error">{error}</p>}
