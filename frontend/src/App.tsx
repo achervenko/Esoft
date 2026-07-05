@@ -56,6 +56,16 @@ function App() {
     };
   }, []);
 
+  const refreshSession = async () => {
+    const response = await authClient.getSession();
+    const sessionUser = (response.data?.user ?? null) as SessionUser | null;
+
+    setIsAuthenticated(Boolean(response.data?.session));
+    setUser(sessionUser);
+
+    return sessionUser;
+  };
+
   useEffect(() => {
     if (isCheckingSession) {
       return;
@@ -78,8 +88,8 @@ function App() {
     setHashRoute(LOGIN_ROUTE);
   };
 
-  const handleAuthenticated = () => {
-    setIsAuthenticated(true);
+  const handleAuthenticated = async () => {
+    await refreshSession();
     setHashRoute(DEFAULT_AUTH_ROUTE);
   };
 

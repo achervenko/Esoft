@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, LogOut, PanelLeftClose, PanelLeftOpen } from
 import { useEffect, useState } from 'react';
 import { DEFAULT_AUTH_ROUTE, getHashRoute } from '../../lib/hash-router';
 import { sidebarSections } from './sidebarItems';
+import { useMobileSidebar } from './useMobileSidebar';
 import './Sidebar.css';
 
 type SidebarProps = {
@@ -39,7 +40,9 @@ function getUserInitial(displayName: string) {
 
 export function Sidebar({ onLogout, user }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [activeHref, setActiveHref] = useState(getHashRoute() || DEFAULT_AUTH_ROUTE);
+  const isMobileSidebar = useMobileSidebar();
   const displayName = getUserDisplayName(user);
   const username = user?.username || user?.displayUsername || 'admin';
 
@@ -52,17 +55,40 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  const handleToggleSidebar = () => {
+    if (isMobileSidebar) {
+      setIsMobileOpen((value) => !value);
+      return;
+    }
+
+    setIsCollapsed((value) => !value);
+  };
+
+  const closeMobileSidebar = () => {
+    if (isMobileSidebar) {
+      setIsMobileOpen(false);
+    }
+  };
+
   return (
-    <aside className={`app-sidebar${isCollapsed ? ' app-sidebar-collapsed' : ''}`}>
+    <aside
+      className={`app-sidebar${isCollapsed ? ' app-sidebar-collapsed' : ''}${
+        isMobileOpen ? ' app-sidebar-mobile-open' : ''
+      }`}
+    >
       <div className="sidebar-header">
         <button
           aria-label={isCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
           className="sidebar-icon-button"
-          onClick={() => setIsCollapsed((value) => !value)}
+          onClick={handleToggleSidebar}
           title={isCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
           type="button"
         >
-          {isCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+          {isCollapsed || (isMobileSidebar && !isMobileOpen) ? (
+            <PanelLeftOpen size={20} />
+          ) : (
+            <PanelLeftClose size={20} />
+          )}
         </button>
       </div>
 
@@ -81,6 +107,7 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
                         aria-current={isActive ? 'page' : undefined}
                         className={isActive ? 'active' : undefined}
                         href={item.href}
+                        onClick={closeMobileSidebar}
                         title={item.label}
                       >
                         <Icon aria-hidden="true" size={20} strokeWidth={1.9} />
@@ -96,7 +123,7 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
       </nav>
 
       <div className="sidebar-footer">
-        <a className="sidebar-user" href="#/profile" title="Настройки пользователя">
+        <a className="sidebar-user" href="#/profile" onClick={closeMobileSidebar} title="Настройки пользователя">
           <span className="sidebar-user-avatar">{getUserInitial(displayName)}</span>
           <span className="sidebar-user-info">
             <strong>{displayName}</strong>

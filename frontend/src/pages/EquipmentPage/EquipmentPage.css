@@ -87,3 +87,78 @@
 .equipment-table-shell tbody tr:hover {
   background: #fafbfc;
 }
+
+.equipment-registry-cards {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .equipment-page {
+    gap: 16px;
+  }
+
+  .equipment-page-header h1 {
+    font-size: 30px;
+  }
+
+  .equipment-table-shell {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .equipment-registry-table {
+    display: none;
+  }
+
+  .equipment-registry-cards {
+    display: grid;
+    gap: 10px;
+  }
+
+  .equipment-registry-card {
+    display: grid;
+    gap: 12px;
+    border: 1px solid #e3e6eb;
+    border-radius: 8px;
+    padding: 14px;
+    background: #ffffff;
+  }
+
+  .equipment-registry-card h2 {
+    margin: 0;
+    color: #15171c;
+    font-size: 17px;
+    line-height: 1.25;
+    font-weight: 800;
+  }
+
+  .equipment-registry-card dl {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .equipment-registry-card dl div {
+    display: grid;
+    grid-template-columns: minmax(108px, 42%) 1fr;
+    gap: 10px;
+    align-items: baseline;
+  }
+
+  .equipment-registry-card dt {
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .equipment-registry-card dd {
+    min-width: 0;
+    margin: 0;
+    color: #15171c;
+    font-size: 14px;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+  }
+}

@@ -42,7 +42,7 @@ const items: EquipmentRegistryItem[] = [
 export function EquipmentRegistryTable() {
   return (
     <div className="equipment-table-shell">
-      <Table.Root size="sm" native>
+      <Table.Root className="equipment-registry-table" size="sm" native>
         <thead>
           <tr>
             <th>Название оборудования</th>
@@ -62,6 +62,28 @@ export function EquipmentRegistryTable() {
           ))}
         </tbody>
       </Table.Root>
+
+      <div className="equipment-registry-cards" aria-label="Реестр оборудования">
+        {items.map((item) => (
+          <article className="equipment-registry-card" key={item.id}>
+            <h2>{item.name}</h2>
+            <dl>
+              <div>
+                <dt>Производитель</dt>
+                <dd>{item.manufacturer}</dd>
+              </div>
+              <div>
+                <dt>Модель</dt>
+                <dd>{item.model}</dd>
+              </div>
+              <div>
+                <dt>Статус</dt>
+                <dd>{item.status}</dd>
+              </div>
+            </dl>
+          </article>
+        ))}
+      </div>
     </div>
   );
 }
