@@ -1,122 +1,212 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useMemo, useState } from 'react';
+import type { FormEvent, MouseEvent } from 'react';
+import { authClient } from './lib/auth-client';
+import './App.css';
+
+type LoginMode = 'username' | 'email';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [login, setLogin] = useState('');
+  const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
+  const [yellowMouth, setYellowMouth] = useState({ x: 0, rotate: 0 });
+  const [orangeMouthY, setOrangeMouthY] = useState(0);
+  const [isBlinking, setIsBlinking] = useState(false);
+  const [isShaking, setIsShaking] = useState(false);
+
+  const loginMode = useMemo<LoginMode>(
+    () => (login.includes('@') ? 'email' : 'username'),
+    [login],
+  );
+
+  const eyeTransform = showPassword
+      ? 'scaleY(0.1)'
+      : isBlinking
+        ? 'scaleY(0.1)'
+        : `translate(${eyeOffset.x}px, ${eyeOffset.y}px)`;
+
+  const blinkEyes = () => {
+    if (showPassword) {
+      return;
+    }
+
+    setIsBlinking(true);
+    window.setTimeout(() => setIsBlinking(false), 200);
+  };
+
+  const handleMouseMove = (event: MouseEvent<HTMLElement>) => {
+    if (!showPassword && !isBlinking) {
+      const x = (event.clientX / window.innerWidth - 0.5) * 10;
+      const y = (event.clientY / window.innerHeight - 0.5) * 10;
+      setEyeOffset({ x, y });
+    }
+
+    const distanceFromCenter =
+      (event.clientX - window.innerWidth / 2) / (window.innerWidth / 2);
+    setYellowMouth({
+      x: distanceFromCenter * 30,
+      rotate: distanceFromCenter * 10,
+    });
+    setOrangeMouthY((event.clientY / window.innerHeight - 0.5) * 8);
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setMessage(null);
+    setError(null);
+
+    const cleanLogin = login.trim();
+
+    if (!cleanLogin || !password) {
+      setError('Заполните логин и пароль.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response =
+        loginMode === 'email'
+          ? await authClient.signIn.email({
+              email: cleanLogin,
+              password,
+              rememberMe: remember,
+            })
+          : await authClient.signIn.username({
+              username: cleanLogin,
+              password,
+              rememberMe: remember,
+            });
+
+      if (response.error) {
+        setError(response.error.message ?? 'Не удалось войти.');
+        return;
+      }
+
+      setMessage('Вход выполнен.');
+      setIsShaking(true);
+      window.setTimeout(() => setIsShaking(false), 600);
+    } catch {
+      setError('Сервер авторизации недоступен. Проверьте backend.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
+    <main className="auth-shell" onMouseMove={handleMouseMove}>
+      <section className="auth-visual" aria-label="Esoft">
+        <div className={`monster-scene${isShaking ? ' head-shake' : ''}`}>
+          <div className="blue-box">
+            <span className="blue-eye blue-eye-left">
+              <span style={{ transform: eyeTransform }} />
+            </span>
+            <span className="blue-eye blue-eye-right">
+              <span style={{ transform: eyeTransform }} />
+            </span>
+          </div>
+          <div className="black-box">
+            <span className="black-eye black-eye-left">
+              <span style={{ transform: eyeTransform }} />
+            </span>
+            <span className="black-eye black-eye-right">
+              <span style={{ transform: eyeTransform }} />
+            </span>
+          </div>
+          <div className="yellow-box">
+            <span className="yellow-eye" style={{ transform: eyeTransform }} />
+            <span
+              className="yellow-mouth"
+              style={{
+                transform: `translateX(${yellowMouth.x}px) rotate(${yellowMouth.rotate}deg)`,
+              }}
+            />
+          </div>
+          <div className="orange-box">
+            <span className="orange-eye orange-eye-left" style={{ transform: eyeTransform }} />
+            <span className="orange-eye orange-eye-right" style={{ transform: eyeTransform }} />
+            <span
+              className="orange-mouth"
+              style={{ transform: `translateY(${orangeMouthY}px)` }}
+            />
+          </div>
         </div>
       </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <section className="auth-panel" aria-labelledby="login-title">
+        <div className="auth-card">
+          <div className="auth-heading">
+            <h2 id="login-title">Вход в систему</h2>
+          </div>
+
+          <form className="login-form" onSubmit={handleSubmit}>
+            <label aria-label="Логин">
+              <input
+                autoComplete="username"
+                name="login"
+                onFocus={blinkEyes}
+                onChange={(event) => setLogin(event.target.value)}
+                placeholder="Логин"
+                type="text"
+                value={login}
+              />
+            </label>
+
+            <label aria-label="Пароль">
+              <div className="password-field">
+                <input
+                  autoComplete="current-password"
+                  name="password"
+                  onFocus={blinkEyes}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Пароль"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                />
+                <button
+                  aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                  className="password-toggle"
+                  onClick={() => setShowPassword((value) => !value)}
+                  type="button"
+                >
+                  {showPassword ? 'Скрыть' : 'Показать'}
+                </button>
+              </div>
+            </label>
+
+            <button
+              aria-checked={remember}
+              className="remember-pin"
+              onClick={() => setRemember((value) => !value)}
+              role="radio"
+              type="button"
+            >
+              <span
+                className="remember-pin-indicator"
+                data-checked={remember ? '' : undefined}
+                aria-hidden="true"
+              >
+                <span />
+              </span>
+              <span>Запомнить пароль</span>
+            </button>
+
+            {error && <p className="form-message error">{error}</p>}
+            {message && <p className="form-message success">{message}</p>}
+
+            <button className="submit-button" disabled={isSubmitting} type="submit">
+              {isSubmitting ? 'Выполняется вход...' : 'Войти'}
+            </button>
+          </form>
+        </div>
+      </section>
+    </main>
+  );
 }
 
-export default App
+export default App;

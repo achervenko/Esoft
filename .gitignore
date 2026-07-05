@@ -8,3 +8,6 @@ coverage/
 *.log
 .DS_Store
 Thumbs.db
+fix-docker-install.ps1
+install-wsl-admin.ps1
+frontend/src/assets/auth-visual.png
