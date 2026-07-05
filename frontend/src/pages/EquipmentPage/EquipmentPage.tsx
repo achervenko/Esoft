@@ -17,10 +17,10 @@ export function EquipmentPage({ userRole }: EquipmentPageProps) {
         <h1>Реестр оборудования</h1>
 
         {canCreateEquipment ? (
-          <button className="equipment-add-button" type="button">
+          <a className="equipment-add-button" href="#/equipment/create">
             <Plus aria-hidden="true" size={18} />
             <span>Добавить оборудование</span>
-          </button>
+          </a>
         ) : null}
       </header>
 

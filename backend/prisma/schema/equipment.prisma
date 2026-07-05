@@ -26,6 +26,7 @@ model Equipment {
   responsibleEmployeeId Int?               @map("responsible_employee_id")
   responsibleEmployee   Employee?          @relation("EquipmentResponsibleEmployee", fields: [responsibleEmployeeId], references: [id], onDelete: SetNull)
   status                EquipmentStatus    @default(ACTIVE)
+  operationText         String?            @map("operation_text")
   operationId           Int?               @map("operation_id")
   operation             Operation?         @relation(fields: [operationId], references: [id], onDelete: SetNull)
   history               EquipmentHistory[]

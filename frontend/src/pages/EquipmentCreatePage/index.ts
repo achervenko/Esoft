@@ -1,0 +1,1 @@
+export { EquipmentCreatePage } from './EquipmentCreatePage';

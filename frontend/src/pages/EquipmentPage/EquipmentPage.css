@@ -33,6 +33,7 @@
   font: inherit;
   font-size: 14px;
   font-weight: 750;
+  text-decoration: none;
 }
 
 .equipment-add-button:hover {

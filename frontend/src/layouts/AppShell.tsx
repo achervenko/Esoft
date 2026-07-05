@@ -1,4 +1,5 @@
 import { Sidebar } from '../modules/sidebar';
+import { EquipmentCreatePage } from '../pages/EquipmentCreatePage';
 import { EquipmentPage } from '../pages/EquipmentPage';
 import './AppShell.css';
 
@@ -19,6 +20,7 @@ type AppShellProps = {
 
 export function AppShell({ onLogout, route, user }: AppShellProps) {
   const isEquipmentRoute = route === '#/equipment';
+  const isEquipmentCreateRoute = route === '#/equipment/create';
 
   return (
     <main className="app-shell">
@@ -26,6 +28,7 @@ export function AppShell({ onLogout, route, user }: AppShellProps) {
 
       <section className="app-workspace" aria-label="Рабочая область">
         {isEquipmentRoute ? <EquipmentPage userRole={user?.role ?? null} /> : null}
+        {isEquipmentCreateRoute ? <EquipmentCreatePage userRole={user?.role ?? null} /> : null}
       </section>
     </main>
   );
