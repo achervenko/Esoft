@@ -255,26 +255,13 @@
   padding: 16px 0;
   background: #ffffff;
   color: #111111;
+  cursor: text;
   font: inherit;
   outline: none;
 }
 
 .login-form input::placeholder {
   color: #111111;
-}
-
-input[type='text'],
-input[type='email'],
-input[type='password'] {
-  cursor: text;
-}
-
-button,
-label,
-a,
-input[type='checkbox'],
-input[type='submit'] {
-  cursor: pointer;
 }
 
 .login-form input:focus {
