@@ -3,15 +3,11 @@ import { AppShell } from './layouts/AppShell';
 import { authClient } from './lib/auth-client';
 import { DEFAULT_AUTH_ROUTE, LOGIN_ROUTE, getHashRoute, isLoginRoute, setHashRoute } from './lib/hash-router';
 import { LoginPage } from './pages/LoginPage';
-
-type SessionUser = {
-  displayUsername?: string | null;
-  firstName?: string | null;
-  middleName?: string | null;
-  name?: string | null;
-  role?: string | null;
-  username?: string | null;
-};
+import {
+  getAuthenticatedUser,
+  waitForAuthenticatedUser,
+  type SessionUser,
+} from './shared/api/auth-session';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -31,12 +27,11 @@ function App() {
   useEffect(() => {
     let isMounted = true;
 
-    authClient
-      .getSession()
-      .then((response) => {
+    getAuthenticatedUser()
+      .then((sessionUser) => {
         if (isMounted) {
-          setIsAuthenticated(Boolean(response.data?.session));
-          setUser((response.data?.user ?? null) as SessionUser | null);
+          setIsAuthenticated(Boolean(sessionUser));
+          setUser(sessionUser);
         }
       })
       .catch(() => {
@@ -55,16 +50,6 @@ function App() {
       isMounted = false;
     };
   }, []);
-
-  const refreshSession = async () => {
-    const response = await authClient.getSession();
-    const sessionUser = (response.data?.user ?? null) as SessionUser | null;
-
-    setIsAuthenticated(Boolean(response.data?.session));
-    setUser(sessionUser);
-
-    return sessionUser;
-  };
 
   useEffect(() => {
     if (isCheckingSession) {
@@ -89,7 +74,10 @@ function App() {
   };
 
   const handleAuthenticated = async () => {
-    await refreshSession();
+    const sessionUser = await waitForAuthenticatedUser();
+
+    setIsAuthenticated(true);
+    setUser(sessionUser);
     setHashRoute(DEFAULT_AUTH_ROUTE);
   };
 

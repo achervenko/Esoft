@@ -2,8 +2,13 @@ import { createAuthClient } from 'better-auth/react';
 import { inferAdditionalFields } from 'better-auth/client/plugins';
 import { adminClient, usernameClient } from 'better-auth/client/plugins';
 
+const API_URL = import.meta.env.VITE_API_URL || undefined;
+
 export const authClient = createAuthClient({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:3000',
+  baseURL: API_URL,
+  fetchOptions: {
+    credentials: 'include',
+  },
   plugins: [
     usernameClient(),
     adminClient(),

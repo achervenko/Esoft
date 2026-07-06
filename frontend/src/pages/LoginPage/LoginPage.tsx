@@ -5,7 +5,7 @@ import { MonsterIllustration } from './MonsterIllustration';
 import './LoginPage.css';
 
 type LoginPageProps = {
-  onAuthenticated: () => void;
+  onAuthenticated: () => Promise<void>;
 };
 
 export function LoginPage({ onAuthenticated }: LoginPageProps) {

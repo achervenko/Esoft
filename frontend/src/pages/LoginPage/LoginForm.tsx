@@ -5,7 +5,7 @@ import { authClient } from '../../lib/auth-client';
 type LoginMode = 'username' | 'email';
 
 type LoginFormProps = {
-  onAuthenticated: () => void;
+  onAuthenticated: () => Promise<void>;
   onFocusField: () => void;
   onSuccessfulLogin: () => void;
   onTogglePassword: () => void;
@@ -66,7 +66,7 @@ export function LoginForm({
 
       setMessage('Вход выполнен.');
       onSuccessfulLogin();
-      window.setTimeout(onAuthenticated, 600);
+      await onAuthenticated();
     } catch {
       setError('Сервер авторизации недоступен. Проверьте backend.');
     } finally {
