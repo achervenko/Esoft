@@ -6,6 +6,11 @@ import { EquipmentService } from './equipment.service';
 export class EquipmentController {
   constructor(private readonly equipmentService: EquipmentService) {}
 
+  @Get()
+  findAll() {
+    return this.equipmentService.findAll();
+  }
+
   @Get('create-options')
   getCreateOptions() {
     return this.equipmentService.getCreateOptions();

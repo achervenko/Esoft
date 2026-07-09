@@ -16,6 +16,27 @@ export class EquipmentService {
     private readonly prisma: PrismaService,
   ) {}
 
+  async findAll() {
+    const equipment = await this.prisma.equipment.findMany({
+      include: {
+        manufacturer: true,
+      },
+      orderBy: [{ visibleId: 'asc' }],
+    });
+
+    return equipment.map((item) => ({
+      id: item.id,
+      visibleId: item.visibleId,
+      name: item.name,
+      inventoryNumber: item.inventoryNumber,
+      serialNumber: item.serialNumber,
+      manufacturer: item.manufacturer?.name ?? 'Не указан',
+      model: item.model ?? 'Не указана',
+      status: item.status,
+      statusLabel: this.getStatusLabel(item.status),
+    }));
+  }
+
   async getCreateOptions() {
     const [manufacturers, countries, sections, employees, nextVisibleId] =
       await Promise.all([
@@ -153,5 +174,17 @@ export class EquipmentService {
 
     const [, day, month, year] = match;
     return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  }
+
+  private getStatusLabel(status: EquipmentStatus) {
+    const statusLabels: Record<EquipmentStatus, string> = {
+      [EquipmentStatus.ACTIVE]: 'В эксплуатации',
+      [EquipmentStatus.RESERVE]: 'Резерв',
+      [EquipmentStatus.REPAIR]: 'В ремонте',
+      [EquipmentStatus.MAINTENANCE]: 'На обслуживании',
+      [EquipmentStatus.WRITTEN_OFF]: 'Списано',
+    };
+
+    return statusLabels[status];
   }
 }

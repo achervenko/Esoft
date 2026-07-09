@@ -5,8 +5,10 @@ import {
   getEquipmentCreateOptions,
   type EquipmentCreateOptions,
 } from '../../shared/api/equipment-api';
+import { Notice } from '../../shared/ui/Notice';
 import { EquipmentCreateForm } from './EquipmentCreateForm';
 import {
+  type EquipmentCreateFieldErrors,
   initialEquipmentCreateFormState,
   toEquipmentCreatePayload,
   validateEquipmentCreateForm,
@@ -34,6 +36,7 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
   const [options, setOptions] = useState<EquipmentCreateOptions | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<EquipmentCreateFieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -47,7 +50,6 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
           setForm((currentForm) => ({
             ...currentForm,
             visibleId: String(data.nextVisibleId),
-            status: data.statuses[0]?.value ?? 'ACTIVE',
           }));
         }
       })
@@ -74,15 +76,23 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
     setForm((currentForm) => ({ ...currentForm, [key]: value }));
   };
 
+  const handleFieldFocus = (key: keyof EquipmentCreateFormState) => {
+    if (fieldErrors[key]) {
+      setError(null);
+      setMessage(null);
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
     setMessage(null);
 
-    const validationError = validateEquipmentCreateForm(form);
+    const validation = validateEquipmentCreateForm(form);
+    setFieldErrors(validation.fieldErrors);
 
-    if (validationError) {
-      setError(validationError);
+    if (validation.formError) {
+      setError(validation.formError);
       return;
     }
 
@@ -101,6 +111,15 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
           ? requestError.message
           : 'Не удалось добавить оборудование.',
       );
+      if (
+        requestError instanceof Error &&
+        requestError.message.toLowerCase().includes('id')
+      ) {
+        setFieldErrors((currentErrors) => ({
+          ...currentErrors,
+          visibleId: requestError.message,
+        }));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -111,9 +130,9 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
       <div className="equipment-create-page">
         <BackToRegistryLink />
         <h1>Добавление оборудования</h1>
-        <p className="equipment-form-message error">
+        <Notice tone="error">
           У вашей роли нет доступа к добавлению оборудования.
-        </p>
+        </Notice>
       </div>
     );
   }
@@ -126,19 +145,17 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
         <h1>Добавление оборудования</h1>
       </header>
 
-      {isLoading ? (
-        <p className="equipment-form-message">Загрузка справочников...</p>
-      ) : null}
-      {error ? <p className="equipment-form-message error">{error}</p> : null}
-      {message ? (
-        <p className="equipment-form-message success">{message}</p>
-      ) : null}
+      {isLoading ? <Notice>Загрузка справочников...</Notice> : null}
+      {error ? <Notice floating tone="error">{error}</Notice> : null}
+      {message ? <Notice floating tone="success">{message}</Notice> : null}
 
       {options ? (
         <EquipmentCreateForm
+          fieldErrors={fieldErrors}
           form={form}
           isSubmitting={isSubmitting}
           onChange={updateForm}
+          onFieldFocus={handleFieldFocus}
           onSubmit={handleSubmit}
           options={options}
         />

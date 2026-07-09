@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.1",
   "scripts": {
+    "start:simple": "powershell -ExecutionPolicy Bypass -File ./start-esoft-npm.ps1",
     "backend:dev": "npm --prefix backend run start:dev",
     "frontend:dev": "npm --prefix frontend run dev",
     "db:up": "docker compose up -d postgres",

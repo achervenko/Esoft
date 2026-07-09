@@ -1,9 +1,12 @@
 .app-sidebar {
-  position: relative;
+  position: sticky;
+  top: 0;
   width: 280px;
-  min-height: 100svh;
+  height: 100svh;
+  min-height: 0;
   display: grid;
   grid-template-rows: auto 1fr auto;
+  overflow: visible;
   border-right: 1px solid #e6e8ec;
   background: #ffffff;
   color: #15171c;

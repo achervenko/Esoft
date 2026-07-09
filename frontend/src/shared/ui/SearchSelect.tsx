@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react';
 import type { OptionItem } from '../api/equipment-api';
 
 type SearchSelectProps = {
+  error?: string;
   label: string;
+  onFocus?: () => void;
   options: OptionItem[];
   placeholder?: string;
   required?: boolean;
@@ -11,8 +13,10 @@ type SearchSelectProps = {
 };
 
 export function SearchSelect({
+  error,
   label,
   onChange,
+  onFocus,
   options,
   placeholder = 'Начните вводить',
   required = false,
@@ -45,7 +49,7 @@ export function SearchSelect({
   };
 
   return (
-    <label className="form-field search-select-field">
+    <label className={`form-field search-select-field${error ? ' has-error' : ''}`}>
       <span>
         {label}
         {required ? <b aria-hidden="true">*</b> : null}
@@ -57,7 +61,10 @@ export function SearchSelect({
           setIsOpen(true);
           onChange(null);
         }}
-        onFocus={() => setIsOpen(true)}
+        onFocus={() => {
+          onFocus?.();
+          setIsOpen(true);
+        }}
         placeholder={placeholder}
         type="text"
         value={query}
@@ -77,6 +84,7 @@ export function SearchSelect({
           ))}
         </div>
       ) : null}
+      {error ? <small className="field-error">{error}</small> : null}
     </label>
   );
 }

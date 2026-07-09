@@ -1,4 +1,9 @@
 import { Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import {
+  getEquipmentRegistry,
+  type EquipmentRegistryItem,
+} from '../../shared/api/equipment-api';
 import { EquipmentRegistryTable } from './EquipmentRegistryTable';
 import './EquipmentPage.css';
 
@@ -6,10 +11,44 @@ type EquipmentPageProps = {
   userRole: string | null;
 };
 
-const rolesAllowedToCreateEquipment = new Set(['admin', 'engineer', 'chief_engineer']);
+const rolesAllowedToCreateEquipment = new Set([
+  'admin',
+  'engineer',
+  'chief_engineer',
+]);
 
 export function EquipmentPage({ userRole }: EquipmentPageProps) {
-  const canCreateEquipment = Boolean(userRole && rolesAllowedToCreateEquipment.has(userRole));
+  const canCreateEquipment = Boolean(
+    userRole && rolesAllowedToCreateEquipment.has(userRole),
+  );
+  const [items, setItems] = useState<EquipmentRegistryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getEquipmentRegistry()
+      .then((data) => {
+        if (isMounted) {
+          setItems(data);
+        }
+      })
+      .catch((requestError: Error) => {
+        if (isMounted) {
+          setError(requestError.message);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="equipment-page">
@@ -25,7 +64,11 @@ export function EquipmentPage({ userRole }: EquipmentPageProps) {
       </header>
 
       <section className="equipment-table-section" aria-label="Реестр оборудования">
-        <EquipmentRegistryTable />
+        {isLoading ? (
+          <p className="equipment-state-message">Загрузка реестра...</p>
+        ) : null}
+        {error ? <p className="equipment-state-message error">{error}</p> : null}
+        {!isLoading && !error ? <EquipmentRegistryTable items={items} /> : null}
       </section>
     </div>
   );

@@ -36,6 +36,18 @@ export type CreateEquipmentPayload = {
   notes?: string | null;
 };
 
+export type EquipmentRegistryItem = {
+  id: number;
+  inventoryNumber: string;
+  manufacturer: string;
+  model: string;
+  name: string;
+  serialNumber: string | null;
+  status: string;
+  statusLabel: string;
+  visibleId: number;
+};
+
 const API_URL = import.meta.env.VITE_API_URL || '';
 
 async function request<T>(path: string, init?: RequestInit) {
@@ -58,6 +70,10 @@ async function request<T>(path: string, init?: RequestInit) {
 
 export function getEquipmentCreateOptions() {
   return request<EquipmentCreateOptions>('/api/equipment/create-options');
+}
+
+export function getEquipmentRegistry() {
+  return request<EquipmentRegistryItem[]>('/api/equipment');
 }
 
 export function createEquipment(payload: CreateEquipmentPayload) {

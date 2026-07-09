@@ -45,6 +45,21 @@
   min-width: 0;
 }
 
+.equipment-state-message {
+  margin: 0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #eef2ff;
+  color: #303744;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.equipment-state-message.error {
+  background: #fff0f0;
+  color: #b42318;
+}
+
 @media (max-width: 640px) {
   .equipment-page-header {
     align-items: stretch;
@@ -57,40 +72,159 @@
 }
 
 .equipment-table-shell {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid #e3e6eb;
   border-radius: 8px;
   background: #ffffff;
 }
 
-.equipment-table-shell table {
+.equipment-table-shell .data-table {
+  min-width: 940px;
   width: 100%;
 }
 
-.equipment-table-shell th {
+.data-table th {
   background: #f3f5f7;
   color: #4b5563;
   font-weight: 800;
 }
 
-.equipment-table-shell th,
-.equipment-table-shell td {
+.data-table-sort-button {
+  width: 100%;
+  min-height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: inherit;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.data-table-sort-button:hover {
+  color: #111111;
+}
+
+.data-table-sort-button.active {
+  color: #111111;
+}
+
+.data-table-sort-triangle {
+  width: 0;
+  height: 0;
+  flex: 0 0 auto;
+  border-right: 4px solid transparent;
+  border-left: 4px solid transparent;
+}
+
+.data-table-sort-triangle.asc {
+  border-bottom: 6px solid #111111;
+}
+
+.data-table-sort-triangle.desc {
+  border-top: 6px solid #111111;
+}
+
+.data-table th,
+.data-table td {
   padding: 12px 14px;
   border-bottom: 1px solid #edf0f3;
   text-align: left;
   white-space: nowrap;
 }
 
-.equipment-table-shell tr:last-child td {
+.data-table th:last-child,
+.data-table td:last-child {
+  padding-right: 18px;
+}
+
+.data-table td:nth-child(2) {
+  min-width: 240px;
+  white-space: normal;
+}
+
+.data-table tr:last-child td {
   border-bottom: 0;
 }
 
-.equipment-table-shell tbody tr:hover {
+.data-table tbody tr:hover {
   background: #fafbfc;
 }
 
 .equipment-registry-cards {
   display: none;
+}
+
+.equipment-status {
+  width: max-content;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #eef2ff;
+  color: #303744;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.status-ACTIVE {
+  background: #edfdf3;
+  color: #087443;
+}
+
+.status-RESERVE {
+  background: #eef2ff;
+  color: #3446a8;
+}
+
+.status-REPAIR {
+  background: #fff3e6;
+  color: #a24f00;
+}
+
+.status-MAINTENANCE {
+  background: #eef7ff;
+  color: #075985;
+}
+
+.status-WRITTEN_OFF {
+  background: #f2f4f7;
+  color: #596273;
+}
+
+.equipment-empty-state {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 22px;
+  background: #ffffff;
+}
+
+.equipment-empty-state h2,
+.equipment-empty-state p {
+  margin: 0;
+}
+
+.equipment-empty-state h2 {
+  color: #15171c;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.equipment-empty-state p {
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 650;
 }
 
 @media (max-width: 640px) {
@@ -109,7 +243,7 @@
     background: transparent;
   }
 
-  .equipment-registry-table {
+  .data-table {
     display: none;
   }
 
@@ -125,6 +259,16 @@
     border-radius: 8px;
     padding: 14px;
     background: #ffffff;
+  }
+
+  .equipment-card-id {
+    width: max-content;
+    border-radius: 999px;
+    padding: 5px 8px;
+    background: #f3f5f7;
+    color: #4b5563;
+    font-size: 12px;
+    font-weight: 800;
   }
 
   .equipment-registry-card h2 {

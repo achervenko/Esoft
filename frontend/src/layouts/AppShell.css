@@ -1,21 +1,30 @@
 .app-shell {
-  min-height: 100svh;
+  height: 100svh;
   display: grid;
   grid-template-columns: auto 1fr;
+  overflow: hidden;
   background: #f7f8fa;
 }
 
 .app-workspace {
   min-width: 0;
+  height: 100svh;
+  overflow: auto;
   padding: 28px;
 }
 
 @media (max-width: 760px) {
   .app-shell {
+    height: auto;
+    min-height: 100svh;
     grid-template-columns: 1fr;
+    overflow: visible;
   }
 
   .app-workspace {
+    height: auto;
+    min-height: 100svh;
+    overflow: visible;
     padding: 78px 18px 22px;
   }
 }

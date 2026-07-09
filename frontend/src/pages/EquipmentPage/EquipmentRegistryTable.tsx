@@ -1,71 +1,110 @@
-import { Table } from '@chakra-ui/react';
+import { useMemo, useState } from 'react';
+import type { EquipmentRegistryItem } from '../../shared/api/equipment-api';
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableSortDirection,
+} from '../../shared/ui/DataTable';
+import { sortDataTableRows } from '../../shared/ui/data-table-model';
 
-type EquipmentRegistryItem = {
-  id: number;
-  manufacturer: string;
-  model: string;
-  name: string;
-  status: string;
+type EquipmentRegistryTableProps = {
+  items: EquipmentRegistryItem[];
 };
 
-const items: EquipmentRegistryItem[] = [
+type EquipmentSortKey =
+  | 'inventoryNumber'
+  | 'manufacturer'
+  | 'model'
+  | 'name'
+  | 'serialNumber'
+  | 'statusLabel'
+  | 'visibleId';
+
+const equipmentColumns: Array<
+  DataTableColumn<EquipmentRegistryItem, EquipmentSortKey>
+> = [
   {
-    id: 1,
-    manufacturer: 'Siemens',
-    model: 'S7-1500',
-    name: 'Контроллер линии сборки',
-    status: 'В эксплуатации',
+    key: 'visibleId',
+    label: 'ID',
+    render: (item) => item.visibleId,
+    sortValue: (item) => item.visibleId,
   },
   {
-    id: 2,
-    manufacturer: 'Omron',
-    model: 'MX2',
-    name: 'Частотный преобразователь',
-    status: 'Резерв',
+    key: 'name',
+    label: 'Название оборудования',
+    render: (item) => item.name,
+    sortValue: (item) => item.name,
   },
   {
-    id: 3,
-    manufacturer: 'Bosch Rexroth',
-    model: 'A10VSO',
-    name: 'Гидравлический насос',
-    status: 'В ремонте',
+    key: 'manufacturer',
+    label: 'Производитель',
+    render: (item) => item.manufacturer,
+    sortValue: (item) => item.manufacturer,
   },
   {
-    id: 4,
-    manufacturer: 'Festo',
-    model: 'DSBC',
-    name: 'Пневмоцилиндр',
-    status: 'На обслуживании',
+    key: 'model',
+    label: 'Модель',
+    render: (item) => item.model,
+    sortValue: (item) => item.model,
+  },
+  {
+    key: 'inventoryNumber',
+    label: 'Инвентарный номер',
+    render: (item) => item.inventoryNumber,
+    sortValue: (item) => item.inventoryNumber,
+  },
+  {
+    key: 'serialNumber',
+    label: 'Заводской номер',
+    render: (item) => item.serialNumber ?? 'б/н',
+    sortValue: (item) => item.serialNumber ?? 'б/н',
+  },
+  {
+    key: 'statusLabel',
+    label: 'Статус',
+    render: (item) => (
+      <span className={`equipment-status status-${item.status}`}>
+        {item.statusLabel}
+      </span>
+    ),
+    sortValue: (item) => item.statusLabel,
   },
 ];
 
-export function EquipmentRegistryTable() {
+const defaultEquipmentSort = {
+  direction: 'asc' as DataTableSortDirection,
+  key: 'visibleId' as EquipmentSortKey,
+};
+
+export function EquipmentRegistryTable({ items }: EquipmentRegistryTableProps) {
+  const [mobileSort] = useState(defaultEquipmentSort);
+  const sortedMobileItems = useMemo(
+    () => sortDataTableRows(items, equipmentColumns, mobileSort),
+    [items, mobileSort],
+  );
+
+  if (items.length === 0) {
+    return (
+      <div className="equipment-empty-state">
+        <h2>Оборудование пока не добавлено</h2>
+        <p>После создания первой карточки она появится в реестре.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="equipment-table-shell">
-      <Table.Root className="equipment-registry-table" size="sm" native>
-        <thead>
-          <tr>
-            <th>Название оборудования</th>
-            <th>Производитель</th>
-            <th>Модель</th>
-            <th>Статус</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr key={item.id}>
-              <td>{item.name}</td>
-              <td>{item.manufacturer}</td>
-              <td>{item.model}</td>
-              <td>{item.status}</td>
-            </tr>
-          ))}
-        </tbody>
-      </Table.Root>
+      <DataTable
+        columns={equipmentColumns}
+        defaultSort={defaultEquipmentSort}
+        getRowKey={(item) => item.id}
+        rows={items}
+      />
 
       <div className="equipment-registry-cards" aria-label="Реестр оборудования">
-        {items.map((item) => (
+        {sortedMobileItems.map((item) => (
           <article className="equipment-registry-card" key={item.id}>
+            <span className="equipment-card-id">ID {item.visibleId}</span>
             <h2>{item.name}</h2>
             <dl>
               <div>
@@ -77,8 +116,20 @@ export function EquipmentRegistryTable() {
                 <dd>{item.model}</dd>
               </div>
               <div>
+                <dt>Инв. номер</dt>
+                <dd>{item.inventoryNumber}</dd>
+              </div>
+              <div>
+                <dt>Заводской</dt>
+                <dd>{item.serialNumber ?? 'б/н'}</dd>
+              </div>
+              <div>
                 <dt>Статус</dt>
-                <dd>{item.status}</dd>
+                <dd>
+                  <span className={`equipment-status status-${item.status}`}>
+                    {item.statusLabel}
+                  </span>
+                </dd>
               </div>
             </dl>
           </article>
