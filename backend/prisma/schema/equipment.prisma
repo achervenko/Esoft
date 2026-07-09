@@ -10,6 +10,7 @@ enum EquipmentStatus {
 
 model Equipment {
   id                    Int                @id @default(autoincrement())
+  visibleId             Int                @unique @default(dbgenerated("nextval('equipment_visible_id_seq'::regclass)")) @map("visible_id")
   inventoryNumber       String             @unique @map("inventory_number") @db.VarChar(64)
   serialNumber          String?            @map("serial_number") @db.VarChar(128)
   name                  String             @db.VarChar(128)
@@ -23,8 +24,8 @@ model Equipment {
   commissioningDate     DateTime?          @map("commissioning_date") @db.Date
   sectionId             Int                @map("section_id")
   section               Section            @relation(fields: [sectionId], references: [id], onDelete: Restrict)
-  responsibleEmployeeId Int?               @map("responsible_employee_id")
-  responsibleEmployee   Employee?          @relation("EquipmentResponsibleEmployee", fields: [responsibleEmployeeId], references: [id], onDelete: SetNull)
+  responsibleEmployeeId Int                @map("responsible_employee_id")
+  responsibleEmployee   Employee           @relation("EquipmentResponsibleEmployee", fields: [responsibleEmployeeId], references: [id], onDelete: Restrict)
   status                EquipmentStatus    @default(ACTIVE)
   operationText         String?            @map("operation_text")
   operationId           Int?               @map("operation_id")
@@ -32,6 +33,7 @@ model Equipment {
   history               EquipmentHistory[]
   notes                 String?
 
+  @@index([visibleId], map: "idx_equipment_visible_id")
   @@index([serialNumber], map: "idx_equipment_serial_number")
   @@index([status], map: "idx_equipment_status")
   @@index([sectionId], map: "idx_equipment_section_id")

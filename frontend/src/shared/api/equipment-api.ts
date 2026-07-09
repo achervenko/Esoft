@@ -13,13 +13,13 @@ export type EquipmentCreateOptions = {
   countries: OptionItem[];
   employees: OptionItem[];
   manufacturers: OptionItem[];
-  nextId: number;
+  nextVisibleId: number;
   sections: OptionItem[];
   statuses: EquipmentStatusOption[];
 };
 
 export type CreateEquipmentPayload = {
-  id?: number;
+  visibleId?: number;
   name: string;
   manufacturerId?: number | null;
   model?: string | null;
@@ -30,7 +30,7 @@ export type CreateEquipmentPayload = {
   manufactureYear?: number | null;
   commissioningDate?: string | null;
   sectionId: number;
-  responsibleEmployeeId?: number | null;
+  responsibleEmployeeId: number;
   status: string;
   operationText?: string | null;
   notes?: string | null;

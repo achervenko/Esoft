@@ -1,7 +1,7 @@
 import { EquipmentStatus } from '@prisma/client';
 
 export class CreateEquipmentDto {
-  id?: number;
+  visibleId?: number;
   name?: string;
   manufacturerId?: number | null;
   model?: string | null;
@@ -12,7 +12,7 @@ export class CreateEquipmentDto {
   manufactureYear?: number | null;
   commissioningDate?: string | null;
   sectionId?: number;
-  responsibleEmployeeId?: number | null;
+  responsibleEmployeeId?: number;
   status?: EquipmentStatus;
   operationText?: string | null;
   notes?: string | null;

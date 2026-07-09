@@ -6,7 +6,7 @@ import { CreateEquipmentDto } from './dto/create-equipment.dto';
 
 const EQUIPMENT_IDENTITY_TARGET = {
   tableName: 'equipment',
-  columnName: 'id',
+  columnName: 'visible_id',
 };
 
 @Injectable()
@@ -17,7 +17,7 @@ export class EquipmentService {
   ) {}
 
   async getCreateOptions() {
-    const [manufacturers, countries, sections, employees, nextId] =
+    const [manufacturers, countries, sections, employees, nextVisibleId] =
       await Promise.all([
         this.prisma.manufacturer.findMany({ orderBy: { name: 'asc' } }),
         this.prisma.country.findMany({ orderBy: { name: 'asc' } }),
@@ -36,7 +36,7 @@ export class EquipmentService {
       ]);
 
     return {
-      nextId,
+      nextVisibleId,
       manufacturers: manufacturers.map(({ id, name }) => ({ id, name })),
       countries: countries.map(({ id, name }) => ({ id, name })),
       sections: sections.map((section) => ({
@@ -45,11 +45,7 @@ export class EquipmentService {
       })),
       employees: employees.map((employee) => ({
         id: employee.id,
-        name: [
-          employee.lastName,
-          employee.firstName,
-          employee.middleName,
-        ]
+        name: [employee.lastName, employee.firstName, employee.middleName]
           .filter(Boolean)
           .join(' '),
         position: employee.position,
@@ -88,20 +84,22 @@ export class EquipmentService {
       throw new BadRequestException('Статус обязателен.');
     }
 
-    if (dto.id) {
+    if (dto.visibleId) {
       const existingEquipment = await this.prisma.equipment.findUnique({
-        where: { id: dto.id },
+        where: { visibleId: dto.visibleId },
         select: { id: true },
       });
 
       if (existingEquipment) {
-        throw new BadRequestException('Оборудование с таким ID уже существует.');
+        throw new BadRequestException(
+          'Оборудование с таким ID уже существует.',
+        );
       }
     }
 
     const equipment = await this.prisma.equipment.create({
       data: {
-        ...(dto.id ? { id: dto.id } : {}),
+        ...(dto.visibleId ? { visibleId: dto.visibleId } : {}),
         name,
         inventoryNumber,
         serialNumber: this.toSerialNumber(dto.serialNumber),
@@ -119,7 +117,7 @@ export class EquipmentService {
       },
     });
 
-    if (dto.id) {
+    if (dto.visibleId) {
       await this.numbering.syncSequence(EQUIPMENT_IDENTITY_TARGET);
     }
 
@@ -156,5 +154,4 @@ export class EquipmentService {
     const [, day, month, year] = match;
     return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
   }
-
 }

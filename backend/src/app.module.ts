@@ -7,7 +7,11 @@ import { EquipmentModule } from './equipment/equipment.module';
 import { PrismaService } from './prisma/prisma.service';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), AppAuthModule, EquipmentModule],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    AppAuthModule,
+    EquipmentModule,
+  ],
   controllers: [AppController],
   providers: [AppService, PrismaService],
 })
