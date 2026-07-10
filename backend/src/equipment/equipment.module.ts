@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { NumberingModule } from '../application/numbering/numbering.module';
+import { AuditModule } from '../audit/audit.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { EquipmentController } from './equipment.controller';
 import { EquipmentService } from './equipment.service';
 
 @Module({
-  imports: [NumberingModule],
+  imports: [AuditModule, NumberingModule],
   controllers: [EquipmentController],
   providers: [EquipmentService, PrismaService],
 })

@@ -6,6 +6,8 @@ import {
   ParseIntPipe,
   Post,
 } from '@nestjs/common';
+import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
+import type { Auth } from '../auth/auth.config';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { EquipmentService } from './equipment.service';
 
@@ -29,7 +31,10 @@ export class EquipmentController {
   }
 
   @Post()
-  create(@Body() dto: CreateEquipmentDto) {
-    return this.equipmentService.create(dto);
+  create(
+    @Body() dto: CreateEquipmentDto,
+    @Session() session: UserSession<Auth>,
+  ) {
+    return this.equipmentService.create(dto, session.user.id);
   }
 }

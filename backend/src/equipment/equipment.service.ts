@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { EquipmentStatus } from '@prisma/client';
 import { IdentityNumberingService } from '../application/numbering/identity-numbering.service';
+import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 
@@ -16,6 +17,7 @@ const EQUIPMENT_IDENTITY_TARGET = {
 @Injectable()
 export class EquipmentService {
   constructor(
+    private readonly auditLog: AuditLogService,
     private readonly numbering: IdentityNumberingService,
     private readonly prisma: PrismaService,
   ) {}
@@ -133,7 +135,7 @@ export class EquipmentService {
     };
   }
 
-  async create(dto: CreateEquipmentDto) {
+  async create(dto: CreateEquipmentDto, userId?: string | null) {
     const name = dto.name?.trim();
     const inventoryNumber = dto.inventoryNumber?.trim();
 
@@ -200,6 +202,8 @@ export class EquipmentService {
     if (dto.visibleId) {
       await this.numbering.syncSequence(EQUIPMENT_IDENTITY_TARGET);
     }
+
+    await this.auditLog.logEquipmentCreated(equipment.id, userId);
 
     return equipment;
   }

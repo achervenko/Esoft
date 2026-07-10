@@ -22,20 +22,24 @@ enum AuditModule {
 
 model AuditLog {
   id         Int         @id @default(autoincrement())
-  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdAt  DateTime    @default(dbgenerated("timezone('Europe/Moscow'::text, now())")) @map("created_at") @db.Timestamp(6)
+  timeZone   String      @default("Europe/Moscow (UTC+03:00)") @map("time_zone") @db.VarChar(32)
   userId     String?     @map("user_id")
   user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull, map: "fk_audit_log_user")
   module     AuditModule @default(EQUIPMENT)
   action     AuditAction
   entityType String      @map("entity_type") @db.VarChar(64)
-  entityId   String?     @map("entity_id")
-  summary    String
-  changes    Json?
+  entityId   Int?        @map("entity_id")
+  fieldName  String?     @map("field_name") @db.VarChar(128)
+  oldValue   String?     @map("old_value") @db.Text
+  newValue   String?     @map("new_value") @db.Text
 
   @@index([createdAt(sort: Desc)], map: "idx_audit_log_created_at")
   @@index([userId], map: "idx_audit_log_user_id")
   @@index([module], map: "idx_audit_log_module")
   @@index([entityType, entityId], map: "idx_audit_log_entity")
+  @@index([entityId], map: "idx_audit_log_entity_id")
+  @@index([fieldName], map: "idx_audit_log_field_name")
   @@index([action], map: "idx_audit_log_action")
   @@map("audit_log")
 }
