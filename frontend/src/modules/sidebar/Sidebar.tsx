@@ -1,10 +1,4 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-  LogOut,
-  PanelLeftClose,
-  PanelLeftOpen,
-} from 'lucide-react';
+import { ChevronRight, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { DEFAULT_AUTH_ROUTE, getHashRoute } from '../../lib/hash-router';
 import type { EmployeeProfile } from '../../shared/api/user-profile-api';
@@ -83,6 +77,13 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
       }`}
     >
       <div className="sidebar-header">
+        <a className="sidebar-brand" href="#/dashboard" onClick={closeMobileSidebar}>
+          <span className="sidebar-brand-mark">
+            <img alt="" aria-hidden="true" src="/favicon.svg" />
+          </span>
+          <span className="sidebar-brand-text">Esoft</span>
+        </a>
+
         <button
           aria-label={isCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
           className="sidebar-icon-button"
@@ -151,7 +152,6 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
         <button className="sidebar-logout" onClick={onLogout} type="button">
           <LogOut aria-hidden="true" size={19} />
           <span className="sidebar-logout-text">Выйти</span>
-          <ChevronLeft aria-hidden="true" className="logout-arrow" size={15} />
         </button>
       </div>
     </aside>
