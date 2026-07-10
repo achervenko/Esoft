@@ -1,9 +1,14 @@
 import { authClient } from '../../lib/auth-client';
+import {
+  getUserProfile,
+  type EmployeeProfile,
+} from './user-profile-api';
 
 export type SessionUser = {
   displayUsername?: string | null;
-  firstName?: string | null;
-  middleName?: string | null;
+  email?: string | null;
+  employee?: EmployeeProfile | null;
+  id?: string;
   name?: string | null;
   role?: string | null;
   username?: string | null;
@@ -25,7 +30,17 @@ export async function getAuthenticatedUser() {
     return null;
   }
 
-  return (response.data.user ?? null) as SessionUser | null;
+  const sessionUser = (response.data.user ?? null) as SessionUser | null;
+
+  if (!sessionUser?.id) {
+    return sessionUser;
+  }
+
+  try {
+    return await getUserProfile(sessionUser.id);
+  } catch {
+    return sessionUser;
+  }
 }
 
 export async function waitForAuthenticatedUser() {

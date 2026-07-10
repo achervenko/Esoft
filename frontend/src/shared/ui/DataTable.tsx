@@ -1,4 +1,5 @@
 import { Table } from '@chakra-ui/react';
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { sortDataTableRows } from './data-table-model';
 
@@ -7,7 +8,7 @@ export type DataTableSortDirection = 'asc' | 'desc';
 export type DataTableColumn<Row, SortKey extends string> = {
   key: SortKey;
   label: string;
-  render: (row: Row) => React.ReactNode;
+  render: (row: Row) => ReactNode;
   sortValue?: (row: Row) => number | string;
 };
 
@@ -18,6 +19,7 @@ type DataTableProps<Row, SortKey extends string> = {
     key: SortKey;
   };
   getRowKey: (row: Row) => string | number;
+  onRowDoubleClick?: (row: Row) => void;
   rows: Row[];
 };
 
@@ -25,6 +27,7 @@ export function DataTable<Row, SortKey extends string>({
   columns,
   defaultSort,
   getRowKey,
+  onRowDoubleClick,
   rows,
 }: DataTableProps<Row, SortKey>) {
   const [sort, setSort] = useState(defaultSort);
@@ -77,7 +80,11 @@ export function DataTable<Row, SortKey extends string>({
       </thead>
       <tbody>
         {sortedRows.map((row) => (
-          <tr key={getRowKey(row)}>
+          <tr
+            className={onRowDoubleClick ? 'data-table-row-clickable' : undefined}
+            key={getRowKey(row)}
+            onDoubleClick={() => onRowDoubleClick?.(row)}
+          >
             {columns.map((column) => (
               <td key={column.key}>{column.render(row)}</td>
             ))}

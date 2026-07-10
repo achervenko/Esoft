@@ -4,7 +4,7 @@ model Employee {
   firstName            String        @map("first_name") @db.VarChar(64)
   middleName           String?       @map("middle_name") @db.VarChar(64)
   position             String        @db.VarChar(64)
-  employeeUser         EmployeeUser?
+  employeeUsers        EmployeeUser[]
   responsibleEquipment Equipment[]   @relation("EquipmentResponsibleEmployee")
 
   @@index([lastName, firstName, middleName], map: "idx_employees_full_name")
@@ -12,11 +12,12 @@ model Employee {
 }
 
 model EmployeeUser {
-  employeeId Int      @unique(map: "uq_employee_users_employee") @map("employee_id")
   userId     String   @unique(map: "uq_employee_users_user") @map("user_id")
+  employeeId Int      @map("employee_id")
   employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([employeeId, userId])
+  @@index([employeeId], map: "idx_employee_users_employee_id")
   @@map("employee_users")
 }

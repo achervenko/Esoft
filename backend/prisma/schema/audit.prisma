@@ -14,11 +14,18 @@ enum AuditAction {
   @@map("audit_action")
 }
 
+enum AuditModule {
+  EQUIPMENT @map("equipment")
+
+  @@map("audit_module")
+}
+
 model AuditLog {
   id         Int         @id @default(autoincrement())
   createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
   userId     String?     @map("user_id")
   user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull, map: "fk_audit_log_user")
+  module     AuditModule @default(EQUIPMENT)
   action     AuditAction
   entityType String      @map("entity_type") @db.VarChar(64)
   entityId   String?     @map("entity_id")
@@ -27,6 +34,7 @@ model AuditLog {
 
   @@index([createdAt(sort: Desc)], map: "idx_audit_log_created_at")
   @@index([userId], map: "idx_audit_log_user_id")
+  @@index([module], map: "idx_audit_log_module")
   @@index([entityType, entityId], map: "idx_audit_log_entity")
   @@index([action], map: "idx_audit_log_action")
   @@map("audit_log")

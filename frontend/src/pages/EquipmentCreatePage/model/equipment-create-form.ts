@@ -22,6 +22,7 @@ export type EquipmentCreateFormState = {
   countryId: number | null;
   manufactureYear: string;
   commissioningDate: string;
+  issueDate: string;
   sectionId: number | null;
   responsibleEmployeeId: number | null;
   status: string;
@@ -47,6 +48,7 @@ export const initialEquipmentCreateFormState: EquipmentCreateFormState = {
   countryId: null,
   manufactureYear: '',
   commissioningDate: '',
+  issueDate: '',
   sectionId: null,
   responsibleEmployeeId: null,
   status: '',
@@ -105,6 +107,17 @@ const equipmentCreateValidationRules: ValidationRule<EquipmentCreateFormState>[]
       trigger: (form) => isInvalidRuDate(form.commissioningDate),
     },
     {
+      field: 'issueDate',
+      message: 'Укажите дату выдачи при назначении ответственного.',
+      trigger: (form) =>
+        Boolean(form.responsibleEmployeeId) && isBlank(form.issueDate),
+    },
+    {
+      field: 'issueDate',
+      message: 'Введите реальную дату выдачи в формате ДД.ММ.ГГГГ.',
+      trigger: (form) => isInvalidRuDate(form.issueDate),
+    },
+    {
       field: 'sectionId',
       message: 'Выберите местонахождение из списка.',
       trigger: (form) => !form.sectionId,
@@ -152,6 +165,7 @@ export function toEquipmentCreatePayload(
     countryId: form.countryId,
     manufactureYear: toOptionalNumber(form.manufactureYear) ?? null,
     commissioningDate: toOptionalText(form.commissioningDate),
+    issueDate: toOptionalText(form.issueDate),
     sectionId: toRequiredNumber(form.sectionId, 'Местонахождение'),
     responsibleEmployeeId: toRequiredNumber(
       form.responsibleEmployeeId,

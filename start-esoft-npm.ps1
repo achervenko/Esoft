@@ -69,6 +69,65 @@ function Wait-HttpReady {
   return $false
 }
 
+function Get-LocalLanIp {
+  $physicalAdapters = @(Get-NetAdapter -ErrorAction SilentlyContinue |
+    Where-Object {
+      $_.Status -eq 'Up' -and
+      $_.Virtual -eq $false -and
+      $_.Name -notmatch 'Bluetooth'
+    } |
+    Select-Object -ExpandProperty ifIndex)
+
+  $addresses = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+    Where-Object {
+      $physicalAdapters -contains $_.InterfaceIndex -and
+      $_.IPAddress -notlike '127.*' -and
+      $_.IPAddress -notlike '169.254.*' -and
+      $_.PrefixOrigin -ne 'WellKnown'
+    } |
+    Sort-Object -Property InterfaceAlias |
+    Select-Object -ExpandProperty IPAddress)
+
+  if ($addresses.Count -gt 0) {
+    return $addresses[0]
+  }
+
+  return '127.0.0.1'
+}
+
+function Ensure-PostgresContainer {
+  try {
+    docker info | Out-Null
+  } catch {
+    $dockerDesktop = 'C:\Program Files\Docker\Docker\Docker Desktop.exe'
+
+    if (-not (Test-Path $dockerDesktop)) {
+      Write-LaunchLog 'Docker Desktop was not found. Skipping PostgreSQL container startup.'
+      return
+    }
+
+    Write-LaunchLog 'Starting Docker Desktop.'
+    Start-Process -FilePath $dockerDesktop -WindowStyle Hidden
+
+    $deadline = (Get-Date).AddSeconds(90)
+    while ((Get-Date) -lt $deadline) {
+      try {
+        docker info | Out-Null
+        break
+      } catch {
+        Start-Sleep -Seconds 3
+      }
+    }
+  }
+
+  try {
+    docker compose up -d postgres | Out-Null
+    Write-LaunchLog 'PostgreSQL container is ready.'
+  } catch {
+    Write-LaunchLog ('PostgreSQL container was not started: ' + $_.Exception.Message)
+  }
+}
+
 New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
 Set-Content -Path $launcherLog -Value '' -Encoding UTF8
 Set-Location $projectRoot
@@ -78,22 +137,26 @@ trap {
   throw
 }
 
+$localIp = Get-LocalLanIp
 $backendUrl = "http://127.0.0.1:$backendPort"
-$frontendUrl = "http://127.0.0.1:$frontendPort"
+$frontendLocalUrl = "http://127.0.0.1:$frontendPort"
+$frontendLanUrl = "http://$localIp`:$frontendPort"
 $backendLog = Join-Path $logsDir 'backend.log'
 $frontendLog = Join-Path $logsDir 'frontend.log'
 
 Write-LaunchLog 'Starting simple npm launcher.'
-Write-LaunchLog 'This launcher does not start Docker or PostgreSQL. DATABASE_URL must already be available.'
+Write-LaunchLog 'This launcher starts PostgreSQL container when Docker Desktop is available.'
+Write-LaunchLog "Detected LAN frontend URL: $frontendLanUrl"
 
 Stop-OldEsoftProcesses
 Write-LaunchLog 'Old Esoft node processes stopped.'
+Ensure-PostgresContainer
 
 Start-Process -FilePath 'cmd.exe' -WindowStyle Hidden -WorkingDirectory (Join-Path $projectRoot 'backend') -ArgumentList @(
   '/d',
   '/s',
   '/c',
-  "npm.cmd run start > `"$backendLog`" 2>&1"
+  "set FRONTEND_URL=$frontendLocalUrl&& set BETTER_AUTH_URL=$backendUrl&& npm.cmd run start > `"$backendLog`" 2>&1"
 )
 
 if (-not (Wait-HttpReady -Url "$backendUrl/" -TimeoutSeconds 60)) {
@@ -107,13 +170,15 @@ Start-Process -FilePath 'cmd.exe' -WindowStyle Hidden -WorkingDirectory (Join-Pa
   '/d',
   '/s',
   '/c',
-  "npm.cmd run dev -- --host 127.0.0.1 > `"$frontendLog`" 2>&1"
+  "npm.cmd run dev -- --host 0.0.0.0 > `"$frontendLog`" 2>&1"
 )
 
-if (-not (Wait-HttpReady -Url "$frontendUrl/" -TimeoutSeconds 60)) {
+if (-not (Wait-HttpReady -Url "$frontendLocalUrl/" -TimeoutSeconds 60)) {
   Write-LaunchLog 'Frontend did not start.'
   throw "Frontend did not start. Check $frontendLog."
 }
 
 Write-LaunchLog 'Frontend is ready. Opening browser.'
-Start-Process "$frontendUrl/#/login"
+Write-LaunchLog "Open from this computer: $frontendLocalUrl/#/login"
+Write-LaunchLog "Open from phone in the same Wi-Fi/LAN: $frontendLanUrl/#/login"
+Start-Process "$frontendLocalUrl/#/login"

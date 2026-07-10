@@ -1,0 +1,38 @@
+.equipment-status-badge {
+  width: max-content;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #eef2ff;
+  color: #303744;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.status-ACTIVE {
+  background: #edfdf3;
+  color: #087443;
+}
+
+.status-RESERVE {
+  background: #eef2ff;
+  color: #3446a8;
+}
+
+.status-REPAIR {
+  background: #fff3e6;
+  color: #a24f00;
+}
+
+.status-MAINTENANCE {
+  background: #eef7ff;
+  color: #075985;
+}
+
+.status-WRITTEN_OFF {
+  background: #f2f4f7;
+  color: #596273;
+}

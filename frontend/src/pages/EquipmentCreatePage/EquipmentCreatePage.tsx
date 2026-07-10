@@ -120,6 +120,15 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
           visibleId: requestError.message,
         }));
       }
+      if (
+        requestError instanceof Error &&
+        requestError.message.toLowerCase().includes('дата выдачи')
+      ) {
+        setFieldErrors((currentErrors) => ({
+          ...currentErrors,
+          issueDate: requestError.message,
+        }));
+      }
     } finally {
       setIsSubmitting(false);
     }

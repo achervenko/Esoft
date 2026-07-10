@@ -1,6 +1,13 @@
-import { ChevronLeft, ChevronRight, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { DEFAULT_AUTH_ROUTE, getHashRoute } from '../../lib/hash-router';
+import type { EmployeeProfile } from '../../shared/api/user-profile-api';
 import { sidebarSections } from './sidebarItems';
 import { useMobileSidebar } from './useMobileSidebar';
 import './Sidebar.css';
@@ -9,8 +16,7 @@ type SidebarProps = {
   onLogout: () => void;
   user: {
     displayUsername?: string | null;
-    firstName?: string | null;
-    middleName?: string | null;
+    employee?: EmployeeProfile | null;
     name?: string | null;
     username?: string | null;
   } | null;
@@ -21,21 +27,21 @@ function getUserDisplayName(user: SidebarProps['user']) {
     return 'Пользователь';
   }
 
-  if (user.firstName || user.middleName) {
-    return [user.firstName, user.middleName].filter(Boolean).join(' ');
-  }
-
-  const nameParts = user.name?.trim().split(/\s+/).filter(Boolean) ?? [];
-
-  if (nameParts.length >= 3) {
-    return `${nameParts[1]} ${nameParts[2]}`;
-  }
-
-  return user.name || user.displayUsername || user.username || 'Пользователь';
+  return (
+    user.employee?.displayName ||
+    user.displayUsername ||
+    user.username ||
+    user.name ||
+    'Пользователь'
+  );
 }
 
 function getUserInitial(displayName: string) {
   return displayName.trim().charAt(0).toUpperCase() || 'П';
+}
+
+function getAccountLabel(user: SidebarProps['user']) {
+  return user?.username || user?.displayUsername || user?.name || 'admin';
 }
 
 export function Sidebar({ onLogout, user }: SidebarProps) {
@@ -44,7 +50,7 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
   const [activeHref, setActiveHref] = useState(getHashRoute() || DEFAULT_AUTH_ROUTE);
   const isMobileSidebar = useMobileSidebar();
   const displayName = getUserDisplayName(user);
-  const username = user?.username || user?.displayUsername || 'admin';
+  const username = getAccountLabel(user);
 
   useEffect(() => {
     const handleHashChange = () => setActiveHref(getHashRoute());
@@ -103,17 +109,23 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
 
                 return (
                   <li key={item.href}>
-                      <a
-                        aria-current={isActive ? 'page' : undefined}
-                        className={isActive ? 'active' : undefined}
-                        href={item.href}
-                        onClick={closeMobileSidebar}
-                        title={item.label}
-                      >
-                        <Icon aria-hidden="true" size={20} strokeWidth={1.9} />
-                        <span className="sidebar-link-text">{item.label}</span>
-                        {isActive ? <ChevronRight aria-hidden="true" className="active-arrow" size={16} /> : null}
-                      </a>
+                    <a
+                      aria-current={isActive ? 'page' : undefined}
+                      className={isActive ? 'active' : undefined}
+                      href={item.href}
+                      onClick={closeMobileSidebar}
+                      title={item.label}
+                    >
+                      <Icon aria-hidden="true" size={20} strokeWidth={1.9} />
+                      <span className="sidebar-link-text">{item.label}</span>
+                      {isActive ? (
+                        <ChevronRight
+                          aria-hidden="true"
+                          className="active-arrow"
+                          size={16}
+                        />
+                      ) : null}
+                    </a>
                   </li>
                 );
               })}
@@ -123,7 +135,12 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
       </nav>
 
       <div className="sidebar-footer">
-        <a className="sidebar-user" href="#/profile" onClick={closeMobileSidebar} title="Настройки пользователя">
+        <a
+          className="sidebar-user"
+          href="#/profile"
+          onClick={closeMobileSidebar}
+          title="Настройки пользователя"
+        >
           <span className="sidebar-user-avatar">{getUserInitial(displayName)}</span>
           <span className="sidebar-user-info">
             <strong>{displayName}</strong>

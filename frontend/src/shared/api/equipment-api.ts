@@ -29,6 +29,7 @@ export type CreateEquipmentPayload = {
   countryId?: number | null;
   manufactureYear?: number | null;
   commissioningDate?: string | null;
+  issueDate?: string | null;
   sectionId: number;
   responsibleEmployeeId: number;
   status: string;
@@ -43,6 +44,28 @@ export type EquipmentRegistryItem = {
   model: string;
   name: string;
   serialNumber: string | null;
+  status: string;
+  statusLabel: string;
+  visibleId: number;
+};
+
+export type EquipmentCard = {
+  commissioningDate: string | null;
+  country: string;
+  id: number;
+  inventoryNumber: string;
+  issueDate: string | null;
+  location: string;
+  manufacturer: string;
+  manufactureYear: number | null;
+  model: string;
+  name: string;
+  notes: string | null;
+  operationText: string | null;
+  responsible: string;
+  responsiblePosition: string;
+  serialNumber: string | null;
+  specifications: string | null;
   status: string;
   statusLabel: string;
   visibleId: number;
@@ -74,6 +97,10 @@ export function getEquipmentCreateOptions() {
 
 export function getEquipmentRegistry() {
   return request<EquipmentRegistryItem[]>('/api/equipment');
+}
+
+export function getEquipmentCard(visibleId: number) {
+  return request<EquipmentCard>(`/api/equipment/${visibleId}`);
 }
 
 export function createEquipment(payload: CreateEquipmentPayload) {

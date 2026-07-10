@@ -191,6 +191,25 @@ export function EquipmentCreateForm({
           value={form.responsibleEmployeeId}
         />
 
+        <label className={`form-field${fieldErrors.issueDate ? ' has-error' : ''}`}>
+          <span>
+            Дата выдачи<b aria-hidden="true">*</b>
+          </span>
+          <input
+            inputMode="numeric"
+            onChange={(event) =>
+              onChange('issueDate', formatRuDate(event.target.value))
+            }
+            onFocus={() => onFieldFocus('issueDate')}
+            placeholder="ДД.ММ.ГГГГ"
+            type="text"
+            value={form.issueDate}
+          />
+          {fieldErrors.issueDate ? (
+            <small className="field-error">{fieldErrors.issueDate}</small>
+          ) : null}
+        </label>
+
         <SelectDropdown
           label="Статус"
           error={fieldErrors.status}

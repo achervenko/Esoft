@@ -1,0 +1,19 @@
+.equipment-view-page {
+  display: grid;
+  gap: 18px;
+}
+
+.equipment-back-link {
+  width: max-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #303744;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.equipment-back-link:hover {
+  color: #111111;
+}

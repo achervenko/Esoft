@@ -11,6 +11,7 @@ export class CreateEquipmentDto {
   countryId?: number | null;
   manufactureYear?: number | null;
   commissioningDate?: string | null;
+  issueDate?: string | null;
   sectionId?: number;
   responsibleEmployeeId?: number;
   status?: EquipmentStatus;

@@ -12,10 +12,6 @@ model User {
   banned                  Boolean?           @default(false)
   banReason               String?
   banExpires              DateTime?
-  lastName                String?            @map("last_name") @db.VarChar(64)
-  firstName               String?            @map("first_name") @db.VarChar(64)
-  middleName              String?            @map("middle_name") @db.VarChar(64)
-  position                String?            @db.VarChar(64)
   lastLoginAt             DateTime?          @map("last_login_at")
   sessions                Session[]
   accounts                Account[]

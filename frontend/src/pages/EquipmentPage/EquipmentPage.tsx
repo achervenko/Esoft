@@ -50,6 +50,10 @@ export function EquipmentPage({ userRole }: EquipmentPageProps) {
     };
   }, []);
 
+  const openEquipmentCard = (visibleId: number) => {
+    window.location.hash = `#/equipment/${visibleId}`;
+  };
+
   return (
     <div className="equipment-page">
       <header className="equipment-page-header">
@@ -68,7 +72,12 @@ export function EquipmentPage({ userRole }: EquipmentPageProps) {
           <p className="equipment-state-message">Загрузка реестра...</p>
         ) : null}
         {error ? <p className="equipment-state-message error">{error}</p> : null}
-        {!isLoading && !error ? <EquipmentRegistryTable items={items} /> : null}
+        {!isLoading && !error ? (
+          <EquipmentRegistryTable
+            items={items}
+            onOpenEquipment={openEquipmentCard}
+          />
+        ) : null}
       </section>
     </div>
   );

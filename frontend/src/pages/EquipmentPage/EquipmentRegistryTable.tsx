@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { EquipmentStatusBadge } from '../../modules/equipment-status';
 import type { EquipmentRegistryItem } from '../../shared/api/equipment-api';
 import {
   DataTable,
@@ -9,6 +10,7 @@ import { sortDataTableRows } from '../../shared/ui/data-table-model';
 
 type EquipmentRegistryTableProps = {
   items: EquipmentRegistryItem[];
+  onOpenEquipment: (visibleId: number) => void;
 };
 
 type EquipmentSortKey =
@@ -63,9 +65,7 @@ const equipmentColumns: Array<
     key: 'statusLabel',
     label: 'Статус',
     render: (item) => (
-      <span className={`equipment-status status-${item.status}`}>
-        {item.statusLabel}
-      </span>
+      <EquipmentStatusBadge label={item.statusLabel} status={item.status} />
     ),
     sortValue: (item) => item.statusLabel,
   },
@@ -76,7 +76,10 @@ const defaultEquipmentSort = {
   key: 'visibleId' as EquipmentSortKey,
 };
 
-export function EquipmentRegistryTable({ items }: EquipmentRegistryTableProps) {
+export function EquipmentRegistryTable({
+  items,
+  onOpenEquipment,
+}: EquipmentRegistryTableProps) {
   const [mobileSort] = useState(defaultEquipmentSort);
   const sortedMobileItems = useMemo(
     () => sortDataTableRows(items, equipmentColumns, mobileSort),
@@ -87,7 +90,9 @@ export function EquipmentRegistryTable({ items }: EquipmentRegistryTableProps) {
     return (
       <div className="equipment-empty-state">
         <h2>Оборудование пока не добавлено</h2>
-        <p>После создания первой карточки она появится в реестре.</p>
+        <p>
+          После создания первой карточки она появится в реестре.
+        </p>
       </div>
     );
   }
@@ -98,12 +103,17 @@ export function EquipmentRegistryTable({ items }: EquipmentRegistryTableProps) {
         columns={equipmentColumns}
         defaultSort={defaultEquipmentSort}
         getRowKey={(item) => item.id}
+        onRowDoubleClick={(item) => onOpenEquipment(item.visibleId)}
         rows={items}
       />
 
       <div className="equipment-registry-cards" aria-label="Реестр оборудования">
         {sortedMobileItems.map((item) => (
-          <article className="equipment-registry-card" key={item.id}>
+          <article
+            className="equipment-registry-card"
+            key={item.id}
+            onDoubleClick={() => onOpenEquipment(item.visibleId)}
+          >
             <span className="equipment-card-id">ID {item.visibleId}</span>
             <h2>{item.name}</h2>
             <dl>
@@ -126,9 +136,10 @@ export function EquipmentRegistryTable({ items }: EquipmentRegistryTableProps) {
               <div>
                 <dt>Статус</dt>
                 <dd>
-                  <span className={`equipment-status status-${item.status}`}>
-                    {item.statusLabel}
-                  </span>
+                  <EquipmentStatusBadge
+                    label={item.statusLabel}
+                    status={item.status}
+                  />
                 </dd>
               </div>
             </dl>

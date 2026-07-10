@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { EquipmentStatus } from '@prisma/client';
 import { IdentityNumberingService } from '../application/numbering/identity-numbering.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -81,6 +85,54 @@ export class EquipmentService {
     };
   }
 
+  async findOneByVisibleId(visibleId: number) {
+    const equipment = await this.prisma.equipment.findUnique({
+      where: { visibleId },
+      include: {
+        country: true,
+        manufacturer: true,
+        responsibleEmployee: true,
+        section: {
+          include: {
+            workshop: true,
+          },
+        },
+      },
+    });
+
+    if (!equipment) {
+      throw new NotFoundException('Оборудование не найдено.');
+    }
+
+    return {
+      id: equipment.id,
+      visibleId: equipment.visibleId,
+      name: equipment.name,
+      inventoryNumber: equipment.inventoryNumber,
+      serialNumber: equipment.serialNumber,
+      manufacturer: equipment.manufacturer?.name ?? 'Не указан',
+      model: equipment.model ?? 'Не указана',
+      specifications: equipment.specifications,
+      country: equipment.country?.name ?? 'Не указана',
+      manufactureYear: equipment.manufactureYear,
+      commissioningDate: equipment.commissioningDate,
+      issueDate: equipment.issueDate,
+      location: `${equipment.section.workshop.name} / ${equipment.section.name}`,
+      responsible: [
+        equipment.responsibleEmployee.lastName,
+        equipment.responsibleEmployee.firstName,
+        equipment.responsibleEmployee.middleName,
+      ]
+        .filter(Boolean)
+        .join(' '),
+      responsiblePosition: equipment.responsibleEmployee.position,
+      status: equipment.status,
+      statusLabel: this.getStatusLabel(equipment.status),
+      operationText: equipment.operationText,
+      notes: equipment.notes,
+    };
+  }
+
   async create(dto: CreateEquipmentDto) {
     const name = dto.name?.trim();
     const inventoryNumber = dto.inventoryNumber?.trim();
@@ -99,6 +151,12 @@ export class EquipmentService {
 
     if (!dto.responsibleEmployeeId) {
       throw new BadRequestException('Ответственный обязателен.');
+    }
+
+    if (dto.responsibleEmployeeId && !dto.issueDate?.trim()) {
+      throw new BadRequestException(
+        'Дата выдачи обязательна при назначении ответственного.',
+      );
     }
 
     if (!dto.status) {
@@ -130,6 +188,7 @@ export class EquipmentService {
         countryId: this.toNullableNumber(dto.countryId),
         manufactureYear: this.toNullableNumber(dto.manufactureYear),
         commissioningDate: this.parseRuDate(dto.commissioningDate),
+        issueDate: this.parseRuDate(dto.issueDate),
         sectionId: dto.sectionId,
         responsibleEmployeeId: dto.responsibleEmployeeId,
         status: dto.status,

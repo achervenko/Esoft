@@ -1,0 +1,26 @@
+.dashboard-page {
+  display: grid;
+  gap: 20px;
+}
+
+.dashboard-page-header h1 {
+  margin: 0;
+  color: #15171c;
+  font-size: 30px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.dashboard-empty-state {
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 22px;
+  background: #ffffff;
+}
+
+.dashboard-empty-state p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 650;
+}
