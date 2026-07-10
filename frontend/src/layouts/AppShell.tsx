@@ -1,6 +1,7 @@
 import { Sidebar } from '../modules/sidebar';
 import { DashboardPage } from '../pages/DashboardPage';
 import { EquipmentCreatePage } from '../pages/EquipmentCreatePage';
+import { EquipmentEditPage } from '../pages/EquipmentEditPage';
 import { EquipmentPage } from '../pages/EquipmentPage';
 import { EquipmentViewPage } from '../pages/EquipmentViewPage';
 import type { EmployeeProfile } from '../shared/api/user-profile-api';
@@ -24,6 +25,8 @@ export function AppShell({ onLogout, route, user }: AppShellProps) {
   const isDashboardRoute = route === '#/dashboard';
   const isEquipmentRoute = route === '#/equipment';
   const isEquipmentCreateRoute = route === '#/equipment/create';
+  const equipmentEditMatch = route.match(/^#\/equipment\/(\d+)\/edit$/);
+  const equipmentEditId = equipmentEditMatch ? Number(equipmentEditMatch[1]) : null;
   const equipmentViewMatch = route.match(/^#\/equipment\/(\d+)$/);
   const equipmentViewId = equipmentViewMatch ? Number(equipmentViewMatch[1]) : null;
 
@@ -35,7 +38,18 @@ export function AppShell({ onLogout, route, user }: AppShellProps) {
         {isDashboardRoute ? <DashboardPage /> : null}
         {isEquipmentRoute ? <EquipmentPage userRole={user?.role ?? null} /> : null}
         {isEquipmentCreateRoute ? <EquipmentCreatePage userRole={user?.role ?? null} /> : null}
-        {equipmentViewId !== null ? <EquipmentViewPage visibleId={equipmentViewId} /> : null}
+        {equipmentEditId !== null ? (
+          <EquipmentEditPage
+            userRole={user?.role ?? null}
+            visibleId={equipmentEditId}
+          />
+        ) : null}
+        {equipmentViewId !== null ? (
+          <EquipmentViewPage
+            userRole={user?.role ?? null}
+            visibleId={equipmentViewId}
+          />
+        ) : null}
       </section>
     </main>
   );

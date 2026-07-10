@@ -37,6 +37,8 @@ export type CreateEquipmentPayload = {
   notes?: string | null;
 };
 
+export type UpdateEquipmentPayload = CreateEquipmentPayload;
+
 export type EquipmentRegistryItem = {
   id: number;
   inventoryNumber: string;
@@ -51,11 +53,13 @@ export type EquipmentRegistryItem = {
 
 export type EquipmentCard = {
   commissioningDate: string | null;
+  countryId: number | null;
   country: string;
   id: number;
   inventoryNumber: string;
   issueDate: string | null;
   location: string;
+  manufacturerId: number | null;
   manufacturer: string;
   manufactureYear: number | null;
   model: string;
@@ -63,7 +67,9 @@ export type EquipmentCard = {
   notes: string | null;
   operationText: string | null;
   responsible: string;
+  responsibleEmployeeId: number;
   responsiblePosition: string;
+  sectionId: number;
   serialNumber: string | null;
   specifications: string | null;
   status: string;
@@ -107,5 +113,15 @@ export function createEquipment(payload: CreateEquipmentPayload) {
   return request('/api/equipment', {
     body: JSON.stringify(payload),
     method: 'POST',
+  });
+}
+
+export function updateEquipment(
+  visibleId: number,
+  payload: UpdateEquipmentPayload,
+) {
+  return request<EquipmentCard>(`/api/equipment/${visibleId}`, {
+    body: JSON.stringify(payload),
+    method: 'PUT',
   });
 }

@@ -1,4 +1,7 @@
-import type { CreateEquipmentPayload } from '../../../shared/api/equipment-api';
+import type {
+  CreateEquipmentPayload,
+  EquipmentCard,
+} from '../../../shared/api/equipment-api';
 import {
   isBlank,
   isInvalidRuDate,
@@ -177,6 +180,31 @@ export function toEquipmentCreatePayload(
   };
 }
 
+export function toEquipmentFormState(
+  equipment: EquipmentCard,
+): EquipmentCreateFormState {
+  return {
+    visibleId: String(equipment.visibleId),
+    name: equipment.name,
+    manufacturerId: equipment.manufacturerId,
+    model: equipment.model === 'Не указана' ? '' : equipment.model,
+    specifications: equipment.specifications ?? '',
+    serialNumber: equipment.serialNumber === 'б/н' ? '' : (equipment.serialNumber ?? ''),
+    inventoryNumber: equipment.inventoryNumber,
+    countryId: equipment.countryId,
+    manufactureYear: equipment.manufactureYear
+      ? String(equipment.manufactureYear)
+      : '',
+    commissioningDate: toRuDateInput(equipment.commissioningDate),
+    issueDate: toRuDateInput(equipment.issueDate),
+    sectionId: equipment.sectionId,
+    responsibleEmployeeId: equipment.responsibleEmployeeId,
+    status: equipment.status,
+    operationText: equipment.operationText ?? '',
+    notes: equipment.notes ?? '',
+  };
+}
+
 function toOptionalNumber(value: string) {
   const cleanValue = value.trim();
   return cleanValue ? Number(cleanValue) : undefined;
@@ -193,4 +221,18 @@ function toRequiredNumber(value: number | null, label: string) {
 function toOptionalText(value: string) {
   const cleanValue = value.trim();
   return cleanValue || null;
+}
+
+function toRuDateInput(value: string | null) {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return new Intl.DateTimeFormat('ru-RU').format(date);
 }

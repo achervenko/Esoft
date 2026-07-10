@@ -1,5 +1,6 @@
 import { Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { canCreateEquipment } from '../../modules/equipment-permissions';
 import {
   getEquipmentRegistry,
   type EquipmentRegistryItem,
@@ -11,16 +12,8 @@ type EquipmentPageProps = {
   userRole: string | null;
 };
 
-const rolesAllowedToCreateEquipment = new Set([
-  'admin',
-  'engineer',
-  'chief_engineer',
-]);
-
 export function EquipmentPage({ userRole }: EquipmentPageProps) {
-  const canCreateEquipment = Boolean(
-    userRole && rolesAllowedToCreateEquipment.has(userRole),
-  );
+  const isCreateAllowed = canCreateEquipment(userRole);
   const [items, setItems] = useState<EquipmentRegistryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +52,7 @@ export function EquipmentPage({ userRole }: EquipmentPageProps) {
       <header className="equipment-page-header">
         <h1>Реестр оборудования</h1>
 
-        {canCreateEquipment ? (
+        {isCreateAllowed ? (
           <a className="equipment-add-button" href="#/equipment/create">
             <Plus aria-hidden="true" size={18} />
             <span>Добавить оборудование</span>

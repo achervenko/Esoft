@@ -1,31 +1,40 @@
 import { ArrowLeft } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { canCreateEquipment } from '../../modules/equipment-permissions';
+import { canEditEquipment } from '../../modules/equipment-permissions';
 import {
-  createEquipment,
+  getEquipmentCard,
   getEquipmentCreateOptions,
+  updateEquipment,
   type EquipmentCreateOptions,
 } from '../../shared/api/equipment-api';
 import { Notice } from '../../shared/ui/Notice';
 import { UnsavedChangesGuard } from '../../shared/ui/UnsavedChangesGuard';
-import { EquipmentCreateForm } from './EquipmentCreateForm';
+import { EquipmentCreateForm } from '../EquipmentCreatePage/EquipmentCreateForm';
 import {
   type EquipmentCreateFieldErrors,
   initialEquipmentCreateFormState,
   toEquipmentCreatePayload,
+  toEquipmentFormState,
   validateEquipmentCreateForm,
   type EquipmentCreateFormState,
-} from './model/equipment-create-form';
-import './EquipmentCreatePage.css';
+} from '../EquipmentCreatePage/model/equipment-create-form';
+import '../EquipmentCreatePage/EquipmentCreatePage.css';
 
-type EquipmentCreatePageProps = {
+type EquipmentEditPageProps = {
   userRole: string | null;
+  visibleId: number;
 };
 
-export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
-  const isCreateAllowed = canCreateEquipment(userRole);
+export function EquipmentEditPage({
+  userRole,
+  visibleId,
+}: EquipmentEditPageProps) {
+  const isEditAllowed = canEditEquipment(userRole);
   const [form, setForm] = useState<EquipmentCreateFormState>(
     initialEquipmentCreateFormState,
+  );
+  const [initialForm, setInitialForm] = useState<EquipmentCreateFormState | null>(
+    null,
   );
   const [options, setOptions] = useState<EquipmentCreateOptions | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,25 +42,25 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
   const [fieldErrors, setFieldErrors] = useState<EquipmentCreateFieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
   const hasUnsavedChanges = useMemo(
-    () =>
-      JSON.stringify(getCreateComparableForm(form)) !==
-      JSON.stringify(getCreateComparableForm(initialEquipmentCreateFormState)),
-    [form],
+    () => Boolean(initialForm && JSON.stringify(form) !== JSON.stringify(initialForm)),
+    [form, initialForm],
   );
 
   useEffect(() => {
     let isMounted = true;
 
-    getEquipmentCreateOptions()
-      .then((data) => {
-        if (isMounted) {
-          setOptions(data);
-          setForm((currentForm) => ({
-            ...currentForm,
-            visibleId: String(data.nextVisibleId),
-          }));
+    Promise.all([getEquipmentCreateOptions(), getEquipmentCard(visibleId)])
+      .then(([optionsData, equipment]) => {
+        if (!isMounted) {
+          return;
         }
+
+        const formState = toEquipmentFormState(equipment);
+        setOptions(optionsData);
+        setForm(formState);
+        setInitialForm(formState);
       })
       .catch((requestError: Error) => {
         if (isMounted) {
@@ -67,7 +76,7 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [visibleId]);
 
   const updateForm = <Key extends keyof EquipmentCreateFormState>(
     key: Key,
@@ -99,17 +108,24 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
     setIsSubmitting(true);
 
     try {
-      await createEquipment(toEquipmentCreatePayload(form));
+      const updatedEquipment = await updateEquipment(
+        visibleId,
+        toEquipmentCreatePayload(form),
+      );
 
-      setMessage('Оборудование добавлено.');
+      setMessage('Оборудование сохранено.');
+      const updatedForm = toEquipmentFormState(updatedEquipment);
+      setInitialForm(updatedForm);
+      setForm(updatedForm);
+
       window.setTimeout(() => {
-        window.location.hash = '#/equipment';
+        window.location.hash = `#/equipment/${updatedEquipment.visibleId}`;
       }, 500);
     } catch (requestError) {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : 'Не удалось добавить оборудование.',
+          : 'Не удалось сохранить оборудование.',
       );
       if (
         requestError instanceof Error &&
@@ -120,27 +136,18 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
           visibleId: requestError.message,
         }));
       }
-      if (
-        requestError instanceof Error &&
-        requestError.message.toLowerCase().includes('дата выдачи')
-      ) {
-        setFieldErrors((currentErrors) => ({
-          ...currentErrors,
-          issueDate: requestError.message,
-        }));
-      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (!isCreateAllowed) {
+  if (!isEditAllowed) {
     return (
       <div className="equipment-create-page">
-        <BackToRegistryLink />
-        <h1>Добавление оборудования</h1>
+        <BackToCardLink visibleId={visibleId} />
+        <h1>Редактирование оборудования</h1>
         <Notice tone="error">
-          У вашей роли нет доступа к добавлению оборудования.
+          У вашей роли нет доступа к редактированию оборудования.
         </Notice>
       </div>
     );
@@ -149,13 +156,13 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
   return (
     <div className="equipment-create-page">
       <UnsavedChangesGuard hasChanges={hasUnsavedChanges} />
-      <BackToRegistryLink />
+      <BackToCardLink visibleId={visibleId} />
 
       <header className="equipment-create-header">
-        <h1>Добавление оборудования</h1>
+        <h1>Редактирование оборудования</h1>
       </header>
 
-      {isLoading ? <Notice>Загрузка справочников...</Notice> : null}
+      {isLoading ? <Notice>Загрузка карточки оборудования...</Notice> : null}
       {error ? <Notice floating tone="error">{error}</Notice> : null}
       {message ? <Notice floating tone="success">{message}</Notice> : null}
 
@@ -168,22 +175,19 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
           onFieldFocus={handleFieldFocus}
           onSubmit={handleSubmit}
           options={options}
+          submitLabel="Сохранить изменения"
+          submittingLabel="Сохранение..."
         />
       ) : null}
     </div>
   );
 }
 
-function BackToRegistryLink() {
+function BackToCardLink({ visibleId }: { visibleId: number }) {
   return (
-    <a className="equipment-back-link" href="#/equipment">
+    <a className="equipment-back-link" href={`#/equipment/${visibleId}`}>
       <ArrowLeft aria-hidden="true" size={18} />
-      <span>К реестру</span>
+      <span>К карточке</span>
     </a>
   );
-}
-
-function getCreateComparableForm(form: EquipmentCreateFormState) {
-  const { visibleId: _visibleId, ...comparableForm } = form;
-  return comparableForm;
 }

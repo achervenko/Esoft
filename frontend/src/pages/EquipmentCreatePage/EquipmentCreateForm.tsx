@@ -19,6 +19,8 @@ type EquipmentCreateFormProps = {
   onFieldFocus: (key: keyof EquipmentCreateFormState) => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   options: EquipmentCreateOptions;
+  submitLabel?: string;
+  submittingLabel?: string;
 };
 
 export function EquipmentCreateForm({
@@ -29,6 +31,8 @@ export function EquipmentCreateForm({
   onFieldFocus,
   onSubmit,
   options,
+  submitLabel = 'Сохранить',
+  submittingLabel = 'Сохранение...',
 }: EquipmentCreateFormProps) {
   return (
     <form className="equipment-create-form" onSubmit={onSubmit}>
@@ -243,16 +247,13 @@ export function EquipmentCreateForm({
       </div>
 
       <div className="equipment-form-actions">
-        <a className="equipment-secondary-button" href="#/equipment">
-          Отмена
-        </a>
         <button
           className="equipment-submit-button"
           disabled={isSubmitting}
           type="submit"
         >
           <Save aria-hidden="true" size={18} />
-          <span>{isSubmitting ? 'Сохранение...' : 'Сохранить'}</span>
+          <span>{isSubmitting ? submittingLabel : submitLabel}</span>
         </button>
       </div>
     </form>

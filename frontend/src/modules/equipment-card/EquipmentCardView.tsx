@@ -1,3 +1,5 @@
+import { Pencil } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { EquipmentStatusBadge } from '../equipment-status';
 import type { EquipmentCard } from '../../shared/api/equipment-api';
 import {
@@ -8,12 +10,13 @@ import {
 import './EquipmentCardView.css';
 
 type EquipmentCardViewProps = {
+  canEdit?: boolean;
   equipment: EquipmentCard;
 };
 
 type EquipmentCardField = {
   label: string;
-  value: string;
+  value: ReactNode;
 };
 
 type EquipmentCardSection = {
@@ -26,7 +29,10 @@ type EquipmentCardTextBlock = {
   value: string | null;
 };
 
-export function EquipmentCardView({ equipment }: EquipmentCardViewProps) {
+export function EquipmentCardView({
+  canEdit = false,
+  equipment,
+}: EquipmentCardViewProps) {
   const sections = getEquipmentCardSections(equipment);
   const textBlocks = getEquipmentCardTextBlocks(equipment);
 
@@ -38,11 +44,15 @@ export function EquipmentCardView({ equipment }: EquipmentCardViewProps) {
             ID {equipment.visibleId} — {equipment.name}
           </h1>
         </div>
-        <EquipmentStatusBadge
-          className="equipment-card-view-status"
-          label={equipment.statusLabel}
-          status={equipment.status}
-        />
+        {canEdit ? (
+          <a
+            className="equipment-card-edit-button"
+            href={`#/equipment/${equipment.visibleId}/edit`}
+          >
+            <Pencil aria-hidden="true" size={17} />
+            <span>Редактировать</span>
+          </a>
+        ) : null}
       </header>
 
       {sections.map((section) => (
@@ -79,6 +89,15 @@ function getEquipmentCardSections(
         {
           label: 'Дата ввода в эксплуатацию',
           value: formatRuDate(equipment.commissioningDate),
+        },
+        {
+          label: 'Статус',
+          value: (
+            <EquipmentStatusBadge
+              label={equipment.statusLabel}
+              status={equipment.status}
+            />
+          ),
         },
       ],
     },

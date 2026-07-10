@@ -317,13 +317,13 @@
 
   .equipment-form-actions {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 12px;
   }
 
   .equipment-secondary-button,
   .equipment-submit-button {
-    flex: 0 1 calc(50% - 6px);
+    flex: 0 1 auto;
     padding: 0 12px;
   }
 }

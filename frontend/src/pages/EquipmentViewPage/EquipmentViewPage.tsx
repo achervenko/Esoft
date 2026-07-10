@@ -1,6 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { EquipmentCardView } from '../../modules/equipment-card';
+import { canEditEquipment } from '../../modules/equipment-permissions';
 import {
   getEquipmentCard,
   type EquipmentCard,
@@ -9,10 +10,14 @@ import { Notice } from '../../shared/ui/Notice';
 import './EquipmentViewPage.css';
 
 type EquipmentViewPageProps = {
+  userRole: string | null;
   visibleId: number;
 };
 
-export function EquipmentViewPage({ visibleId }: EquipmentViewPageProps) {
+export function EquipmentViewPage({
+  userRole,
+  visibleId,
+}: EquipmentViewPageProps) {
   const [equipment, setEquipment] = useState<EquipmentCard | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +56,12 @@ export function EquipmentViewPage({ visibleId }: EquipmentViewPageProps) {
 
       {isLoading ? <Notice>Загрузка карточки оборудования...</Notice> : null}
       {error ? <Notice tone="error">{error}</Notice> : null}
-      {equipment ? <EquipmentCardView equipment={equipment} /> : null}
+      {equipment ? (
+        <EquipmentCardView
+          canEdit={canEditEquipment(userRole)}
+          equipment={equipment}
+        />
+      ) : null}
     </div>
   );
 }
