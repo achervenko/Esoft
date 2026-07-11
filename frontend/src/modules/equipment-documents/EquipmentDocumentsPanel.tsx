@@ -11,6 +11,11 @@ import { Notice } from "../../shared/ui/Notice";
 import { PdfPreviewModal } from "../../shared/ui/PdfPreviewModal";
 import { EquipmentDocumentsList } from "./EquipmentDocumentsList";
 import { EquipmentDocumentUploadForm } from "./EquipmentDocumentUploadForm";
+import {
+  getEquipmentDocumentUploadErrorMessage,
+  getEquipmentDocumentUploadSuccessMessage,
+  validateEquipmentDocumentUpload,
+} from "./equipment-document-upload-validation";
 import { getDisplayName } from "./equipment-document-utils";
 import { equipmentDocumentsText as text } from "./equipment-documents.text";
 import "./EquipmentDocumentsPanel.css";
@@ -27,8 +32,9 @@ export function EquipmentDocumentsPanel({
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [files, setFiles] = useState<EquipmentFile[]>([]);
-  const [documentType, setDocumentType] =
-    useState<StorageDocumentType>("passport");
+  const [documentType, setDocumentType] = useState<StorageDocumentType | "">(
+    "",
+  );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
@@ -83,8 +89,19 @@ export function EquipmentDocumentsPanel({
     setError(null);
     setMessage(null);
 
-    if (!selectedFile) {
-      setError(text.selectFileError);
+    const validationError = validateEquipmentDocumentUpload({
+      documentType,
+      files,
+      isUploading,
+      selectedFile,
+    });
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    if (!documentType || !selectedFile) {
       return;
     }
 
@@ -97,7 +114,7 @@ export function EquipmentDocumentsPanel({
         visibleId,
       });
 
-      setMessage(text.uploaded);
+      setMessage(getEquipmentDocumentUploadSuccessMessage(documentType));
       setSelectedFile(null);
 
       if (fileInputRef.current) {
@@ -106,11 +123,7 @@ export function EquipmentDocumentsPanel({
 
       loadFiles();
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0434\u043e\u043a\u0443\u043c\u0435\u043d\u0442.",
-      );
+      setError(getEquipmentDocumentUploadErrorMessage(requestError));
     } finally {
       setIsUploading(false);
     }

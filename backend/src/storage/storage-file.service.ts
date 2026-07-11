@@ -5,19 +5,14 @@ import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   toAuditModule,
-  toStorageFileDisplayName,
+  toStorageFileDisplayNameInList,
   toStorageFileDto,
+  toStorageFileDtos,
 } from './storage-file.mapper';
 import {
-  createStorageObjectKey,
-  getSafeExtension,
   isPdfStorageFile,
-  normalizeOriginalFileName,
 } from './storage-file-names.helper';
-import {
-  assertValidStorageDocumentType,
-  assertValidStorageFile,
-} from './storage-file.validation';
+import { StorageFileUploadService } from './storage-file-upload.service';
 import { StorageObjectService } from './storage-object.service';
 import { StorageOwnerService } from './storage-owner.service';
 import type {
@@ -34,11 +29,12 @@ export class StorageFileService {
     private readonly objectStorage: StorageObjectService,
     private readonly ownerStorage: StorageOwnerService,
     private readonly prisma: PrismaService,
+    private readonly uploadStorage: StorageFileUploadService,
   ) {}
 
   async listFiles(owner: StorageOwnerContext): Promise<StorageFileDto[]> {
     const files = await this.ownerStorage.findActiveFiles(owner);
-    return files.map(toStorageFileDto);
+    return toStorageFileDtos(files);
   }
 
   async uploadFile(params: {
@@ -48,54 +44,7 @@ export class StorageFileService {
     owner: StorageOwnerContext;
     userId?: string | null;
   }): Promise<StorageFileDto> {
-    assertValidStorageFile(params.file);
-    assertValidStorageDocumentType(params.documentType);
-
-    const file = {
-      ...params.file,
-      originalname: normalizeOriginalFileName(params.file.originalname),
-    };
-    const storedObject = await this.objectStorage.putObject({
-      body: file.buffer,
-      contentType: file.mimetype,
-      key: createStorageObjectKey({
-        documentType: params.documentType,
-        extension: getSafeExtension(file),
-        owner: params.owner,
-      }),
-    });
-
-    let storageFile: StorageFile;
-
-    try {
-      storageFile = await this.prisma.storageFile.create({
-        data: {
-          bucket: storedObject.bucket,
-          documentType: params.documentType,
-          mimeType: file.mimetype || 'application/octet-stream',
-          objectKey: storedObject.key,
-          originalName: file.originalname,
-          ownerEntityId: params.owner.entityId,
-          ownerEntityType: params.owner.entityType,
-          ownerModule: params.owner.module,
-          sizeBytes: BigInt(file.size),
-          uploadedByUserId: params.userId ?? null,
-        },
-      });
-    } catch (error) {
-      await this.objectStorage.deleteObject(storedObject.key).catch(() => null);
-      throw error;
-    }
-
-    await this.writeAudit({
-      action: AuditAction.FILE_UPLOAD,
-      audit: params.audit,
-      newValue: toStorageFileDisplayName(storageFile),
-      oldValue: null,
-      userId: params.userId,
-    });
-
-    return toStorageFileDto(storageFile);
+    return this.uploadStorage.uploadFile(params);
   }
 
   async getDownload(fileId: number) {
@@ -106,7 +55,7 @@ export class StorageFileService {
       body: object.body,
       contentLength: object.contentLength,
       contentType: object.contentType || file.mimeType,
-      fileName: toStorageFileDisplayName(file),
+      fileName: await this.getActiveDisplayName(file),
     };
   }
 
@@ -125,7 +74,7 @@ export class StorageFileService {
       body: object.body,
       contentLength: object.contentLength,
       contentType: 'application/pdf',
-      fileName: toStorageFileDisplayName(file),
+      fileName: await this.getActiveDisplayName(file),
     };
   }
 
@@ -139,6 +88,8 @@ export class StorageFileService {
       params.fileId,
       params.owner,
     );
+    const activeFiles = await this.ownerStorage.findActiveFiles(params.owner);
+    const displayName = toStorageFileDisplayNameInList(file, activeFiles);
 
     const deletedFile = await this.prisma.storageFile.update({
       data: {
@@ -153,7 +104,7 @@ export class StorageFileService {
       action: AuditAction.FILE_DELETE,
       audit: params.audit,
       newValue: null,
-      oldValue: toStorageFileDisplayName(file),
+      oldValue: displayName,
       userId: params.userId,
     });
 
@@ -200,5 +151,15 @@ export class StorageFileService {
       module: params.audit.actionModule,
       userId: params.userId,
     });
+  }
+
+  private async getActiveDisplayName(file: StorageFile) {
+    const activeFiles = await this.ownerStorage.findActiveFiles({
+      entityId: file.ownerEntityId,
+      entityType: file.ownerEntityType,
+      module: file.ownerModule,
+    });
+
+    return toStorageFileDisplayNameInList(file, activeFiles);
   }
 }

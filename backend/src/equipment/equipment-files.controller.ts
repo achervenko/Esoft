@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  NotFoundException,
   Param,
   ParseIntPipe,
   Post,
@@ -28,8 +29,7 @@ export class EquipmentFilesController {
 
   @Get()
   async list(@Param('visibleId', ParseIntPipe) visibleId: number) {
-    const owner =
-      await this.equipmentService.findStorageOwnerByVisibleId(visibleId);
+    const owner = await this.findStorageOwnerByVisibleId(visibleId);
 
     return this.storageFileService.listFiles(owner);
   }
@@ -50,8 +50,7 @@ export class EquipmentFilesController {
   ) {
     assertCanManageFiles(session.user.role);
 
-    const owner =
-      await this.equipmentService.findStorageOwnerByVisibleId(visibleId);
+    const owner = await this.findStorageOwnerByVisibleId(visibleId);
 
     return this.storageFileService.uploadFile({
       audit: {
@@ -64,5 +63,21 @@ export class EquipmentFilesController {
       owner,
       userId: session.user.id,
     });
+  }
+
+  private async findStorageOwnerByVisibleId(visibleId: number) {
+    try {
+      return await this.equipmentService.findStorageOwnerByVisibleId(visibleId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new NotFoundException({
+          code: 'EQUIPMENT_NOT_FOUND',
+          message:
+            '\u041e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u0435 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e.',
+        });
+      }
+
+      throw error;
+    }
   }
 }

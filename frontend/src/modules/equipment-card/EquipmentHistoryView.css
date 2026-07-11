@@ -41,6 +41,10 @@
   background: #fbfcfd;
 }
 
+.equipment-history-item--file {
+  background: #ffffff;
+}
+
 .equipment-history-item header {
   display: flex;
   align-items: flex-start;
@@ -53,7 +57,7 @@
   gap: 3px;
 }
 
-.equipment-history-item strong {
+.equipment-history-item header strong {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -62,7 +66,7 @@
   font-weight: 850;
 }
 
-.equipment-history-item strong span {
+.equipment-history-item header strong span {
   border-radius: 999px;
   padding: 3px 8px;
   background: #eef0f3;
@@ -118,6 +122,45 @@
   overflow-wrap: anywhere;
 }
 
+.equipment-history-file-event {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #eef0f3;
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.equipment-history-file-icon {
+  width: 42px;
+  height: 42px;
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.equipment-history-file-event--delete .equipment-history-file-icon {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.equipment-history-file-event div {
+  min-width: 0;
+  display: grid;
+}
+
+.equipment-history-file-event strong {
+  display: block;
+  color: #15171c;
+  font-size: 15px;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 760px) {
   .equipment-history-item header {
     display: grid;
@@ -138,17 +181,6 @@
     color: #6b7280;
     font-size: 11px;
     font-weight: 850;
-  }
-
-  .equipment-history-change-row span:nth-child(1)::before {
-    content: 'Поле';
-  }
-
-  .equipment-history-change-row span:nth-child(2)::before {
-    content: 'Старое значение';
-  }
-
-  .equipment-history-change-row span:nth-child(3)::before {
-    content: 'Новое значение';
+    content: attr(data-label);
   }
 }

@@ -108,6 +108,19 @@ export type EquipmentFile = {
 };
 
 const API_URL = import.meta.env.VITE_API_URL || "";
+const UPLOAD_TIMEOUT_MS = 120_000;
+
+export class ApiRequestError extends Error {
+  readonly code?: string;
+  readonly status: number;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.code = code;
+    this.status = status;
+  }
+}
 
 async function request<T>(path: string, init?: RequestInit) {
   const response = await fetch(`${API_URL}${path}`, {
@@ -121,9 +134,11 @@ async function request<T>(path: string, init?: RequestInit) {
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null);
-    throw new Error(
+    throw new ApiRequestError(
       errorBody?.message ??
         "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0432\u044b\u043f\u043e\u043b\u043d\u0438\u0442\u044c \u0437\u0430\u043f\u0440\u043e\u0441.",
+      response.status,
+      errorBody?.code,
     );
   }
 
@@ -176,20 +191,25 @@ export async function uploadEquipmentFile(params: {
   formData.append("documentType", params.documentType);
   formData.append("file", params.file);
 
-  const response = await fetch(
-    `${API_URL}/api/equipment/${params.visibleId}/files`,
-    {
-      body: formData,
-      credentials: "include",
-      method: "POST",
-    },
+  const abortController = new AbortController();
+  const timeoutId = window.setTimeout(
+    () => abortController.abort(),
+    UPLOAD_TIMEOUT_MS,
   );
+  const response = await fetch(`${API_URL}/api/equipment/${params.visibleId}/files`, {
+    body: formData,
+    credentials: "include",
+    method: "POST",
+    signal: abortController.signal,
+  }).finally(() => window.clearTimeout(timeoutId));
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null);
-    throw new Error(
+    throw new ApiRequestError(
       errorBody?.message ??
         "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0434\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u043e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u044f.",
+      response.status,
+      errorBody?.code,
     );
   }
 

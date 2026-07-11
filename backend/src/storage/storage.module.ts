@@ -6,6 +6,7 @@ import { FilesController } from './files.controller';
 import { s3ClientProvider } from './s3/s3-client.provider';
 import { StorageController } from './storage.controller';
 import { StorageFileService } from './storage-file.service';
+import { StorageFileUploadService } from './storage-file-upload.service';
 import { StorageObjectService } from './storage-object.service';
 import { StorageOwnerService } from './storage-owner.service';
 import { STORAGE_CONFIG } from './storage.tokens';
@@ -22,6 +23,7 @@ import { STORAGE_CONFIG } from './storage.tokens';
     s3ClientProvider,
     PrismaService,
     StorageFileService,
+    StorageFileUploadService,
     StorageObjectService,
     StorageOwnerService,
   ],

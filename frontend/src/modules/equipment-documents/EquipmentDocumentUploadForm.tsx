@@ -9,11 +9,11 @@ import {
 import "./EquipmentDocumentUploadForm.css";
 
 type EquipmentDocumentUploadFormProps = {
-  documentType: StorageDocumentType;
+  documentType: StorageDocumentType | "";
   fileInputId: string;
   fileInputRef: RefObject<HTMLInputElement | null>;
   isUploading: boolean;
-  onDocumentTypeChange: (documentType: StorageDocumentType) => void;
+  onDocumentTypeChange: (documentType: StorageDocumentType | "") => void;
   onFileChange: (file: File | null) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   selectedFile: File | null;
@@ -38,6 +38,7 @@ export function EquipmentDocumentUploadForm({
           label={text.type}
           onChange={(value) => onDocumentTypeChange(value as StorageDocumentType)}
           options={documentTypeOptions}
+          placeholder={text.selectDocumentType}
           required
           value={documentType}
         />
@@ -50,7 +51,9 @@ export function EquipmentDocumentUploadForm({
           <div className="equipment-file-picker">
             <input
               ref={fileInputRef}
+              accept={getFileInputAccept(documentType)}
               id={fileInputId}
+              disabled={isUploading}
               onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
               type="file"
             />
@@ -76,4 +79,19 @@ export function EquipmentDocumentUploadForm({
       </div>
     </form>
   );
+}
+
+function getFileInputAccept(documentType: StorageDocumentType | "") {
+  if (
+    documentType === "passport" ||
+    documentType === "maintenance_instruction"
+  ) {
+    return "application/pdf,.pdf";
+  }
+
+  if (documentType === "equipment_photo") {
+    return "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp";
+  }
+
+  return undefined;
 }
