@@ -19,10 +19,8 @@ type AuditFieldChange = {
   oldValue?: unknown;
 };
 
-type FieldAuditAction = 'CREATE' | 'UPDATE';
-
 type WriteAuditParams = {
-  action: FieldAuditAction;
+  action: AuditAction;
   entityId: number;
   entityType: string;
   fields: AuditFieldChange[];
@@ -133,7 +131,7 @@ export class AuditLogService {
         module: params.module,
         newValue: this.formatValue(field.newValue),
         oldValue:
-          params.action === AuditAction.CREATE
+          params.action === AuditAction.CREATE || field.oldValue === undefined
             ? null
             : this.formatValue(field.oldValue),
         userId: params.userId ?? null,

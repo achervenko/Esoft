@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { AppAuthModule } from './auth/auth.module';
 import { EquipmentModule } from './equipment/equipment.module';
 import { PrismaService } from './prisma/prisma.service';
+import { StorageModule } from './storage/storage.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -12,6 +13,7 @@ import { UsersModule } from './users/users.module';
     ConfigModule.forRoot({ isGlobal: true }),
     AppAuthModule,
     EquipmentModule,
+    StorageModule,
     UsersModule,
   ],
   controllers: [AppController],

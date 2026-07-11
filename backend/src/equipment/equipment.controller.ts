@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  ForbiddenException,
   Get,
   Param,
   ParseIntPipe,
@@ -10,14 +9,9 @@ import {
 } from '@nestjs/common';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { Auth } from '../auth/auth.config';
+import { assertCanEditEquipment } from '../auth/role-permissions';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { EquipmentService } from './equipment.service';
-
-const rolesAllowedToEditEquipment = new Set([
-  'admin',
-  'chief_engineer',
-  'engineer',
-]);
 
 @Controller('api/equipment')
 export class EquipmentController {
@@ -57,11 +51,7 @@ export class EquipmentController {
     @Body() dto: CreateEquipmentDto,
     @Session() session: UserSession<Auth>,
   ) {
-    const role = session.user.role;
-
-    if (!role || !rolesAllowedToEditEquipment.has(String(role))) {
-      throw new ForbiddenException('Недостаточно прав для редактирования.');
-    }
+    assertCanEditEquipment(session.user.role);
 
     return this.equipmentService.update(visibleId, dto, session.user.id);
   }

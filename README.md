@@ -10,6 +10,7 @@ Esoft is a local equipment accounting app.
 
 - Node.js
 - PostgreSQL
+- MinIO, installed by project script
 
 ## Config
 
@@ -28,6 +29,7 @@ Edit this file when you need to change:
 - local network host
 - database host, port, name, user and password
 - auth secret
+- MinIO endpoint, bucket, credentials, executable path and data path
 - browser startup behavior
 
 The launcher syncs generated env files on every start:
@@ -36,6 +38,55 @@ The launcher syncs generated env files on every start:
 - `frontend/.env`
 
 Do not edit generated env files unless you need a temporary manual override.
+
+## MinIO
+
+MinIO is used as local S3-compatible file storage.
+
+The repository does not store:
+
+- `tools/minio.exe`
+- `minio/` object storage data
+
+These paths are local runtime files and are ignored by Git.
+
+Install or update MinIO from the project root:
+
+```powershell
+npm run install:minio
+```
+
+The installer downloads the official Windows binary from:
+
+```text
+https://dl.min.io/server/minio/release/windows-amd64/minio.exe
+```
+
+It uses `esoft.config.json`:
+
+- `storage.executablePath` - where `minio.exe` is saved
+- `storage.dataPath` - where object data is stored
+- `storage.accessKey` and `storage.secretKey` - MinIO admin login
+
+Start MinIO:
+
+```powershell
+npm run start:minio
+```
+
+Default local addresses:
+
+```text
+API:     http://127.0.0.1:9000
+Console: http://127.0.0.1:9001
+```
+
+On first setup, open the MinIO console and create the bucket from
+`storage.bucket` in `esoft.config.json` usually:
+
+```text
+esoft
+```
 
 ## Start
 
@@ -58,6 +109,7 @@ npm run prisma:migrate
 From the project root:
 
 ```powershell
+npm run start:minio
 npm run start:simple
 ```
 

@@ -10,3 +10,7 @@ esoft.config.json
 .DS_Store
 Thumbs.db
 frontend/src/assets/auth-visual.png
+
+# Local MinIO runtime and object storage data.
+minio/
+tools/

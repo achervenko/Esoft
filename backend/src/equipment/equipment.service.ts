@@ -3,7 +3,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditModule, EquipmentStatus, Prisma } from '@prisma/client';
+import {
+  AuditModule,
+  EquipmentStatus,
+  Prisma,
+  StorageOwnerModule,
+} from '@prisma/client';
 import { IdentityNumberingService } from '../application/numbering/identity-numbering.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -157,6 +162,23 @@ export class EquipmentService {
       timeZone: item.timeZone,
       user: item.user ? this.toAuditUserName(item.user) : 'РќРµ СѓРєР°Р·Р°РЅ',
     }));
+  }
+
+  async findStorageOwnerByVisibleId(visibleId: number) {
+    const equipment = await this.prisma.equipment.findUnique({
+      where: { visibleId },
+      select: { id: true },
+    });
+
+    if (!equipment) {
+      throw new NotFoundException('Оборудование не найдено.');
+    }
+
+    return {
+      entityId: equipment.id,
+      entityType: 'equipment',
+      module: StorageOwnerModule.EQUIPMENT,
+    };
   }
 
   async create(dto: CreateEquipmentDto, userId?: string | null) {

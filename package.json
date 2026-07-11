@@ -3,6 +3,8 @@
   "private": true,
   "version": "0.0.1",
   "scripts": {
+    "install:minio": "powershell -ExecutionPolicy Bypass -File ./install-minio.ps1",
+    "start:minio": "powershell -ExecutionPolicy Bypass -File ./start-minio.ps1",
     "start:simple": "powershell -ExecutionPolicy Bypass -File ./start-esoft-npm.ps1",
     "start:server": "powershell -ExecutionPolicy Bypass -File ./start-esoft-server.ps1",
     "backend:dev": "npm --prefix backend run start:dev",

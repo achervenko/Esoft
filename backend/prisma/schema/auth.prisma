@@ -18,6 +18,7 @@ model User {
   auditLogs               AuditLog[]
   employeeUser            EmployeeUser?
   equipmentHistoryChanges EquipmentHistory[]
+  uploadedStorageFiles    StorageFile[]      @relation("UploadedStorageFiles")
 
   @@unique([email])
   @@unique([username])

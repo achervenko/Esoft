@@ -20,6 +20,18 @@
   "auth": {
     "secret": "replace-with-generated-secret"
   },
+  "storage": {
+    "provider": "minio",
+    "endpoint": "http://127.0.0.1:9000",
+    "console": "http://127.0.0.1:9001",
+    "bucket": "esoft",
+    "accessKey": "esoft",
+    "secretKey": "replace-with-minio-password",
+    "dataPath": "C:\\EsoftData\\minio",
+    "executablePath": "C:\\Esoft\\tools\\minio.exe",
+    "forcePathStyle": true,
+    "region": "us-east-1"
+  },
   "logs": {
     "directory": "logs"
   }
