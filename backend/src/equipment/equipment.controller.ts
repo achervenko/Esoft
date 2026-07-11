@@ -38,6 +38,11 @@ export class EquipmentController {
     return this.equipmentService.findOneByVisibleId(visibleId);
   }
 
+  @Get(':visibleId/history')
+  findHistory(@Param('visibleId', ParseIntPipe) visibleId: number) {
+    return this.equipmentService.findHistoryByVisibleId(visibleId);
+  }
+
   @Post()
   create(
     @Body() dto: CreateEquipmentDto,

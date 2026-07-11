@@ -4,7 +4,9 @@ import { EquipmentCardView } from '../../modules/equipment-card';
 import { canEditEquipment } from '../../modules/equipment-permissions';
 import {
   getEquipmentCard,
+  getEquipmentHistory,
   type EquipmentCard,
+  type EquipmentHistoryItem,
 } from '../../shared/api/equipment-api';
 import { Notice } from '../../shared/ui/Notice';
 import './EquipmentViewPage.css';
@@ -19,16 +21,19 @@ export function EquipmentViewPage({
   visibleId,
 }: EquipmentViewPageProps) {
   const [equipment, setEquipment] = useState<EquipmentCard | null>(null);
+  const [history, setHistory] = useState<EquipmentHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    getEquipmentCard(visibleId)
-      .then((data) => {
+    Promise.all([getEquipmentCard(visibleId), getEquipmentHistory(visibleId)])
+      .then(([equipmentData, historyData]) => {
         if (isMounted) {
-          setEquipment(data);
+          setEquipment(equipmentData);
+          setHistory(historyData);
         }
       })
       .catch((requestError: Error) => {
@@ -39,6 +44,7 @@ export function EquipmentViewPage({
       .finally(() => {
         if (isMounted) {
           setIsLoading(false);
+          setIsHistoryLoading(false);
         }
       });
 
@@ -60,6 +66,8 @@ export function EquipmentViewPage({
         <EquipmentCardView
           canEdit={canEditEquipment(userRole)}
           equipment={equipment}
+          history={history}
+          isHistoryLoading={isHistoryLoading}
         />
       ) : null}
     </div>

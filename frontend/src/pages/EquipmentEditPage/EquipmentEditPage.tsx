@@ -12,6 +12,7 @@ import { UnsavedChangesGuard } from '../../shared/ui/UnsavedChangesGuard';
 import { EquipmentCreateForm } from '../EquipmentCreatePage/EquipmentCreateForm';
 import {
   type EquipmentCreateFieldErrors,
+  getEquipmentFieldErrorsFromMessage,
   initialEquipmentCreateFormState,
   toEquipmentCreatePayload,
   toEquipmentFormState,
@@ -122,20 +123,16 @@ export function EquipmentEditPage({
         window.location.hash = `#/equipment/${updatedEquipment.visibleId}`;
       }, 500);
     } catch (requestError) {
-      setError(
+      const errorMessage =
         requestError instanceof Error
           ? requestError.message
-          : 'Не удалось сохранить оборудование.',
-      );
-      if (
-        requestError instanceof Error &&
-        requestError.message.toLowerCase().includes('id')
-      ) {
-        setFieldErrors((currentErrors) => ({
-          ...currentErrors,
-          visibleId: requestError.message,
-        }));
-      }
+          : 'Не удалось сохранить оборудование.';
+
+      setError(errorMessage);
+      setFieldErrors((currentErrors) => ({
+        ...currentErrors,
+        ...getEquipmentFieldErrorsFromMessage(errorMessage),
+      }));
     } finally {
       setIsSubmitting(false);
     }
@@ -163,8 +160,16 @@ export function EquipmentEditPage({
       </header>
 
       {isLoading ? <Notice>Загрузка карточки оборудования...</Notice> : null}
-      {error ? <Notice floating tone="error">{error}</Notice> : null}
-      {message ? <Notice floating tone="success">{message}</Notice> : null}
+      {error ? (
+        <Notice floating tone="error">
+          {error}
+        </Notice>
+      ) : null}
+      {message ? (
+        <Notice floating tone="success">
+          {message}
+        </Notice>
+      ) : null}
 
       {options ? (
         <EquipmentCreateForm

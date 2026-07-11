@@ -11,6 +11,7 @@ import { UnsavedChangesGuard } from '../../shared/ui/UnsavedChangesGuard';
 import { EquipmentCreateForm } from './EquipmentCreateForm';
 import {
   type EquipmentCreateFieldErrors,
+  getEquipmentFieldErrorsFromMessage,
   initialEquipmentCreateFormState,
   toEquipmentCreatePayload,
   validateEquipmentCreateForm,
@@ -33,6 +34,7 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
   const [fieldErrors, setFieldErrors] = useState<EquipmentCreateFieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
   const hasUnsavedChanges = useMemo(
     () =>
       JSON.stringify(getCreateComparableForm(form)) !==
@@ -106,29 +108,16 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
         window.location.hash = '#/equipment';
       }, 500);
     } catch (requestError) {
-      setError(
+      const errorMessage =
         requestError instanceof Error
           ? requestError.message
-          : 'Не удалось добавить оборудование.',
-      );
-      if (
-        requestError instanceof Error &&
-        requestError.message.toLowerCase().includes('id')
-      ) {
-        setFieldErrors((currentErrors) => ({
-          ...currentErrors,
-          visibleId: requestError.message,
-        }));
-      }
-      if (
-        requestError instanceof Error &&
-        requestError.message.toLowerCase().includes('дата выдачи')
-      ) {
-        setFieldErrors((currentErrors) => ({
-          ...currentErrors,
-          issueDate: requestError.message,
-        }));
-      }
+          : 'Не удалось добавить оборудование.';
+
+      setError(errorMessage);
+      setFieldErrors((currentErrors) => ({
+        ...currentErrors,
+        ...getEquipmentFieldErrorsFromMessage(errorMessage),
+      }));
     } finally {
       setIsSubmitting(false);
     }
@@ -156,8 +145,16 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
       </header>
 
       {isLoading ? <Notice>Загрузка справочников...</Notice> : null}
-      {error ? <Notice floating tone="error">{error}</Notice> : null}
-      {message ? <Notice floating tone="success">{message}</Notice> : null}
+      {error ? (
+        <Notice floating tone="error">
+          {error}
+        </Notice>
+      ) : null}
+      {message ? (
+        <Notice floating tone="success">
+          {message}
+        </Notice>
+      ) : null}
 
       {options ? (
         <EquipmentCreateForm

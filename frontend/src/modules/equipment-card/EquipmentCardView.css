@@ -35,12 +35,44 @@
   font-weight: 800;
 }
 
-.equipment-card-view-status {
-  min-height: 36px;
-  align-self: flex-start;
+.equipment-card-tabs {
+  width: max-content;
+  display: inline-flex;
+  gap: 4px;
+  border: 1px solid #e3e6eb;
   border-radius: 8px;
-  padding: 9px 14px;
+  padding: 4px;
+  background: #ffffff;
+}
+
+.equipment-card-tabs button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 14px;
+  background: transparent;
+  color: #4b5563;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.equipment-card-tabs button.active {
+  background: #111111;
+  color: #ffffff;
+}
+
+.equipment-card-tab-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.equipment-card-muted {
+  margin: 0;
+  color: #6b7280;
   font-size: 15px;
+  font-weight: 650;
 }
 
 .equipment-card-view-section {
@@ -116,5 +148,13 @@
 
   .equipment-card-view-grid {
     grid-template-columns: 1fr;
+  }
+
+  .equipment-card-tabs {
+    width: 100%;
+  }
+
+  .equipment-card-tabs button {
+    flex: 1;
   }
 }

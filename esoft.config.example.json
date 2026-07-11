@@ -1,0 +1,26 @@
+{
+  "app": {
+    "name": "Esoft",
+    "openBrowser": true,
+    "openAddress": "local"
+  },
+  "network": {
+    "host": "auto",
+    "backendPort": 3000,
+    "frontendPort": 5173
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "esoft",
+    "user": "esoft",
+    "password": "replace-with-db-password",
+    "schema": "public"
+  },
+  "auth": {
+    "secret": "replace-with-generated-secret"
+  },
+  "logs": {
+    "directory": "logs"
+  }
+}

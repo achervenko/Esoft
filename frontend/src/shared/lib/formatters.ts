@@ -17,5 +17,15 @@ export function formatNullableNumber(value: number | null) {
 }
 
 export function formatNullableText(value: string | null, fallback = 'Не указано') {
-  return value?.trim() || fallback;
+  const normalizedValue = value?.trim();
+
+  if (!normalizedValue) {
+    return fallback;
+  }
+
+  if (normalizedValue.toLocaleLowerCase('ru-RU') === 'не указано') {
+    return 'Не указано';
+  }
+
+  return normalizedValue;
 }

@@ -1,18 +1,26 @@
 import { Pencil } from 'lucide-react';
-import type { ReactNode } from 'react';
-import { EquipmentStatusBadge } from '../equipment-status';
-import type { EquipmentCard } from '../../shared/api/equipment-api';
+import { useState, type ReactNode } from 'react';
+import type {
+  EquipmentCard,
+  EquipmentHistoryItem,
+} from '../../shared/api/equipment-api';
 import {
   formatNullableNumber,
   formatNullableText,
   formatRuDate,
 } from '../../shared/lib/formatters';
+import { EquipmentStatusBadge } from '../equipment-status';
+import { EquipmentHistoryView } from './EquipmentHistoryView';
 import './EquipmentCardView.css';
 
 type EquipmentCardViewProps = {
   canEdit?: boolean;
   equipment: EquipmentCard;
+  history: EquipmentHistoryItem[];
+  isHistoryLoading?: boolean;
 };
+
+type EquipmentCardTab = 'details' | 'history';
 
 type EquipmentCardField = {
   label: string;
@@ -32,7 +40,10 @@ type EquipmentCardTextBlock = {
 export function EquipmentCardView({
   canEdit = false,
   equipment,
+  history,
+  isHistoryLoading = false,
 }: EquipmentCardViewProps) {
+  const [activeTab, setActiveTab] = useState<EquipmentCardTab>('details');
   const sections = getEquipmentCardSections(equipment);
   const textBlocks = getEquipmentCardTextBlocks(equipment);
 
@@ -44,7 +55,7 @@ export function EquipmentCardView({
             ID {equipment.visibleId} — {equipment.name}
           </h1>
         </div>
-        {canEdit ? (
+        {canEdit && activeTab === 'details' ? (
           <a
             className="equipment-card-edit-button"
             href={`#/equipment/${equipment.visibleId}/edit`}
@@ -55,23 +66,59 @@ export function EquipmentCardView({
         ) : null}
       </header>
 
-      {sections.map((section) => (
-        <section className="equipment-card-view-section" key={section.title}>
-          <h2>{section.title}</h2>
-          <EquipmentCardGrid items={section.fields} />
-        </section>
-      ))}
+      <div className="equipment-card-tabs" role="tablist">
+        <button
+          aria-selected={activeTab === 'details'}
+          className={activeTab === 'details' ? 'active' : undefined}
+          onClick={() => setActiveTab('details')}
+          role="tab"
+          type="button"
+        >
+          Карточка
+        </button>
+        <button
+          aria-selected={activeTab === 'history'}
+          className={activeTab === 'history' ? 'active' : undefined}
+          onClick={() => setActiveTab('history')}
+          role="tab"
+          type="button"
+        >
+          История изменений
+        </button>
+      </div>
 
-      <section className="equipment-card-view-section">
-        <h2>Описание</h2>
-        {textBlocks.map((block) => (
-          <EquipmentTextBlock
-            key={block.label}
-            label={block.label}
-            value={block.value}
-          />
-        ))}
-      </section>
+      {activeTab === 'details' ? (
+        <section className="equipment-card-tab-panel" role="tabpanel">
+          {sections.map((section) => (
+            <section className="equipment-card-view-section" key={section.title}>
+              <h2>{section.title}</h2>
+              <EquipmentCardGrid items={section.fields} />
+            </section>
+          ))}
+
+          <section className="equipment-card-view-section">
+            <h2>Описание</h2>
+            {textBlocks.map((block) => (
+              <EquipmentTextBlock
+                key={block.label}
+                label={block.label}
+                value={block.value}
+              />
+            ))}
+          </section>
+        </section>
+      ) : (
+        <section className="equipment-card-tab-panel" role="tabpanel">
+          {isHistoryLoading ? (
+            <section className="equipment-card-view-section">
+              <h2>История изменений</h2>
+              <p className="equipment-card-muted">Загрузка истории...</p>
+            </section>
+          ) : (
+            <EquipmentHistoryView history={history} />
+          )}
+        </section>
+      )}
     </article>
   );
 }
@@ -86,10 +133,6 @@ function getEquipmentCardSections(
         { label: 'Производитель', value: equipment.manufacturer },
         { label: 'Модель', value: equipment.model },
         { label: 'Заводской номер', value: equipment.serialNumber ?? 'б/н' },
-        {
-          label: 'Дата ввода в эксплуатацию',
-          value: formatRuDate(equipment.commissioningDate),
-        },
         {
           label: 'Статус',
           value: (
@@ -118,6 +161,10 @@ function getEquipmentCardSections(
         {
           label: 'Год выпуска',
           value: formatNullableNumber(equipment.manufactureYear),
+        },
+        {
+          label: 'Дата ввода в эксплуатацию',
+          value: formatRuDate(equipment.commissioningDate),
         },
       ],
     },

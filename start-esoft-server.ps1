@@ -8,17 +8,17 @@ if (-not (Test-Path $configPath)) {
 }
 
 $config = Get-Content -Raw -Path $configPath -Encoding UTF8 | ConvertFrom-Json
-
 $backendPort = if ($config.network.backendPort) { [int]$config.network.backendPort } else { 3000 }
 $frontendPort = if ($config.network.frontendPort) { [int]$config.network.frontendPort } else { 5173 }
 $logsDirectory = if ($config.logs.directory) { [string]$config.logs.directory } else { 'logs' }
 $logsDir = Join-Path $projectRoot $logsDirectory
-$launcherLog = Join-Path $logsDir 'launcher.log'
+$launcherLog = Join-Path $logsDir 'server-window.log'
 
-function Write-LaunchLog {
+function Write-Status {
   param([string] $Message)
 
-  $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+  $timestamp = Get-Date -Format 'HH:mm:ss'
+  Write-Host "[$timestamp] $Message"
   Add-Content -Path $launcherLog -Value "[$timestamp] $Message" -Encoding UTF8
 }
 
@@ -145,15 +145,6 @@ function Wait-HttpReady {
   return $false
 }
 
-function Write-FirewallHint {
-  $rules = Get-NetFirewallRule -DisplayName 'Esoft Local Network*' -ErrorAction SilentlyContinue |
-    Where-Object { $_.Enabled -eq 'True' -and $_.Action -eq 'Allow' }
-
-  if (-not $rules) {
-    Write-LaunchLog 'Local network firewall rules were not found. If phones cannot open Esoft, run setup-network-access.ps1 as administrator once.'
-  }
-}
-
 function Sync-EnvFiles {
   param(
     [string] $BackendUrl,
@@ -162,7 +153,7 @@ function Sync-EnvFiles {
 
   $db = $config.database
   $databaseHost = if ($db.host) { [string]$db.host } else { 'localhost' }
-  $databasePort = if ($db.port) { [int]$db.port } else { 5433 }
+  $databasePort = if ($db.port) { [int]$db.port } else { 5432 }
   $databaseName = if ($db.name) { [string]$db.name } else { 'esoft' }
   $databaseUser = if ($db.user) { [string]$db.user } else { 'esoft' }
   $databasePassword = if ($db.password) { [string]$db.password } else { 'esoft_password' }
@@ -175,20 +166,38 @@ function Sync-EnvFiles {
   Set-OrAddEnvValue -Path (Join-Path $projectRoot 'backend\.env') -Name 'BETTER_AUTH_SECRET' -Value $authSecret
   Set-OrAddEnvValue -Path (Join-Path $projectRoot 'backend\.env') -Name 'BETTER_AUTH_URL' -Value $BackendUrl
   Set-OrAddEnvValue -Path (Join-Path $projectRoot 'backend\.env') -Name 'FRONTEND_URL' -Value $FrontendUrl
-
   Set-OrAddEnvValue -Path (Join-Path $projectRoot 'frontend\.env') -Name 'VITE_API_URL' -Value ''
+}
+
+function Test-PostgresReady {
+  $db = $config.database
+  $databaseHost = if ($db.host) { [string]$db.host } else { 'localhost' }
+  $databasePort = if ($db.port) { [int]$db.port } else { 5432 }
+
+  $connection = Get-NetTCPConnection -RemoteAddress $databaseHost -RemotePort $databasePort -ErrorAction SilentlyContinue
+  if ($connection) {
+    return $true
+  }
+
+  try {
+    $client = New-Object System.Net.Sockets.TcpClient
+    $async = $client.BeginConnect($databaseHost, $databasePort, $null, $null)
+    $ready = $async.AsyncWaitHandle.WaitOne(3000)
+    if ($ready) {
+      $client.EndConnect($async)
+      $client.Close()
+      return $true
+    }
+  } catch {
+    return $false
+  }
+
+  return $false
 }
 
 New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
 Set-Content -Path $launcherLog -Value '' -Encoding UTF8
 Set-Location $projectRoot
-
-trap {
-  Write-LaunchLog ('ERROR: ' + $_.Exception.Message)
-  break
-}
-
-Write-LaunchLog 'Starting Esoft launcher.'
 
 $hostAddress = Get-ConfiguredHost -HostValue ([string]$config.network.host)
 $localBackendUrl = "http://127.0.0.1:$backendPort"
@@ -197,54 +206,87 @@ $lanBackendUrl = "http://$hostAddress`:$backendPort"
 $lanFrontendUrl = "http://$hostAddress`:$frontendPort"
 $openAddress = if ($config.app.openAddress) { [string]$config.app.openAddress } else { 'local' }
 $browserUrl = if ($openAddress -eq 'lan') { $lanFrontendUrl } else { $localFrontendUrl }
-
-Sync-EnvFiles -BackendUrl $lanBackendUrl -FrontendUrl $lanFrontendUrl
-Write-LaunchLog "Using frontend URL $lanFrontendUrl and backend URL $lanBackendUrl."
-Write-LaunchLog "Browser URL is $browserUrl/#/login."
-Write-FirewallHint
-
-Stop-OldEsoftProcesses
-Write-LaunchLog 'Old Esoft processes stopped.'
-Write-LaunchLog 'PostgreSQL must be running as a local service or an external database.'
-
 $backendLog = Join-Path $logsDir 'backend.log'
 $frontendLog = Join-Path $logsDir 'frontend.log'
-$backendCommand = "npm.cmd run start > `"$backendLog`" 2>&1"
-$frontendCommand = "npm.cmd run dev -- --host 0.0.0.0 > `"$frontendLog`" 2>&1"
+$backendProcess = $null
+$frontendProcess = $null
 
-Write-LaunchLog 'Starting backend.'
-Start-Process -FilePath 'cmd.exe' -WindowStyle Hidden -WorkingDirectory (Join-Path $projectRoot 'backend') -ArgumentList @(
-  '/d',
-  '/s',
-  '/c',
-  $backendCommand
-)
+try {
+  Clear-Host
+  Write-Host 'Esoft server window' -ForegroundColor Cyan
+  Write-Host 'Close this window or press Ctrl+C to stop backend and frontend.'
+  Write-Host ''
 
-$backendReady = Wait-HttpReady -Url "$localBackendUrl/" -TimeoutSeconds 90
+  Write-Status 'Syncing config and env files.'
+  Sync-EnvFiles -BackendUrl $lanBackendUrl -FrontendUrl $lanFrontendUrl
 
-if (-not $backendReady) {
-  Write-LaunchLog 'Readiness failed. backendReady=False frontendReady=NotStarted'
-  throw 'Esoft backend did not start. Check logs in the logs folder.'
-}
+  if (-not (Test-PostgresReady)) {
+    throw 'PostgreSQL is not available. Start PostgreSQL service and try again.'
+  }
 
-Write-LaunchLog 'Starting frontend.'
-Start-Process -FilePath 'cmd.exe' -WindowStyle Hidden -WorkingDirectory (Join-Path $projectRoot 'frontend') -ArgumentList @(
-  '/d',
-  '/s',
-  '/c',
-  $frontendCommand
-)
+  Write-Status 'Stopping old Esoft processes.'
+  Stop-OldEsoftProcesses
 
-$frontendReady = Wait-HttpReady -Url "$localFrontendUrl/" -TimeoutSeconds 90
+  Write-Status 'Starting backend.'
+  $backendProcess = Start-Process -FilePath 'cmd.exe' -WindowStyle Hidden -PassThru -WorkingDirectory (Join-Path $projectRoot 'backend') -ArgumentList @(
+    '/d',
+    '/s',
+    '/c',
+    "npm.cmd run start > `"$backendLog`" 2>&1"
+  )
 
-if (-not $frontendReady) {
-  Write-LaunchLog "Readiness failed. backendReady=$backendReady frontendReady=$frontendReady"
-  throw 'Esoft did not start. Check logs in the logs folder.'
-}
+  if (-not (Wait-HttpReady -Url "$localBackendUrl/" -TimeoutSeconds 90)) {
+    throw "Backend did not start. Check $backendLog"
+  }
 
-Write-LaunchLog 'Esoft is ready.'
+  Write-Status 'Starting frontend.'
+  $frontendProcess = Start-Process -FilePath 'cmd.exe' -WindowStyle Hidden -PassThru -WorkingDirectory (Join-Path $projectRoot 'frontend') -ArgumentList @(
+    '/d',
+    '/s',
+    '/c',
+    "npm.cmd run dev -- --host 0.0.0.0 > `"$frontendLog`" 2>&1"
+  )
 
-if ($config.app.openBrowser -ne $false) {
-  Write-LaunchLog 'Opening browser.'
-  Start-Process "$browserUrl/#/login"
+  if (-not (Wait-HttpReady -Url "$localFrontendUrl/" -TimeoutSeconds 90)) {
+    throw "Frontend did not start. Check $frontendLog"
+  }
+
+  Write-Status 'Esoft is ready.'
+  Write-Host ''
+  Write-Host "Open on this computer: $localFrontendUrl/#/login" -ForegroundColor Green
+  Write-Host "Open in local network: $lanFrontendUrl/#/login" -ForegroundColor Green
+  Write-Host ''
+
+  if ($config.app.openBrowser -ne $false) {
+    Start-Process "$browserUrl/#/login"
+  }
+
+  Write-Host 'Live server window is active. Press Ctrl+C to stop.' -ForegroundColor Yellow
+  while ($true) {
+    Start-Sleep -Seconds 5
+
+    if ($backendProcess.HasExited) {
+      throw "Backend process stopped. Check $backendLog"
+    }
+
+    if ($frontendProcess.HasExited) {
+      throw "Frontend process stopped. Check $frontendLog"
+    }
+  }
+} catch {
+  Write-Host ''
+  Write-Host $_.Exception.Message -ForegroundColor Red
+  Write-Host ''
+  Write-Host "Backend log: $backendLog"
+  Write-Host "Frontend log: $frontendLog"
+  Write-Host ''
+  Read-Host 'Press Enter to close'
+} finally {
+  if ($backendProcess -and -not $backendProcess.HasExited) {
+    Stop-Process -Id $backendProcess.Id -Force -ErrorAction SilentlyContinue
+  }
+
+  if ($frontendProcess -and -not $frontendProcess.HasExited) {
+    Stop-Process -Id $frontendProcess.Id -Force -ErrorAction SilentlyContinue
+  }
 }

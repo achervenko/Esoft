@@ -121,6 +121,22 @@ const equipmentCreateValidationRules: ValidationRule<EquipmentCreateFormState>[]
       trigger: (form) => isInvalidRuDate(form.issueDate),
     },
     {
+      field: 'issueDate',
+      message: 'Дата выдачи не может быть раньше даты ввода в эксплуатацию.',
+      trigger: (form) =>
+        isRuDateBefore(form.issueDate, form.commissioningDate),
+    },
+    {
+      field: 'commissioningDate',
+      message:
+        'Год ввода в эксплуатацию не может быть меньше года выпуска.',
+      trigger: (form) =>
+        isCommissioningYearBeforeManufactureYear(
+          form.commissioningDate,
+          form.manufactureYear,
+        ),
+    },
+    {
       field: 'sectionId',
       message: 'Выберите местонахождение из списка.',
       trigger: (form) => !form.sectionId,
@@ -152,6 +168,25 @@ export function validateEquipmentCreateForm(
   form: EquipmentCreateFormState,
 ): EquipmentCreateValidationResult {
   return validateForm(form, equipmentCreateValidationRules);
+}
+
+export function getEquipmentFieldErrorsFromMessage(message: string) {
+  const lowerMessage = message.toLowerCase();
+  const fieldErrors: EquipmentCreateFieldErrors = {};
+
+  if (lowerMessage.includes('id')) {
+    fieldErrors.visibleId = message;
+  }
+
+  if (lowerMessage.includes('дата выдачи')) {
+    fieldErrors.issueDate = message;
+  }
+
+  if (lowerMessage.includes('год ввода')) {
+    fieldErrors.commissioningDate = message;
+  }
+
+  return fieldErrors;
 }
 
 export function toEquipmentCreatePayload(
@@ -235,4 +270,51 @@ function toRuDateInput(value: string | null) {
   }
 
   return new Intl.DateTimeFormat('ru-RU').format(date);
+}
+
+function parseRuDate(value: string) {
+  const match = value.trim().match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const [, day, month, year] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+
+  if (
+    date.getUTCFullYear() !== Number(year) ||
+    date.getUTCMonth() !== Number(month) - 1 ||
+    date.getUTCDate() !== Number(day)
+  ) {
+    return null;
+  }
+
+  return date;
+}
+
+function isRuDateBefore(checkedDateValue: string, minDateValue: string) {
+  const checkedDate = parseRuDate(checkedDateValue);
+  const minDate = parseRuDate(minDateValue);
+
+  if (!checkedDate || !minDate) {
+    return false;
+  }
+
+  return checkedDate.getTime() < minDate.getTime();
+}
+
+function isCommissioningYearBeforeManufactureYear(
+  commissioningDateValue: string,
+  manufactureYearValue: string,
+) {
+  const commissioningDate = parseRuDate(commissioningDateValue);
+  const cleanYear = manufactureYearValue.trim();
+  const manufactureYear = Number(cleanYear);
+
+  if (!commissioningDate || !/^\d{4}$/.test(cleanYear)) {
+    return false;
+  }
+
+  return commissioningDate.getUTCFullYear() < manufactureYear;
 }

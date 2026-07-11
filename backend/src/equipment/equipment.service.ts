@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EquipmentStatus, Prisma } from '@prisma/client';
+import { AuditModule, EquipmentStatus, Prisma } from '@prisma/client';
 import { IdentityNumberingService } from '../application/numbering/identity-numbering.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -113,6 +113,50 @@ export class EquipmentService {
     }
 
     return this.toEquipmentCard(equipment);
+  }
+
+  async findHistoryByVisibleId(visibleId: number) {
+    const equipment = await this.prisma.equipment.findUnique({
+      where: { visibleId },
+      select: { id: true },
+    });
+
+    if (!equipment) {
+      throw new NotFoundException(
+        'РћР±РѕСЂСѓРґРѕРІР°РЅРёРµ РЅРµ РЅР°Р№РґРµРЅРѕ.',
+      );
+    }
+
+    const history = await this.prisma.auditLog.findMany({
+      where: {
+        entityId: equipment.id,
+        entityType: 'equipment',
+        module: AuditModule.EQUIPMENT,
+      },
+      include: {
+        user: {
+          include: {
+            employeeUser: {
+              include: {
+                employee: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+
+    return history.map((item) => ({
+      id: item.id,
+      action: item.action,
+      createdAt: item.createdAt,
+      fieldName: item.fieldName,
+      newValue: item.newValue,
+      oldValue: item.oldValue,
+      timeZone: item.timeZone,
+      user: item.user ? this.toAuditUserName(item.user) : 'РќРµ СѓРєР°Р·Р°РЅ',
+    }));
   }
 
   async create(dto: CreateEquipmentDto, userId?: string | null) {
@@ -236,6 +280,26 @@ export class EquipmentService {
       throw new BadRequestException('Статус обязателен.');
     }
 
+    const manufactureYear = this.toNullableNumber(dto.manufactureYear);
+    const commissioningDate = this.parseRuDate(dto.commissioningDate);
+    const issueDate = this.parseRuDate(dto.issueDate);
+
+    if (
+      manufactureYear &&
+      commissioningDate &&
+      commissioningDate.getUTCFullYear() < manufactureYear
+    ) {
+      throw new BadRequestException(
+        'Год ввода в эксплуатацию не может быть меньше года выпуска.',
+      );
+    }
+
+    if (issueDate && commissioningDate && issueDate < commissioningDate) {
+      throw new BadRequestException(
+        'Дата выдачи не может быть раньше даты ввода в эксплуатацию.',
+      );
+    }
+
     return {
       name,
       inventoryNumber,
@@ -244,9 +308,9 @@ export class EquipmentService {
       specifications: this.toNullableText(dto.specifications),
       manufacturerId: this.toNullableNumber(dto.manufacturerId),
       countryId: this.toNullableNumber(dto.countryId),
-      manufactureYear: this.toNullableNumber(dto.manufactureYear),
-      commissioningDate: this.parseRuDate(dto.commissioningDate),
-      issueDate: this.parseRuDate(dto.issueDate),
+      manufactureYear,
+      commissioningDate,
+      issueDate,
       sectionId: dto.sectionId,
       responsibleEmployeeId: dto.responsibleEmployeeId,
       status: dto.status,
@@ -287,6 +351,33 @@ export class EquipmentService {
       operationText: equipment.operationText,
       notes: equipment.notes,
     };
+  }
+
+  private toAuditUserName(
+    user: Prisma.UserGetPayload<{
+      include: {
+        employeeUser: {
+          include: {
+            employee: true;
+          };
+        };
+      };
+    }>,
+  ) {
+    const employee = user.employeeUser?.employee;
+
+    if (employee) {
+      return [employee.lastName, employee.firstName, employee.middleName]
+        .filter(Boolean)
+        .join(' ');
+    }
+
+    return (
+      user.displayUsername ||
+      user.username ||
+      user.name ||
+      'РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ'
+    );
   }
 
   private getEquipmentAuditChanges(

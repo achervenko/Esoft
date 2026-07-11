@@ -77,6 +77,17 @@ export type EquipmentCard = {
   visibleId: number;
 };
 
+export type EquipmentHistoryItem = {
+  action: string;
+  createdAt: string;
+  fieldName: string | null;
+  id: number;
+  newValue: string | null;
+  oldValue: string | null;
+  timeZone: string;
+  user: string;
+};
+
 const API_URL = import.meta.env.VITE_API_URL || '';
 
 async function request<T>(path: string, init?: RequestInit) {
@@ -107,6 +118,10 @@ export function getEquipmentRegistry() {
 
 export function getEquipmentCard(visibleId: number) {
   return request<EquipmentCard>(`/api/equipment/${visibleId}`);
+}
+
+export function getEquipmentHistory(visibleId: number) {
+  return request<EquipmentHistoryItem[]>(`/api/equipment/${visibleId}/history`);
 }
 
 export function createEquipment(payload: CreateEquipmentPayload) {
