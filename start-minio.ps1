@@ -1,6 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path $projectRoot 'tools\Set-Utf8Console.ps1')
 $configPath = Join-Path $projectRoot 'esoft.config.json'
 
 if (-not (Test-Path $configPath)) {

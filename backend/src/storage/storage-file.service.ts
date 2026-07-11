@@ -1,12 +1,23 @@
-import { randomUUID } from 'node:crypto';
-import {
-  BadRequestException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import type { StorageFile } from '@prisma/client';
-import { AuditAction, AuditModule, StorageOwnerModule } from '@prisma/client';
+import { AuditAction, StorageDocumentType } from '@prisma/client';
 import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  toAuditModule,
+  toStorageFileDisplayName,
+  toStorageFileDto,
+} from './storage-file.mapper';
+import {
+  createStorageObjectKey,
+  getSafeExtension,
+  isPdfStorageFile,
+  normalizeOriginalFileName,
+} from './storage-file-names.helper';
+import {
+  assertValidStorageDocumentType,
+  assertValidStorageFile,
+} from './storage-file.validation';
 import { StorageObjectService } from './storage-object.service';
 import { StorageOwnerService } from './storage-owner.service';
 import type {
@@ -15,8 +26,6 @@ import type {
   StorageOwnerContext,
   UploadedFileInput,
 } from './storage.types';
-
-const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
 @Injectable()
 export class StorageFileService {
@@ -34,17 +43,26 @@ export class StorageFileService {
 
   async uploadFile(params: {
     audit: StorageAuditContext;
+    documentType: StorageDocumentType;
     file: UploadedFileInput;
     owner: StorageOwnerContext;
     userId?: string | null;
   }): Promise<StorageFileDto> {
-    this.assertValidFile(params.file);
+    assertValidStorageFile(params.file);
+    assertValidStorageDocumentType(params.documentType);
 
-    const objectKey = this.createObjectKey(params.owner, params.file.originalname);
+    const file = {
+      ...params.file,
+      originalname: normalizeOriginalFileName(params.file.originalname),
+    };
     const storedObject = await this.objectStorage.putObject({
-      body: params.file.buffer,
-      contentType: params.file.mimetype,
-      key: objectKey,
+      body: file.buffer,
+      contentType: file.mimetype,
+      key: createStorageObjectKey({
+        documentType: params.documentType,
+        extension: getSafeExtension(file),
+        owner: params.owner,
+      }),
     });
 
     let storageFile: StorageFile;
@@ -53,13 +71,14 @@ export class StorageFileService {
       storageFile = await this.prisma.storageFile.create({
         data: {
           bucket: storedObject.bucket,
-          mimeType: params.file.mimetype || 'application/octet-stream',
+          documentType: params.documentType,
+          mimeType: file.mimetype || 'application/octet-stream',
           objectKey: storedObject.key,
-          originalName: params.file.originalname,
+          originalName: file.originalname,
           ownerEntityId: params.owner.entityId,
           ownerEntityType: params.owner.entityType,
           ownerModule: params.owner.module,
-          sizeBytes: BigInt(params.file.size),
+          sizeBytes: BigInt(file.size),
           uploadedByUserId: params.userId ?? null,
         },
       });
@@ -68,17 +87,11 @@ export class StorageFileService {
       throw error;
     }
 
-    await this.auditLog.writeFieldChanges({
+    await this.writeAudit({
       action: AuditAction.FILE_UPLOAD,
-      entityId: params.audit.entityId,
-      entityType: params.audit.entityType,
-      fields: [
-        {
-          fieldName: 'Файл',
-          newValue: storageFile.originalName,
-        },
-      ],
-      module: params.audit.actionModule,
+      audit: params.audit,
+      newValue: toStorageFileDisplayName(storageFile),
+      oldValue: null,
       userId: params.userId,
     });
 
@@ -93,7 +106,26 @@ export class StorageFileService {
       body: object.body,
       contentLength: object.contentLength,
       contentType: object.contentType || file.mimeType,
-      fileName: file.originalName,
+      fileName: toStorageFileDisplayName(file),
+    };
+  }
+
+  async getPreview(fileId: number) {
+    const file = await this.ownerStorage.findActiveFile(fileId);
+
+    if (!isPdfStorageFile(file)) {
+      throw new BadRequestException(
+        '\u041f\u0440\u0435\u0432\u044c\u044e \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e \u0442\u043e\u043b\u044c\u043a\u043e \u0434\u043b\u044f PDF-\u0444\u0430\u0439\u043b\u043e\u0432.',
+      );
+    }
+
+    const object = await this.objectStorage.getObject(file.objectKey);
+
+    return {
+      body: object.body,
+      contentLength: object.contentLength,
+      contentType: 'application/pdf',
+      fileName: toStorageFileDisplayName(file),
     };
   }
 
@@ -117,18 +149,11 @@ export class StorageFileService {
       },
     });
 
-    await this.auditLog.writeFieldChanges({
+    await this.writeAudit({
       action: AuditAction.FILE_DELETE,
-      entityId: params.audit.entityId,
-      entityType: params.audit.entityType,
-      fields: [
-        {
-          fieldName: 'Файл',
-          oldValue: file.originalName,
-          newValue: null,
-        },
-      ],
-      module: params.audit.actionModule,
+      audit: params.audit,
+      newValue: null,
+      oldValue: toStorageFileDisplayName(file),
       userId: params.userId,
     });
 
@@ -154,51 +179,26 @@ export class StorageFileService {
     });
   }
 
-  private assertValidFile(file: UploadedFileInput) {
-    if (!file?.buffer || file.size <= 0) {
-      throw new BadRequestException('Файл пустой или не передан.');
-    }
-
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      throw new BadRequestException('Размер файла не должен превышать 25 МБ.');
-    }
+  private writeAudit(params: {
+    action: AuditAction;
+    audit: StorageAuditContext;
+    newValue: string | null;
+    oldValue: string | null;
+    userId?: string | null;
+  }) {
+    return this.auditLog.writeFieldChanges({
+      action: params.action,
+      entityId: params.audit.entityId,
+      entityType: params.audit.entityType,
+      fields: [
+        {
+          fieldName: '\u0424\u0430\u0439\u043b',
+          newValue: params.newValue,
+          oldValue: params.oldValue,
+        },
+      ],
+      module: params.audit.actionModule,
+      userId: params.userId,
+    });
   }
-
-  private createObjectKey(owner: StorageOwnerContext, originalName: string) {
-    const safeFileName = toSafeFileName(originalName);
-    return `${owner.module}/${owner.entityId}/${randomUUID()}-${safeFileName}`;
-  }
-}
-
-function toAuditModule(module: StorageOwnerModule) {
-  const modules: Record<StorageOwnerModule, AuditModule> = {
-    [StorageOwnerModule.EQUIPMENT]: AuditModule.EQUIPMENT,
-  };
-
-  return modules[module];
-}
-
-function toStorageFileDto(file: StorageFile): StorageFileDto {
-  return {
-    createdAt: file.createdAt,
-    deletedAt: file.deletedAt,
-    id: file.id,
-    mimeType: file.mimeType,
-    originalName: file.originalName,
-    sizeBytes: file.sizeBytes.toString(),
-  };
-}
-
-function toSafeFileName(fileName: string) {
-  const cleanName = fileName
-    .trim()
-    .replace(/[\\/]/g, '-')
-    .replace(/[^\p{L}\p{N}._ -]/gu, '')
-    .replace(/\s+/g, '-');
-
-  if (!cleanName || cleanName === '.' || cleanName === '..') {
-    throw new BadRequestException('Некорректное имя файла.');
-  }
-
-  return cleanName.slice(0, 160);
 }

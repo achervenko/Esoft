@@ -1,5 +1,11 @@
 import type { Readable } from 'node:stream';
-import type { AuditModule, StorageOwnerModule } from '@prisma/client';
+import type {
+  AuditModule,
+  StorageDocumentType,
+  StorageOwnerModule,
+} from '@prisma/client';
+
+export type { StorageDocumentType };
 
 export type PutObjectInput = {
   body: Buffer | Uint8Array | Readable | string;
@@ -35,6 +41,8 @@ export type StorageAuditContext = {
 export type StorageFileDto = {
   createdAt: Date;
   deletedAt: Date | null;
+  displayName: string;
+  documentType: StorageDocumentType;
   id: number;
   mimeType: string;
   originalName: string;

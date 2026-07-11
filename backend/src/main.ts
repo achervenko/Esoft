@@ -9,6 +9,7 @@ async function bootstrap() {
   app.use('/api/equipment', json({ limit: '2mb' }));
   app.enableCors({
     credentials: true,
+    exposedHeaders: ['Content-Disposition'],
     origin: [
       process.env.FRONTEND_URL ?? 'http://127.0.0.1:5173',
       'http://127.0.0.1:5173',

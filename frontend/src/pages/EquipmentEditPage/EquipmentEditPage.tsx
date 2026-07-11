@@ -1,15 +1,16 @@
-import { ArrowLeft } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { canEditEquipment } from '../../modules/equipment-permissions';
+import { ArrowLeft } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { EquipmentDocumentsPanel } from "../../modules/equipment-documents";
+import { canEditEquipment } from "../../modules/equipment-permissions";
 import {
   getEquipmentCard,
   getEquipmentCreateOptions,
   updateEquipment,
   type EquipmentCreateOptions,
-} from '../../shared/api/equipment-api';
-import { Notice } from '../../shared/ui/Notice';
-import { UnsavedChangesGuard } from '../../shared/ui/UnsavedChangesGuard';
-import { EquipmentCreateForm } from '../EquipmentCreatePage/EquipmentCreateForm';
+} from "../../shared/api/equipment-api";
+import { Notice } from "../../shared/ui/Notice";
+import { UnsavedChangesGuard } from "../../shared/ui/UnsavedChangesGuard";
+import { EquipmentCreateForm } from "../EquipmentCreatePage/EquipmentCreateForm";
 import {
   type EquipmentCreateFieldErrors,
   getEquipmentFieldErrorsFromMessage,
@@ -18,15 +19,19 @@ import {
   toEquipmentFormState,
   validateEquipmentCreateForm,
   type EquipmentCreateFormState,
-} from '../EquipmentCreatePage/model/equipment-create-form';
-import '../EquipmentCreatePage/EquipmentCreatePage.css';
+} from "../EquipmentCreatePage/model/equipment-create-form";
+import "../EquipmentCreatePage/EquipmentCreatePage.css";
 
 type EquipmentEditPageProps = {
+  initialTab?: EquipmentEditTab;
   userRole: string | null;
   visibleId: number;
 };
 
+type EquipmentEditTab = "details" | "documents";
+
 export function EquipmentEditPage({
+  initialTab = "details",
   userRole,
   visibleId,
 }: EquipmentEditPageProps) {
@@ -34,18 +39,23 @@ export function EquipmentEditPage({
   const [form, setForm] = useState<EquipmentCreateFormState>(
     initialEquipmentCreateFormState,
   );
-  const [initialForm, setInitialForm] = useState<EquipmentCreateFormState | null>(
-    null,
-  );
+  const [initialForm, setInitialForm] =
+    useState<EquipmentCreateFormState | null>(null);
   const [options, setOptions] = useState<EquipmentCreateOptions | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<EquipmentCreateFieldErrors>({});
+  const [activeTab, setActiveTab] = useState<EquipmentEditTab>(initialTab);
+  const [fieldErrors, setFieldErrors] = useState<EquipmentCreateFieldErrors>(
+    {},
+  );
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const hasUnsavedChanges = useMemo(
-    () => Boolean(initialForm && JSON.stringify(form) !== JSON.stringify(initialForm)),
+    () =>
+      Boolean(
+        initialForm && JSON.stringify(form) !== JSON.stringify(initialForm),
+      ),
     [form, initialForm],
   );
 
@@ -78,6 +88,10 @@ export function EquipmentEditPage({
       isMounted = false;
     };
   }, [visibleId]);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   const updateForm = <Key extends keyof EquipmentCreateFormState>(
     key: Key,
@@ -114,7 +128,7 @@ export function EquipmentEditPage({
         toEquipmentCreatePayload(form),
       );
 
-      setMessage('Оборудование сохранено.');
+      setMessage("Оборудование сохранено.");
       const updatedForm = toEquipmentFormState(updatedEquipment);
       setInitialForm(updatedForm);
       setForm(updatedForm);
@@ -126,7 +140,7 @@ export function EquipmentEditPage({
       const errorMessage =
         requestError instanceof Error
           ? requestError.message
-          : 'Не удалось сохранить оборудование.';
+          : "Не удалось сохранить оборудование.";
 
       setError(errorMessage);
       setFieldErrors((currentErrors) => ({
@@ -171,18 +185,43 @@ export function EquipmentEditPage({
         </Notice>
       ) : null}
 
+      <div className="equipment-edit-tabs" role="tablist">
+        <button
+          aria-selected={activeTab === "details"}
+          className={activeTab === "details" ? "active" : undefined}
+          onClick={() => setActiveTab("details")}
+          role="tab"
+          type="button"
+        >
+          Данные
+        </button>
+        <button
+          aria-selected={activeTab === "documents"}
+          className={activeTab === "documents" ? "active" : undefined}
+          onClick={() => setActiveTab("documents")}
+          role="tab"
+          type="button"
+        >
+          Документы
+        </button>
+      </div>
+
       {options ? (
-        <EquipmentCreateForm
-          fieldErrors={fieldErrors}
-          form={form}
-          isSubmitting={isSubmitting}
-          onChange={updateForm}
-          onFieldFocus={handleFieldFocus}
-          onSubmit={handleSubmit}
-          options={options}
-          submitLabel="Сохранить изменения"
-          submittingLabel="Сохранение..."
-        />
+        activeTab === "details" ? (
+          <EquipmentCreateForm
+            fieldErrors={fieldErrors}
+            form={form}
+            isSubmitting={isSubmitting}
+            onChange={updateForm}
+            onFieldFocus={handleFieldFocus}
+            onSubmit={handleSubmit}
+            options={options}
+            submitLabel="Сохранить изменения"
+            submittingLabel="Сохранение..."
+          />
+        ) : (
+          <EquipmentDocumentsPanel mode="edit" visibleId={visibleId} />
+        )
       ) : null}
     </div>
   );

@@ -3,6 +3,8 @@
   "private": true,
   "version": "0.0.1",
   "scripts": {
+    "check:encoding": "node ./tools/check-encoding.mjs",
+    "check:encoding:strict": "node ./tools/check-encoding.mjs --strict",
     "install:minio": "powershell -ExecutionPolicy Bypass -File ./install-minio.ps1",
     "start:minio": "powershell -ExecutionPolicy Bypass -File ./start-minio.ps1",
     "start:simple": "powershell -ExecutionPolicy Bypass -File ./start-esoft-npm.ps1",

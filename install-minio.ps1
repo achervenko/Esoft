@@ -1,6 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path $projectRoot 'tools\Set-Utf8Console.ps1')
 $configPath = Join-Path $projectRoot 'esoft.config.json'
 $fallbackMinioPath = Join-Path $projectRoot 'tools\minio.exe'
 $downloadUrl = 'https://dl.min.io/server/minio/release/windows-amd64/minio.exe'

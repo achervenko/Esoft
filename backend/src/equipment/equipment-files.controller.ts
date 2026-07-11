@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
@@ -8,7 +9,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { AuditModule } from '@prisma/client';
+import { AuditModule, StorageDocumentType } from '@prisma/client';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { Auth } from '../auth/auth.config';
 import { assertCanManageFiles } from '../auth/role-permissions';
@@ -27,9 +28,8 @@ export class EquipmentFilesController {
 
   @Get()
   async list(@Param('visibleId', ParseIntPipe) visibleId: number) {
-    const owner = await this.equipmentService.findStorageOwnerByVisibleId(
-      visibleId,
-    );
+    const owner =
+      await this.equipmentService.findStorageOwnerByVisibleId(visibleId);
 
     return this.storageFileService.listFiles(owner);
   }
@@ -44,14 +44,14 @@ export class EquipmentFilesController {
   )
   async upload(
     @Param('visibleId', ParseIntPipe) visibleId: number,
+    @Body('documentType') documentType: StorageDocumentType,
     @UploadedFile() file: UploadedFileInput,
     @Session() session: UserSession<Auth>,
   ) {
     assertCanManageFiles(session.user.role);
 
-    const owner = await this.equipmentService.findStorageOwnerByVisibleId(
-      visibleId,
-    );
+    const owner =
+      await this.equipmentService.findStorageOwnerByVisibleId(visibleId);
 
     return this.storageFileService.uploadFile({
       audit: {
@@ -59,6 +59,7 @@ export class EquipmentFilesController {
         entityId: owner.entityId,
         entityType: owner.entityType,
       },
+      documentType,
       file,
       owner,
       userId: session.user.id,

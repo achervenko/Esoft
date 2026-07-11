@@ -39,6 +39,27 @@ export class FilesController {
     return new StreamableFile(file.body);
   }
 
+  @Get(':fileId/preview')
+  @Header('Cache-Control', 'private, max-age=0, no-cache')
+  async preview(
+    @Param('fileId', ParseIntPipe) fileId: number,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const file = await this.storageFileService.getPreview(fileId);
+
+    response.setHeader('Content-Type', file.contentType);
+    response.setHeader(
+      'Content-Disposition',
+      createInlineContentDisposition(file.fileName),
+    );
+
+    if (file.contentLength !== undefined) {
+      response.setHeader('Content-Length', String(file.contentLength));
+    }
+
+    return new StreamableFile(file.body);
+  }
+
   @Delete(':fileId')
   delete(
     @Param('fileId', ParseIntPipe) fileId: number,
@@ -56,4 +77,9 @@ export class FilesController {
 function createContentDisposition(fileName: string) {
   const fallbackFileName = fileName.replace(/[^\x20-\x7E]/g, '_');
   return `attachment; filename="${fallbackFileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
+}
+
+function createInlineContentDisposition(fileName: string) {
+  const fallbackFileName = fileName.replace(/[^\x20-\x7E]/g, '_');
+  return `inline; filename="${fallbackFileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
 }
