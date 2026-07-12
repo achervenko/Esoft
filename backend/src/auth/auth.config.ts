@@ -3,9 +3,11 @@ import { PrismaClient } from '@prisma/client';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { admin, username } from 'better-auth/plugins';
+import { AuthLoginService } from './auth-login.service';
 import { createPrismaClientOptions } from '../prisma/prisma-client-options';
 
 const prisma = new PrismaClient(createPrismaClientOptions());
+const authLoginService = new AuthLoginService(prisma);
 
 export const auth = betterAuth({
   appName: 'Esoft',
@@ -19,6 +21,22 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
   }),
+  databaseHooks: {
+    session: {
+      create: {
+        after: async (session) => {
+          await authLoginService
+            .recordSuccessfulLogin(session)
+            .catch((error) => {
+              console.error(
+                '[auth-login] Failed to update last login timestamp',
+                error,
+              );
+            });
+        },
+      },
+    },
+  },
   emailAndPassword: {
     enabled: true,
   },

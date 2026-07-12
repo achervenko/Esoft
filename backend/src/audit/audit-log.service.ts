@@ -21,7 +21,7 @@ type AuditFieldChange = {
 
 type WriteAuditParams = {
   action: AuditAction;
-  entityId: number;
+  entityId?: number | null;
   entityType: string;
   fields: AuditFieldChange[];
   module: AuditModule;
@@ -125,7 +125,7 @@ export class AuditLogService {
     await this.prisma.auditLog.createMany({
       data: params.fields.map((field) => ({
         action: params.action,
-        entityId: params.entityId,
+        entityId: params.entityId ?? null,
         entityType: params.entityType,
         fieldName: field.fieldName,
         module: params.module,

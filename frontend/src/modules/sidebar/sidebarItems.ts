@@ -5,6 +5,7 @@ export type SidebarItem = {
   href: string;
   icon: LucideIcon;
   label: string;
+  roles?: string[];
 };
 
 export type SidebarSection = {
@@ -35,6 +36,7 @@ export const sidebarSections: SidebarSection[] = [
         href: '#/users',
         icon: Users,
         label: 'Пользователи',
+        roles: ['admin'],
       },
     ],
   },

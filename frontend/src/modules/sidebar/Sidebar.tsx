@@ -12,6 +12,7 @@ type SidebarProps = {
     displayUsername?: string | null;
     employee?: EmployeeProfile | null;
     name?: string | null;
+    role?: string | null;
     username?: string | null;
   } | null;
 };
@@ -45,6 +46,7 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
   const isMobileSidebar = useMobileSidebar();
   const displayName = getUserDisplayName(user);
   const username = getAccountLabel(user);
+  const userRole = user?.role ?? null;
 
   useEffect(() => {
     const handleHashChange = () => setActiveHref(getHashRoute());
@@ -104,7 +106,9 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
           <section className="sidebar-section" key={section.title}>
             <h2>{section.title}</h2>
             <ul>
-              {section.items.map((item) => {
+              {section.items
+                .filter((item) => !item.roles || item.roles.includes(String(userRole)))
+                .map((item) => {
                 const Icon = item.icon;
                 const isActive = activeHref === item.href;
 

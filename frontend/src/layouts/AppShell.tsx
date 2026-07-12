@@ -4,12 +4,14 @@ import { EquipmentCreatePage } from "../pages/EquipmentCreatePage";
 import { EquipmentEditPage } from "../pages/EquipmentEditPage";
 import { EquipmentPage } from "../pages/EquipmentPage";
 import { EquipmentViewPage } from "../pages/EquipmentViewPage";
+import { UsersPage } from "../pages/UsersPage";
 import type { EmployeeProfile } from "../shared/api/user-profile-api";
 import "./AppShell.css";
 
 type AppShellUser = {
   displayUsername?: string | null;
   employee?: EmployeeProfile | null;
+  id?: string | null;
   name?: string | null;
   role?: string | null;
   username?: string | null;
@@ -24,6 +26,7 @@ type AppShellProps = {
 export function AppShell({ onLogout, route, user }: AppShellProps) {
   const isDashboardRoute = route === "#/dashboard";
   const isEquipmentRoute = route === "#/equipment";
+  const isUsersRoute = route === "#/users";
   const isEquipmentCreateRoute = route === "#/equipment/create";
   const equipmentEditMatch = route.match(
     /^#\/equipment\/(\d+)\/edit(?:\?tab=(details|documents))?$/,
@@ -61,6 +64,12 @@ export function AppShell({ onLogout, route, user }: AppShellProps) {
           <EquipmentViewPage
             userRole={user?.role ?? null}
             visibleId={equipmentViewId}
+          />
+        ) : null}
+        {isUsersRoute ? (
+          <UsersPage
+            currentUserId={user?.id ?? null}
+            userRole={user?.role ?? null}
           />
         ) : null}
       </section>
