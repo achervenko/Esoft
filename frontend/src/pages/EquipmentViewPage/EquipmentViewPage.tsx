@@ -53,12 +53,21 @@ export function EquipmentViewPage({
     };
   }, [visibleId]);
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    window.location.hash = '#/equipment';
+  };
+
   return (
     <div className="equipment-view-page">
-      <a className="equipment-back-link" href="#/equipment">
+      <button className="equipment-back-link" onClick={handleBack} type="button">
         <ArrowLeft aria-hidden="true" size={18} />
-        <span>К реестру</span>
-      </a>
+        <span>Назад</span>
+      </button>
 
       {isLoading ? <Notice>Загрузка карточки оборудования...</Notice> : null}
       {error ? <Notice tone="error">{error}</Notice> : null}

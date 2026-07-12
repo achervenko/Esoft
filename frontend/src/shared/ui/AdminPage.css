@@ -211,8 +211,7 @@
   color: #b42318;
 }
 
-.admin-form .form-field input,
-.admin-form .form-field select {
+.admin-form .form-field input {
   min-height: 44px;
   border: 1px solid #d7dce3;
   border-radius: 8px;
@@ -224,8 +223,7 @@
   font-weight: 700;
 }
 
-.admin-form .form-field input:focus,
-.admin-form .form-field select:focus {
+.admin-form .form-field input:focus {
   border-color: #111111;
   outline: 2px solid rgba(17, 17, 17, 0.12);
   outline-offset: 0;

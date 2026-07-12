@@ -16,7 +16,7 @@ enum StorageDocumentType {
 model StorageFile {
   id               Int                 @id @default(autoincrement())
   bucket           String              @db.VarChar(63)
-  objectKey        String              @unique @map("object_key") @db.VarChar(512)
+  objectKey        String              @map("object_key") @db.VarChar(512)
   originalName     String              @map("original_name") @db.VarChar(255)
   mimeType         String              @map("mime_type") @db.VarChar(128)
   sizeBytes        BigInt              @map("size_bytes")
@@ -26,9 +26,10 @@ model StorageFile {
   ownerEntityId    Int                 @map("owner_entity_id")
   uploadedByUserId String?             @map("uploaded_by_user_id")
   uploadedByUser   User?               @relation("UploadedStorageFiles", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
-  createdAt        DateTime            @default(dbgenerated("timezone('Europe/Moscow'::text, now())")) @map("created_at") @db.Timestamp(6)
-  deletedAt        DateTime?           @map("deleted_at") @db.Timestamp(6)
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  deletedAt        DateTime?           @map("deleted_at") @db.Timestamptz(6)
 
+  @@unique([bucket, objectKey], map: "uq_storage_files_bucket_object_key")
   @@index([bucket], map: "idx_storage_files_bucket")
   @@index([createdAt(sort: Desc)], map: "idx_storage_files_created_at")
   @@index([uploadedByUserId], map: "idx_storage_files_uploaded_by_user_id")

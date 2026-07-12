@@ -23,7 +23,7 @@ enum AuditModule {
 
 model AuditLog {
   id         Int         @id @default(autoincrement())
-  createdAt  DateTime    @default(dbgenerated("timezone('Europe/Moscow'::text, now())")) @map("created_at") @db.Timestamp(6)
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
   timeZone   String      @default("Europe/Moscow (UTC+03:00)") @map("time_zone") @db.VarChar(32)
   userId     String?     @map("user_id")
   user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull, map: "fk_audit_log_user")

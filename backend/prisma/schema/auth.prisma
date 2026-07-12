@@ -1,23 +1,23 @@
 model User {
-  id                      String             @id
-  name                    String
-  email                   String
-  emailVerified           Boolean            @default(false)
-  image                   String?
-  createdAt               DateTime           @default(now())
-  updatedAt               DateTime           @updatedAt
-  username                String?
-  displayUsername         String?
-  role                    String?
-  banned                  Boolean?           @default(false)
-  banReason               String?
-  banExpires              DateTime?
-  lastLoginAt             DateTime?          @map("last_login_at")
-  sessions                Session[]
-  accounts                Account[]
-  auditLogs               AuditLog[]
-  employeeUser            EmployeeUser?
-  uploadedStorageFiles    StorageFile[]      @relation("UploadedStorageFiles")
+  id                   String        @id
+  name                 String
+  email                String
+  emailVerified        Boolean       @default(false)
+  image                String?
+  createdAt            DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime      @updatedAt @db.Timestamptz(6)
+  username             String?
+  displayUsername      String?
+  role                 String?
+  banned               Boolean?      @default(false)
+  banReason            String?
+  banExpires           DateTime?     @db.Timestamptz(6)
+  lastLoginAt          DateTime?     @map("last_login_at") @db.Timestamptz(6)
+  sessions             Session[]
+  accounts             Account[]
+  auditLogs            AuditLog[]
+  employeeUser         EmployeeUser?
+  uploadedStorageFiles StorageFile[] @relation("UploadedStorageFiles")
 
   @@unique([email])
   @@unique([username])
@@ -26,10 +26,10 @@ model User {
 
 model Session {
   id             String   @id
-  expiresAt      DateTime
+  expiresAt      DateTime @db.Timestamptz(6)
   token          String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(6)
   ipAddress      String?
   userAgent      String?
   userId         String
@@ -50,12 +50,12 @@ model Account {
   accessToken           String?
   refreshToken          String?
   idToken               String?
-  accessTokenExpiresAt  DateTime?
-  refreshTokenExpiresAt DateTime?
+  accessTokenExpiresAt  DateTime? @db.Timestamptz(6)
+  refreshTokenExpiresAt DateTime? @db.Timestamptz(6)
   scope                 String?
   password              String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  createdAt             DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(6)
 
   @@index([userId])
   @@map("account")
@@ -65,9 +65,9 @@ model Verification {
   id         String   @id
   identifier String
   value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  expiresAt  DateTime @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(6)
 
   @@index([identifier])
   @@map("verification")

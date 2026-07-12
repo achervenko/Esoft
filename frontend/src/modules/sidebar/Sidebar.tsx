@@ -39,6 +39,10 @@ function getAccountLabel(user: SidebarProps['user']) {
   return user?.username || user?.displayUsername || user?.name || 'admin';
 }
 
+function isSidebarItemActive(activeHref: string, itemHref: string) {
+  return activeHref === itemHref || activeHref.startsWith(`${itemHref}?`);
+}
+
 export function Sidebar({ onLogout, user }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -110,7 +114,7 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
                 .filter((item) => !item.roles || item.roles.includes(String(userRole)))
                 .map((item) => {
                 const Icon = item.icon;
-                const isActive = activeHref === item.href;
+                const isActive = isSidebarItemActive(activeHref, item.href);
 
                 return (
                   <li key={item.href}>

@@ -5,6 +5,7 @@ import type {
   LocationPayload,
 } from "../../shared/api/dictionaries-admin-api";
 import { AdminModal } from "../../shared/ui/AdminModal";
+import { SelectDropdown } from "../../shared/ui/SelectDropdown";
 
 type LocationFormModalProps = {
   isSaving: boolean;
@@ -37,7 +38,7 @@ export function LocationFormModal({
     const objectId = Number(form.objectId);
     const name = form.name.trim();
 
-    if (!name || !Number.isInteger(objectId)) {
+    if (!name || !Number.isInteger(objectId) || objectId <= 0) {
       setError("Укажите объект и название местонахождения.");
       return;
     }
@@ -54,28 +55,22 @@ export function LocationFormModal({
       }
     >
       <form className="admin-form" onSubmit={handleSubmit}>
-        <label className="form-field">
-          <span>
-            Объект<b aria-hidden="true">*</b>
-          </span>
-          <select
-            autoFocus
-            onChange={(event) =>
-              setForm((currentForm) => ({
-                ...currentForm,
-                objectId: event.target.value,
-              }))
-            }
-            value={form.objectId}
-          >
-            <option value="">Выберите объект</option>
-            {objects.map((object) => (
-              <option key={object.id} value={object.id}>
-                {object.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectDropdown
+          label="Объект"
+          onChange={(value) =>
+            setForm((currentForm) => ({
+              ...currentForm,
+              objectId: value,
+            }))
+          }
+          options={objects.map((object) => ({
+            label: object.name,
+            value: String(object.id),
+          }))}
+          placeholder="Выберите объект"
+          required
+          value={form.objectId}
+        />
 
         <label className="form-field">
           <span>

@@ -1,0 +1,62 @@
+view AdminEquipmentFull {
+  id                          Int
+  visibleId                   Int              @map("visible_id")
+  inventoryNumber             String           @map("inventory_number") @db.VarChar(64)
+  serialNumber                String?          @map("serial_number") @db.VarChar(128)
+  equipmentName               String           @map("equipment_name") @db.VarChar(128)
+  model                       String?          @db.VarChar(128)
+  specifications              String?
+  manufacturerId              Int?             @map("manufacturer_id")
+  manufacturerName            String?          @map("manufacturer_name") @db.VarChar(128)
+  countryId                   Int?             @map("country_id")
+  countryName                 String?          @map("country_name") @db.VarChar(128)
+  countryIso                  String?          @map("country_iso") @db.Char(2)
+  manufactureYear             Int?             @map("manufacture_year") @db.SmallInt
+  commissioningDate           DateTime?        @map("commissioning_date") @db.Date
+  issueDate                   DateTime?        @map("issue_date") @db.Date
+  sectionId                   Int              @map("section_id")
+  sectionName                 String           @map("section_name") @db.VarChar(128)
+  workshopId                  Int              @map("workshop_id")
+  workshopName                String           @map("workshop_name") @db.VarChar(128)
+  responsibleEmployeeId       Int              @map("responsible_employee_id")
+  responsibleEmployeeName     String           @map("responsible_employee_name")
+  responsibleEmployeePosition String           @map("responsible_employee_position") @db.VarChar(64)
+  status                      EquipmentStatus
+  operationText               String?          @map("operation_text")
+  notes                       String?
+
+  @@ignore
+  @@map("admin_equipment_full")
+}
+
+view AdminOrganizationStructure {
+  workshopId     Int     @map("workshop_id")
+  workshopName   String  @map("workshop_name") @db.VarChar(128)
+  sectionId      Int?    @map("section_id")
+  sectionName    String? @map("section_name") @db.VarChar(128)
+  equipmentCount BigInt  @map("equipment_count")
+
+  @@ignore
+  @@map("admin_organization_structure")
+}
+
+view AdminAuditLogFull {
+  id               Int
+  createdAt        DateTime    @map("created_at") @db.Timestamptz(6)
+  userId           String?     @map("user_id")
+  username         String?
+  userName         String?     @map("user_name")
+  employeeId       Int?        @map("employee_id")
+  employeeFullName String      @map("employee_full_name")
+  action           AuditAction
+  module           AuditModule
+  entityType       String      @map("entity_type") @db.VarChar(64)
+  entityId         Int?        @map("entity_id")
+  fieldName        String?     @map("field_name") @db.VarChar(128)
+  oldValue         String?     @map("old_value") @db.Text
+  newValue         String?     @map("new_value") @db.Text
+  timeZone         String      @map("time_zone") @db.VarChar(32)
+
+  @@ignore
+  @@map("admin_audit_log_full")
+}

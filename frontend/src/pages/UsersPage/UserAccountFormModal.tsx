@@ -7,6 +7,7 @@ import type {
   UserAccountPayload,
 } from "../../shared/api/users-admin-api";
 import { AdminModal } from "../../shared/ui/AdminModal";
+import { SelectDropdown } from "../../shared/ui/SelectDropdown";
 
 type UserAccountFormModalProps = {
   employees: AdminEmployee[];
@@ -29,7 +30,7 @@ export function UserAccountFormModal({
     email: user?.email ?? "",
     employeeId: user?.employee?.id ? String(user.employee.id) : "",
     password: "",
-    role: (user?.role as AdminUserRole | null) ?? "operator",
+    role: String((user?.role as AdminUserRole | null) ?? "operator"),
     username: user?.username ?? "",
   });
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +55,8 @@ export function UserAccountFormModal({
       !form.email.trim() ||
       !form.username.trim() ||
       !form.role ||
-      !Number.isInteger(employeeId)
+      !Number.isInteger(employeeId) ||
+      employeeId <= 0
     ) {
       setError("Заполните сотрудника, email, логин и роль.");
       return;
@@ -82,7 +84,7 @@ export function UserAccountFormModal({
       email: form.email.trim(),
       employeeId,
       password: isCreateMode ? form.password : undefined,
-      role: form.role,
+      role: form.role as AdminUserRole,
       username: form.username.trim(),
     });
   };
@@ -95,23 +97,17 @@ export function UserAccountFormModal({
       }
     >
       <form className="admin-form" onSubmit={handleSubmit}>
-        <label className="form-field">
-          <span>
-            Сотрудник<b aria-hidden="true">*</b>
-          </span>
-          <select
-            autoFocus
-            onChange={(event) => updateField("employeeId", event.target.value)}
-            value={form.employeeId}
-          >
-            <option value="">Выберите сотрудника</option>
-            {employees.map((employee) => (
-              <option key={employee.id} value={employee.id}>
-                {employee.fullName} — {employee.position}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectDropdown
+          label="Сотрудник"
+          onChange={(value) => updateField("employeeId", value)}
+          options={employees.map((employee) => ({
+            label: `${employee.fullName} — ${employee.position}`,
+            value: String(employee.id),
+          }))}
+          placeholder="Выберите сотрудника"
+          required
+          value={form.employeeId}
+        />
         <label className="form-field">
           <span>
             Email<b aria-hidden="true">*</b>
@@ -146,21 +142,16 @@ export function UserAccountFormModal({
             />
           </label>
         ) : null}
-        <label className="form-field">
-          <span>
-            Роль<b aria-hidden="true">*</b>
-          </span>
-          <select
-            onChange={(event) => updateField("role", event.target.value)}
-            value={form.role}
-          >
-            {roles.map((role) => (
-              <option key={role.value} value={role.value}>
-                {role.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectDropdown
+          label="Роль"
+          onChange={(value) => updateField("role", value)}
+          options={roles.map((role) => ({
+            label: role.label,
+            value: role.value,
+          }))}
+          required
+          value={form.role}
+        />
 
         {error ? <p className="admin-form-error">{error}</p> : null}
 

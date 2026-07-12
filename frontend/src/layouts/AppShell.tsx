@@ -5,6 +5,7 @@ import { EquipmentCreatePage } from "../pages/EquipmentCreatePage";
 import { EquipmentEditPage } from "../pages/EquipmentEditPage";
 import { EquipmentPage } from "../pages/EquipmentPage";
 import { EquipmentViewPage } from "../pages/EquipmentViewPage";
+import { SearchPage } from "../pages/SearchPage";
 import { UsersPage } from "../pages/UsersPage";
 import type { EmployeeProfile } from "../shared/api/user-profile-api";
 import "./AppShell.css";
@@ -28,6 +29,7 @@ export function AppShell({ onLogout, route, user }: AppShellProps) {
   const isDashboardRoute = route === "#/dashboard";
   const isDictionariesRoute = route === "#/dictionaries";
   const isEquipmentRoute = route === "#/equipment";
+  const isSearchRoute = route === "#/search" || route.startsWith("#/search?");
   const isUsersRoute = route === "#/users";
   const isEquipmentCreateRoute = route === "#/equipment/create";
   const equipmentEditMatch = route.match(
@@ -55,6 +57,7 @@ export function AppShell({ onLogout, route, user }: AppShellProps) {
         {isEquipmentRoute ? (
           <EquipmentPage userRole={user?.role ?? null} />
         ) : null}
+        {isSearchRoute ? <SearchPage /> : null}
         {isEquipmentCreateRoute ? (
           <EquipmentCreatePage userRole={user?.role ?? null} />
         ) : null}

@@ -11,9 +11,11 @@ export function EquipmentStatusBadge({
   label,
   status,
 }: EquipmentStatusBadgeProps) {
+  const statusClassName = `status-${status.toUpperCase()}`;
+
   return (
     <span
-      className={`equipment-status-badge status-${status}${className ? ` ${className}` : ''}`}
+      className={`equipment-status-badge ${statusClassName}${className ? ` ${className}` : ''}`}
     >
       {label}
     </span>

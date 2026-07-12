@@ -12,6 +12,7 @@ import {
 import { IdentityNumberingService } from '../application/numbering/identity-numbering.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { EquipmentSearchProjector } from '../search/equipment-search.projector';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 
 const EQUIPMENT_IDENTITY_TARGET = {
@@ -38,6 +39,7 @@ type EquipmentWithAuditRelations = Prisma.EquipmentGetPayload<{
 export class EquipmentService {
   constructor(
     private readonly auditLog: AuditLogService,
+    private readonly equipmentSearchProjector: EquipmentSearchProjector,
     private readonly numbering: IdentityNumberingService,
     private readonly prisma: PrismaService,
   ) {}
@@ -197,11 +199,20 @@ export class EquipmentService {
       }
     }
 
-    const equipment = await this.prisma.equipment.create({
-      data: {
-        ...(dto.visibleId ? { visibleId: dto.visibleId } : {}),
-        ...data,
-      },
+    const equipment = await this.prisma.$transaction(async (tx) => {
+      const createdEquipment = await tx.equipment.create({
+        data: {
+          ...(dto.visibleId ? { visibleId: dto.visibleId } : {}),
+          ...data,
+        },
+      });
+
+      await this.equipmentSearchProjector.upsertEquipment(
+        tx,
+        createdEquipment.id,
+      );
+
+      return createdEquipment;
     });
 
     if (dto.visibleId) {
@@ -242,12 +253,19 @@ export class EquipmentService {
       }
     }
 
-    await this.prisma.equipment.update({
-      where: { id: currentEquipment.id },
-      data: {
-        ...(dto.visibleId ? { visibleId: dto.visibleId } : {}),
-        ...data,
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.equipment.update({
+        where: { id: currentEquipment.id },
+        data: {
+          ...(dto.visibleId ? { visibleId: dto.visibleId } : {}),
+          ...data,
+        },
+      });
+
+      await this.equipmentSearchProjector.upsertEquipment(
+        tx,
+        currentEquipment.id,
+      );
     });
 
     if (dto.visibleId && dto.visibleId !== currentEquipment.visibleId) {

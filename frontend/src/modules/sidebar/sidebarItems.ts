@@ -1,4 +1,4 @@
-import { BookOpen, Factory, Gauge, Users } from "lucide-react";
+import { BookOpen, Factory, Gauge, Search, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type SidebarItem = {
@@ -26,6 +26,11 @@ export const sidebarSections: SidebarSection[] = [
         href: "#/equipment",
         icon: Factory,
         label: "Оборудование",
+      },
+      {
+        href: "#/search",
+        icon: Search,
+        label: "Поиск",
       },
     ],
   },
