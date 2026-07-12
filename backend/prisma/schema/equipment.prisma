@@ -29,9 +29,6 @@ model Equipment {
   responsibleEmployee   Employee           @relation("EquipmentResponsibleEmployee", fields: [responsibleEmployeeId], references: [id], onDelete: Restrict)
   status                EquipmentStatus    @default(ACTIVE)
   operationText         String?            @map("operation_text")
-  operationId           Int?               @map("operation_id")
-  operation             Operation?         @relation(fields: [operationId], references: [id], onDelete: SetNull)
-  history               EquipmentHistory[]
   notes                 String?
 
   @@index([visibleId], map: "idx_equipment_visible_id")
@@ -39,6 +36,5 @@ model Equipment {
   @@index([status], map: "idx_equipment_status")
   @@index([sectionId], map: "idx_equipment_section_id")
   @@index([responsibleEmployeeId], map: "idx_equipment_responsible_employee_id")
-  @@index([operationId], map: "idx_equipment_operation_id")
   @@map("equipment")
 }

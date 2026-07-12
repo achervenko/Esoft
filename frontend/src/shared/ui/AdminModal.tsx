@@ -8,10 +8,14 @@ type AdminModalProps = {
 
 export function AdminModal({ children, onClose, title }: AdminModalProps) {
   return (
-    <div className="users-modal-backdrop" onMouseDown={onClose}>
+    <div
+      className="admin-modal-backdrop"
+      onMouseDown={onClose}
+      role="presentation"
+    >
       <section
         aria-modal="true"
-        className="users-modal"
+        className="admin-modal"
         onMouseDown={(event) => event.stopPropagation()}
         role="dialog"
       >

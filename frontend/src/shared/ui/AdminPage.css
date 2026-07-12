@@ -1,0 +1,262 @@
+.admin-page {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-page-header h1,
+.admin-page-header p,
+.admin-card h2,
+.admin-state,
+.admin-form-hint,
+.admin-form-error {
+  margin: 0;
+}
+
+.admin-page-header h1 {
+  color: #15171c;
+  font-size: 30px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
+.admin-page-header p,
+.admin-state,
+.admin-form-hint {
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-tabs {
+  width: max-content;
+}
+
+.admin-card {
+  display: grid;
+  gap: 14px;
+  overflow-x: auto;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 18px;
+  background: #ffffff;
+}
+
+.admin-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-card h2 {
+  color: #15171c;
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.admin-nested-sections {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-nested-section {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-nested-section > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-nested-section h3 {
+  margin: 0;
+  color: #15171c;
+  font-size: 16px;
+  font-weight: 850;
+}
+
+.admin-primary-button,
+.admin-secondary-button,
+.admin-table-actions button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 0 12px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.admin-icon-button {
+  width: 38px;
+  min-width: 38px;
+  padding: 0;
+}
+
+.admin-primary-button {
+  border: 1px solid #111111;
+  background: #111111;
+  color: #ffffff;
+}
+
+.admin-secondary-button,
+.admin-table-actions button {
+  border: 1px solid #d7dce3;
+  background: #ffffff;
+  color: #3f4652;
+}
+
+.admin-primary-button:disabled,
+.admin-secondary-button:disabled,
+.admin-table-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.admin-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.admin-card .data-table th:last-child,
+.admin-card .data-table td:last-child {
+  text-align: right;
+}
+
+.admin-card .data-table th:last-child .data-table-sort-button {
+  justify-content: flex-end;
+}
+
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(21, 23, 28, 0.58);
+}
+
+.admin-modal {
+  width: min(560px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  display: grid;
+  overflow-y: auto;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 28px 80px rgba(17, 24, 39, 0.24);
+}
+
+.admin-modal > header {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #eef0f3;
+  padding: 0 18px;
+}
+
+.admin-modal h2 {
+  margin: 0;
+  color: #15171c;
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.admin-modal > header button {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #d7dce3;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #3f4652;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.admin-form {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.admin-form .form-field {
+  display: grid;
+  gap: 8px;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.admin-form .form-field b {
+  margin-left: 3px;
+  color: #b42318;
+}
+
+.admin-form .form-field input,
+.admin-form .form-field select {
+  min-height: 44px;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #ffffff;
+  color: #15171c;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-form .form-field input:focus,
+.admin-form .form-field select:focus {
+  border-color: #111111;
+  outline: 2px solid rgba(17, 17, 17, 0.12);
+  outline-offset: 0;
+}
+
+.admin-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.admin-form-error {
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+@media (max-width: 760px) {
+  .admin-page-header,
+  .admin-card > header,
+  .admin-nested-section > header,
+  .admin-form-actions {
+    display: grid;
+  }
+
+  .admin-tabs {
+    width: 100%;
+  }
+
+  .admin-primary-button,
+  .admin-secondary-button {
+    width: 100%;
+  }
+}

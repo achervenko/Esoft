@@ -6,7 +6,7 @@ import type {
   AdminUserRole,
   UserAccountPayload,
 } from "../../shared/api/users-admin-api";
-import { AdminModal } from "./AdminModal";
+import { AdminModal } from "../../shared/ui/AdminModal";
 
 type UserAccountFormModalProps = {
   employees: AdminEmployee[];
@@ -90,11 +90,15 @@ export function UserAccountFormModal({
   return (
     <AdminModal
       onClose={onClose}
-      title={isCreateMode ? "Новая учётная запись" : "Редактирование учётной записи"}
+      title={
+        isCreateMode ? "Новая учётная запись" : "Редактирование учётной записи"
+      }
     >
-      <form className="users-form" onSubmit={handleSubmit}>
+      <form className="admin-form" onSubmit={handleSubmit}>
         <label className="form-field">
-          <span>Сотрудник *</span>
+          <span>
+            Сотрудник<b aria-hidden="true">*</b>
+          </span>
           <select
             autoFocus
             onChange={(event) => updateField("employeeId", event.target.value)}
@@ -109,7 +113,9 @@ export function UserAccountFormModal({
           </select>
         </label>
         <label className="form-field">
-          <span>Email *</span>
+          <span>
+            Email<b aria-hidden="true">*</b>
+          </span>
           <input
             maxLength={255}
             onChange={(event) => updateField("email", event.target.value)}
@@ -118,7 +124,9 @@ export function UserAccountFormModal({
           />
         </label>
         <label className="form-field">
-          <span>Логин *</span>
+          <span>
+            Логин<b aria-hidden="true">*</b>
+          </span>
           <input
             maxLength={64}
             onChange={(event) => updateField("username", event.target.value)}
@@ -127,7 +135,9 @@ export function UserAccountFormModal({
         </label>
         {isCreateMode ? (
           <label className="form-field">
-            <span>Пароль *</span>
+            <span>
+              Пароль<b aria-hidden="true">*</b>
+            </span>
             <input
               minLength={8}
               onChange={(event) => updateField("password", event.target.value)}
@@ -137,7 +147,9 @@ export function UserAccountFormModal({
           </label>
         ) : null}
         <label className="form-field">
-          <span>Роль *</span>
+          <span>
+            Роль<b aria-hidden="true">*</b>
+          </span>
           <select
             onChange={(event) => updateField("role", event.target.value)}
             value={form.role}
@@ -150,13 +162,21 @@ export function UserAccountFormModal({
           </select>
         </label>
 
-        {error ? <p className="users-form-error">{error}</p> : null}
+        {error ? <p className="admin-form-error">{error}</p> : null}
 
-        <div className="users-form-actions">
-          <button className="users-secondary-button" onClick={onClose} type="button">
+        <div className="admin-form-actions">
+          <button
+            className="admin-secondary-button"
+            onClick={onClose}
+            type="button"
+          >
             Отмена
           </button>
-          <button className="users-primary-button" disabled={isSaving} type="submit">
+          <button
+            className="admin-primary-button"
+            disabled={isSaving}
+            type="submit"
+          >
             {isSaving ? "Сохранение..." : "Сохранить"}
           </button>
         </div>

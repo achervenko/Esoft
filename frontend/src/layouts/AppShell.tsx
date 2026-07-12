@@ -1,5 +1,6 @@
 import { Sidebar } from "../modules/sidebar";
 import { DashboardPage } from "../pages/DashboardPage";
+import { DictionariesPage } from "../pages/DictionariesPage";
 import { EquipmentCreatePage } from "../pages/EquipmentCreatePage";
 import { EquipmentEditPage } from "../pages/EquipmentEditPage";
 import { EquipmentPage } from "../pages/EquipmentPage";
@@ -25,6 +26,7 @@ type AppShellProps = {
 
 export function AppShell({ onLogout, route, user }: AppShellProps) {
   const isDashboardRoute = route === "#/dashboard";
+  const isDictionariesRoute = route === "#/dictionaries";
   const isEquipmentRoute = route === "#/equipment";
   const isUsersRoute = route === "#/users";
   const isEquipmentCreateRoute = route === "#/equipment/create";
@@ -47,6 +49,9 @@ export function AppShell({ onLogout, route, user }: AppShellProps) {
 
       <section className="app-workspace" aria-label="Рабочая область">
         {isDashboardRoute ? <DashboardPage /> : null}
+        {isDictionariesRoute ? (
+          <DictionariesPage userRole={user?.role ?? null} />
+        ) : null}
         {isEquipmentRoute ? (
           <EquipmentPage userRole={user?.role ?? null} />
         ) : null}

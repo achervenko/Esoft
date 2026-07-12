@@ -1,26 +1,19 @@
 import { useEffect, useState } from "react";
 import {
-  createAdminEmployee,
   createAdminUserAccount,
-  deleteAdminEmployee,
   getAdminEmployees,
   getAdminRoles,
   getAdminUserAccounts,
   setAdminUserPassword,
   setAdminUserStatus,
-  updateAdminEmployee,
   updateAdminUserAccount,
   type AdminEmployee,
   type AdminRoleOption,
   type AdminUserAccount,
-  type EmployeePayload,
   type UserAccountPayload,
 } from "../../shared/api/users-admin-api";
 import { getUsersAdminErrorMessage } from "./users-admin-error-messages";
 
-export type ActiveUsersTab = "employees" | "accounts";
-
-export type EmployeeFormState = AdminEmployee | "new" | null;
 export type UserFormState = AdminUserAccount | "new" | null;
 
 type UseUsersAdminPageParams = {
@@ -28,13 +21,13 @@ type UseUsersAdminPageParams = {
 };
 
 export function useUsersAdminPage({ userRole }: UseUsersAdminPageParams) {
-  const [activeTab, setActiveTab] = useState<ActiveUsersTab>("employees");
   const [employees, setEmployees] = useState<AdminEmployee[]>([]);
   const [users, setUsers] = useState<AdminUserAccount[]>([]);
   const [roles, setRoles] = useState<AdminRoleOption[]>([]);
-  const [employeeForm, setEmployeeForm] = useState<EmployeeFormState>(null);
   const [userForm, setUserForm] = useState<UserFormState>(null);
-  const [passwordUser, setPasswordUser] = useState<AdminUserAccount | null>(null);
+  const [passwordUser, setPasswordUser] = useState<AdminUserAccount | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +45,9 @@ export function useUsersAdminPage({ userRole }: UseUsersAdminPageParams) {
         setUsers(userItems);
         setRoles(roleItems);
       })
-      .catch((requestError) => setError(getUsersAdminErrorMessage(requestError)))
+      .catch((requestError) =>
+        setError(getUsersAdminErrorMessage(requestError)),
+      )
       .finally(() => setIsLoading(false));
   };
 
@@ -64,21 +59,6 @@ export function useUsersAdminPage({ userRole }: UseUsersAdminPageParams) {
 
     setIsLoading(false);
   }, [isAdmin]);
-
-  const saveEmployee = async (payload: EmployeePayload) => {
-    await runSavingAction(async () => {
-      if (employeeForm === "new") {
-        await createAdminEmployee(payload);
-        setMessage("Сотрудник добавлен.");
-      } else if (employeeForm) {
-        await updateAdminEmployee(employeeForm.id, payload);
-        setMessage("Сотрудник обновлён.");
-      }
-
-      setEmployeeForm(null);
-      loadData();
-    });
-  };
 
   const saveUser = async (payload: UserAccountPayload) => {
     await runSavingAction(async () => {
@@ -121,30 +101,8 @@ export function useUsersAdminPage({ userRole }: UseUsersAdminPageParams) {
     try {
       await setAdminUserStatus(user.id, !user.banned);
       setMessage(
-        user.banned
-          ? "Учётная запись включена."
-          : "Учётная запись отключена.",
+        user.banned ? "Учётная запись включена." : "Учётная запись отключена.",
       );
-      loadData();
-    } catch (requestError) {
-      setError(getUsersAdminErrorMessage(requestError));
-    }
-  };
-
-  const removeEmployee = async (employee: AdminEmployee) => {
-    const confirmed = window.confirm(
-      `Удалить сотрудника «${employee.fullName}»?`,
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    setError(null);
-
-    try {
-      await deleteAdminEmployee(employee.id);
-      setMessage("Сотрудник удалён.");
       loadData();
     } catch (requestError) {
       setError(getUsersAdminErrorMessage(requestError));
@@ -165,21 +123,15 @@ export function useUsersAdminPage({ userRole }: UseUsersAdminPageParams) {
   };
 
   return {
-    activeTab,
     employees,
-    employeeForm,
     error,
     isAdmin,
     isLoading,
     isSaving,
     message,
     passwordUser,
-    removeEmployee,
     roles,
-    saveEmployee,
     saveUser,
-    setActiveTab,
-    setEmployeeForm,
     setPassword,
     setPasswordUser,
     setUserForm,

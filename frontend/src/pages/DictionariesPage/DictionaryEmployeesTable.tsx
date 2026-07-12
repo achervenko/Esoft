@@ -1,8 +1,8 @@
-import { Edit2, Trash2 } from "lucide-react";
-import { DataTable, type DataTableColumn } from "../../shared/ui/DataTable";
 import type { AdminEmployee } from "../../shared/api/users-admin-api";
+import { AdminTableActions } from "../../shared/ui/AdminTableActions";
+import { DataTable, type DataTableColumn } from "../../shared/ui/DataTable";
 
-type EmployeesTableProps = {
+type DictionaryEmployeesTableProps = {
   employees: AdminEmployee[];
   onDelete: (employee: AdminEmployee) => void;
   onEdit: (employee: AdminEmployee) => void;
@@ -28,35 +28,21 @@ const employeeColumns = (
     key: "actions",
     label: "",
     render: (employee) => (
-      <div className="users-table-actions">
-        <button
-          aria-label={`Редактировать сотрудника ${employee.fullName}`}
-          className="users-icon-button"
-          onClick={() => onEdit(employee)}
-          title="Редактировать"
-          type="button"
-        >
-          <Edit2 size={17} />
-        </button>
-        <button
-          aria-label={`Удалить сотрудника ${employee.fullName}`}
-          className="users-icon-button"
-          onClick={() => onDelete(employee)}
-          title="Удалить"
-          type="button"
-        >
-          <Trash2 size={17} />
-        </button>
-      </div>
+      <AdminTableActions
+        deleteLabel={`Удалить сотрудника ${employee.fullName}`}
+        editLabel={`Редактировать сотрудника ${employee.fullName}`}
+        onDelete={() => onDelete(employee)}
+        onEdit={() => onEdit(employee)}
+      />
     ),
   },
 ];
 
-export function EmployeesTable({
+export function DictionaryEmployeesTable({
   employees,
   onDelete,
   onEdit,
-}: EmployeesTableProps) {
+}: DictionaryEmployeesTableProps) {
   return (
     <DataTable
       columns={employeeColumns(onEdit, onDelete)}

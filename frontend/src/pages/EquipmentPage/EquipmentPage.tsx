@@ -1,12 +1,12 @@
-import { Plus } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { canCreateEquipment } from '../../modules/equipment-permissions';
+import { Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { canCreateEquipment } from "../../modules/equipment-permissions";
 import {
   getEquipmentRegistry,
   type EquipmentRegistryItem,
-} from '../../shared/api/equipment-api';
-import { EquipmentRegistryTable } from './EquipmentRegistryTable';
-import './EquipmentPage.css';
+} from "../../shared/api/equipment-api";
+import { EquipmentRegistryTable } from "./EquipmentRegistryTable";
+import "./EquipmentPage.css";
 
 type EquipmentPageProps = {
   userRole: string | null;
@@ -55,16 +55,21 @@ export function EquipmentPage({ userRole }: EquipmentPageProps) {
         {isCreateAllowed ? (
           <a className="equipment-add-button" href="#/equipment/create">
             <Plus aria-hidden="true" size={18} />
-            <span>Добавить оборудование</span>
+            <span>Добавить</span>
           </a>
         ) : null}
       </header>
 
-      <section className="equipment-table-section" aria-label="Реестр оборудования">
+      <section
+        className="equipment-table-section"
+        aria-label="Реестр оборудования"
+      >
         {isLoading ? (
           <p className="equipment-state-message">Загрузка реестра...</p>
         ) : null}
-        {error ? <p className="equipment-state-message error">{error}</p> : null}
+        {error ? (
+          <p className="equipment-state-message error">{error}</p>
+        ) : null}
         {!isLoading && !error ? (
           <EquipmentRegistryTable
             items={items}

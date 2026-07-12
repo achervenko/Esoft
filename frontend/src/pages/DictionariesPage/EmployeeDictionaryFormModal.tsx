@@ -1,20 +1,23 @@
 import { useState } from "react";
-import type { AdminEmployee, EmployeePayload } from "../../shared/api/users-admin-api";
-import { AdminModal } from "./AdminModal";
+import type {
+  AdminEmployee,
+  EmployeePayload,
+} from "../../shared/api/users-admin-api";
+import { AdminModal } from "../../shared/ui/AdminModal";
 
-type EmployeeFormModalProps = {
+type EmployeeDictionaryFormModalProps = {
   employee: AdminEmployee | null;
   isSaving: boolean;
   onClose: () => void;
   onSubmit: (payload: EmployeePayload) => void;
 };
 
-export function EmployeeFormModal({
+export function EmployeeDictionaryFormModal({
   employee,
   isSaving,
   onClose,
   onSubmit,
-}: EmployeeFormModalProps) {
+}: EmployeeDictionaryFormModalProps) {
   const [form, setForm] = useState<EmployeePayload>({
     firstName: employee?.firstName ?? "",
     lastName: employee?.lastName ?? "",
@@ -37,7 +40,11 @@ export function EmployeeFormModal({
       return;
     }
 
-    if (!form.lastName.trim() || !form.firstName.trim() || !form.position.trim()) {
+    if (
+      !form.lastName.trim() ||
+      !form.firstName.trim() ||
+      !form.position.trim()
+    ) {
       setError("Заполните фамилию, имя и должность.");
       return;
     }
@@ -56,9 +63,11 @@ export function EmployeeFormModal({
       onClose={onClose}
       title={employee ? "Редактирование сотрудника" : "Новый сотрудник"}
     >
-      <form className="users-form" onSubmit={handleSubmit}>
+      <form className="admin-form" onSubmit={handleSubmit}>
         <label className="form-field">
-          <span>Фамилия *</span>
+          <span>
+            Фамилия<b aria-hidden="true">*</b>
+          </span>
           <input
             autoFocus
             maxLength={64}
@@ -67,7 +76,9 @@ export function EmployeeFormModal({
           />
         </label>
         <label className="form-field">
-          <span>Имя *</span>
+          <span>
+            Имя<b aria-hidden="true">*</b>
+          </span>
           <input
             maxLength={64}
             onChange={(event) => updateField("firstName", event.target.value)}
@@ -83,7 +94,9 @@ export function EmployeeFormModal({
           />
         </label>
         <label className="form-field">
-          <span>Должность *</span>
+          <span>
+            Должность<b aria-hidden="true">*</b>
+          </span>
           <input
             maxLength={64}
             onChange={(event) => updateField("position", event.target.value)}
@@ -91,13 +104,21 @@ export function EmployeeFormModal({
           />
         </label>
 
-        {error ? <p className="users-form-error">{error}</p> : null}
+        {error ? <p className="admin-form-error">{error}</p> : null}
 
-        <div className="users-form-actions">
-          <button className="users-secondary-button" onClick={onClose} type="button">
+        <div className="admin-form-actions">
+          <button
+            className="admin-secondary-button"
+            onClick={onClose}
+            type="button"
+          >
             Отмена
           </button>
-          <button className="users-primary-button" disabled={isSaving} type="submit">
+          <button
+            className="admin-primary-button"
+            disabled={isSaving}
+            type="submit"
+          >
             {isSaving ? "Сохранение..." : "Сохранить"}
           </button>
         </div>

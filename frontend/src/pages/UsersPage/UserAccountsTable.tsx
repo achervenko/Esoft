@@ -59,10 +59,10 @@ const userColumns = ({
     key: "actions",
     label: "",
     render: (user) => (
-      <div className="users-table-actions">
+      <div className="admin-table-actions">
         <button
           aria-label={`Редактировать учётную запись ${user.username || user.email}`}
-          className="users-icon-button"
+          className="admin-icon-button"
           onClick={() => onEdit(user)}
           title="Редактировать"
           type="button"
@@ -71,7 +71,7 @@ const userColumns = ({
         </button>
         <button
           aria-label={`Сменить пароль для ${user.username || user.email}`}
-          className="users-icon-button"
+          className="admin-icon-button"
           onClick={() => onChangePassword(user)}
           title="Сменить пароль"
           type="button"
@@ -84,7 +84,7 @@ const userColumns = ({
               ? `Включить учётную запись ${user.username || user.email}`
               : `Отключить учётную запись ${user.username || user.email}`
           }
-          className={`users-icon-button users-status-toggle${
+          className={`admin-icon-button users-status-toggle${
             user.banned ? " banned" : " active"
           }`}
           disabled={user.id === currentUserId && !user.banned}

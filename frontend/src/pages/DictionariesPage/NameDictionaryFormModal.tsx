@@ -1,21 +1,28 @@
 import { useState } from "react";
-import type { AdminUserAccount } from "../../shared/api/users-admin-api";
+import type { DictionaryNamePayload } from "../../shared/api/dictionaries-admin-api";
 import { AdminModal } from "../../shared/ui/AdminModal";
 
-type PasswordFormModalProps = {
-  isSaving: boolean;
-  onClose: () => void;
-  onSubmit: (password: string) => void;
-  user: AdminUserAccount;
+type NameDictionaryItem = {
+  id: number;
+  name: string;
 };
 
-export function PasswordFormModal({
+type NameDictionaryFormModalProps = {
+  item: NameDictionaryItem | null;
+  isSaving: boolean;
+  onClose: () => void;
+  onSubmit: (payload: DictionaryNamePayload) => void;
+  title: string;
+};
+
+export function NameDictionaryFormModal({
+  item,
   isSaving,
   onClose,
   onSubmit,
-  user,
-}: PasswordFormModalProps) {
-  const [password, setPassword] = useState("");
+  title,
+}: NameDictionaryFormModalProps) {
+  const [name, setName] = useState(item?.name ?? "");
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -25,32 +32,27 @@ export function PasswordFormModal({
       return;
     }
 
-    if (password.length < 8) {
-      setError("Пароль должен быть не короче 8 символов.");
+    if (!name.trim()) {
+      setError("Укажите название.");
       return;
     }
 
     setError(null);
-    onSubmit(password);
+    onSubmit({ name: name.trim() });
   };
 
   return (
-    <AdminModal onClose={onClose} title="Смена пароля">
+    <AdminModal onClose={onClose} title={title}>
       <form className="admin-form" onSubmit={handleSubmit}>
-        <p className="admin-form-hint">
-          Новый пароль будет установлен для учётной записи{" "}
-          {user.username || user.email}.
-        </p>
         <label className="form-field">
           <span>
-            Новый пароль<b aria-hidden="true">*</b>
+            Название<b aria-hidden="true">*</b>
           </span>
           <input
             autoFocus
-            minLength={8}
-            onChange={(event) => setPassword(event.target.value)}
-            type="password"
-            value={password}
+            maxLength={128}
+            onChange={(event) => setName(event.target.value)}
+            value={name}
           />
         </label>
 
@@ -69,7 +71,7 @@ export function PasswordFormModal({
             disabled={isSaving}
             type="submit"
           >
-            {isSaving ? "Сохранение..." : "Сменить пароль"}
+            {isSaving ? "Сохранение..." : "Сохранить"}
           </button>
         </div>
       </form>

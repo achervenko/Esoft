@@ -1,5 +1,5 @@
-import { Factory, Gauge, Users } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { BookOpen, Factory, Gauge, Users } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 export type SidebarItem = {
   href: string;
@@ -15,28 +15,34 @@ export type SidebarSection = {
 
 export const sidebarSections: SidebarSection[] = [
   {
-    title: 'Основное',
+    title: "Основное",
     items: [
       {
-        href: '#/dashboard',
+        href: "#/dashboard",
         icon: Gauge,
-        label: 'Панель',
+        label: "Панель",
       },
       {
-        href: '#/equipment',
+        href: "#/equipment",
         icon: Factory,
-        label: 'Оборудование',
+        label: "Оборудование",
       },
     ],
   },
   {
-    title: 'Администрирование',
+    title: "Администрирование",
     items: [
       {
-        href: '#/users',
+        href: "#/users",
         icon: Users,
-        label: 'Пользователи',
-        roles: ['admin'],
+        label: "Пользователи",
+        roles: ["admin"],
+      },
+      {
+        href: "#/dictionaries",
+        icon: BookOpen,
+        label: "Справочники",
+        roles: ["admin"],
       },
     ],
   },
