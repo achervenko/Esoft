@@ -200,7 +200,8 @@
   overflow: hidden;
 }
 
-.sidebar-user-avatar img {
+.sidebar-user-avatar .async-image,
+.sidebar-user-avatar .async-image img {
   display: block;
   width: 100%;
   height: 100%;

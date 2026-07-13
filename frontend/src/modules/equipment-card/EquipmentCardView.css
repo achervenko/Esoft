@@ -96,6 +96,96 @@
   font-weight: 800;
 }
 
+.equipment-card-main-section {
+  gap: 18px;
+}
+
+.equipment-card-main-layout {
+  display: grid;
+  grid-template-columns: 256px minmax(0, 1fr);
+  align-items: start;
+  gap: 22px;
+}
+
+.equipment-photo-gallery {
+  width: 256px;
+  display: grid;
+  gap: 10px;
+}
+
+.equipment-photo-frame {
+  width: 256px;
+  height: 256px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e3e6eb;
+  border-radius: 12px;
+  background: #f4f6f8;
+}
+
+.equipment-photo-preview-button {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.equipment-photo-preview-button .async-image,
+.equipment-photo-preview-button .async-image img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.equipment-photo-preview-button:focus-visible {
+  outline: 3px solid rgba(17, 17, 17, 0.18);
+  outline-offset: -3px;
+}
+
+.equipment-photo-placeholder {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.equipment-photo-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.equipment-photo-controls button {
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  padding: 0;
+  background: #ffffff;
+  color: #303744;
+  cursor: pointer;
+}
+
+.equipment-photo-controls button:hover {
+  border-color: #111111;
+  color: #111111;
+}
+
 .equipment-card-view-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -148,6 +238,20 @@
 
   .equipment-card-view-grid {
     grid-template-columns: 1fr;
+  }
+
+  .equipment-card-main-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .equipment-photo-gallery,
+  .equipment-photo-frame {
+    width: min(256px, 100%);
+  }
+
+  .equipment-photo-frame {
+    height: auto;
+    aspect-ratio: 1;
   }
 
   .equipment-card-tabs {

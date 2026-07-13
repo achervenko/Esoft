@@ -9,7 +9,10 @@ import type { StorageFile } from '@prisma/client';
 import { AuditAction, StorageDocumentType } from '@prisma/client';
 import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { toStorageFileDisplayNameInList, toStorageFileDto } from './storage-file.mapper';
+import {
+  toStorageFileDisplayNameInList,
+  toStorageFileDto,
+} from './storage-file.mapper';
 import {
   createStorageObjectKey,
   getSafeExtension,
@@ -85,6 +88,10 @@ export class StorageFileUploadService {
       storedObject,
       userId: params.userId,
       documentType: params.documentType,
+      isPrimary: this.shouldMakePrimary({
+        activeFiles: activeFilesBeforeUpload,
+        documentType: params.documentType,
+      }),
     });
     const activeFiles = await this.ownerStorage.findActiveFiles(params.owner);
     const displayName = toStorageFileDisplayNameInList(
@@ -106,6 +113,7 @@ export class StorageFileUploadService {
   private async createStorageFileSafely(params: {
     documentType: StorageDocumentType;
     file: UploadedFileInput;
+    isPrimary: boolean;
     owner: StorageOwnerContext;
     storedObject: { bucket: string; key: string };
     userId?: string | null;
@@ -115,6 +123,7 @@ export class StorageFileUploadService {
         data: {
           bucket: params.storedObject.bucket,
           documentType: params.documentType,
+          isPrimary: params.isPrimary,
           mimeType: params.file.mimetype || 'application/octet-stream',
           objectKey: params.storedObject.key,
           originalName: params.file.originalname,
@@ -168,6 +177,19 @@ export class StorageFileUploadService {
         '\u041f\u0430\u0441\u043f\u043e\u0440\u0442 \u0434\u043b\u044f \u044d\u0442\u043e\u0433\u043e \u043e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u044f \u0443\u0436\u0435 \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043d. \u0423\u0434\u0430\u043b\u0438\u0442\u0435 \u0435\u0433\u043e \u043f\u0435\u0440\u0435\u0434 \u0437\u0430\u0433\u0440\u0443\u0437\u043a\u043e\u0439 \u043d\u043e\u0432\u043e\u0433\u043e.',
       );
     }
+  }
+
+  private shouldMakePrimary(params: {
+    activeFiles: StorageFile[];
+    documentType: StorageDocumentType;
+  }) {
+    if (params.documentType !== StorageDocumentType.equipment_photo) {
+      return false;
+    }
+
+    return !params.activeFiles.some(
+      (file) => file.documentType === StorageDocumentType.equipment_photo,
+    );
   }
 
   private async putObjectSafely(input: {

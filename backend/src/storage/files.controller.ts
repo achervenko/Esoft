@@ -5,6 +5,8 @@ import {
   Header,
   Param,
   ParseIntPipe,
+  Patch,
+  Query,
   Res,
   StreamableFile,
 } from '@nestjs/common';
@@ -13,6 +15,7 @@ import type { Response } from 'express';
 import { assertCanManageFiles } from '../auth/role-permissions';
 import type { Auth } from '../auth/auth.config';
 import { StorageFileService } from './storage-file.service';
+import type { StorageImagePreviewSize } from './storage.types';
 
 @Controller('api/files')
 export class FilesController {
@@ -40,14 +43,23 @@ export class FilesController {
   }
 
   @Get(':fileId/preview')
-  @Header('Cache-Control', 'private, max-age=0, no-cache')
   async preview(
     @Param('fileId', ParseIntPipe) fileId: number,
+    @Query('size') size: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const file = await this.storageFileService.getPreview(fileId);
+    const file = await this.storageFileService.getPreview(
+      fileId,
+      toStorageImagePreviewSize(size),
+    );
 
     response.setHeader('Content-Type', file.contentType);
+    response.setHeader(
+      'Cache-Control',
+      file.isOptimizedImagePreview
+        ? 'private, max-age=31536000, immutable'
+        : 'private, max-age=86400',
+    );
     response.setHeader(
       'Content-Disposition',
       createInlineContentDisposition(file.fileName),
@@ -72,6 +84,19 @@ export class FilesController {
       userId: session.user.id,
     });
   }
+
+  @Patch(':fileId/primary')
+  setPrimary(
+    @Param('fileId', ParseIntPipe) fileId: number,
+    @Session() session: UserSession<Auth>,
+  ) {
+    assertCanManageFiles(session.user.role);
+
+    return this.storageFileService.setPrimaryFileById({
+      fileId,
+      userId: session.user.id,
+    });
+  }
 }
 
 function createContentDisposition(fileName: string) {
@@ -82,4 +107,18 @@ function createContentDisposition(fileName: string) {
 function createInlineContentDisposition(fileName: string) {
   const fallbackFileName = fileName.replace(/[^\x20-\x7E]/g, '_');
   return `inline; filename="${fallbackFileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
+}
+
+function toStorageImagePreviewSize(
+  value: string | undefined,
+): StorageImagePreviewSize | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  if (value === 'small' || value === 'medium') {
+    return value;
+  }
+
+  return undefined;
 }

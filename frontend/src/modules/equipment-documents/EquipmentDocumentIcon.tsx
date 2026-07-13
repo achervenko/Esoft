@@ -7,6 +7,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { EquipmentFile } from "../../shared/api/equipment-api";
+import { getFilePreviewUrl } from "../../shared/api/files-api";
+import { AsyncImage } from "../../shared/ui/AsyncImage";
 import { getFileExtension } from "./equipment-document-utils";
 
 type EquipmentDocumentIconProps = {
@@ -14,6 +16,17 @@ type EquipmentDocumentIconProps = {
 };
 
 export function EquipmentDocumentIcon({ file }: EquipmentDocumentIconProps) {
+  if (file.documentType === "equipment_photo") {
+    return (
+      <div
+        className="equipment-document-icon equipment-document-icon-thumbnail"
+        title="Фото"
+      >
+        <AsyncImage src={getFilePreviewUrl(file.id, { size: "small" })} />
+      </div>
+    );
+  }
+
   const iconInfo = getFileIconInfo(file);
   const Icon = iconInfo.Icon;
 

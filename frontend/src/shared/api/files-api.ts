@@ -1,7 +1,13 @@
 const API_URL = import.meta.env.VITE_API_URL || "";
 
-export function getFilePreviewUrl(fileId: number) {
-  return `${API_URL}/api/files/${fileId}/preview`;
+export type FilePreviewSize = "small" | "medium";
+
+export function getFilePreviewUrl(
+  fileId: number,
+  options: { size?: FilePreviewSize } = {},
+) {
+  const baseUrl = `${API_URL}/api/files/${fileId}/preview`;
+  return options.size ? `${baseUrl}?size=${options.size}` : baseUrl;
 }
 
 export function getFileDownloadUrl(fileId: number) {

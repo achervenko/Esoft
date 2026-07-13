@@ -19,6 +19,8 @@ export type StoredObject = {
   contentType?: string;
 };
 
+export type StorageImagePreviewSize = 'small' | 'medium';
+
 export type UploadedFileInput = {
   buffer: Buffer;
   mimetype?: string;
@@ -44,6 +46,7 @@ export type StorageFileDto = {
   displayName: string;
   documentType: StorageDocumentType;
   id: number;
+  isPrimary: boolean;
   mimeType: string;
   originalName: string;
   sizeBytes: string;

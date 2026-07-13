@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { EmployeeProfile } from "../../shared/api/user-profile-api";
 import type { UserPhoto } from "../../shared/api/user-profile-api";
+import { AsyncImage } from "../../shared/ui/AsyncImage";
 import {
   getProfileModuleAccess,
   getProfilePermissionAccess,
@@ -44,7 +45,7 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
           type="button"
         >
           {user?.photo?.mediumUrl ? (
-            <img alt="" src={user.photo.mediumUrl} />
+            <AsyncImage src={user.photo.mediumUrl} />
           ) : (
             <span>{getInitials(fullName)}</span>
           )}

@@ -4,6 +4,7 @@ import {
   deleteEquipmentFile,
   downloadEquipmentFile,
   getEquipmentFiles,
+  setEquipmentFilePrimary,
   uploadEquipmentFile,
   type EquipmentFile,
   type StorageDocumentType,
@@ -30,11 +31,13 @@ import "./EquipmentDocumentsPanel.css";
 
 type EquipmentDocumentsPanelProps = {
   mode: "edit" | "view";
+  onSaved?: () => void;
   visibleId: number;
 };
 
 export function EquipmentDocumentsPanel({
   mode,
+  onSaved,
   visibleId,
 }: EquipmentDocumentsPanelProps) {
   const [files, setFiles] = useState<EquipmentFile[]>([]);
@@ -47,6 +50,9 @@ export function EquipmentDocumentsPanel({
     null,
   );
   const [deletingFileId, setDeletingFileId] = useState<number | null>(null);
+  const [settingPrimaryFileId, setSettingPrimaryFileId] = useState<
+    number | null
+  >(null);
   const [previewFile, setPreviewFile] = useState<EquipmentFile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -61,7 +67,9 @@ export function EquipmentDocumentsPanel({
     return documentTypeOptions.reduce(
       (groups, option) => ({
         ...groups,
-        [option.value]: files.filter((file) => file.documentType === option.value),
+        [option.value]: files
+          .filter((file) => file.documentType === option.value)
+          .sort(compareEquipmentFiles),
       }),
       {} as Record<StorageDocumentType, EquipmentFile[]>,
     );
@@ -115,7 +123,9 @@ export function EquipmentDocumentsPanel({
     }));
   };
 
-  const handleSaveChanges = async (event?: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveChanges = async (
+    event?: React.FormEvent<HTMLFormElement>,
+  ) => {
     event?.preventDefault();
     setError(null);
     setMessage(null);
@@ -160,6 +170,7 @@ export function EquipmentDocumentsPanel({
       setSelectedFiles({});
       setMessage(text.savedChanges);
       loadFiles();
+      onSaved?.();
     } catch (requestError) {
       setError(getEquipmentDocumentUploadErrorMessage(requestError));
       setSelectedFiles((currentFiles) => {
@@ -221,6 +232,38 @@ export function EquipmentDocumentsPanel({
     }
   };
 
+  const handleSetPrimary = async (file: EquipmentFile) => {
+    setError(null);
+    setMessage(null);
+    setSettingPrimaryFileId(file.id);
+
+    try {
+      const updatedFile = await setEquipmentFilePrimary(file.id);
+
+      setFiles((currentFiles) =>
+        currentFiles.map((currentFile) => {
+          if (currentFile.documentType !== "equipment_photo") {
+            return currentFile;
+          }
+
+          return {
+            ...currentFile,
+            isPrimary: currentFile.id === updatedFile.id,
+          };
+        }),
+      );
+      setMessage(text.primaryPhotoSaved);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043d\u0430\u0437\u043d\u0430\u0447\u0438\u0442\u044c \u043e\u0441\u043d\u043e\u0432\u043d\u043e\u0435 \u0444\u043e\u0442\u043e.",
+      );
+    } finally {
+      setSettingPrimaryFileId(null);
+    }
+  };
+
   return (
     <section className="equipment-documents-panel">
       {mode === "edit" ? (
@@ -258,7 +301,9 @@ export function EquipmentDocumentsPanel({
               onDownload={(file) => void handleDownload(file)}
               onFileChange={handleFileChange}
               onOpenPreview={setPreviewFile}
+              onSetPrimary={(file) => void handleSetPrimary(file)}
               selectedFile={selectedFiles[option.value] ?? null}
+              settingPrimaryFileId={settingPrimaryFileId}
               title={option.label}
             />
           ))
@@ -275,7 +320,9 @@ export function EquipmentDocumentsPanel({
             type="submit"
           >
             <Save aria-hidden="true" size={18} />
-            <span>{uploadingDocumentType ? text.saving : text.saveChanges}</span>
+            <span>
+              {uploadingDocumentType ? text.saving : text.saveChanges}
+            </span>
           </button>
         </form>
       ) : null}
@@ -288,4 +335,12 @@ export function EquipmentDocumentsPanel({
       />
     </section>
   );
+}
+
+function compareEquipmentFiles(left: EquipmentFile, right: EquipmentFile) {
+  if (left.isPrimary !== right.isPrimary) {
+    return left.isPrimary ? -1 : 1;
+  }
+
+  return right.id - left.id;
 }

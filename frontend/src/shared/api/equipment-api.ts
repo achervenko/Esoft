@@ -102,6 +102,7 @@ export type EquipmentFile = {
   displayName: string;
   documentType: StorageDocumentType;
   id: number;
+  isPrimary: boolean;
   mimeType: string;
   originalName: string;
   sizeBytes: string;
@@ -196,12 +197,15 @@ export async function uploadEquipmentFile(params: {
     () => abortController.abort(),
     UPLOAD_TIMEOUT_MS,
   );
-  const response = await fetch(`${API_URL}/api/equipment/${params.visibleId}/files`, {
-    body: formData,
-    credentials: "include",
-    method: "POST",
-    signal: abortController.signal,
-  }).finally(() => window.clearTimeout(timeoutId));
+  const response = await fetch(
+    `${API_URL}/api/equipment/${params.visibleId}/files`,
+    {
+      body: formData,
+      credentials: "include",
+      method: "POST",
+      signal: abortController.signal,
+    },
+  ).finally(() => window.clearTimeout(timeoutId));
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null);
@@ -219,6 +223,12 @@ export async function uploadEquipmentFile(params: {
 export function deleteEquipmentFile(fileId: number) {
   return request<EquipmentFile>(`/api/files/${fileId}`, {
     method: "DELETE",
+  });
+}
+
+export function setEquipmentFilePrimary(fileId: number) {
+  return request<EquipmentFile>(`/api/files/${fileId}/primary`, {
+    method: "PATCH",
   });
 }
 

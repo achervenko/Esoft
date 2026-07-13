@@ -67,6 +67,18 @@ export class StorageObjectService {
     };
   }
 
+  async getObjectOrNull(key: string): Promise<StoredObject | null> {
+    try {
+      return await this.getObject(key);
+    } catch (error) {
+      if (isMissingObjectError(error)) {
+        return null;
+      }
+
+      throw error;
+    }
+  }
+
   async deleteObject(key: string) {
     await this.s3Client.send(
       new DeleteObjectCommand({
@@ -79,4 +91,15 @@ export class StorageObjectService {
 
 function isReadableStream(value: unknown): value is Readable {
   return value instanceof Readable;
+}
+
+function isMissingObjectError(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const namedError = error as { Code?: string; name?: string };
+  return ['NoSuchKey', 'NotFound'].includes(
+    namedError.name ?? namedError.Code ?? '',
+  );
 }

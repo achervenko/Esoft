@@ -1,18 +1,21 @@
 import { Pencil } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   EquipmentCard,
+  EquipmentFile,
   EquipmentHistoryItem,
 } from "../../shared/api/equipment-api";
+import { getEquipmentFiles } from "../../shared/api/equipment-api";
 import { buildHashRoute } from "../../shared/lib/hash-navigation";
-import {
-  formatNullableNumber,
-  formatNullableText,
-  formatRuDate,
-} from "../../shared/lib/formatters";
 import { EquipmentDocumentsPanel } from "../equipment-documents";
-import { EquipmentStatusBadge } from "../equipment-status";
+import { EquipmentCardGrid } from "./EquipmentCardGrid";
 import { EquipmentHistoryView } from "./EquipmentHistoryView";
+import { EquipmentMainDataSection } from "./EquipmentMainDataSection";
+import { EquipmentTextBlock } from "./EquipmentTextBlock";
+import {
+  getEquipmentCardSections,
+  getEquipmentCardTextBlocks,
+} from "./equipment-card-view-model";
 import "./EquipmentCardView.css";
 
 type EquipmentCardViewProps = {
@@ -26,21 +29,6 @@ type EquipmentCardViewProps = {
 
 type EquipmentCardTab = "details" | "documents" | "history";
 
-type EquipmentCardField = {
-  label: string;
-  value: ReactNode;
-};
-
-type EquipmentCardSection = {
-  fields: EquipmentCardField[];
-  title: string;
-};
-
-type EquipmentCardTextBlock = {
-  label: string;
-  value: string | null;
-};
-
 export function EquipmentCardView({
   canEdit = false,
   equipment,
@@ -50,8 +38,14 @@ export function EquipmentCardView({
   returnTo,
 }: EquipmentCardViewProps) {
   const [activeTab, setActiveTab] = useState<EquipmentCardTab>(initialTab);
+  const [files, setFiles] = useState<EquipmentFile[]>([]);
   const sections = getEquipmentCardSections(equipment);
+  const [mainSection, ...secondarySections] = sections;
   const textBlocks = getEquipmentCardTextBlocks(equipment);
+  const equipmentPhotos = useMemo(
+    () => files.filter((file) => file.documentType === "equipment_photo"),
+    [files],
+  );
   const editHref = buildHashRoute(`#/equipment/${equipment.visibleId}/edit`, {
     returnTo,
     tab: activeTab,
@@ -60,6 +54,26 @@ export function EquipmentCardView({
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getEquipmentFiles(equipment.visibleId)
+      .then((fileItems) => {
+        if (isMounted) {
+          setFiles(fileItems);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setFiles([]);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [equipment.visibleId]);
 
   return (
     <article className="equipment-card-view">
@@ -117,7 +131,15 @@ export function EquipmentCardView({
 
       {activeTab === "details" ? (
         <section className="equipment-card-tab-panel" role="tabpanel">
-          {sections.map((section) => (
+          {mainSection ? (
+            <EquipmentMainDataSection
+              fields={mainSection.fields}
+              photos={equipmentPhotos}
+              title={mainSection.title}
+            />
+          ) : null}
+
+          {secondarySections.map((section) => (
             <section
               className="equipment-card-view-section"
               key={section.title}
@@ -178,93 +200,4 @@ function navigateWithViewTransition(hashRoute: string) {
   } catch {
     window.location.hash = hashRoute;
   }
-}
-
-function getEquipmentCardSections(
-  equipment: EquipmentCard,
-): EquipmentCardSection[] {
-  return [
-    {
-      title: "Основные данные",
-      fields: [
-        { label: "Производитель", value: equipment.manufacturer },
-        { label: "Модель", value: equipment.model },
-        { label: "Заводской номер", value: equipment.serialNumber ?? "б/н" },
-        {
-          label: "Статус",
-          value: (
-            <EquipmentStatusBadge
-              label={equipment.statusLabel}
-              status={equipment.status}
-            />
-          ),
-        },
-      ],
-    },
-    {
-      title: "Местонахождение",
-      fields: [
-        { label: "Местонахождение", value: equipment.location },
-        { label: "Ответственный", value: equipment.responsible },
-        { label: "Дата выдачи", value: formatRuDate(equipment.issueDate) },
-        { label: "Должность", value: equipment.responsiblePosition },
-      ],
-    },
-    {
-      title: "Учетные данные",
-      fields: [
-        { label: "Инвентарный номер", value: equipment.inventoryNumber },
-        { label: "Страна производства", value: equipment.country },
-        {
-          label: "Год выпуска",
-          value: formatNullableNumber(equipment.manufactureYear),
-        },
-        {
-          label: "Дата ввода в эксплуатацию",
-          value: formatRuDate(equipment.commissioningDate),
-        },
-      ],
-    },
-  ];
-}
-
-function getEquipmentCardTextBlocks(
-  equipment: EquipmentCard,
-): EquipmentCardTextBlock[] {
-  return [
-    {
-      label: "Технические характеристики",
-      value: equipment.specifications,
-    },
-    {
-      label: "Технологическая операция",
-      value: equipment.operationText,
-    },
-    {
-      label: "Примечание",
-      value: equipment.notes,
-    },
-  ];
-}
-
-function EquipmentCardGrid({ items }: { items: EquipmentCardField[] }) {
-  return (
-    <dl className="equipment-card-view-grid">
-      {items.map((item) => (
-        <div key={item.label}>
-          <dt>{item.label}</dt>
-          <dd>{item.value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-function EquipmentTextBlock({ label, value }: EquipmentCardTextBlock) {
-  return (
-    <div className="equipment-card-view-text">
-      <h3>{label}</h3>
-      <p>{formatNullableText(value)}</p>
-    </div>
-  );
 }

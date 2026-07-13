@@ -18,6 +18,7 @@ export function toStorageFileDto(
     displayName,
     documentType: file.documentType,
     id: file.id,
+    isPrimary: file.isPrimary,
     mimeType: file.mimeType,
     originalName: normalizeOriginalFileName(file.originalName),
     sizeBytes: file.sizeBytes.toString(),

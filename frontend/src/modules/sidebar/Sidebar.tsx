@@ -1,10 +1,19 @@
-import { ChevronRight, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { DEFAULT_AUTH_ROUTE, getHashRoute } from '../../lib/hash-router';
-import type { EmployeeProfile, UserPhoto } from '../../shared/api/user-profile-api';
-import { sidebarSections } from './sidebarItems';
-import { useMobileSidebar } from './useMobileSidebar';
-import './Sidebar.css';
+import {
+  ChevronRight,
+  LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { DEFAULT_AUTH_ROUTE, getHashRoute } from "../../lib/hash-router";
+import type {
+  EmployeeProfile,
+  UserPhoto,
+} from "../../shared/api/user-profile-api";
+import { AsyncImage } from "../../shared/ui/AsyncImage";
+import { sidebarSections } from "./sidebarItems";
+import { useMobileSidebar } from "./useMobileSidebar";
+import "./Sidebar.css";
 
 type SidebarProps = {
   onLogout: () => void;
@@ -18,9 +27,9 @@ type SidebarProps = {
   } | null;
 };
 
-function getUserDisplayName(user: SidebarProps['user']) {
+function getUserDisplayName(user: SidebarProps["user"]) {
   if (!user) {
-    return 'Пользователь';
+    return "Пользователь";
   }
 
   return (
@@ -28,16 +37,16 @@ function getUserDisplayName(user: SidebarProps['user']) {
     user.displayUsername ||
     user.username ||
     user.name ||
-    'Пользователь'
+    "Пользователь"
   );
 }
 
 function getUserInitial(displayName: string) {
-  return displayName.trim().charAt(0).toUpperCase() || 'П';
+  return displayName.trim().charAt(0).toUpperCase() || "П";
 }
 
-function getAccountLabel(user: SidebarProps['user']) {
-  return user?.username || user?.displayUsername || user?.name || 'admin';
+function getAccountLabel(user: SidebarProps["user"]) {
+  return user?.username || user?.displayUsername || user?.name || "admin";
 }
 
 function isSidebarItemActive(activeHref: string, itemHref: string) {
@@ -47,7 +56,9 @@ function isSidebarItemActive(activeHref: string, itemHref: string) {
 export function Sidebar({ onLogout, user }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [activeHref, setActiveHref] = useState(getHashRoute() || DEFAULT_AUTH_ROUTE);
+  const [activeHref, setActiveHref] = useState(
+    getHashRoute() || DEFAULT_AUTH_ROUTE,
+  );
   const isMobileSidebar = useMobileSidebar();
   const displayName = getUserDisplayName(user);
   const username = getAccountLabel(user);
@@ -56,10 +67,10 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
   useEffect(() => {
     const handleHashChange = () => setActiveHref(getHashRoute());
 
-    window.addEventListener('hashchange', handleHashChange);
+    window.addEventListener("hashchange", handleHashChange);
     handleHashChange();
 
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
   const handleToggleSidebar = () => {
@@ -79,12 +90,16 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
 
   return (
     <aside
-      className={`app-sidebar${isCollapsed ? ' app-sidebar-collapsed' : ''}${
-        isMobileOpen ? ' app-sidebar-mobile-open' : ''
+      className={`app-sidebar${isCollapsed ? " app-sidebar-collapsed" : ""}${
+        isMobileOpen ? " app-sidebar-mobile-open" : ""
       }`}
     >
       <div className="sidebar-header">
-        <a className="sidebar-brand" href="#/dashboard" onClick={closeMobileSidebar}>
+        <a
+          className="sidebar-brand"
+          href="#/dashboard"
+          onClick={closeMobileSidebar}
+        >
           <span className="sidebar-brand-mark">
             <img alt="" aria-hidden="true" src="/favicon.svg" />
           </span>
@@ -92,10 +107,10 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
         </a>
 
         <button
-          aria-label={isCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
+          aria-label={isCollapsed ? "Развернуть меню" : "Свернуть меню"}
           className="sidebar-icon-button"
           onClick={handleToggleSidebar}
-          title={isCollapsed ? 'Развернуть меню' : 'Свернуть меню'}
+          title={isCollapsed ? "Развернуть меню" : "Свернуть меню"}
           type="button"
         >
           {isCollapsed || (isMobileSidebar && !isMobileOpen) ? (
@@ -112,33 +127,36 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
             <h2>{section.title}</h2>
             <ul>
               {section.items
-                .filter((item) => !item.roles || item.roles.includes(String(userRole)))
+                .filter(
+                  (item) =>
+                    !item.roles || item.roles.includes(String(userRole)),
+                )
                 .map((item) => {
-                const Icon = item.icon;
-                const isActive = isSidebarItemActive(activeHref, item.href);
+                  const Icon = item.icon;
+                  const isActive = isSidebarItemActive(activeHref, item.href);
 
-                return (
-                  <li key={item.href}>
-                    <a
-                      aria-current={isActive ? 'page' : undefined}
-                      className={isActive ? 'active' : undefined}
-                      href={item.href}
-                      onClick={closeMobileSidebar}
-                      title={item.label}
-                    >
-                      <Icon aria-hidden="true" size={20} strokeWidth={1.9} />
-                      <span className="sidebar-link-text">{item.label}</span>
-                      {isActive ? (
-                        <ChevronRight
-                          aria-hidden="true"
-                          className="active-arrow"
-                          size={16}
-                        />
-                      ) : null}
-                    </a>
-                  </li>
-                );
-              })}
+                  return (
+                    <li key={item.href}>
+                      <a
+                        aria-current={isActive ? "page" : undefined}
+                        className={isActive ? "active" : undefined}
+                        href={item.href}
+                        onClick={closeMobileSidebar}
+                        title={item.label}
+                      >
+                        <Icon aria-hidden="true" size={20} strokeWidth={1.9} />
+                        <span className="sidebar-link-text">{item.label}</span>
+                        {isActive ? (
+                          <ChevronRight
+                            aria-hidden="true"
+                            className="active-arrow"
+                            size={16}
+                          />
+                        ) : null}
+                      </a>
+                    </li>
+                  );
+                })}
             </ul>
           </section>
         ))}
@@ -153,7 +171,7 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
         >
           <span className="sidebar-user-avatar">
             {user?.photo?.smallUrl ? (
-              <img alt="" src={user.photo.smallUrl} />
+              <AsyncImage src={user.photo.smallUrl} />
             ) : (
               getUserInitial(displayName)
             )}

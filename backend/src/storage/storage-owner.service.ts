@@ -14,7 +14,7 @@ export class StorageOwnerService {
         ownerEntityType: owner.entityType,
         ownerModule: owner.module,
       },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
     });
   }
 

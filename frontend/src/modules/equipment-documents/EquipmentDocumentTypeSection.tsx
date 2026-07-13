@@ -17,7 +17,9 @@ type EquipmentDocumentTypeSectionProps = {
   onDownload: (file: EquipmentFile) => void;
   onFileChange: (documentType: StorageDocumentType, file: File | null) => void;
   onOpenPreview: (file: EquipmentFile) => void;
+  onSetPrimary?: (file: EquipmentFile) => void;
   selectedFile: File | null;
+  settingPrimaryFileId?: number | null;
   title: string;
 };
 
@@ -32,7 +34,9 @@ export function EquipmentDocumentTypeSection({
   onDownload,
   onFileChange,
   onOpenPreview,
+  onSetPrimary,
   selectedFile,
+  settingPrimaryFileId,
   title,
 }: EquipmentDocumentTypeSectionProps) {
   const fileInputId = useId();
@@ -66,6 +70,8 @@ export function EquipmentDocumentTypeSection({
               onDelete={onDelete}
               onDownload={onDownload}
               onOpenPreview={onOpenPreview}
+              onSetPrimary={onSetPrimary}
+              settingPrimaryFileId={settingPrimaryFileId}
             />
           ))}
         </ul>

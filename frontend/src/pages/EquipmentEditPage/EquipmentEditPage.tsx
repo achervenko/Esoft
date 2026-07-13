@@ -235,7 +235,17 @@ export function EquipmentEditPage({
             submittingLabel="Сохранение..."
           />
         ) : (
-          <EquipmentDocumentsPanel mode="edit" visibleId={visibleId} />
+          <EquipmentDocumentsPanel
+            mode="edit"
+            onSaved={() => {
+              window.location.hash = buildEquipmentViewHref(
+                visibleId,
+                "documents",
+                returnTo,
+              );
+            }}
+            visibleId={visibleId}
+          />
         )
       ) : null}
     </div>

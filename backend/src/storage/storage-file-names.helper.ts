@@ -71,6 +71,10 @@ export function isPdfStorageFile(file: StorageFile) {
   );
 }
 
+export function isImageStorageFile(file: StorageFile) {
+  return file.mimeType.toLowerCase().startsWith('image/');
+}
+
 function decodeMojibakeText(value: string) {
   if (!/[\u00d0\u00d1\u00c2]/.test(value)) {
     return value;

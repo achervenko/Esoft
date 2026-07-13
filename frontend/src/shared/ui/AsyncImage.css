@@ -1,0 +1,56 @@
+.async-image {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #f4f6f8;
+}
+
+.async-image::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  opacity: 0;
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0) 20%,
+    rgba(255, 255, 255, 0.75) 45%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  transform: translateX(-100%);
+}
+
+.async-image--loading::before {
+  opacity: 1;
+  animation: async-image-shimmer 1.15s ease-in-out infinite;
+}
+
+.async-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.async-image--loaded img {
+  opacity: 1;
+}
+
+.async-image-error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #8a94a6;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+@keyframes async-image-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
