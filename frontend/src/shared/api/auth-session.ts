@@ -2,6 +2,7 @@ import { authClient } from '../../lib/auth-client';
 import {
   getUserProfile,
   type EmployeeProfile,
+  type UserPhoto,
 } from './user-profile-api';
 
 export type SessionUser = {
@@ -10,6 +11,7 @@ export type SessionUser = {
   employee?: EmployeeProfile | null;
   id?: string;
   name?: string | null;
+  photo?: UserPhoto | null;
   role?: string | null;
   username?: string | null;
 };

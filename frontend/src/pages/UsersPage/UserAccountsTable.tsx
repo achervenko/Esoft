@@ -1,4 +1,4 @@
-import { Edit2, KeyRound, Power } from "lucide-react";
+import { Edit2, ImagePlus, KeyRound, Power } from "lucide-react";
 import { DataTable, type DataTableColumn } from "../../shared/ui/DataTable";
 import type { AdminUserAccount } from "../../shared/api/users-admin-api";
 import { formatDate } from "./users-page-utils";
@@ -8,6 +8,7 @@ type UserAccountsTableProps = {
   users: AdminUserAccount[];
   onChangePassword: (user: AdminUserAccount) => void;
   onEdit: (user: AdminUserAccount) => void;
+  onPhoto: (user: AdminUserAccount) => void;
   onToggleStatus: (user: AdminUserAccount) => void;
 };
 
@@ -15,6 +16,7 @@ const userColumns = ({
   currentUserId,
   onChangePassword,
   onEdit,
+  onPhoto,
   onToggleStatus,
 }: Omit<UserAccountsTableProps, "users">): Array<
   DataTableColumn<AdminUserAccount, string>
@@ -61,6 +63,15 @@ const userColumns = ({
     render: (user) => (
       <div className="admin-table-actions">
         <button
+          aria-label={`Загрузить фото для ${user.username || user.email}`}
+          className="admin-icon-button"
+          onClick={() => onPhoto(user)}
+          title="Фото"
+          type="button"
+        >
+          <ImagePlus size={17} />
+        </button>
+        <button
           aria-label={`Редактировать учётную запись ${user.username || user.email}`}
           className="admin-icon-button"
           onClick={() => onEdit(user)}
@@ -103,6 +114,7 @@ export function UserAccountsTable({
   currentUserId,
   onChangePassword,
   onEdit,
+  onPhoto,
   onToggleStatus,
   users,
 }: UserAccountsTableProps) {
@@ -112,6 +124,7 @@ export function UserAccountsTable({
         currentUserId,
         onChangePassword,
         onEdit,
+        onPhoto,
         onToggleStatus,
       })}
       defaultSort={{ direction: "asc", key: "employee" }}

@@ -8,14 +8,21 @@ import {
   Patch,
   Post,
   Put,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { Auth } from '../auth/auth.config';
 import { assertAdmin } from '../auth/role-permissions';
+import type { UploadedFileInput } from '../storage/storage.types';
 import { EmployeesAdminService } from './employees-admin.service';
 import { UserAccountsAdminService } from './user-accounts-admin.service';
 import { UserCredentialsAdminService } from './user-credentials-admin.service';
+import { UserPhotosAdminService } from './user-photos-admin.service';
 import { UserStatusAdminService } from './user-status-admin.service';
+
+const MAX_USER_PHOTO_SIZE_BYTES = 10 * 1024 * 1024;
 
 @Controller('api/users/admin')
 export class UsersAdminController {
@@ -23,6 +30,7 @@ export class UsersAdminController {
     private readonly employeeAdminService: EmployeesAdminService,
     private readonly userAccountsAdminService: UserAccountsAdminService,
     private readonly userCredentialsAdminService: UserCredentialsAdminService,
+    private readonly userPhotosAdminService: UserPhotosAdminService,
     private readonly userStatusAdminService: UserStatusAdminService,
   ) {}
 
@@ -133,6 +141,41 @@ export class UsersAdminController {
     return this.userStatusAdminService.setUserStatus({
       banned,
       currentUserId: session.user.id,
+      userId,
+    });
+  }
+
+  @Post('accounts/:userId/photo')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: MAX_USER_PHOTO_SIZE_BYTES,
+      },
+    }),
+  )
+  uploadUserPhoto(
+    @Param('userId') userId: string,
+    @UploadedFile() file: UploadedFileInput | undefined,
+    @Session() session: UserSession<Auth>,
+  ) {
+    assertAdmin(session.user.role);
+
+    return this.userPhotosAdminService.uploadPhoto({
+      actorUserId: session.user.id,
+      file,
+      userId,
+    });
+  }
+
+  @Delete('accounts/:userId/photo')
+  deleteUserPhoto(
+    @Param('userId') userId: string,
+    @Session() session: UserSession<Auth>,
+  ) {
+    assertAdmin(session.user.role);
+
+    return this.userPhotosAdminService.deletePhoto({
+      actorUserId: session.user.id,
       userId,
     });
   }

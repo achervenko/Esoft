@@ -52,6 +52,7 @@ export class UserCredentialsAdminService {
             employee: true,
           },
         },
+        photo: true,
       },
       where: { id: userId },
     });

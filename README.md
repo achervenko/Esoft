@@ -164,3 +164,17 @@ React client helper:
 ```text
 frontend/src/lib/auth-client.ts
 ```
+
+## UI typography
+
+Use the same text scale across new frontend screens:
+
+- Page title, for example registry or profile header: `30px`, `line-height: 1.2`, `font-weight: 800`, color `#15171c`.
+- Entity/card title, for example equipment card title or profile name: `30px`, `line-height: 1.2`, `font-weight: 800`, color `#15171c`.
+- Card section title, for example `Основные данные` or `Данные пользователя`: `18px`, `font-weight: 800`, color `#15171c`.
+- Field label: `12px`, `font-weight: 800`, color `#6b7280`.
+- Field value: `15px`, `font-weight: 650`, color `#15171c`.
+- Secondary description text: `14px`, `line-height: 1.4`, `font-weight: 650`, color `#6b7280`.
+
+When adding a new page, copy these settings from the equipment registry and
+equipment card styles instead of inventing a separate text scale.

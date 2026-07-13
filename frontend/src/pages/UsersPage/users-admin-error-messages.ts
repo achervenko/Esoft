@@ -10,6 +10,12 @@ const messagesByCode: Record<string, string> = {
   EMPLOYEE_REQUIRED: "Выберите сотрудника.",
   FIRST_NAME_REQUIRED: "Укажите имя.",
   FORBIDDEN: "Недостаточно прав для управления пользователями.",
+  EMPTY_FILE: "Файл пустой.",
+  FILE_REQUIRED: "Выберите фото для загрузки.",
+  FILE_TOO_LARGE: "Размер фото не должен превышать 10 МБ.",
+  IMAGE_PIXEL_LIMIT_EXCEEDED: "Разрешение фото не должно превышать 25 МП.",
+  IMAGE_TOO_SMALL: "Короткая сторона фото должна быть не меньше 512 px.",
+  INVALID_IMAGE: "Не удалось прочитать изображение. Выберите другой файл.",
   INVALID_EMAIL: "Укажите корректный email.",
   INVALID_ROLE: "Выберите допустимую роль.",
   INVALID_STATUS: "Некорректный статус учётной записи.",
@@ -19,10 +25,14 @@ const messagesByCode: Record<string, string> = {
   PASSWORD_REQUIRED: "Укажите пароль.",
   PASSWORD_TOO_SHORT: "Пароль должен быть не короче 8 символов.",
   POSITION_REQUIRED: "Укажите должность.",
+  STORAGE_UNAVAILABLE: "Хранилище файлов временно недоступно.",
   UNIQUE_CONSTRAINT: "Запись с такими данными уже существует.",
   USER_NOT_FOUND: "Пользователь не найден.",
   USERNAME_ALREADY_EXISTS: "Логин уже занят.",
   USERNAME_REQUIRED: "Укажите логин.",
+  UNSUPPORTED_FILE_FORMAT: "Для фото доступны только JPG, PNG и WebP.",
+  USER_PHOTO_UPLOAD_FAILED:
+    "Не удалось сохранить фото пользователя. Изменения отменены.",
   VALUE_TOO_LONG: "Значение слишком длинное.",
 };
 

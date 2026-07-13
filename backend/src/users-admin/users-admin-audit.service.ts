@@ -121,6 +121,38 @@ export class UsersAdminAuditService {
     });
   }
 
+  logUserPhotoUploaded(user: UserAuditData, actorUserId?: string | null) {
+    return this.auditLog.writeFieldChanges({
+      action: AuditAction.USER_PHOTO_UPLOAD,
+      entityType: this.userEntityType(user.id),
+      fields: [
+        {
+          fieldName: 'Фото пользователя',
+          newValue: 'загружено',
+          oldValue: 'не указано',
+        },
+      ],
+      module: AuditModule.USERS,
+      userId: actorUserId,
+    });
+  }
+
+  logUserPhotoDeleted(user: UserAuditData, actorUserId?: string | null) {
+    return this.auditLog.writeFieldChanges({
+      action: AuditAction.USER_PHOTO_DELETE,
+      entityType: this.userEntityType(user.id),
+      fields: [
+        {
+          fieldName: 'Фото пользователя',
+          newValue: 'удалено',
+          oldValue: 'загружено',
+        },
+      ],
+      module: AuditModule.USERS,
+      userId: actorUserId,
+    });
+  }
+
   private employeeFields(
     newEmployee: EmployeeAuditData | null,
     oldEmployee: EmployeeAuditData | null,

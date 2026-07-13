@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import {
   createAdminUserAccount,
+  deleteAdminUserPhoto,
   getAdminEmployees,
   getAdminRoles,
   getAdminUserAccounts,
   setAdminUserPassword,
   setAdminUserStatus,
   updateAdminUserAccount,
+  uploadAdminUserPhoto,
   type AdminEmployee,
   type AdminRoleOption,
   type AdminUserAccount,
@@ -17,10 +19,16 @@ import { getUsersAdminErrorMessage } from "./users-admin-error-messages";
 export type UserFormState = AdminUserAccount | "new" | null;
 
 type UseUsersAdminPageParams = {
+  currentUserId?: string | null;
+  onCurrentUserChanged?: () => void;
   userRole: string | null;
 };
 
-export function useUsersAdminPage({ userRole }: UseUsersAdminPageParams) {
+export function useUsersAdminPage({
+  currentUserId,
+  onCurrentUserChanged,
+  userRole,
+}: UseUsersAdminPageParams) {
   const [employees, setEmployees] = useState<AdminEmployee[]>([]);
   const [users, setUsers] = useState<AdminUserAccount[]>([]);
   const [roles, setRoles] = useState<AdminRoleOption[]>([]);
@@ -28,6 +36,7 @@ export function useUsersAdminPage({ userRole }: UseUsersAdminPageParams) {
   const [passwordUser, setPasswordUser] = useState<AdminUserAccount | null>(
     null,
   );
+  const [photoUser, setPhotoUser] = useState<AdminUserAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,6 +104,34 @@ export function useUsersAdminPage({ userRole }: UseUsersAdminPageParams) {
     });
   };
 
+  const saveUserPhoto = async (file: File) => {
+    if (!photoUser) {
+      return;
+    }
+
+    await runSavingAction(async () => {
+      const updatedUser = await uploadAdminUserPhoto(photoUser.id, file);
+      setPhotoUser(null);
+      setMessage("Фото пользователя сохранено.");
+      replaceUser(updatedUser);
+      refreshCurrentUserIfNeeded(updatedUser.id);
+    });
+  };
+
+  const deleteUserPhoto = async () => {
+    if (!photoUser) {
+      return;
+    }
+
+    await runSavingAction(async () => {
+      const updatedUser = await deleteAdminUserPhoto(photoUser.id);
+      setPhotoUser(null);
+      setMessage("Фото пользователя удалено.");
+      replaceUser(updatedUser);
+      refreshCurrentUserIfNeeded(updatedUser.id);
+    });
+  };
+
   const toggleUserStatus = async (user: AdminUserAccount) => {
     setError(null);
 
@@ -122,7 +159,22 @@ export function useUsersAdminPage({ userRole }: UseUsersAdminPageParams) {
     }
   };
 
+  const replaceUser = (updatedUser: AdminUserAccount) => {
+    setUsers((currentUsers) =>
+      currentUsers.map((user) =>
+        user.id === updatedUser.id ? updatedUser : user,
+      ),
+    );
+  };
+
+  const refreshCurrentUserIfNeeded = (userId: string) => {
+    if (userId === currentUserId) {
+      onCurrentUserChanged?.();
+    }
+  };
+
   return {
+    deleteUserPhoto,
     employees,
     error,
     isAdmin,
@@ -130,10 +182,13 @@ export function useUsersAdminPage({ userRole }: UseUsersAdminPageParams) {
     isSaving,
     message,
     passwordUser,
+    photoUser,
     roles,
     saveUser,
+    saveUserPhoto,
     setPassword,
     setPasswordUser,
+    setPhotoUser,
     setUserForm,
     toggleUserStatus,
     userForm,

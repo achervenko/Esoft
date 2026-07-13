@@ -9,6 +9,8 @@ enum AuditAction {
   LOGIN
   LOGOUT
   USER_BLOCK
+  USER_PHOTO_DELETE
+  USER_PHOTO_UPLOAD
   ROLE_CHANGE
 
   @@map("audit_action")

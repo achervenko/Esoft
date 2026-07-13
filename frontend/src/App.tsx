@@ -81,12 +81,25 @@ function App() {
     setHashRoute(DEFAULT_AUTH_ROUTE);
   };
 
+  const refreshAuthenticatedUser = async () => {
+    const sessionUser = await getAuthenticatedUser();
+    setUser(sessionUser);
+    setIsAuthenticated(Boolean(sessionUser));
+  };
+
   if (isCheckingSession) {
     return <main className="empty-page" aria-label="Загрузка приложения" />;
   }
 
   if (isAuthenticated) {
-    return <AppShell onLogout={handleLogout} route={route} user={user} />;
+    return (
+      <AppShell
+        onLogout={handleLogout}
+        onUserRefresh={() => void refreshAuthenticatedUser()}
+        route={route}
+        user={user}
+      />
+    );
   }
 
   return <LoginPage onAuthenticated={handleAuthenticated} />;

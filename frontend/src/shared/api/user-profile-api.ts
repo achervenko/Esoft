@@ -14,8 +14,16 @@ export type UserProfile = {
   employee: EmployeeProfile | null;
   id: string;
   name?: string | null;
+  photo: UserPhoto | null;
   role?: string | null;
   username?: string | null;
+};
+
+export type UserPhoto = {
+  largeUrl: string;
+  mediumUrl: string;
+  smallUrl: string;
+  updatedAt: string;
 };
 
 const API_URL = import.meta.env.VITE_API_URL || '';

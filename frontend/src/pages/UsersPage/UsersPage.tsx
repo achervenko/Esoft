@@ -4,16 +4,26 @@ import { Notice } from "../../shared/ui/Notice";
 import { PasswordFormModal } from "./PasswordFormModal";
 import { UserAccountFormModal } from "./UserAccountFormModal";
 import { UserAccountsTable } from "./UserAccountsTable";
+import { UserPhotoFormModal } from "./UserPhotoFormModal";
 import { useUsersAdminPage } from "./useUsersAdminPage";
 import "./UsersPage.css";
 
 type UsersPageProps = {
   currentUserId?: string | null;
+  onCurrentUserChanged?: () => void;
   userRole: string | null;
 };
 
-export function UsersPage({ currentUserId, userRole }: UsersPageProps) {
-  const page = useUsersAdminPage({ userRole });
+export function UsersPage({
+  currentUserId,
+  onCurrentUserChanged,
+  userRole,
+}: UsersPageProps) {
+  const page = useUsersAdminPage({
+    currentUserId,
+    onCurrentUserChanged,
+    userRole,
+  });
 
   if (!page.isAdmin) {
     return (
@@ -53,6 +63,7 @@ export function UsersPage({ currentUserId, userRole }: UsersPageProps) {
             currentUserId={currentUserId}
             onChangePassword={page.setPasswordUser}
             onEdit={page.setUserForm}
+            onPhoto={page.setPhotoUser}
             onToggleStatus={(user) => void page.toggleUserStatus(user)}
             users={page.users}
           />
@@ -76,6 +87,16 @@ export function UsersPage({ currentUserId, userRole }: UsersPageProps) {
           onClose={() => page.setPasswordUser(null)}
           onSubmit={(password) => void page.setPassword(password)}
           user={page.passwordUser}
+        />
+      ) : null}
+
+      {page.photoUser ? (
+        <UserPhotoFormModal
+          isSaving={page.isSaving}
+          onClose={() => page.setPhotoUser(null)}
+          onDelete={() => void page.deleteUserPhoto()}
+          onSubmit={(file) => void page.saveUserPhoto(file)}
+          user={page.photoUser}
         />
       ) : null}
     </section>

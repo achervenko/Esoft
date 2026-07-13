@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { toUserPhotoDto } from './user-photo.dto';
 
 @Injectable()
 export class UsersService {
@@ -14,6 +15,7 @@ export class UsersService {
             employee: true,
           },
         },
+        photo: true,
       },
     });
 
@@ -28,6 +30,7 @@ export class UsersService {
       displayUsername: user.displayUsername,
       email: user.email,
       name: user.name,
+      photo: toUserPhotoDto(user.photo),
       role: user.role,
       username: user.username,
       employee: employee

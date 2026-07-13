@@ -1,3 +1,5 @@
+import type { UserPhoto } from "./user-profile-api";
+
 export type AdminRoleOption = {
   label: string;
   value: AdminUserRole;
@@ -34,6 +36,7 @@ export type AdminUserAccount = {
   id: string;
   lastLoginAt: string | null;
   name: string;
+  photo: UserPhoto | null;
   role: AdminUserRole | string | null;
   roleLabel: string;
   username: string | null;
@@ -131,13 +134,32 @@ export function setAdminUserStatus(id: string, banned: boolean) {
   });
 }
 
+export function uploadAdminUserPhoto(id: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return request<AdminUserAccount>(`/api/users/admin/accounts/${id}/photo`, {
+    body: formData,
+    method: "POST",
+  });
+}
+
+export function deleteAdminUserPhoto(id: string) {
+  return request<AdminUserAccount>(`/api/users/admin/accounts/${id}/photo`, {
+    method: "DELETE",
+  });
+}
+
 async function request<T>(path: string, init?: RequestInit) {
+  const isFormData = init?.body instanceof FormData;
   const response = await fetch(`${API_URL}${path}`, {
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
+    headers: isFormData
+      ? init?.headers
+      : {
+          "Content-Type": "application/json",
+          ...init?.headers,
+        },
     ...init,
   });
 

@@ -1,7 +1,7 @@
 import { ChevronRight, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { DEFAULT_AUTH_ROUTE, getHashRoute } from '../../lib/hash-router';
-import type { EmployeeProfile } from '../../shared/api/user-profile-api';
+import type { EmployeeProfile, UserPhoto } from '../../shared/api/user-profile-api';
 import { sidebarSections } from './sidebarItems';
 import { useMobileSidebar } from './useMobileSidebar';
 import './Sidebar.css';
@@ -12,6 +12,7 @@ type SidebarProps = {
     displayUsername?: string | null;
     employee?: EmployeeProfile | null;
     name?: string | null;
+    photo?: UserPhoto | null;
     role?: string | null;
     username?: string | null;
   } | null;
@@ -150,7 +151,13 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
           onClick={closeMobileSidebar}
           title="Настройки пользователя"
         >
-          <span className="sidebar-user-avatar">{getUserInitial(displayName)}</span>
+          <span className="sidebar-user-avatar">
+            {user?.photo?.smallUrl ? (
+              <img alt="" src={user.photo.smallUrl} />
+            ) : (
+              getUserInitial(displayName)
+            )}
+          </span>
           <span className="sidebar-user-info">
             <strong>{displayName}</strong>
             <span>{username}</span>

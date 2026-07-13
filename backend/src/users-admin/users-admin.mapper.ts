@@ -1,3 +1,5 @@
+import { toUserPhotoDto } from '../users/user-photo.dto';
+
 export function toEmployeeDto(employee: {
   _count?: {
     employeeUsers: number;
@@ -38,6 +40,10 @@ type AdminUserForDto = {
   id: string;
   lastLoginAt: Date | null;
   name: string;
+  photo?: {
+    updatedAt: Date;
+    userId: string;
+  } | null;
   role: string | null;
   sessions?: Array<{
     createdAt: Date;
@@ -64,6 +70,7 @@ export function toAdminUserDto(user: AdminUserForDto) {
     id: user.id,
     lastLoginAt,
     name: user.name,
+    photo: toUserPhotoDto(user.photo),
     role: user.role,
     roleLabel: getRoleLabel(user.role),
     username: user.username,

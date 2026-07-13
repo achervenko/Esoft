@@ -17,6 +17,8 @@ model User {
   accounts             Account[]
   auditLogs            AuditLog[]
   employeeUser         EmployeeUser?
+  photo                UserPhoto?
+  uploadedUserPhotos   UserPhoto[]   @relation("UploadedUserPhotos")
   uploadedStorageFiles StorageFile[] @relation("UploadedStorageFiles")
 
   @@unique([email])

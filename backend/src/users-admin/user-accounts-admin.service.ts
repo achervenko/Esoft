@@ -36,6 +36,7 @@ export class UserAccountsAdminService {
             employee: true,
           },
         },
+        photo: true,
         sessions: {
           orderBy: { createdAt: 'desc' },
           select: { createdAt: true },
@@ -84,6 +85,7 @@ export class UserAccountsAdminService {
                 employee: true,
               },
             },
+            photo: true,
           },
           where: { id: createdUser.id },
         });
@@ -116,6 +118,7 @@ export class UserAccountsAdminService {
               employee: true,
             },
           },
+          photo: true,
         },
         where: { id: userId },
       });
@@ -149,6 +152,7 @@ export class UserAccountsAdminService {
                 employee: true,
               },
             },
+            photo: true,
           },
           where: { id: userId },
         });

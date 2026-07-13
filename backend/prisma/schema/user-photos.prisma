@@ -1,0 +1,16 @@
+model UserPhoto {
+  userId           String   @id @map("user_id")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bucket           String   @db.VarChar(63)
+  largeObjectKey   String   @map("large_object_key") @db.VarChar(512)
+  mediumObjectKey  String   @map("medium_object_key") @db.VarChar(512)
+  smallObjectKey   String   @map("small_object_key") @db.VarChar(512)
+  originalName     String   @map("original_name") @db.VarChar(255)
+  uploadedByUserId String?  @map("uploaded_by_user_id")
+  uploadedByUser   User?    @relation("UploadedUserPhotos", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([uploadedByUserId], map: "idx_user_photos_uploaded_by_user_id")
+  @@map("user_photos")
+}

@@ -34,6 +34,7 @@ export class UserStatusAdminService {
               employee: true,
             },
           },
+          photo: true,
         },
         where: { id: params.userId },
       });
@@ -51,6 +52,7 @@ export class UserStatusAdminService {
               employee: true,
             },
           },
+          photo: true,
         },
         where: { id: params.userId },
       });

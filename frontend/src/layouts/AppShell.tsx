@@ -5,9 +5,10 @@ import { EquipmentCreatePage } from "../pages/EquipmentCreatePage";
 import { EquipmentEditPage } from "../pages/EquipmentEditPage";
 import { EquipmentPage } from "../pages/EquipmentPage";
 import { EquipmentViewPage } from "../pages/EquipmentViewPage";
+import { ProfilePage } from "../pages/ProfilePage";
 import { SearchPage } from "../pages/SearchPage";
 import { UsersPage } from "../pages/UsersPage";
-import type { EmployeeProfile } from "../shared/api/user-profile-api";
+import type { EmployeeProfile, UserPhoto } from "../shared/api/user-profile-api";
 import { getHashRouteParam, getSafeReturnTo } from "../shared/lib/hash-navigation";
 import "./AppShell.css";
 
@@ -16,20 +17,23 @@ type AppShellUser = {
   employee?: EmployeeProfile | null;
   id?: string | null;
   name?: string | null;
+  photo?: UserPhoto | null;
   role?: string | null;
   username?: string | null;
 };
 
 type AppShellProps = {
   onLogout: () => void;
+  onUserRefresh?: () => void;
   route: string;
   user: AppShellUser | null;
 };
 
-export function AppShell({ onLogout, route, user }: AppShellProps) {
+export function AppShell({ onLogout, onUserRefresh, route, user }: AppShellProps) {
   const isDashboardRoute = route === "#/dashboard";
   const isDictionariesRoute = route === "#/dictionaries";
   const isEquipmentRoute = route === "#/equipment";
+  const isProfileRoute = route === "#/profile";
   const isSearchRoute = route === "#/search" || route.startsWith("#/search?");
   const isUsersRoute = route === "#/users";
   const isEquipmentCreateRoute = route === "#/equipment/create";
@@ -71,6 +75,7 @@ export function AppShell({ onLogout, route, user }: AppShellProps) {
           <EquipmentPage userRole={user?.role ?? null} />
         ) : null}
         {isSearchRoute ? <SearchPage /> : null}
+        {isProfileRoute ? <ProfilePage user={user} /> : null}
         {isEquipmentCreateRoute ? (
           <EquipmentCreatePage userRole={user?.role ?? null} />
         ) : null}
@@ -93,6 +98,7 @@ export function AppShell({ onLogout, route, user }: AppShellProps) {
         {isUsersRoute ? (
           <UsersPage
             currentUserId={user?.id ?? null}
+            onCurrentUserChanged={onUserRefresh}
             userRole={user?.role ?? null}
           />
         ) : null}
