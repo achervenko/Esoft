@@ -8,6 +8,7 @@ import {
   updateEquipment,
   type EquipmentCreateOptions,
 } from "../../shared/api/equipment-api";
+import { buildHashRoute } from "../../shared/lib/hash-navigation";
 import { Notice } from "../../shared/ui/Notice";
 import { UnsavedChangesGuard } from "../../shared/ui/UnsavedChangesGuard";
 import { EquipmentCreateForm } from "../EquipmentCreatePage/EquipmentCreateForm";
@@ -24,6 +25,7 @@ import "../EquipmentCreatePage/EquipmentCreatePage.css";
 
 type EquipmentEditPageProps = {
   initialTab?: EquipmentEditTab;
+  returnTo: string;
   userRole: string | null;
   visibleId: number;
 };
@@ -32,6 +34,7 @@ type EquipmentEditTab = "details" | "documents";
 
 export function EquipmentEditPage({
   initialTab = "details",
+  returnTo,
   userRole,
   visibleId,
 }: EquipmentEditPageProps) {
@@ -134,7 +137,11 @@ export function EquipmentEditPage({
       setForm(updatedForm);
 
       window.setTimeout(() => {
-        window.location.hash = `#/equipment/${updatedEquipment.visibleId}`;
+        window.location.hash = buildEquipmentViewHref(
+          updatedEquipment.visibleId,
+          activeTab,
+          returnTo,
+        );
       }, 500);
     } catch (requestError) {
       const errorMessage =
@@ -155,7 +162,11 @@ export function EquipmentEditPage({
   if (!isEditAllowed) {
     return (
       <div className="equipment-create-page">
-        <BackToCardLink visibleId={visibleId} />
+        <BackToCardLink
+          activeTab={activeTab}
+          returnTo={returnTo}
+          visibleId={visibleId}
+        />
         <h1>Редактирование оборудования</h1>
         <Notice tone="error">
           У вашей роли нет доступа к редактированию оборудования.
@@ -167,7 +178,11 @@ export function EquipmentEditPage({
   return (
     <div className="equipment-create-page">
       <UnsavedChangesGuard hasChanges={hasUnsavedChanges} />
-      <BackToCardLink visibleId={visibleId} />
+      <BackToCardLink
+        activeTab={activeTab}
+        returnTo={returnTo}
+        visibleId={visibleId}
+      />
 
       <header className="equipment-create-header">
         <h1>Редактирование оборудования</h1>
@@ -227,11 +242,33 @@ export function EquipmentEditPage({
   );
 }
 
-function BackToCardLink({ visibleId }: { visibleId: number }) {
+function BackToCardLink({
+  activeTab,
+  returnTo,
+  visibleId,
+}: {
+  activeTab: EquipmentEditTab;
+  returnTo: string;
+  visibleId: number;
+}) {
   return (
-    <a className="equipment-back-link" href={`#/equipment/${visibleId}`}>
+    <a
+      className="equipment-back-link"
+      href={buildEquipmentViewHref(visibleId, activeTab, returnTo)}
+    >
       <ArrowLeft aria-hidden="true" size={18} />
-      <span>К карточке</span>
+      <span>{"Назад"}</span>
     </a>
   );
+}
+
+function buildEquipmentViewHref(
+  visibleId: number,
+  activeTab: EquipmentEditTab,
+  returnTo: string,
+) {
+  return buildHashRoute(`#/equipment/${visibleId}`, {
+    returnTo,
+    tab: activeTab === "documents" ? "documents" : null,
+  });
 }

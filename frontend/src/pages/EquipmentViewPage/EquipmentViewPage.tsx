@@ -12,11 +12,15 @@ import { Notice } from '../../shared/ui/Notice';
 import './EquipmentViewPage.css';
 
 type EquipmentViewPageProps = {
+  initialTab?: 'details' | 'documents' | 'history';
+  returnTo: string;
   userRole: string | null;
   visibleId: number;
 };
 
 export function EquipmentViewPage({
+  initialTab = 'details',
+  returnTo,
   userRole,
   visibleId,
 }: EquipmentViewPageProps) {
@@ -53,21 +57,12 @@ export function EquipmentViewPage({
     };
   }, [visibleId]);
 
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      window.history.back();
-      return;
-    }
-
-    window.location.hash = '#/equipment';
-  };
-
   return (
     <div className="equipment-view-page">
-      <button className="equipment-back-link" onClick={handleBack} type="button">
+      <a className="equipment-back-link" href={returnTo}>
         <ArrowLeft aria-hidden="true" size={18} />
         <span>Назад</span>
-      </button>
+      </a>
 
       {isLoading ? <Notice>Загрузка карточки оборудования...</Notice> : null}
       {error ? <Notice tone="error">{error}</Notice> : null}
@@ -76,7 +71,9 @@ export function EquipmentViewPage({
           canEdit={canEditEquipment(userRole)}
           equipment={equipment}
           history={history}
+          initialTab={initialTab}
           isHistoryLoading={isHistoryLoading}
+          returnTo={returnTo}
         />
       ) : null}
     </div>

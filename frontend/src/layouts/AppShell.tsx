@@ -8,6 +8,7 @@ import { EquipmentViewPage } from "../pages/EquipmentViewPage";
 import { SearchPage } from "../pages/SearchPage";
 import { UsersPage } from "../pages/UsersPage";
 import type { EmployeeProfile } from "../shared/api/user-profile-api";
+import { getHashRouteParam, getSafeReturnTo } from "../shared/lib/hash-navigation";
 import "./AppShell.css";
 
 type AppShellUser = {
@@ -32,18 +33,30 @@ export function AppShell({ onLogout, route, user }: AppShellProps) {
   const isSearchRoute = route === "#/search" || route.startsWith("#/search?");
   const isUsersRoute = route === "#/users";
   const isEquipmentCreateRoute = route === "#/equipment/create";
-  const equipmentEditMatch = route.match(
-    /^#\/equipment\/(\d+)\/edit(?:\?tab=(details|documents))?$/,
-  );
+  const equipmentEditMatch = route.match(/^#\/equipment\/(\d+)\/edit(?:\?.*)?$/);
   const equipmentEditId = equipmentEditMatch
     ? Number(equipmentEditMatch[1])
     : null;
+  const equipmentEditTabParam = getHashRouteParam(route, "tab");
   const equipmentEditTab =
-    equipmentEditMatch?.[2] === "documents" ? "documents" : "details";
-  const equipmentViewMatch = route.match(/^#\/equipment\/(\d+)$/);
+    equipmentEditTabParam === "documents" ? "documents" : "details";
+  const equipmentEditReturnTo = getSafeReturnTo(
+    getHashRouteParam(route, "returnTo"),
+  );
+  const equipmentViewMatch = route.match(
+    /^#\/equipment\/(\d+)(?:\?.*)?$/,
+  );
   const equipmentViewId = equipmentViewMatch
     ? Number(equipmentViewMatch[1])
     : null;
+  const equipmentViewTabParam = getHashRouteParam(route, "tab");
+  const equipmentViewTab =
+    equipmentViewTabParam === "documents" || equipmentViewTabParam === "history"
+      ? equipmentViewTabParam
+      : "details";
+  const equipmentViewReturnTo = getSafeReturnTo(
+    getHashRouteParam(route, "returnTo"),
+  );
 
   return (
     <main className="app-shell">
@@ -64,12 +77,15 @@ export function AppShell({ onLogout, route, user }: AppShellProps) {
         {equipmentEditId !== null ? (
           <EquipmentEditPage
             initialTab={equipmentEditTab}
+            returnTo={equipmentEditReturnTo}
             userRole={user?.role ?? null}
             visibleId={equipmentEditId}
           />
         ) : null}
         {equipmentViewId !== null ? (
           <EquipmentViewPage
+            initialTab={equipmentViewTab}
+            returnTo={equipmentViewReturnTo}
             userRole={user?.role ?? null}
             visibleId={equipmentViewId}
           />

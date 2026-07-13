@@ -97,7 +97,11 @@ export function PdfPreviewModal({
   }
 
   return createPortal(
-    <div className="pdf-preview-backdrop" role="presentation">
+    <div
+      className="pdf-preview-backdrop"
+      onClick={onClose}
+      role="presentation"
+    >
       <section
         aria-label={resolvedFileName}
         aria-modal="true"

@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { Save } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import {
   deleteEquipmentFile,
   downloadEquipmentFile,
@@ -9,15 +10,22 @@ import {
 } from "../../shared/api/equipment-api";
 import { Notice } from "../../shared/ui/Notice";
 import { PdfPreviewModal } from "../../shared/ui/PdfPreviewModal";
-import { EquipmentDocumentsList } from "./EquipmentDocumentsList";
-import { EquipmentDocumentUploadForm } from "./EquipmentDocumentUploadForm";
+import { UnsavedChangesGuard } from "../../shared/ui/UnsavedChangesGuard";
+import { EquipmentDocumentTypeSection } from "./EquipmentDocumentTypeSection";
+import {
+  getSelectedDocumentEntries,
+  hasSelectedDocumentFiles,
+  type SelectedEquipmentDocumentFiles,
+} from "./equipment-document-selection";
 import {
   getEquipmentDocumentUploadErrorMessage,
-  getEquipmentDocumentUploadSuccessMessage,
   validateEquipmentDocumentUpload,
 } from "./equipment-document-upload-validation";
 import { getDisplayName } from "./equipment-document-utils";
-import { equipmentDocumentsText as text } from "./equipment-documents.text";
+import {
+  documentTypeOptions,
+  equipmentDocumentsText as text,
+} from "./equipment-documents.text";
 import "./EquipmentDocumentsPanel.css";
 
 type EquipmentDocumentsPanelProps = {
@@ -29,15 +37,12 @@ export function EquipmentDocumentsPanel({
   mode,
   visibleId,
 }: EquipmentDocumentsPanelProps) {
-  const fileInputId = useId();
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [files, setFiles] = useState<EquipmentFile[]>([]);
-  const [documentType, setDocumentType] = useState<StorageDocumentType | "">(
-    "",
-  );
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] =
+    useState<SelectedEquipmentDocumentFiles>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
+  const [uploadingDocumentType, setUploadingDocumentType] =
+    useState<StorageDocumentType | null>(null);
   const [downloadingFileId, setDownloadingFileId] = useState<number | null>(
     null,
   );
@@ -45,6 +50,22 @@ export function EquipmentDocumentsPanel({
   const [previewFile, setPreviewFile] = useState<EquipmentFile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  const selectedDocumentEntries = useMemo(
+    () => getSelectedDocumentEntries(selectedFiles),
+    [selectedFiles],
+  );
+  const hasUnsavedDocumentChanges = selectedDocumentEntries.length > 0;
+
+  const filesByDocumentType = useMemo(() => {
+    return documentTypeOptions.reduce(
+      (groups, option) => ({
+        ...groups,
+        [option.value]: files.filter((file) => file.documentType === option.value),
+      }),
+      {} as Record<StorageDocumentType, EquipmentFile[]>,
+    );
+  }, [files]);
 
   const loadFiles = () => {
     setIsLoading(true);
@@ -84,48 +105,72 @@ export function EquipmentDocumentsPanel({
     };
   }, [visibleId]);
 
-  const handleUpload = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleFileChange = (
+    nextDocumentType: StorageDocumentType,
+    file: File | null,
+  ) => {
+    setSelectedFiles((currentFiles) => ({
+      ...currentFiles,
+      [nextDocumentType]: file,
+    }));
+  };
+
+  const handleSaveChanges = async (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
     setError(null);
     setMessage(null);
 
-    const validationError = validateEquipmentDocumentUpload({
-      documentType,
-      files,
-      isUploading,
-      selectedFile,
-    });
-
-    if (validationError) {
-      setError(validationError);
+    if (uploadingDocumentType) {
       return;
     }
 
-    if (!documentType || !selectedFile) {
+    if (!hasSelectedDocumentFiles(selectedFiles)) {
       return;
     }
 
-    setIsUploading(true);
-
-    try {
-      await uploadEquipmentFile({
+    for (const [documentType, selectedFile] of selectedDocumentEntries) {
+      const validationError = validateEquipmentDocumentUpload({
         documentType,
-        file: selectedFile,
-        visibleId,
+        files,
+        isUploading: Boolean(uploadingDocumentType),
+        selectedFile,
       });
 
-      setMessage(getEquipmentDocumentUploadSuccessMessage(documentType));
-      setSelectedFile(null);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
+    }
 
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+    const uploadedDocumentTypes: StorageDocumentType[] = [];
+
+    try {
+      for (const [documentType, selectedFile] of selectedDocumentEntries) {
+        setUploadingDocumentType(documentType);
+
+        await uploadEquipmentFile({
+          documentType,
+          file: selectedFile,
+          visibleId,
+        });
+
+        uploadedDocumentTypes.push(documentType);
       }
 
+      setSelectedFiles({});
+      setMessage(text.savedChanges);
       loadFiles();
     } catch (requestError) {
       setError(getEquipmentDocumentUploadErrorMessage(requestError));
+      setSelectedFiles((currentFiles) => {
+        const nextFiles = { ...currentFiles };
+        uploadedDocumentTypes.forEach((documentType) => {
+          nextFiles[documentType] = null;
+        });
+        return nextFiles;
+      });
     } finally {
-      setIsUploading(false);
+      setUploadingDocumentType(null);
     }
   };
 
@@ -179,31 +224,61 @@ export function EquipmentDocumentsPanel({
   return (
     <section className="equipment-documents-panel">
       {mode === "edit" ? (
-        <EquipmentDocumentUploadForm
-          documentType={documentType}
-          fileInputId={fileInputId}
-          fileInputRef={fileInputRef}
-          isUploading={isUploading}
-          onDocumentTypeChange={setDocumentType}
-          onFileChange={setSelectedFile}
-          onSubmit={handleUpload}
-          selectedFile={selectedFile}
-        />
+        <UnsavedChangesGuard hasChanges={hasUnsavedDocumentChanges} />
       ) : null}
 
       {error ? <Notice tone="error">{error}</Notice> : null}
       {message ? <Notice tone="success">{message}</Notice> : null}
 
-      <EquipmentDocumentsList
-        deletingFileId={deletingFileId}
-        downloadingFileId={downloadingFileId}
-        files={files}
-        isLoading={isLoading}
-        mode={mode}
-        onDelete={handleDelete}
-        onDownload={(file) => void handleDownload(file)}
-        onOpenPreview={setPreviewFile}
-      />
+      {isLoading ? (
+        <section className="equipment-documents-list-section">
+          <p className="equipment-documents-muted">{text.loading}</p>
+        </section>
+      ) : null}
+
+      {!isLoading && mode === "view" && files.length === 0 ? (
+        <section className="equipment-documents-list-section">
+          <div className="equipment-documents-empty">
+            <p>{text.emptyView}</p>
+          </div>
+        </section>
+      ) : null}
+
+      {!isLoading
+        ? documentTypeOptions.map((option) => (
+            <EquipmentDocumentTypeSection
+              deletingFileId={deletingFileId}
+              documentType={option.value}
+              downloadingFileId={downloadingFileId}
+              files={filesByDocumentType[option.value]}
+              isUploading={Boolean(uploadingDocumentType)}
+              key={option.value}
+              mode={mode}
+              onDelete={handleDelete}
+              onDownload={(file) => void handleDownload(file)}
+              onFileChange={handleFileChange}
+              onOpenPreview={setPreviewFile}
+              selectedFile={selectedFiles[option.value] ?? null}
+              title={option.label}
+            />
+          ))
+        : null}
+
+      {mode === "edit" && !isLoading && hasUnsavedDocumentChanges ? (
+        <form
+          className="equipment-form-actions"
+          onSubmit={(event) => void handleSaveChanges(event)}
+        >
+          <button
+            className="equipment-submit-button"
+            disabled={Boolean(uploadingDocumentType)}
+            type="submit"
+          >
+            <Save aria-hidden="true" size={18} />
+            <span>{uploadingDocumentType ? text.saving : text.saveChanges}</span>
+          </button>
+        </form>
+      ) : null}
 
       <PdfPreviewModal
         fileId={previewFile?.id ?? null}

@@ -1,8 +1,15 @@
 import { memo } from "react";
 import { EquipmentStatusBadge } from "../../modules/equipment-status";
 import type { SearchResultItem } from "../../shared/api/search-api";
+import { buildHashRoute } from "../../shared/lib/hash-navigation";
 
 function getResultHref(item: SearchResultItem) {
+  if (item.targetUrl?.startsWith("#/equipment/")) {
+    return buildHashRoute(item.targetUrl, {
+      returnTo: window.location.hash,
+    });
+  }
+
   if (item.targetUrl) {
     return item.targetUrl;
   }

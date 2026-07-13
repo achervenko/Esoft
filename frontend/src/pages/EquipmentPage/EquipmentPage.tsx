@@ -5,6 +5,7 @@ import {
   getEquipmentRegistry,
   type EquipmentRegistryItem,
 } from "../../shared/api/equipment-api";
+import { buildHashRoute } from "../../shared/lib/hash-navigation";
 import { EquipmentRegistryTable } from "./EquipmentRegistryTable";
 import "./EquipmentPage.css";
 
@@ -44,7 +45,9 @@ export function EquipmentPage({ userRole }: EquipmentPageProps) {
   }, []);
 
   const openEquipmentCard = (visibleId: number) => {
-    window.location.hash = `#/equipment/${visibleId}`;
+    window.location.hash = buildHashRoute(`#/equipment/${visibleId}`, {
+      returnTo: "#/equipment",
+    });
   };
 
   return (

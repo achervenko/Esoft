@@ -1,9 +1,10 @@
 import { Pencil } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type {
   EquipmentCard,
   EquipmentHistoryItem,
 } from "../../shared/api/equipment-api";
+import { buildHashRoute } from "../../shared/lib/hash-navigation";
 import {
   formatNullableNumber,
   formatNullableText,
@@ -18,7 +19,9 @@ type EquipmentCardViewProps = {
   canEdit?: boolean;
   equipment: EquipmentCard;
   history: EquipmentHistoryItem[];
+  initialTab?: EquipmentCardTab;
   isHistoryLoading?: boolean;
+  returnTo: string;
 };
 
 type EquipmentCardTab = "details" | "documents" | "history";
@@ -42,12 +45,21 @@ export function EquipmentCardView({
   canEdit = false,
   equipment,
   history,
+  initialTab = "details",
   isHistoryLoading = false,
+  returnTo,
 }: EquipmentCardViewProps) {
-  const [activeTab, setActiveTab] = useState<EquipmentCardTab>("details");
+  const [activeTab, setActiveTab] = useState<EquipmentCardTab>(initialTab);
   const sections = getEquipmentCardSections(equipment);
   const textBlocks = getEquipmentCardTextBlocks(equipment);
-  const editHref = `#/equipment/${equipment.visibleId}/edit?tab=${activeTab}`;
+  const editHref = buildHashRoute(`#/equipment/${equipment.visibleId}/edit`, {
+    returnTo,
+    tab: activeTab,
+  });
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   return (
     <article className="equipment-card-view">
