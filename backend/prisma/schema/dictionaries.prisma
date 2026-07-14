@@ -2,8 +2,21 @@ model Manufacturer {
   id        Int         @id @default(autoincrement())
   name      String      @unique @db.VarChar(128)
   equipment Equipment[]
+  models    EquipmentModel[]
 
   @@map("manufacturers")
+}
+
+model EquipmentModel {
+  id             Int          @id @default(autoincrement())
+  name           String       @db.VarChar(128)
+  manufacturerId Int          @map("manufacturer_id")
+  manufacturer   Manufacturer @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
+  equipment      Equipment[]
+
+  @@unique([manufacturerId, name], map: "uq_equipment_models_manufacturer_name")
+  @@index([manufacturerId], map: "idx_equipment_models_manufacturer_id")
+  @@map("equipment_models")
 }
 
 model Country {

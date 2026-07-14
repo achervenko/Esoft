@@ -63,3 +63,20 @@ export function parseLocationPayload(payload: {
 
   return { name, workshopId: objectId };
 }
+
+export function parseEquipmentModelPayload(payload: {
+  manufacturerId?: unknown;
+  name?: unknown;
+}) {
+  const name = parseDictionaryName(payload);
+  const manufacturerId = Number(payload.manufacturerId);
+
+  if (!Number.isInteger(manufacturerId) || manufacturerId <= 0) {
+    throw new BadRequestException({
+      code: 'DICTIONARY_PARENT_REQUIRED',
+      message: 'Укажите производителя.',
+    });
+  }
+
+  return { manufacturerId, name };
+}

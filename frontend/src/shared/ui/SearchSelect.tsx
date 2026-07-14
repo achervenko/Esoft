@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { OptionItem } from '../api/equipment-api';
 
 type SearchSelectProps = {
@@ -25,6 +25,10 @@ export function SearchSelect({
   const selectedOption = options.find((option) => option.id === value) ?? null;
   const [query, setQuery] = useState(selectedOption?.name ?? '');
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    setQuery(selectedOption?.name ?? '');
+  }, [selectedOption?.name]);
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();

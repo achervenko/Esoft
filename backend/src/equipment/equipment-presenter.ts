@@ -7,9 +7,9 @@ export function toEquipmentListItem(item: {
   name: string;
   inventoryNumber: string;
   serialNumber: string | null;
-  model: string | null;
+  model: { name: string };
   status: EquipmentStatus;
-  manufacturer: { name: string } | null;
+  manufacturer: { name: string };
 }) {
   return {
     id: item.id,
@@ -17,8 +17,8 @@ export function toEquipmentListItem(item: {
     name: item.name,
     inventoryNumber: item.inventoryNumber,
     serialNumber: item.serialNumber,
-    manufacturer: item.manufacturer?.name ?? 'Не указан',
-    model: item.model ?? 'Не указана',
+    manufacturer: item.manufacturer.name,
+    model: item.model.name,
     status: item.status,
     statusLabel: getEquipmentStatusLabel(item.status),
   };
@@ -32,8 +32,9 @@ export function toEquipmentCard(equipment: EquipmentWithAuditRelations) {
     inventoryNumber: equipment.inventoryNumber,
     serialNumber: equipment.serialNumber,
     manufacturerId: equipment.manufacturerId,
-    manufacturer: equipment.manufacturer?.name ?? 'Не указан',
-    model: equipment.model ?? 'Не указана',
+    manufacturer: equipment.manufacturer.name,
+    modelId: equipment.modelId,
+    model: equipment.model.name,
     specifications: equipment.specifications,
     countryId: equipment.countryId,
     country: equipment.country?.name ?? 'Не указана',

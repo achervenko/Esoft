@@ -13,6 +13,14 @@ export function buildEquipmentData(dto: CreateEquipmentDto) {
     throw new BadRequestException('Инвентарный номер обязателен.');
   }
 
+  if (!dto.manufacturerId) {
+    throw new BadRequestException('Производитель обязателен.');
+  }
+
+  if (!dto.modelId) {
+    throw new BadRequestException('Модель обязательна.');
+  }
+
   if (!dto.sectionId) {
     throw new BadRequestException('Местонахождение обязательно.');
   }
@@ -55,9 +63,9 @@ export function buildEquipmentData(dto: CreateEquipmentDto) {
     name,
     inventoryNumber,
     serialNumber: toSerialNumber(dto.serialNumber),
-    model: toNullableText(dto.model),
+    modelId: dto.modelId,
     specifications: toNullableText(dto.specifications),
-    manufacturerId: toNullableNumber(dto.manufacturerId),
+    manufacturerId: dto.manufacturerId,
     countryId: toNullableNumber(dto.countryId),
     manufactureYear,
     commissioningDate,

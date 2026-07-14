@@ -44,6 +44,7 @@ function getDictionaryErrorByCode(code: string | null) {
     case "COUNTRY_ISO_REQUIRED":
       return "Укажите ISO страны.";
     case "COUNTRY_NOT_FOUND":
+    case "EQUIPMENT_MODEL_NOT_FOUND":
     case "MANUFACTURER_NOT_FOUND":
       return "Запись не найдена.";
     case "DICTIONARY_ITEM_ALREADY_EXISTS":
@@ -55,7 +56,7 @@ function getDictionaryErrorByCode(code: string | null) {
     case "DICTIONARY_NAME_TOO_LONG":
       return "Название слишком длинное.";
     case "DICTIONARY_PARENT_REQUIRED":
-      return "Укажите объект.";
+      return "Укажите родительский элемент.";
     case "LOCATION_NOT_FOUND":
     case "OBJECT_NOT_FOUND":
       return "Запись не найдена.";

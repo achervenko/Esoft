@@ -1,5 +1,6 @@
 import { TriangleAlert } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import './UnsavedChangesGuard.css';
 
 type UnsavedChangesGuardProps = {
@@ -93,7 +94,7 @@ export function UnsavedChangesGuard({ hasChanges }: UnsavedChangesGuardProps) {
     window.location.href = nextHref;
   };
 
-  return (
+  return createPortal(
     <div
       aria-labelledby="unsaved-changes-title"
       aria-modal="true"
@@ -126,7 +127,8 @@ export function UnsavedChangesGuard({ hasChanges }: UnsavedChangesGuardProps) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

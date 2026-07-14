@@ -16,6 +16,7 @@ export class EquipmentSearchProjector {
       where: { id: equipmentId },
       include: {
         manufacturer: true,
+        model: true,
         responsibleEmployee: true,
         section: {
           include: {
@@ -49,8 +50,8 @@ export class EquipmentSearchProjector {
       equipment.name,
       equipment.inventoryNumber,
       removeInventorySeparators(equipment.inventoryNumber),
-      equipment.model,
-      equipment.manufacturer?.name,
+      equipment.model.name,
+      equipment.manufacturer.name,
       equipment.serialNumber,
       equipment.section.workshop.name,
       equipment.section.name,

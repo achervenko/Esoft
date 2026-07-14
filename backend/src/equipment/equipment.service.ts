@@ -25,6 +25,7 @@ export class EquipmentService {
     const equipment = await this.prisma.equipment.findMany({
       include: {
         manufacturer: true,
+        model: true,
       },
       orderBy: [{ visibleId: 'asc' }],
     });
@@ -33,9 +34,12 @@ export class EquipmentService {
   }
 
   async getCreateOptions() {
-    const [manufacturers, countries, sections, employees, nextVisibleId] =
+    const [manufacturers, models, countries, sections, employees, nextVisibleId] =
       await Promise.all([
         this.prisma.manufacturer.findMany({ orderBy: { name: 'asc' } }),
+        this.prisma.equipmentModel.findMany({
+          orderBy: [{ manufacturer: { name: 'asc' } }, { name: 'asc' }],
+        }),
         this.prisma.country.findMany({ orderBy: { name: 'asc' } }),
         this.prisma.section.findMany({
           include: { workshop: true },
@@ -54,6 +58,7 @@ export class EquipmentService {
     return toEquipmentCreateOptions({
       nextVisibleId,
       manufacturers,
+      models,
       countries,
       sections,
       employees,
@@ -136,6 +141,10 @@ export class EquipmentService {
 
   async create(dto: CreateEquipmentDto, userId?: string | null) {
     const data = buildEquipmentData(dto);
+    await this.assertModelBelongsToManufacturer(
+      data.modelId,
+      data.manufacturerId,
+    );
 
     if (dto.visibleId) {
       const existingEquipment = await this.prisma.equipment.findUnique({
@@ -190,6 +199,10 @@ export class EquipmentService {
     }
 
     const data = buildEquipmentData(dto);
+    await this.assertModelBelongsToManufacturer(
+      data.modelId,
+      data.manufacturerId,
+    );
 
     if (dto.visibleId && dto.visibleId !== currentEquipment.visibleId) {
       const existingEquipment = await this.prisma.equipment.findUnique({
@@ -239,5 +252,21 @@ export class EquipmentService {
     });
 
     return toEquipmentCard(updatedEquipment);
+  }
+
+  private async assertModelBelongsToManufacturer(
+    modelId: number,
+    manufacturerId: number,
+  ) {
+    const model = await this.prisma.equipmentModel.findUnique({
+      where: { id: modelId },
+      select: { manufacturerId: true },
+    });
+
+    if (!model || model.manufacturerId !== manufacturerId) {
+      throw new BadRequestException(
+        'Выберите модель выбранного производителя.',
+      );
+    }
   }
 }

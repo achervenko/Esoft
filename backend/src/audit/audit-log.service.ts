@@ -38,6 +38,7 @@ export class AuditLogService {
       include: {
         country: true,
         manufacturer: true,
+        model: true,
         responsibleEmployee: true,
         section: {
           include: {
@@ -54,8 +55,8 @@ export class AuditLogService {
     const lines: AuditFieldLine[] = [
       { label: 'ID', value: equipment.visibleId },
       { label: 'Название оборудования', value: equipment.name },
-      { label: 'Производитель', value: equipment.manufacturer?.name },
-      { label: 'Модель', value: equipment.model },
+      { label: 'Производитель', value: equipment.manufacturer.name },
+      { label: 'Модель', value: equipment.model.name },
       { label: 'Технические характеристики', value: equipment.specifications },
       { label: 'Заводской номер', value: equipment.serialNumber },
       { label: 'Инвентарный номер', value: equipment.inventoryNumber },

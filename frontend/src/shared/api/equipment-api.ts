@@ -2,6 +2,7 @@ import { downloadFileById, getFileDownloadUrl } from "./files-api";
 
 export type OptionItem = {
   id: number;
+  manufacturerId?: number;
   name: string;
   position?: string;
 };
@@ -15,6 +16,7 @@ export type EquipmentCreateOptions = {
   countries: OptionItem[];
   employees: OptionItem[];
   manufacturers: OptionItem[];
+  models: OptionItem[];
   nextVisibleId: number;
   sections: OptionItem[];
   statuses: EquipmentStatusOption[];
@@ -23,8 +25,8 @@ export type EquipmentCreateOptions = {
 export type CreateEquipmentPayload = {
   visibleId?: number;
   name: string;
-  manufacturerId?: number | null;
-  model?: string | null;
+  manufacturerId: number;
+  modelId: number;
   specifications?: string | null;
   serialNumber?: string | null;
   inventoryNumber: string;
@@ -61,9 +63,10 @@ export type EquipmentCard = {
   inventoryNumber: string;
   issueDate: string | null;
   location: string;
-  manufacturerId: number | null;
+  manufacturerId: number;
   manufacturer: string;
   manufactureYear: number | null;
+  modelId: number;
   model: string;
   name: string;
   notes: string | null;

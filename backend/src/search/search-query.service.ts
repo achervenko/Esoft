@@ -72,7 +72,7 @@ export class SearchQueryService {
           ELSE NULL
         END AS target_url,
         manufacturers.name AS manufacturer,
-        equipment.model,
+        equipment_models.name AS model,
         equipment.serial_number,
         CASE
           WHEN workshops.name IS NOT NULL AND sections.name IS NOT NULL
@@ -93,6 +93,8 @@ export class SearchQueryService {
         AND equipment.id = entity_id
       LEFT JOIN manufacturers
         ON manufacturers.id = equipment.manufacturer_id
+      LEFT JOIN equipment_models
+        ON equipment_models.id = equipment.model_id
       LEFT JOIN sections
         ON sections.id = equipment.section_id
       LEFT JOIN workshops

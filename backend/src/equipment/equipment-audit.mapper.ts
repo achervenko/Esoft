@@ -51,8 +51,8 @@ export function toEquipmentAuditValues(
   return {
     ID: String(equipment.visibleId),
     'Название оборудования': equipment.name,
-    Производитель: equipment.manufacturer?.name ?? null,
-    Модель: equipment.model,
+    Производитель: equipment.manufacturer.name,
+    Модель: equipment.model.name,
     'Технические характеристики': equipment.specifications,
     'Заводской номер': equipment.serialNumber,
     'Инвентарный номер': equipment.inventoryNumber,

@@ -3,8 +3,8 @@ import { EquipmentStatus } from '@prisma/client';
 export class CreateEquipmentDto {
   visibleId?: number;
   name?: string;
-  manufacturerId?: number | null;
-  model?: string | null;
+  manufacturerId?: number;
+  modelId?: number;
   specifications?: string | null;
   serialNumber?: string | null;
   inventoryNumber?: string;

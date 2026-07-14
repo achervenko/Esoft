@@ -34,6 +34,23 @@ export function EquipmentCreateForm({
   submitLabel = 'Сохранить',
   submittingLabel = 'Сохранение...',
 }: EquipmentCreateFormProps) {
+  const modelOptions = options.models.filter(
+    (model) => model.manufacturerId === form.manufacturerId,
+  );
+
+  const handleManufacturerChange = (value: number | null) => {
+    onChange('manufacturerId', value);
+
+    if (
+      form.modelId &&
+      !options.models.some(
+        (model) => model.id === form.modelId && model.manufacturerId === value,
+      )
+    ) {
+      onChange('modelId', null);
+    }
+  };
+
   return (
     <form className="equipment-create-form" onSubmit={onSubmit}>
       <div className="equipment-form-grid">
@@ -72,24 +89,27 @@ export function EquipmentCreateForm({
         <SearchSelect
           label="Производитель"
           error={fieldErrors.manufacturerId}
-          onChange={(value) => onChange('manufacturerId', value)}
+          onChange={handleManufacturerChange}
           onFocus={() => onFieldFocus('manufacturerId')}
           options={options.manufacturers}
+          required
           value={form.manufacturerId}
         />
 
-        <label className={`form-field${fieldErrors.model ? ' has-error' : ''}`}>
-          <span>Модель</span>
-          <input
-            onChange={(event) => onChange('model', event.target.value)}
-            onFocus={() => onFieldFocus('model')}
-            type="text"
-            value={form.model}
-          />
-          {fieldErrors.model ? (
-            <small className="field-error">{fieldErrors.model}</small>
-          ) : null}
-        </label>
+        <SearchSelect
+          label="Модель"
+          error={fieldErrors.modelId}
+          onChange={(value) => onChange('modelId', value)}
+          onFocus={() => onFieldFocus('modelId')}
+          options={modelOptions}
+          placeholder={
+            form.manufacturerId
+              ? "Выберите модель"
+              : "Сначала выберите производителя"
+          }
+          required
+          value={form.modelId}
+        />
 
         <label className="form-field form-field-wide">
           <span>Технические характеристики</span>

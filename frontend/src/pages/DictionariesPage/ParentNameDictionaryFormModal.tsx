@@ -1,30 +1,38 @@
 import { useState } from "react";
-import type {
-  DictionaryLocation,
-  DictionaryObject,
-  LocationPayload,
-} from "../../shared/api/dictionaries-admin-api";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import { SelectDropdown } from "../../shared/ui/SelectDropdown";
 
-type LocationFormModalProps = {
-  isSaving: boolean;
-  location: DictionaryLocation | null;
-  objects: DictionaryObject[];
-  onClose: () => void;
-  onSubmit: (payload: LocationPayload) => void;
+type ParentOption = {
+  id: number;
+  name: string;
 };
 
-export function LocationFormModal({
+type ParentNameDictionaryFormModalProps = {
+  initialName?: string;
+  initialParentId?: number | null;
+  isSaving: boolean;
+  nameLabel: string;
+  onClose: () => void;
+  onSubmit: (payload: { name: string; parentId: number }) => void;
+  parentLabel: string;
+  parentOptions: ParentOption[];
+  title: string;
+};
+
+export function ParentNameDictionaryFormModal({
+  initialName = "",
+  initialParentId = null,
   isSaving,
-  location,
-  objects,
+  nameLabel,
   onClose,
   onSubmit,
-}: LocationFormModalProps) {
+  parentLabel,
+  parentOptions,
+  title,
+}: ParentNameDictionaryFormModalProps) {
   const [form, setForm] = useState({
-    name: location?.name ?? "",
-    objectId: location?.workshopId ? String(location.workshopId) : "",
+    name: initialName,
+    parentId: initialParentId ? String(initialParentId) : "",
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -35,48 +43,45 @@ export function LocationFormModal({
       return;
     }
 
-    const objectId = Number(form.objectId);
+    const parentId = Number(form.parentId);
     const name = form.name.trim();
 
-    if (!name || !Number.isInteger(objectId) || objectId <= 0) {
-      setError("Укажите объект и название местонахождения.");
+    if (!name || !Number.isInteger(parentId) || parentId <= 0) {
+      setError(`Укажите ${parentLabel.toLowerCase()} и название.`);
       return;
     }
 
     setError(null);
-    onSubmit({ name, objectId });
+    onSubmit({ name, parentId });
   };
 
   return (
-    <AdminModal
-      onClose={onClose}
-      title={
-        location ? "Редактирование местонахождения" : "Новое местонахождение"
-      }
-    >
+    <AdminModal onClose={onClose} title={title}>
       <form className="admin-form" onSubmit={handleSubmit}>
         <SelectDropdown
-          label="Объект"
+          label={parentLabel}
           onChange={(value) =>
             setForm((currentForm) => ({
               ...currentForm,
-              objectId: value,
+              parentId: value,
             }))
           }
-          options={objects.map((object) => ({
-            label: object.name,
-            value: String(object.id),
+          options={parentOptions.map((option) => ({
+            label: option.name,
+            value: String(option.id),
           }))}
-          placeholder="Выберите объект"
+          placeholder={`Выберите ${parentLabel.toLowerCase()}`}
           required
-          value={form.objectId}
+          value={form.parentId}
         />
 
         <label className="form-field">
           <span>
-            Местонахождение<b aria-hidden="true">*</b>
+            {nameLabel}
+            <b aria-hidden="true">*</b>
           </span>
           <input
+            autoFocus
             maxLength={128}
             onChange={(event) =>
               setForm((currentForm) => ({

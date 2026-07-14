@@ -4,6 +4,7 @@ import { throwDictionaryPrismaError } from './dictionaries-admin.errors';
 import {
   parseCountryPayload,
   parseDictionaryName,
+  parseEquipmentModelPayload,
   parseLocationPayload,
 } from './dictionaries-admin.validation';
 
@@ -48,6 +49,57 @@ export class DictionariesAdminService {
       return { ok: true };
     } catch (error) {
       throwDictionaryPrismaError(error, 'MANUFACTURER_NOT_FOUND');
+    }
+  }
+
+  listEquipmentModels() {
+    return this.prisma.equipmentModel.findMany({
+      include: { manufacturer: true },
+      orderBy: [{ manufacturer: { name: 'asc' } }, { name: 'asc' }],
+    });
+  }
+
+  async createEquipmentModel(payload: {
+    manufacturerId?: unknown;
+    name?: unknown;
+  }) {
+    const data = parseEquipmentModelPayload(payload);
+    await this.assertManufacturerExists(data.manufacturerId);
+
+    try {
+      return await this.prisma.equipmentModel.create({
+        data,
+        include: { manufacturer: true },
+      });
+    } catch (error) {
+      throwDictionaryPrismaError(error, 'EQUIPMENT_MODEL_NOT_FOUND');
+    }
+  }
+
+  async updateEquipmentModel(
+    id: number,
+    payload: { manufacturerId?: unknown; name?: unknown },
+  ) {
+    const data = parseEquipmentModelPayload(payload);
+    await this.assertManufacturerExists(data.manufacturerId);
+
+    try {
+      return await this.prisma.equipmentModel.update({
+        data,
+        include: { manufacturer: true },
+        where: { id },
+      });
+    } catch (error) {
+      throwDictionaryPrismaError(error, 'EQUIPMENT_MODEL_NOT_FOUND');
+    }
+  }
+
+  async deleteEquipmentModel(id: number) {
+    try {
+      await this.prisma.equipmentModel.delete({ where: { id } });
+      return { ok: true };
+    } catch (error) {
+      throwDictionaryPrismaError(error, 'EQUIPMENT_MODEL_NOT_FOUND');
     }
   }
 
@@ -173,6 +225,19 @@ export class DictionariesAdminService {
     if (!object) {
       throw new NotFoundException({
         code: 'OBJECT_NOT_FOUND',
+        message: 'Запись не найдена.',
+      });
+    }
+  }
+
+  private async assertManufacturerExists(id: number) {
+    const manufacturer = await this.prisma.manufacturer.findUnique({
+      where: { id },
+    });
+
+    if (!manufacturer) {
+      throw new NotFoundException({
+        code: 'MANUFACTURER_NOT_FOUND',
         message: 'Запись не найдена.',
       });
     }

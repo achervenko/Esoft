@@ -64,6 +64,44 @@ export class DictionariesAdminController {
     return this.dictionariesAdminService.deleteManufacturer(id);
   }
 
+  @Get('models')
+  listEquipmentModels(@Session() session: UserSession<Auth>) {
+    assertAdmin(session.user.role);
+
+    return this.dictionariesAdminService.listEquipmentModels();
+  }
+
+  @Post('models')
+  createEquipmentModel(
+    @Body() payload: Record<string, unknown>,
+    @Session() session: UserSession<Auth>,
+  ) {
+    assertAdmin(session.user.role);
+
+    return this.dictionariesAdminService.createEquipmentModel(payload);
+  }
+
+  @Put('models/:id')
+  updateEquipmentModel(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() payload: Record<string, unknown>,
+    @Session() session: UserSession<Auth>,
+  ) {
+    assertAdmin(session.user.role);
+
+    return this.dictionariesAdminService.updateEquipmentModel(id, payload);
+  }
+
+  @Delete('models/:id')
+  deleteEquipmentModel(
+    @Param('id', ParseIntPipe) id: number,
+    @Session() session: UserSession<Auth>,
+  ) {
+    assertAdmin(session.user.role);
+
+    return this.dictionariesAdminService.deleteEquipmentModel(id);
+  }
+
   @Get('countries')
   listCountries(@Session() session: UserSession<Auth>) {
     assertAdmin(session.user.role);

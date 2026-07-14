@@ -7,6 +7,13 @@ export type DictionaryManufacturer = {
   name: string;
 };
 
+export type DictionaryEquipmentModel = {
+  id: number;
+  manufacturer: DictionaryManufacturer;
+  manufacturerId: number;
+  name: string;
+};
+
 export type DictionaryCountry = {
   id: number;
   iso: string;
@@ -37,6 +44,11 @@ export type CountryPayload = {
 export type LocationPayload = {
   name: string;
   objectId: number;
+};
+
+export type EquipmentModelPayload = {
+  manufacturerId: number;
+  name: string;
 };
 
 const API_URL = import.meta.env.VITE_API_URL || "";
@@ -88,6 +100,36 @@ export function updateDictionaryManufacturer(
 
 export function deleteDictionaryManufacturer(id: number) {
   return request<{ ok: true }>(`/api/dictionaries/admin/manufacturers/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export function getDictionaryEquipmentModels() {
+  return request<DictionaryEquipmentModel[]>("/api/dictionaries/admin/models");
+}
+
+export function createDictionaryEquipmentModel(payload: EquipmentModelPayload) {
+  return request<DictionaryEquipmentModel>("/api/dictionaries/admin/models", {
+    body: JSON.stringify(payload),
+    method: "POST",
+  });
+}
+
+export function updateDictionaryEquipmentModel(
+  id: number,
+  payload: EquipmentModelPayload,
+) {
+  return request<DictionaryEquipmentModel>(
+    `/api/dictionaries/admin/models/${id}`,
+    {
+      body: JSON.stringify(payload),
+      method: "PUT",
+    },
+  );
+}
+
+export function deleteDictionaryEquipmentModel(id: number) {
+  return request<{ ok: true }>(`/api/dictionaries/admin/models/${id}`, {
     method: "DELETE",
   });
 }

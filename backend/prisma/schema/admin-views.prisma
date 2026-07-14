@@ -4,10 +4,11 @@ view AdminEquipmentFull {
   inventoryNumber             String           @map("inventory_number") @db.VarChar(64)
   serialNumber                String?          @map("serial_number") @db.VarChar(128)
   equipmentName               String           @map("equipment_name") @db.VarChar(128)
+  modelId                     Int              @map("model_id")
   model                       String?          @db.VarChar(128)
   specifications              String?
-  manufacturerId              Int?             @map("manufacturer_id")
-  manufacturerName            String?          @map("manufacturer_name") @db.VarChar(128)
+  manufacturerId              Int              @map("manufacturer_id")
+  manufacturerName            String           @map("manufacturer_name") @db.VarChar(128)
   countryId                   Int?             @map("country_id")
   countryName                 String?          @map("country_name") @db.VarChar(128)
   countryIso                  String?          @map("country_iso") @db.Char(2)

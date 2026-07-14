@@ -5,10 +5,10 @@ import { CountriesTable } from "./CountriesTable";
 import { CountryFormModal } from "./CountryFormModal";
 import { DictionaryEmployeesTable } from "./DictionaryEmployeesTable";
 import { EmployeeDictionaryFormModal } from "./EmployeeDictionaryFormModal";
-import { LocationFormModal } from "./LocationFormModal";
 import { LocationsDictionaryPanel } from "./LocationsDictionaryPanel";
-import { ManufacturersTable } from "./ManufacturersTable";
+import { ManufacturersDictionaryPanel } from "./ManufacturersDictionaryPanel";
 import { NameDictionaryFormModal } from "./NameDictionaryFormModal";
+import { ParentNameDictionaryFormModal } from "./ParentNameDictionaryFormModal";
 import {
   useDictionariesAdminPage,
   type ActiveDictionariesTab,
@@ -89,7 +89,7 @@ export function DictionariesPage({ userRole }: DictionariesPageProps) {
       <section className="admin-card dictionaries-card">
         <header>
           <h2>{tabLabels[page.activeTab]}</h2>
-          {page.activeTab !== "locations" ? (
+          {page.activeTab !== "locations" && page.activeTab !== "manufacturers" ? (
             <button
               className="admin-primary-button"
               onClick={openCreateForm}
@@ -110,12 +110,17 @@ export function DictionariesPage({ userRole }: DictionariesPageProps) {
           />
         ) : null}
         {!page.isLoading && page.activeTab === "manufacturers" ? (
-          <ManufacturersTable
+          <ManufacturersDictionaryPanel
             manufacturers={page.manufacturers}
-            onDelete={(manufacturer) =>
+            models={page.models}
+            onCreateManufacturer={() => page.setManufacturerForm("new")}
+            onCreateModel={() => page.setModelForm("new")}
+            onDeleteManufacturer={(manufacturer) =>
               void page.removeManufacturer(manufacturer)
             }
-            onEdit={page.setManufacturerForm}
+            onDeleteModel={(model) => void page.removeModel(model)}
+            onEditManufacturer={page.setManufacturerForm}
+            onEditModel={page.setModelForm}
           />
         ) : null}
         {!page.isLoading && page.activeTab === "countries" ? (
@@ -186,12 +191,54 @@ export function DictionariesPage({ userRole }: DictionariesPageProps) {
       ) : null}
 
       {page.locationForm ? (
-        <LocationFormModal
+        <ParentNameDictionaryFormModal
+          initialName={
+            page.locationForm === "new" ? "" : page.locationForm.name
+          }
+          initialParentId={
+            page.locationForm === "new" ? null : page.locationForm.workshopId
+          }
           isSaving={page.isSaving}
-          location={page.locationForm === "new" ? null : page.locationForm}
-          objects={page.objects}
+          nameLabel="Местонахождение"
           onClose={() => page.setLocationForm(null)}
-          onSubmit={(payload) => void page.saveLocation(payload)}
+          onSubmit={(payload) =>
+            void page.saveLocation({
+              name: payload.name,
+              objectId: payload.parentId,
+            })
+          }
+          parentLabel="Объект"
+          parentOptions={page.objects}
+          title={
+            page.locationForm === "new"
+              ? "Новое местонахождение"
+              : "Редактирование местонахождения"
+          }
+        />
+      ) : null}
+
+      {page.modelForm ? (
+        <ParentNameDictionaryFormModal
+          initialName={page.modelForm === "new" ? "" : page.modelForm.name}
+          initialParentId={
+            page.modelForm === "new" ? null : page.modelForm.manufacturerId
+          }
+          isSaving={page.isSaving}
+          nameLabel="Модель"
+          onClose={() => page.setModelForm(null)}
+          onSubmit={(payload) =>
+            void page.saveModel({
+              name: payload.name,
+              manufacturerId: payload.parentId,
+            })
+          }
+          parentLabel="Производитель"
+          parentOptions={page.manufacturers}
+          title={
+            page.modelForm === "new"
+              ? "Новая модель"
+              : "Редактирование модели"
+          }
         />
       ) : null}
     </section>

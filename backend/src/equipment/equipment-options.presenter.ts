@@ -10,6 +10,7 @@ type EquipmentCreateOptionsInput = {
     position: string;
   }>;
   manufacturers: Array<{ id: number; name: string }>;
+  models: Array<{ id: number; manufacturerId: number; name: string }>;
   nextVisibleId: number;
   sections: Array<{
     id: number;
@@ -24,12 +25,18 @@ export function toEquipmentCreateOptions({
   countries,
   employees,
   manufacturers,
+  models,
   nextVisibleId,
   sections,
 }: EquipmentCreateOptionsInput) {
   return {
     nextVisibleId,
     manufacturers: manufacturers.map(({ id, name }) => ({ id, name })),
+    models: models.map(({ id, manufacturerId, name }) => ({
+      id,
+      manufacturerId,
+      name,
+    })),
     countries: countries.map(({ id, name }) => ({ id, name })),
     sections: sections.map((section) => ({
       id: section.id,

@@ -1,46 +1,29 @@
 import { useEffect, useState } from "react";
+import { createCountryDictionaryActions } from "./country-dictionary-actions";
 import {
-  createAdminEmployee,
-  deleteAdminEmployee,
-  getAdminEmployees,
-  updateAdminEmployee,
-  type AdminEmployee,
-  type EmployeePayload,
-} from "../../shared/api/users-admin-api";
-import {
-  createDictionaryCountry,
-  createDictionaryManufacturer,
-  createDictionaryLocation,
-  createDictionaryObject,
-  deleteDictionaryCountry,
-  deleteDictionaryManufacturer,
-  deleteDictionaryLocation,
-  deleteDictionaryObject,
-  getDictionaryCountries,
-  getDictionaryLocations,
-  getDictionaryManufacturers,
-  getDictionaryObjects,
-  updateDictionaryCountry,
-  updateDictionaryManufacturer,
-  updateDictionaryLocation,
-  updateDictionaryObject,
-  type CountryPayload,
-  type DictionaryCountry,
-  type DictionaryLocation,
-  type DictionaryManufacturer,
-  type DictionaryNamePayload,
-  type DictionaryObject,
-  type LocationPayload,
-} from "../../shared/api/dictionaries-admin-api";
-import { getDictionariesAdminErrorMessage } from "./dictionaries-admin-error-messages";
+  type ActiveDictionariesTab,
+  type CountryFormState,
+  type EmployeeDictionaryFormState,
+  type EquipmentModelFormState,
+  type LocationFormState,
+  type ManufacturerFormState,
+  type ObjectFormState,
+} from "./dictionaries-page-types";
+import { createEmployeeDictionaryActions } from "./employee-dictionary-actions";
+import { createLocationDictionaryActions } from "./location-dictionary-actions";
+import { createManufacturerDictionaryActions } from "./manufacturer-dictionary-actions";
+import { useDictionariesAdminData } from "./useDictionariesAdminData";
+import { useDictionariesSaving } from "./useDictionariesSaving";
 
-export type ActiveDictionariesTab =
-  "employees" | "manufacturers" | "countries" | "locations";
-export type EmployeeDictionaryFormState = AdminEmployee | "new" | null;
-export type ManufacturerFormState = DictionaryManufacturer | "new" | null;
-export type CountryFormState = DictionaryCountry | "new" | null;
-export type ObjectFormState = DictionaryObject | "new" | null;
-export type LocationFormState = DictionaryLocation | "new" | null;
+export type {
+  ActiveDictionariesTab,
+  CountryFormState,
+  EmployeeDictionaryFormState,
+  EquipmentModelFormState,
+  LocationFormState,
+  ManufacturerFormState,
+  ObjectFormState,
+} from "./dictionaries-page-types";
 
 type UseDictionariesAdminPageParams = {
   userRole: string | null;
@@ -51,248 +34,97 @@ export function useDictionariesAdminPage({
 }: UseDictionariesAdminPageParams) {
   const [activeTab, setActiveTab] =
     useState<ActiveDictionariesTab>("employees");
-  const [countries, setCountries] = useState<DictionaryCountry[]>([]);
-  const [employees, setEmployees] = useState<AdminEmployee[]>([]);
-  const [locations, setLocations] = useState<DictionaryLocation[]>([]);
-  const [manufacturers, setManufacturers] = useState<DictionaryManufacturer[]>(
-    [],
-  );
-  const [objects, setObjects] = useState<DictionaryObject[]>([]);
   const [countryForm, setCountryForm] = useState<CountryFormState>(null);
   const [employeeForm, setEmployeeForm] =
     useState<EmployeeDictionaryFormState>(null);
   const [locationForm, setLocationForm] = useState<LocationFormState>(null);
   const [manufacturerForm, setManufacturerForm] =
     useState<ManufacturerFormState>(null);
+  const [modelForm, setModelForm] = useState<EquipmentModelFormState>(null);
   const [objectForm, setObjectForm] = useState<ObjectFormState>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const isAdmin = userRole === "admin";
 
-  const loadData = () => {
-    setIsLoading(true);
-    setError(null);
-
-    Promise.all([
-      getAdminEmployees(),
-      getDictionaryManufacturers(),
-      getDictionaryCountries(),
-      getDictionaryObjects(),
-      getDictionaryLocations(),
-    ])
-      .then(
-        ([
-          employeeItems,
-          manufacturerItems,
-          countryItems,
-          objectItems,
-          locationItems,
-        ]) => {
-          setEmployees(employeeItems);
-          setManufacturers(manufacturerItems);
-          setCountries(countryItems);
-          setObjects(objectItems);
-          setLocations(locationItems);
-        },
-      )
-      .catch((requestError) =>
-        setError(getDictionariesAdminErrorMessage(requestError)),
-      )
-      .finally(() => setIsLoading(false));
-  };
+  const data = useDictionariesAdminData();
+  const { isSaving, runSavingAction } = useDictionariesSaving({
+    setError: data.setError,
+    setMessage,
+  });
 
   useEffect(() => {
     if (isAdmin) {
-      loadData();
+      data.loadData();
       return;
     }
 
-    setIsLoading(false);
-  }, [isAdmin]);
+    data.setIsLoading(false);
+  }, [data.loadData, data.setIsLoading, isAdmin]);
 
-  const saveEmployee = async (payload: EmployeePayload) => {
-    await runSavingAction(async () => {
-      if (employeeForm === "new") {
-        await createAdminEmployee(payload);
-        setMessage("Сотрудник добавлен.");
-      } else if (employeeForm) {
-        await updateAdminEmployee(employeeForm.id, payload);
-        setMessage("Сотрудник обновлён.");
-      }
+  const employeeActions = createEmployeeDictionaryActions({
+    employeeForm,
+    loadData: data.loadData,
+    runSavingAction,
+    setEmployeeForm,
+    setMessage,
+  });
 
-      setEmployeeForm(null);
-      loadData();
-    });
-  };
+  const manufacturerActions = createManufacturerDictionaryActions({
+    loadData: data.loadData,
+    manufacturerForm,
+    modelForm,
+    runSavingAction,
+    setManufacturerForm,
+    setMessage,
+    setModelForm,
+  });
 
-  const removeEmployee = async (employee: AdminEmployee) => {
-    if (!window.confirm(`Удалить сотрудника «${employee.fullName}»?`)) {
-      return;
-    }
+  const countryActions = createCountryDictionaryActions({
+    countryForm,
+    loadData: data.loadData,
+    runSavingAction,
+    setCountryForm,
+    setMessage,
+  });
 
-    await runSavingAction(async () => {
-      await deleteAdminEmployee(employee.id);
-      setMessage("Сотрудник удалён.");
-      loadData();
-    });
-  };
-
-  const saveManufacturer = async (payload: DictionaryNamePayload) => {
-    await runSavingAction(async () => {
-      if (manufacturerForm === "new") {
-        await createDictionaryManufacturer(payload);
-        setMessage("Производитель добавлен.");
-      } else if (manufacturerForm) {
-        await updateDictionaryManufacturer(manufacturerForm.id, payload);
-        setMessage("Производитель обновлён.");
-      }
-
-      setManufacturerForm(null);
-      loadData();
-    });
-  };
-
-  const removeManufacturer = async (manufacturer: DictionaryManufacturer) => {
-    if (!window.confirm(`Удалить производителя «${manufacturer.name}»?`)) {
-      return;
-    }
-
-    await runSavingAction(async () => {
-      await deleteDictionaryManufacturer(manufacturer.id);
-      setMessage("Производитель удалён.");
-      loadData();
-    });
-  };
-
-  const saveCountry = async (payload: CountryPayload) => {
-    await runSavingAction(async () => {
-      if (countryForm === "new") {
-        await createDictionaryCountry(payload);
-        setMessage("Страна добавлена.");
-      } else if (countryForm) {
-        await updateDictionaryCountry(countryForm.id, payload);
-        setMessage("Страна обновлена.");
-      }
-
-      setCountryForm(null);
-      loadData();
-    });
-  };
-
-  const removeCountry = async (country: DictionaryCountry) => {
-    if (!window.confirm(`Удалить страну «${country.name}»?`)) {
-      return;
-    }
-
-    await runSavingAction(async () => {
-      await deleteDictionaryCountry(country.id);
-      setMessage("Страна удалена.");
-      loadData();
-    });
-  };
-
-  const saveObject = async (payload: DictionaryNamePayload) => {
-    await runSavingAction(async () => {
-      if (objectForm === "new") {
-        await createDictionaryObject(payload);
-        setMessage("Объект добавлен.");
-      } else if (objectForm) {
-        await updateDictionaryObject(objectForm.id, payload);
-        setMessage("Объект обновлён.");
-      }
-
-      setObjectForm(null);
-      loadData();
-    });
-  };
-
-  const removeObject = async (object: DictionaryObject) => {
-    if (!window.confirm(`Удалить объект «${object.name}»?`)) {
-      return;
-    }
-
-    await runSavingAction(async () => {
-      await deleteDictionaryObject(object.id);
-      setMessage("Объект удалён.");
-      loadData();
-    });
-  };
-
-  const saveLocation = async (payload: LocationPayload) => {
-    await runSavingAction(async () => {
-      if (locationForm === "new") {
-        await createDictionaryLocation(payload);
-        setMessage("Местонахождение добавлено.");
-      } else if (locationForm) {
-        await updateDictionaryLocation(locationForm.id, payload);
-        setMessage("Местонахождение обновлено.");
-      }
-
-      setLocationForm(null);
-      loadData();
-    });
-  };
-
-  const removeLocation = async (location: DictionaryLocation) => {
-    if (!window.confirm(`Удалить местонахождение «${location.name}»?`)) {
-      return;
-    }
-
-    await runSavingAction(async () => {
-      await deleteDictionaryLocation(location.id);
-      setMessage("Местонахождение удалено.");
-      loadData();
-    });
-  };
-
-  const runSavingAction = async (action: () => Promise<void>) => {
-    setIsSaving(true);
-    setError(null);
-    setMessage(null);
-
-    try {
-      await action();
-    } catch (requestError) {
-      setError(getDictionariesAdminErrorMessage(requestError));
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const locationActions = createLocationDictionaryActions({
+    loadData: data.loadData,
+    locationForm,
+    objectForm,
+    runSavingAction,
+    setLocationForm,
+    setMessage,
+    setObjectForm,
+  });
 
   return {
     activeTab,
-    countries,
+    countries: data.countries,
     countryForm,
-    employees,
+    employees: data.employees,
     employeeForm,
-    error,
+    error: data.error,
     isAdmin,
-    isLoading,
+    isLoading: data.isLoading,
     isSaving,
     locationForm,
-    locations,
+    locations: data.locations,
     manufacturerForm,
-    manufacturers,
+    manufacturers: data.manufacturers,
     message,
+    modelForm,
+    models: data.models,
     objectForm,
-    objects,
-    removeCountry,
-    removeEmployee,
-    removeLocation,
-    removeManufacturer,
-    removeObject,
-    saveCountry,
-    saveEmployee,
-    saveLocation,
-    saveManufacturer,
-    saveObject,
+    objects: data.objects,
+    ...countryActions,
+    ...employeeActions,
+    ...locationActions,
+    ...manufacturerActions,
     setActiveTab,
     setCountryForm,
     setEmployeeForm,
     setLocationForm,
     setManufacturerForm,
+    setModelForm,
     setObjectForm,
   };
 }

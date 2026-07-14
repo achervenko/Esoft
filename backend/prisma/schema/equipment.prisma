@@ -14,10 +14,11 @@ model Equipment {
   inventoryNumber       String             @unique @map("inventory_number") @db.VarChar(64)
   serialNumber          String?            @map("serial_number") @db.VarChar(128)
   name                  String             @db.VarChar(128)
-  model                 String?            @db.VarChar(128)
+  modelId               Int                @map("model_id")
+  model                 EquipmentModel     @relation(fields: [modelId], references: [id], onDelete: Restrict)
   specifications        String?
-  manufacturerId        Int?               @map("manufacturer_id")
-  manufacturer          Manufacturer?      @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
+  manufacturerId        Int                @map("manufacturer_id")
+  manufacturer          Manufacturer       @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
   countryId             Int?               @map("country_id")
   country               Country?           @relation(fields: [countryId], references: [id], onDelete: Restrict)
   manufactureYear       Int?               @map("manufacture_year") @db.SmallInt
@@ -34,6 +35,7 @@ model Equipment {
   @@index([visibleId], map: "idx_equipment_visible_id")
   @@index([serialNumber], map: "idx_equipment_serial_number")
   @@index([status], map: "idx_equipment_status")
+  @@index([modelId], map: "idx_equipment_model_id")
   @@index([sectionId], map: "idx_equipment_section_id")
   @@index([responsibleEmployeeId], map: "idx_equipment_responsible_employee_id")
   @@map("equipment")

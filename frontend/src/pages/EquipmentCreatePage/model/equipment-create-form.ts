@@ -18,7 +18,7 @@ export type EquipmentCreateFormState = {
   visibleId: string;
   name: string;
   manufacturerId: number | null;
-  model: string;
+  modelId: number | null;
   specifications: string;
   serialNumber: string;
   inventoryNumber: string;
@@ -44,7 +44,7 @@ export const initialEquipmentCreateFormState: EquipmentCreateFormState = {
   visibleId: '',
   name: '',
   manufacturerId: null,
-  model: '',
+  modelId: null,
   specifications: '',
   serialNumber: '',
   inventoryNumber: '',
@@ -94,9 +94,14 @@ const equipmentCreateValidationRules: ValidationRule<EquipmentCreateFormState>[]
       trigger: (form) => isLongerThan(form.serialNumber, 128),
     },
     {
-      field: 'model',
-      message: 'Модель: максимум 128 символов.',
-      trigger: (form) => isLongerThan(form.model, 128),
+      field: 'manufacturerId',
+      message: 'Выберите производителя из списка.',
+      trigger: (form) => !form.manufacturerId,
+    },
+    {
+      field: 'modelId',
+      message: 'Выберите модель из списка.',
+      trigger: (form) => !form.modelId,
     },
     {
       field: 'manufactureYear',
@@ -186,6 +191,14 @@ export function getEquipmentFieldErrorsFromMessage(message: string) {
     fieldErrors.commissioningDate = message;
   }
 
+  if (lowerMessage.includes('производител')) {
+    fieldErrors.manufacturerId = message;
+  }
+
+  if (lowerMessage.includes('модел')) {
+    fieldErrors.modelId = message;
+  }
+
   return fieldErrors;
 }
 
@@ -195,8 +208,8 @@ export function toEquipmentCreatePayload(
   return {
     visibleId: toOptionalNumber(form.visibleId),
     name: form.name.trim(),
-    manufacturerId: form.manufacturerId,
-    model: toOptionalText(form.model),
+    manufacturerId: toRequiredNumber(form.manufacturerId, 'Производитель'),
+    modelId: toRequiredNumber(form.modelId, 'Модель'),
     specifications: toOptionalText(form.specifications),
     serialNumber: toOptionalText(form.serialNumber),
     inventoryNumber: form.inventoryNumber.trim(),
@@ -222,7 +235,7 @@ export function toEquipmentFormState(
     visibleId: String(equipment.visibleId),
     name: equipment.name,
     manufacturerId: equipment.manufacturerId,
-    model: equipment.model === 'Не указана' ? '' : equipment.model,
+    modelId: equipment.modelId,
     specifications: equipment.specifications ?? '',
     serialNumber: equipment.serialNumber === 'б/н' ? '' : (equipment.serialNumber ?? ''),
     inventoryNumber: equipment.inventoryNumber,
