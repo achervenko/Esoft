@@ -28,6 +28,7 @@ model Equipment {
   section               Section            @relation(fields: [sectionId], references: [id], onDelete: Restrict)
   responsibleEmployeeId Int                @map("responsible_employee_id")
   responsibleEmployee   Employee           @relation("EquipmentResponsibleEmployee", fields: [responsibleEmployeeId], references: [id], onDelete: Restrict)
+  events                EquipmentEvent[]
   status                EquipmentStatus    @default(ACTIVE)
   operationText         String?            @map("operation_text")
   notes                 String?

@@ -1,6 +1,7 @@
 model Manufacturer {
   id        Int         @id @default(autoincrement())
   name      String      @unique @db.VarChar(128)
+  isActive  Boolean     @default(true) @map("is_active")
   equipment Equipment[]
   models    EquipmentModel[]
 
@@ -10,13 +11,37 @@ model Manufacturer {
 model EquipmentModel {
   id             Int          @id @default(autoincrement())
   name           String       @db.VarChar(128)
+  isActive       Boolean      @default(true) @map("is_active")
   manufacturerId Int          @map("manufacturer_id")
   manufacturer   Manufacturer @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
   equipment      Equipment[]
+  eventTypes     EquipmentModelEventType[]
 
   @@unique([manufacturerId, name], map: "uq_equipment_models_manufacturer_name")
   @@index([manufacturerId], map: "idx_equipment_models_manufacturer_id")
   @@map("equipment_models")
+}
+
+model EquipmentEventType {
+  id         Int                       @id @default(autoincrement())
+  name       String                    @unique(map: "uq_equipment_event_types_name") @db.VarChar(64)
+  code       String                    @unique(map: "uq_equipment_event_types_code") @db.VarChar(32)
+  isActive   Boolean                   @default(true) @map("is_active")
+  models     EquipmentModelEventType[]
+  events     EquipmentEvent[]
+
+  @@map("equipment_event_types")
+}
+
+model EquipmentModelEventType {
+  equipmentModelId Int                @map("equipment_model_id")
+  eventTypeId      Int                @map("event_type_id")
+  checklistTemplateId Int?            @map("checklist_template_id")
+  equipmentModel   EquipmentModel     @relation(fields: [equipmentModelId], references: [id], onDelete: Restrict)
+  eventType        EquipmentEventType @relation(fields: [eventTypeId], references: [id], onDelete: Restrict)
+
+  @@id([equipmentModelId, eventTypeId], map: "pk_equipment_model_event_types")
+  @@map("equipment_model_event_types")
 }
 
 model Country {
