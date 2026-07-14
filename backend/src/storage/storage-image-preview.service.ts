@@ -7,7 +7,7 @@ import { StorageObjectService } from './storage-object.service';
 
 const PREVIEW_CONSTRAINTS = {
   maxFileSizeBytes: 50 * 1024 * 1024,
-  maxPixelCount: 25_000_000,
+  maxPixelCount: 120_000_000,
   minShortSidePx: 1,
 };
 

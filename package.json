@@ -9,6 +9,7 @@
     "start:minio": "powershell -ExecutionPolicy Bypass -File ./start-minio.ps1",
     "start:simple": "powershell -ExecutionPolicy Bypass -File ./start-esoft-npm.ps1",
     "start:server": "powershell -ExecutionPolicy Bypass -File ./start-esoft-server.ps1",
+    "start:production": "powershell -ExecutionPolicy Bypass -File ./start-esoft-production.ps1",
     "backend:dev": "npm --prefix backend run start:dev",
     "frontend:dev": "npm --prefix frontend run dev"
   }

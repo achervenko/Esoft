@@ -127,6 +127,49 @@ Logs are written to:
 logs
 ```
 
+## Production-like Server Start
+
+Use this path for a small Windows server without Docker.
+
+Prepare the server once:
+
+- install Node.js LTS;
+- install PostgreSQL;
+- run `database/setup-postgres.sql` if the database and user do not exist yet;
+- run `npm run install:minio`;
+- copy `esoft.config.example.json` to `esoft.config.json`;
+- fill database, auth and MinIO settings in `esoft.config.json`.
+
+Then start Esoft from the project root:
+
+```powershell
+npm run start:production
+```
+
+The production launcher:
+
+- syncs `backend/.env` and `frontend/.env` from `esoft.config.json`;
+- starts MinIO from the configured executable and data folder;
+- installs npm dependencies if `node_modules` is missing;
+- generates Prisma client;
+- applies migrations with `prisma migrate deploy`;
+- builds backend and frontend;
+- starts backend from `dist/main`;
+- starts frontend from the built `dist` via Vite preview;
+- opens the browser if `app.openBrowser` is enabled.
+
+For this deployment mode the operator usually changes only one file:
+
+```text
+esoft.config.json
+```
+
+Keep backups of:
+
+- PostgreSQL database;
+- MinIO data folder from `storage.dataPath`;
+- `esoft.config.json`.
+
 ## Manual Dev Start
 
 Use this only when you need to debug parts separately:
