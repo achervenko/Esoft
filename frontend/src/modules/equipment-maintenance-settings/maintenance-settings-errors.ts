@@ -1,4 +1,4 @@
-import { ApiRequestError } from "../../shared/api/equipment-api";
+import { ApiRequestError } from "../../shared/api/api-error";
 
 export function getMaintenanceSettingsErrorMessage(error: unknown) {
   if (error instanceof TypeError) {

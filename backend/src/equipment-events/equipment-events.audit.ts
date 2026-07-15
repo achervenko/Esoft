@@ -57,7 +57,7 @@ export async function getEquipmentEventAuditSnapshot(
     note: event.note,
     originalPlannedDate: event.originalPlannedDate,
     plannedDate: event.plannedDate,
-    responsibles: event.responsibles.map((item) => employeeLabel(item.employee)),
+    responsibles: event.responsibles.map((item) => responsibleUserLabel(item.user)),
     source: event.source,
     status: event.status,
   };
@@ -181,6 +181,11 @@ function buildUpdateLines(params: {
       oldValue: formatDate(params.oldEvent.factDate),
     },
     {
+      fieldName: 'Плановая дата',
+      newValue: formatDate(params.newEvent.plannedDate),
+      oldValue: formatDate(params.oldEvent.plannedDate),
+    },
+    {
       fieldName: 'Ответственные',
       newValue: responsibleList(params.newEvent),
       oldValue: responsibleList(params.oldEvent),
@@ -234,17 +239,25 @@ function eventTypeLabel(event: EquipmentEventAuditSnapshot) {
   return `${event.eventTypeName} [${event.eventTypeCode}] #${event.eventTypeId}`;
 }
 
-function employeeLabel(employee: {
-  firstName: string;
-  id: number;
-  lastName: string;
-  middleName: string | null;
+function responsibleUserLabel(user: {
+  employeeUser: {
+    employee: {
+      firstName: string;
+      lastName: string;
+      middleName: string | null;
+    };
+  } | null;
+  id: string;
+  name: string;
 }) {
-  const fullName = [employee.lastName, employee.firstName, employee.middleName]
-    .filter(Boolean)
-    .join(' ');
+  const employee = user.employeeUser?.employee;
+  const fullName = employee
+    ? [employee.lastName, employee.firstName, employee.middleName]
+        .filter(Boolean)
+        .join(' ')
+    : user.name;
 
-  return `${fullName} #${employee.id}`;
+  return `${fullName} #${user.id}`;
 }
 
 function responsibleList(event: EquipmentEventAuditSnapshot) {

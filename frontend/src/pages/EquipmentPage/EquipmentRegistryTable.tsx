@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { EquipmentStatusBadge } from '../../modules/equipment-status';
-import type { EquipmentRegistryItem } from '../../shared/api/equipment-api';
+import type { EquipmentRegistryItem } from '../../shared/api/equipment/equipment.types';
 import {
   DataTable,
   type DataTableColumn,

@@ -80,7 +80,8 @@
   max-width: none;
 }
 
-.form-field span {
+.form-field span,
+.form-field > label {
   color: #4b5563;
   font-size: 13px;
   font-weight: 800;
@@ -203,7 +204,7 @@
   box-shadow: 0 16px 36px rgba(24, 35, 52, 0.14);
 }
 
-.search-select-menu button {
+.search-select-option {
   display: grid;
   gap: 2px;
   border: 0;
@@ -215,7 +216,8 @@
   text-align: left;
 }
 
-.search-select-menu button:hover {
+.search-select-option:hover,
+.search-select-option.active {
   background: #f4f6f8;
 }
 

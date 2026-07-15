@@ -1,7 +1,7 @@
 import type {
   CreateEquipmentPayload,
   EquipmentCard,
-} from '../../../shared/api/equipment-api';
+} from '../../../shared/api/equipment/equipment.types';
 import {
   isBlank,
   isInvalidRuDate,

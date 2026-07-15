@@ -1,0 +1,56 @@
+export type MaintenancePeriodicity = {
+  years: number;
+  months: number;
+  weeks: number;
+  days: number;
+};
+
+export type MaintenanceExecutionType = "INTERNAL" | "EXTERNAL";
+
+export type MaintenanceType = {
+  code?: string;
+  id: number;
+  isActive?: boolean;
+  name: string;
+};
+
+export type MaintenanceSetting = {
+  checklistTemplateId: number | null;
+  executionType: MaintenanceExecutionType;
+  id: number;
+  maintenanceType: {
+    id: number;
+    isActive: boolean;
+    name: string;
+  };
+  periodicity: MaintenancePeriodicity | null;
+};
+
+export type MaintenanceSettingsResponse = {
+  affectedEquipmentCount: number;
+  equipment: {
+    name: string;
+    visibleId: number;
+  };
+  settings: MaintenanceSetting[];
+};
+
+export type AvailableMaintenanceTypesResponse = {
+  maintenanceTypes: MaintenanceType[];
+};
+
+export type MaintenanceSettingBasePayload = {
+  checklistTemplateId: number | null;
+  executionType: MaintenanceExecutionType;
+  periodicity: MaintenancePeriodicity | null;
+};
+
+export type MaintenanceSettingPayload = MaintenanceSettingBasePayload & {
+  maintenanceTypeId: number;
+};
+
+export type MaintenanceSettingUpdatePayload = {
+  checklistTemplateId?: number | null;
+  executionType?: MaintenanceExecutionType;
+  periodicity?: MaintenancePeriodicity | null;
+};

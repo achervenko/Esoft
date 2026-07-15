@@ -1,5 +1,5 @@
 import { Save } from 'lucide-react';
-import type { EquipmentCreateOptions } from '../../shared/api/equipment-api';
+import type { EquipmentCreateOptions } from '../../shared/api/equipment/equipment.types';
 import { SearchSelect } from '../../shared/ui/SearchSelect';
 import { SelectDropdown } from '../../shared/ui/SelectDropdown';
 import {

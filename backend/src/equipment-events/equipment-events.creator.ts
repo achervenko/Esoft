@@ -14,10 +14,10 @@ import { EquipmentEventsAssertions } from './equipment-events.assertions';
 export type CreateManualEquipmentEventCommand = {
   kind: 'manual';
   equipmentVisibleId: number;
-  factDate: Date;
   maintenanceTypeId: number;
   note: string | null;
-  responsibleEmployeeIds: number[];
+  plannedDate: Date;
+  responsibleUserIds: string[];
 };
 
 export type CreatePlannedEquipmentEventCommand = {
@@ -26,7 +26,7 @@ export type CreatePlannedEquipmentEventCommand = {
   eventTypeId: number;
   originalPlannedDate: Date;
   plannedDate: Date;
-  responsibleEmployeeIds: number[];
+  responsibleUserIds: string[];
 };
 
 export type CreateEquipmentEventCommand =
@@ -55,8 +55,8 @@ export class EquipmentEventsCreator {
       tx,
       userId,
     );
-    const responsibleEmployeeIds = [
-      ...new Set(command.responsibleEmployeeIds),
+    const responsibleUserIds = [
+      ...new Set(command.responsibleUserIds),
     ];
     const maintenanceTypeId =
       command.kind === 'manual' ? command.maintenanceTypeId : command.eventTypeId;
@@ -65,7 +65,7 @@ export class EquipmentEventsCreator {
       await this.assertions.loadValidEventCreationInput(tx, {
         equipmentVisibleId: command.equipmentVisibleId,
         maintenanceTypeId,
-        responsibleEmployeeIds,
+        responsibleUserIds,
       });
 
     const event = await tx.equipmentEvent.create({
@@ -79,9 +79,9 @@ export class EquipmentEventsCreator {
     });
 
     await tx.equipmentEventResponsible.createMany({
-      data: responsibleEmployeeIds.map((employeeId) => ({
-        employeeId,
+      data: responsibleUserIds.map((responsibleUserId) => ({
         equipmentEventId: event.id,
+        userId: responsibleUserId,
       })),
     });
 
@@ -108,12 +108,12 @@ export class EquipmentEventsCreator {
       return {
         ...common,
         eventTypeId: command.maintenanceTypeId,
-        factDate: command.factDate,
+        factDate: null,
         note: command.note,
-        originalPlannedDate: null,
-        plannedDate: null,
+        originalPlannedDate: command.plannedDate,
+        plannedDate: command.plannedDate,
         source: EquipmentEventSource.MANUAL,
-        status: EquipmentEventStatus.DRAFT,
+        status: EquipmentEventStatus.CREATED,
       };
     }
 

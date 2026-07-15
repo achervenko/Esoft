@@ -1,10 +1,8 @@
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { canCreateEquipment } from "../../modules/equipment-permissions";
-import {
-  getEquipmentRegistry,
-  type EquipmentRegistryItem,
-} from "../../shared/api/equipment-api";
+import { getEquipmentRegistry } from "../../shared/api/equipment/equipment.api";
+import type { EquipmentRegistryItem } from "../../shared/api/equipment/equipment.types";
 import { buildHashRoute } from "../../shared/lib/hash-navigation";
 import { EquipmentRegistryTable } from "./EquipmentRegistryTable";
 import "./EquipmentPage.css";

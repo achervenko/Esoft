@@ -1,4 +1,4 @@
-import type { MaintenanceSetting } from "../../shared/api/equipment-api";
+import type { MaintenanceSetting } from "../../shared/api/maintenance/maintenance.types";
 import { AdminTableActions } from "../../shared/ui/AdminTableActions";
 import { DataTable, type DataTableColumn } from "../../shared/ui/DataTable";
 import {

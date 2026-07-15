@@ -8,17 +8,10 @@ const employeeResponseSelect = {
   position: true,
 } satisfies Prisma.EmployeeSelect;
 
-const employeeNameSelect = {
-  firstName: true,
-  id: true,
-  lastName: true,
-  middleName: true,
-} satisfies Prisma.EmployeeSelect;
-
 const responsiblesOrderBy = [
-  { employee: { lastName: 'asc' } },
-  { employee: { firstName: 'asc' } },
-  { employee: { middleName: 'asc' } },
+  { user: { employeeUser: { employee: { lastName: 'asc' } } } },
+  { user: { employeeUser: { employee: { firstName: 'asc' } } } },
+  { user: { name: 'asc' } },
 ] satisfies Prisma.EquipmentEventResponsibleOrderByWithRelationInput[];
 
 const equipmentListSelect = {
@@ -60,8 +53,19 @@ const eventTypeResponseSelect = {
 const responsiblesResponseSelect = {
   orderBy: responsiblesOrderBy,
   select: {
-    employee: {
-      select: employeeResponseSelect,
+    user: {
+      select: {
+        employeeUser: {
+          select: {
+            employee: {
+              select: employeeResponseSelect,
+            },
+          },
+        },
+        id: true,
+        name: true,
+        role: true,
+      },
     },
   },
 } satisfies Prisma.EquipmentEventResponsibleFindManyArgs;
@@ -136,8 +140,22 @@ export const equipmentEventAuditSelect = {
   responsibles: {
     orderBy: responsiblesOrderBy,
     select: {
-      employee: {
-        select: employeeNameSelect,
+      user: {
+        select: {
+          employeeUser: {
+            select: {
+              employee: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  middleName: true,
+                },
+              },
+            },
+          },
+          id: true,
+          name: true,
+        },
       },
     },
   },

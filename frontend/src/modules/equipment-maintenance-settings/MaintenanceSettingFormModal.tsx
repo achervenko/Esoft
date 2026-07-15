@@ -5,7 +5,7 @@ import type {
   MaintenancePeriodicity,
   MaintenanceSetting,
   MaintenanceSettingUpdatePayload,
-} from "../../shared/api/equipment-api";
+} from "../../shared/api/maintenance/maintenance.types";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import { SelectDropdown } from "../../shared/ui/SelectDropdown";
 import { PeriodicityFields } from "./PeriodicityFields";

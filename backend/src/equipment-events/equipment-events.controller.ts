@@ -16,11 +16,11 @@ import {
   type CompleteEquipmentEventDto,
   type CreateManualEquipmentEventDto,
   type EquipmentEventsQueryDto,
-  type UpdateDraftEquipmentEventDto,
+  type UpdateCreatedEquipmentEventDto,
   parseCompleteEventDto,
   parseCreateManualEventDto,
   parseEquipmentEventsQuery,
-  parseUpdateDraftEventDto,
+  parseUpdateCreatedEventDto,
 } from './equipment-events.validation';
 
 @Controller('api')
@@ -33,6 +33,13 @@ export class EquipmentEventsController {
     @Session() _session: UserSession<Auth>,
   ) {
     return this.equipmentEventsService.findAll(parseEquipmentEventsQuery(query));
+  }
+
+  @Get('equipment-events/responsible-users')
+  findResponsibleUsers(@Session() session: UserSession<Auth>) {
+    assertCanManageEquipmentEvents(session.user.role);
+
+    return this.equipmentEventsService.findResponsibleUsers();
   }
 
   @Get('equipment-events/:id')
@@ -63,8 +70,6 @@ export class EquipmentEventsController {
     @Body() dto: CompleteEquipmentEventDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
-    assertCanManageEquipmentEvents(session.user.role);
-
     return this.equipmentEventsService.complete(
       id,
       parseCompleteEventDto(dto),
@@ -72,17 +77,25 @@ export class EquipmentEventsController {
     );
   }
 
-  @Patch('equipment-events/:id')
-  updateDraft(
+  @Post('equipment-events/:id/start')
+  start(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateDraftEquipmentEventDto | undefined,
+    @Session() session: UserSession<Auth>,
+  ) {
+    return this.equipmentEventsService.start(id, session.user.id);
+  }
+
+  @Patch('equipment-events/:id')
+  updateCreated(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateCreatedEquipmentEventDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
     assertCanManageEquipmentEvents(session.user.role);
 
-    return this.equipmentEventsService.updateDraft(
+    return this.equipmentEventsService.updateCreated(
       id,
-      parseUpdateDraftEventDto(dto),
+      parseUpdateCreatedEventDto(dto),
       session.user.id,
     );
   }

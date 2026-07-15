@@ -7,7 +7,6 @@ model Employee {
   employeeUsers        EmployeeUser[]
   responsibleEquipment Equipment[]    @relation("EquipmentResponsibleEmployee")
   createdEvents        EquipmentEvent[] @relation("EquipmentEventCreatedBy")
-  eventResponsibilities EquipmentEventResponsible[]
 
   @@index([lastName, firstName, middleName], map: "idx_employees_full_name")
   @@map("employees")

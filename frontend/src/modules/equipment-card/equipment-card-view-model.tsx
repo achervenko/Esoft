@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { EquipmentCard } from "../../shared/api/equipment-api";
+import type { EquipmentCard } from "../../shared/api/equipment/equipment.types";
 import {
   formatNullableNumber,
   formatRuDate,

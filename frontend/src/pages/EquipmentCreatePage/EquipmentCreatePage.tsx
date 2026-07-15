@@ -4,8 +4,8 @@ import { canCreateEquipment } from '../../modules/equipment-permissions';
 import {
   createEquipment,
   getEquipmentCreateOptions,
-  type EquipmentCreateOptions,
-} from '../../shared/api/equipment-api';
+} from '../../shared/api/equipment/equipment.api';
+import type { EquipmentCreateOptions } from '../../shared/api/equipment/equipment.types';
 import { Notice } from '../../shared/ui/Notice';
 import { UnsavedChangesGuard } from '../../shared/ui/UnsavedChangesGuard';
 import { EquipmentCreateForm } from './EquipmentCreateForm';

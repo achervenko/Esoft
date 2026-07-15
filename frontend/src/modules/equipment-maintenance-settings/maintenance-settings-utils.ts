@@ -1,7 +1,9 @@
 import type {
   MaintenanceExecutionType,
   MaintenancePeriodicity,
-} from "../../shared/api/equipment-api";
+  MaintenanceSettingsResponse,
+  MaintenanceType,
+} from "../../shared/api/maintenance/maintenance.types";
 
 export const executionTypeLabels: Record<MaintenanceExecutionType, string> = {
   EXTERNAL: "Внешнее",
@@ -31,6 +33,38 @@ function durationPart(value: number, forms: [string, string, string]) {
   }
 
   return `${value} ${pluralizeRu(value, forms)}`;
+}
+
+export function reconcileAvailableMaintenanceTypes(
+  currentAvailableTypes: MaintenanceType[],
+  nextSettingsResponse: MaintenanceSettingsResponse,
+  previousSettingsResponse: MaintenanceSettingsResponse | null,
+) {
+  const typeById = new Map<number, MaintenanceType>();
+
+  for (const maintenanceType of currentAvailableTypes) {
+    typeById.set(maintenanceType.id, maintenanceType);
+  }
+
+  for (const setting of previousSettingsResponse?.settings ?? []) {
+    typeById.set(setting.maintenanceType.id, setting.maintenanceType);
+  }
+
+  for (const setting of nextSettingsResponse.settings) {
+    typeById.set(setting.maintenanceType.id, setting.maintenanceType);
+  }
+
+  const assignedTypeIds = new Set(
+    nextSettingsResponse.settings.map((setting) => setting.maintenanceType.id),
+  );
+
+  return Array.from(typeById.values())
+    .filter(
+      (maintenanceType) =>
+        !assignedTypeIds.has(maintenanceType.id) &&
+        maintenanceType.isActive !== false,
+    )
+    .sort((left, right) => left.name.localeCompare(right.name, "ru"));
 }
 
 function pluralizeRu(value: number, [one, few, many]: [string, string, string]) {

@@ -1,4 +1,4 @@
-import type { MaintenancePeriodicity } from "../../shared/api/equipment-api";
+import type { MaintenancePeriodicity } from "../../shared/api/maintenance/maintenance.types";
 import type { PeriodicityForm } from "./maintenance-setting-form-utils";
 
 type PeriodicityFieldsProps = {

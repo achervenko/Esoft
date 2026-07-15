@@ -1,5 +1,5 @@
 import { FileCheck2, FileX2 } from "lucide-react";
-import type { EquipmentHistoryItem } from "../../shared/api/equipment-api";
+import type { EquipmentHistoryItem } from "../../shared/api/equipment/equipment.types";
 import "./EquipmentHistoryView.css";
 
 type EquipmentHistoryViewProps = {

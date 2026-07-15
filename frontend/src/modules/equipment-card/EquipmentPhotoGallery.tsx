@@ -1,16 +1,22 @@
 import { ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { EquipmentFile } from "../../shared/api/equipment-api";
+import type { EquipmentFile } from "../../shared/api/equipment-files/equipment-files.types";
 import { getFilePreviewUrl } from "../../shared/api/files-api";
 import { AsyncImage } from "../../shared/ui/AsyncImage";
 import { ImagePreviewModal } from "../../shared/ui/ImagePreviewModal";
 import { getDisplayName } from "../equipment-documents/equipment-document-utils";
 
 type EquipmentPhotoGalleryProps = {
+  error?: string | null;
+  isLoading?: boolean;
   photos: EquipmentFile[];
 };
 
-export function EquipmentPhotoGallery({ photos }: EquipmentPhotoGalleryProps) {
+export function EquipmentPhotoGallery({
+  error = null,
+  isLoading = false,
+  photos,
+}: EquipmentPhotoGalleryProps) {
   const sortedPhotos = useMemo(
     () =>
       [...photos].sort((left, right) => {
@@ -25,10 +31,18 @@ export function EquipmentPhotoGallery({ photos }: EquipmentPhotoGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const activePhoto = sortedPhotos[activeIndex] ?? null;
+  const photoSetKey = useMemo(
+    () =>
+      sortedPhotos
+        .map((photo) => `${photo.id}:${photo.isPrimary ? "primary" : "regular"}`)
+        .join("|"),
+    [sortedPhotos],
+  );
 
   useEffect(() => {
     setActiveIndex(0);
-  }, [sortedPhotos.length]);
+    setIsPreviewOpen(false);
+  }, [photoSetKey]);
 
   const canNavigate = sortedPhotos.length > 1;
 
@@ -62,7 +76,9 @@ export function EquipmentPhotoGallery({ photos }: EquipmentPhotoGalleryProps) {
         ) : (
           <div className="equipment-photo-placeholder">
             <ImageIcon aria-hidden="true" size={34} />
-            <span>Фото не загружено</span>
+            <span>
+              {error ?? (isLoading ? "Загрузка фото..." : "Фото не загружено")}
+            </span>
           </div>
         )}
       </div>

@@ -40,7 +40,7 @@ export class EquipmentEventsAssertions {
     params: {
       equipmentVisibleId: number;
       maintenanceTypeId: number;
-      responsibleEmployeeIds: number[];
+      responsibleUserIds: string[];
     },
   ) {
     const equipment = await tx.equipment.findUnique({
@@ -65,7 +65,7 @@ export class EquipmentEventsAssertions {
       maintenanceTypeId: params.maintenanceTypeId,
     });
 
-    await this.assertEmployeesExist(tx, params.responsibleEmployeeIds);
+    await this.assertResponsibleUsersExist(tx, params.responsibleUserIds);
 
     return { equipment, maintenanceSetting };
   }
@@ -73,6 +73,7 @@ export class EquipmentEventsAssertions {
   async assertEventCanBeCompleted(
     tx: Prisma.TransactionClient,
     eventId: number,
+    userId?: string | null,
   ) {
     const event = await tx.equipmentEvent.findUnique({
       where: { id: eventId },
@@ -81,7 +82,7 @@ export class EquipmentEventsAssertions {
         id: true,
         responsibles: {
           select: {
-            employeeId: true,
+            userId: true,
           },
         },
         status: true,
@@ -95,10 +96,7 @@ export class EquipmentEventsAssertions {
       );
     }
 
-    if (
-      event.status !== EquipmentEventStatus.DRAFT &&
-      event.status !== EquipmentEventStatus.CREATED
-    ) {
+    if (event.status !== EquipmentEventStatus.IN_PROGRESS) {
       throwEquipmentEventConflict(
         'EVENT_STATUS_CONFLICT',
         'Событие в текущем статусе нельзя завершить.',
@@ -111,6 +109,8 @@ export class EquipmentEventsAssertions {
         'У события должен быть хотя бы один ответственный.',
       );
     }
+
+    this.assertAssignedResponsible(event.responsibles, userId);
 
     return event;
   }
@@ -132,8 +132,8 @@ export class EquipmentEventsAssertions {
     }
 
     if (
-      event.status !== EquipmentEventStatus.DRAFT &&
-      event.status !== EquipmentEventStatus.CREATED
+      event.status !== EquipmentEventStatus.CREATED &&
+      event.status !== EquipmentEventStatus.IN_PROGRESS
     ) {
       throwEquipmentEventConflict(
         'EVENT_STATUS_CONFLICT',
@@ -144,13 +144,62 @@ export class EquipmentEventsAssertions {
     return event;
   }
 
-  async loadValidDraftUpdateInput(
+  async assertEventCanBeStarted(
+    tx: Prisma.TransactionClient,
+    eventId: number,
+    userId?: string | null,
+  ) {
+    const event = await tx.equipmentEvent.findUnique({
+      where: { id: eventId },
+      select: {
+        id: true,
+        responsibles: {
+          select: {
+            userId: true,
+          },
+        },
+        status: true,
+      },
+    });
+
+    if (!event) {
+      throwEquipmentEventNotFound(
+        'EVENT_NOT_FOUND',
+        'Событие оборудования не найдено.',
+      );
+    }
+
+    if (event.status !== EquipmentEventStatus.CREATED) {
+      throwEquipmentEventConflict(
+        'EVENT_STATUS_CONFLICT',
+        'Событие в текущем статусе нельзя взять в работу.',
+      );
+    }
+
+    this.assertAssignedResponsible(event.responsibles, userId);
+
+    return event;
+  }
+
+  private assertAssignedResponsible(
+    responsibles: Array<{ userId: string }>,
+    userId?: string | null,
+  ) {
+    if (!userId || !responsibles.some((item) => item.userId === userId)) {
+      throwEquipmentEventForbidden(
+        'EVENT_RESPONSIBLE_REQUIRED',
+        'Только назначенный ответственный может выполнить это действие.',
+      );
+    }
+  }
+
+  async loadValidCreatedUpdateInput(
     tx: Prisma.TransactionClient,
     params: {
       equipmentVisibleId?: number;
       eventId: number;
       maintenanceTypeId?: number;
-      responsibleEmployeeIds?: number[];
+      responsibleUserIds?: string[];
     },
   ) {
     const event = await tx.equipmentEvent.findUnique({
@@ -163,12 +212,12 @@ export class EquipmentEventsAssertions {
           },
         },
         eventTypeId: true,
-        factDate: true,
         id: true,
         note: true,
+        plannedDate: true,
         responsibles: {
           select: {
-            employeeId: true,
+            userId: true,
           },
         },
         status: true,
@@ -183,10 +232,10 @@ export class EquipmentEventsAssertions {
       );
     }
 
-    if (event.status !== EquipmentEventStatus.DRAFT) {
+    if (event.status !== EquipmentEventStatus.CREATED) {
       throwEquipmentEventConflict(
         'EVENT_STATUS_CONFLICT',
-        'Изменять можно только черновик события.',
+        'Изменять можно только назначенное событие до начала работ.',
       );
     }
 
@@ -205,15 +254,15 @@ export class EquipmentEventsAssertions {
         })
       : undefined;
 
-    if (params.responsibleEmployeeIds) {
-      await this.assertEmployeesExist(tx, params.responsibleEmployeeIds);
+    if (params.responsibleUserIds) {
+      await this.assertResponsibleUsersExist(tx, params.responsibleUserIds);
     }
 
     return {
-      currentFactDate: event.factDate,
       currentNote: event.note,
-      currentResponsibleEmployeeIds: event.responsibles.map(
-        (item) => item.employeeId,
+      currentPlannedDate: event.plannedDate,
+      currentResponsibleUserIds: event.responsibles.map(
+        (item) => item.userId,
       ),
       equipmentId:
         equipment.id === event.equipment.id ? undefined : equipment.id,
@@ -296,32 +345,42 @@ export class EquipmentEventsAssertions {
     return equipment;
   }
 
-  private async assertEmployeesExist(
+  private async assertResponsibleUsersExist(
     tx: Prisma.TransactionClient,
-    employeeIds: number[],
+    userIds: string[],
   ) {
-    const uniqueEmployeeIds = [...new Set(employeeIds)];
+    const uniqueUserIds = [...new Set(userIds)];
 
-    if (uniqueEmployeeIds.length === 0) {
+    if (uniqueUserIds.length === 0) {
       throwEquipmentEventBadRequest(
         'RESPONSIBLES_REQUIRED',
         'У события должен быть хотя бы один ответственный.',
       );
     }
 
-    const employees = await tx.employee.findMany({
+    const users = await tx.user.findMany({
       where: {
         id: {
-          in: uniqueEmployeeIds,
+          in: uniqueUserIds,
+        },
+        employeeUser: {
+          isNot: null,
         },
       },
-      select: { id: true },
+      select: { banned: true, id: true },
     });
 
-    if (employees.length !== uniqueEmployeeIds.length) {
+    if (users.length !== uniqueUserIds.length) {
       throwEquipmentEventNotFound(
         'RESPONSIBLE_NOT_FOUND',
-        'Один или несколько ответственных не найдены.',
+        'Один или несколько ответственных пользователей не найдены.',
+      );
+    }
+
+    if (users.some((user) => user.banned)) {
+      throwEquipmentEventBadRequest(
+        'RESPONSIBLE_USER_INACTIVE',
+        'Один или несколько ответственных пользователей отключены.',
       );
     }
   }

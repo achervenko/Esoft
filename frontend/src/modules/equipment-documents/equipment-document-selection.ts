@@ -1,4 +1,4 @@
-import type { StorageDocumentType } from "../../shared/api/equipment-api";
+import type { StorageDocumentType } from "../../shared/api/equipment-files/equipment-files.types";
 
 export type SelectedEquipmentDocumentFiles = Partial<
   Record<StorageDocumentType, File | null>

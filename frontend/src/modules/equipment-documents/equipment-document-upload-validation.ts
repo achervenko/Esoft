@@ -1,4 +1,8 @@
-import { ApiRequestError, type EquipmentFile, type StorageDocumentType } from "../../shared/api/equipment-api";
+import { ApiRequestError } from "../../shared/api/api-error";
+import type {
+  EquipmentFile,
+  StorageDocumentType,
+} from "../../shared/api/equipment-files/equipment-files.types";
 import { equipmentDocumentsText as text } from "./equipment-documents.text";
 
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
@@ -40,8 +44,13 @@ export function validateEquipmentDocumentUpload({
     return text.errors.fileTooLarge;
   }
 
-  if (documentType === "passport" && files.some((file) => file.documentType === "passport")) {
-    return text.errors.documentAlreadyExists;
+  if (
+    documentType === "passport" &&
+    files.some(
+      (file) => file.documentType === "passport" && file.deletedAt === null,
+    )
+  ) {
+    return text.errors.passportAlreadyExists;
   }
 
   if (documentType === "passport" && !isPdfFile(selectedFile)) {
@@ -107,7 +116,7 @@ function isAbortError(error: unknown) {
 function getMessageByBackendCode(code: string, fallback: string) {
   const messages: Record<string, string> = {
     DATABASE_ERROR: text.errors.database,
-    DOCUMENT_ALREADY_EXISTS: text.errors.documentAlreadyExists,
+    DOCUMENT_ALREADY_EXISTS: text.errors.passportAlreadyExists,
     DOCUMENT_TYPE_REQUIRED: text.errors.documentTypeRequired,
     EMPTY_FILE: text.errors.emptyFile,
     EQUIPMENT_NOT_FOUND: text.errors.equipmentNotFound,

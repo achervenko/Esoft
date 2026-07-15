@@ -1,13 +1,15 @@
 import { Pencil } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   EquipmentCard,
-  EquipmentFile,
   EquipmentHistoryItem,
-} from "../../shared/api/equipment-api";
-import { getEquipmentFiles } from "../../shared/api/equipment-api";
+} from "../../shared/api/equipment/equipment.types";
+import { getEquipmentFiles } from "../../shared/api/equipment-files/equipment-files.api";
+import type { EquipmentFile } from "../../shared/api/equipment-files/equipment-files.types";
+import { getApiErrorMessage } from "../../shared/api/api-error";
 import { buildHashRoute } from "../../shared/lib/hash-navigation";
 import { EquipmentDocumentsPanel } from "../equipment-documents";
+import { EquipmentEventsPanel } from "../equipment-events";
 import { MaintenanceSettingsPanel } from "../equipment-maintenance-settings";
 import { EquipmentCardGrid } from "./EquipmentCardGrid";
 import { EquipmentHistoryView } from "./EquipmentHistoryView";
@@ -22,28 +24,37 @@ import "./EquipmentCardView.css";
 
 type EquipmentCardViewProps = {
   canEdit?: boolean;
+  canManageEquipmentEvents?: boolean;
   canManageMaintenanceSettings?: boolean;
+  currentUserId?: string | null;
   equipment: EquipmentCard;
   history: EquipmentHistoryItem[];
   historyError?: string | null;
   initialTab?: EquipmentViewTab;
   isHistoryLoading?: boolean;
+  onTabChange?: (tab: EquipmentViewTab) => void;
   returnTo: string;
 };
 
 export function EquipmentCardView({
   canEdit = false,
+  canManageEquipmentEvents = false,
   canManageMaintenanceSettings = false,
+  currentUserId = null,
   equipment,
   history,
   historyError = null,
   initialTab = "details",
   isHistoryLoading = false,
+  onTabChange,
   returnTo,
 }: EquipmentCardViewProps) {
   const [activeTab, setActiveTab] = useState<EquipmentViewTab>(initialTab);
   const [files, setFiles] = useState<EquipmentFile[]>([]);
   const [filesVisibleId, setFilesVisibleId] = useState<number | null>(null);
+  const filesVisibleIdRef = useRef<number | null>(null);
+  const [filesError, setFilesError] = useState<string | null>(null);
+  const [isFilesLoading, setIsFilesLoading] = useState(false);
   const sections = getEquipmentCardSections(equipment);
   const [mainSection, ...secondarySections] = sections;
   const textBlocks = getEquipmentCardTextBlocks(equipment);
@@ -64,12 +75,16 @@ export function EquipmentCardView({
       return;
     }
 
-    navigateWithViewTransition(
-      buildHashRoute(`#/equipment/${equipment.visibleId}`, {
-        returnTo,
-        tab: tab === "details" ? null : tab,
-      }),
-    );
+    setActiveTab(tab);
+    onTabChange?.(tab);
+    const hashRoute = buildHashRoute(`#/equipment/${equipment.visibleId}`, {
+      returnTo,
+      tab: tab === "details" ? null : tab,
+    });
+
+    if (window.location.hash !== hashRoute) {
+      window.location.hash = hashRoute;
+    }
   };
 
   useEffect(() => {
@@ -79,29 +94,44 @@ export function EquipmentCardView({
   useEffect(() => {
     let isMounted = true;
 
-    if (activeTab !== "details" || filesVisibleId === equipment.visibleId) {
+    if (activeTab !== "details") {
       return () => {
         isMounted = false;
       };
     }
 
+    setIsFilesLoading(filesVisibleIdRef.current !== equipment.visibleId);
+    setFilesError(null);
+
     getEquipmentFiles(equipment.visibleId)
       .then((fileItems) => {
         if (isMounted) {
           setFiles(fileItems);
+          filesVisibleIdRef.current = equipment.visibleId;
           setFilesVisibleId(equipment.visibleId);
+          setFilesError(null);
         }
       })
-      .catch(() => {
+      .catch((requestError) => {
         if (isMounted) {
-          setFiles([]);
+          if (filesVisibleIdRef.current !== equipment.visibleId) {
+            setFiles([]);
+            setFilesVisibleId(equipment.visibleId);
+          }
+
+          setFilesError(getApiErrorMessage(requestError));
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsFilesLoading(false);
         }
       });
 
     return () => {
       isMounted = false;
     };
-  }, [activeTab, equipment.visibleId, filesVisibleId]);
+  }, [activeTab, equipment.visibleId]);
 
   return (
     <article className="equipment-card-view">
@@ -147,6 +177,15 @@ export function EquipmentCardView({
           Документы
         </button>
         <button
+          aria-selected={activeTab === "events"}
+          className={activeTab === "events" ? "active" : undefined}
+          onClick={() => updateActiveTab("events")}
+          role="tab"
+          type="button"
+        >
+          События
+        </button>
+        <button
           aria-selected={activeTab === "maintenance-settings"}
           className={
             activeTab === "maintenance-settings" ? "active" : undefined
@@ -173,6 +212,8 @@ export function EquipmentCardView({
           {mainSection ? (
             <EquipmentMainDataSection
               fields={mainSection.fields}
+              isPhotosLoading={isFilesLoading}
+              photoError={filesError}
               photos={equipmentPhotos}
               title={mainSection.title}
             />
@@ -214,6 +255,16 @@ export function EquipmentCardView({
         <section className="equipment-card-tab-panel" role="tabpanel">
           <MaintenanceSettingsPanel
             canManage={canManageMaintenanceSettings}
+            visibleId={equipment.visibleId}
+          />
+        </section>
+      ) : null}
+
+      {activeTab === "events" ? (
+        <section className="equipment-card-tab-panel" role="tabpanel">
+          <EquipmentEventsPanel
+            canManageEvents={canManageEquipmentEvents}
+            currentUserId={currentUserId}
             visibleId={equipment.visibleId}
           />
         </section>

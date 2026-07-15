@@ -6,7 +6,7 @@ import {
   FileText,
   type LucideIcon,
 } from "lucide-react";
-import type { EquipmentFile } from "../../shared/api/equipment-api";
+import type { EquipmentFile } from "../../shared/api/equipment-files/equipment-files.types";
 import { getFilePreviewUrl } from "../../shared/api/files-api";
 import { AsyncImage } from "../../shared/ui/AsyncImage";
 import { getFileExtension } from "./equipment-document-utils";

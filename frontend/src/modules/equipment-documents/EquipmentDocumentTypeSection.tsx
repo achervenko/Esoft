@@ -2,7 +2,7 @@ import { useEffect, useId, useRef } from "react";
 import type {
   EquipmentFile,
   StorageDocumentType,
-} from "../../shared/api/equipment-api";
+} from "../../shared/api/equipment-files/equipment-files.types";
 import { EquipmentDocumentListItem } from "./EquipmentDocumentListItem";
 import { EquipmentDocumentUploadForm } from "./EquipmentDocumentUploadForm";
 

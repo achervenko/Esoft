@@ -1,4 +1,4 @@
-import type { EquipmentFile } from "../../shared/api/equipment-api";
+import type { EquipmentFile } from "../../shared/api/equipment-files/equipment-files.types";
 
 export function formatFileCount(count: number) {
   return `${count} ${getFileWord(count)}`;

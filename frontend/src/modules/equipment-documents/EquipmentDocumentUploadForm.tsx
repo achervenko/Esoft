@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import type { StorageDocumentType } from "../../shared/api/equipment-api";
+import type { StorageDocumentType } from "../../shared/api/equipment-files/equipment-files.types";
 import { equipmentDocumentsText as text } from "./equipment-documents.text";
 import "./EquipmentDocumentUploadForm.css";
 

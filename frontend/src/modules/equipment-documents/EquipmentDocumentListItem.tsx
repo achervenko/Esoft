@@ -1,6 +1,6 @@
 import { Download, Star, Trash2 } from "lucide-react";
 import type { KeyboardEvent } from "react";
-import type { EquipmentFile } from "../../shared/api/equipment-api";
+import type { EquipmentFile } from "../../shared/api/equipment-files/equipment-files.types";
 import { EquipmentDocumentIcon } from "./EquipmentDocumentIcon";
 import { getDisplayName, isPdfFile } from "./equipment-document-utils";
 import { equipmentDocumentsText as text } from "./equipment-documents.text";

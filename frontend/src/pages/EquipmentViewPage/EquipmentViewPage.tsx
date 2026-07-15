@@ -7,17 +7,22 @@ import {
 import {
   canEditEquipment,
   canManageEquipmentEvents,
+  canManageMaintenanceSettings,
 } from "../../modules/equipment-permissions";
 import {
   getEquipmentCard,
   getEquipmentHistory,
-  type EquipmentCard,
-  type EquipmentHistoryItem,
-} from "../../shared/api/equipment-api";
+} from "../../shared/api/equipment/equipment.api";
+import type {
+  EquipmentCard,
+  EquipmentHistoryItem,
+} from "../../shared/api/equipment/equipment.types";
+import { getApiErrorMessage } from "../../shared/api/api-error";
 import { Notice } from "../../shared/ui/Notice";
 import "./EquipmentViewPage.css";
 
 type EquipmentViewPageProps = {
+  currentUserId?: string | null;
   initialTab?: EquipmentViewTab;
   returnTo: string;
   userRole: string | null;
@@ -25,15 +30,18 @@ type EquipmentViewPageProps = {
 };
 
 export function EquipmentViewPage({
+  currentUserId = null,
   initialTab = "details",
   returnTo,
   userRole,
   visibleId,
 }: EquipmentViewPageProps) {
+  const [activeTab, setActiveTab] = useState<EquipmentViewTab>(initialTab);
   const [equipment, setEquipment] = useState<EquipmentCard | null>(null);
   const [history, setHistory] = useState<EquipmentHistoryItem[]>([]);
+  const [hasLoadedHistory, setHasLoadedHistory] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);
 
@@ -50,9 +58,9 @@ export function EquipmentViewPage({
           setEquipment(equipmentData);
         }
       })
-      .catch((requestError: Error) => {
+      .catch((requestError) => {
         if (isMounted) {
-          setError(requestError.message);
+          setError(getApiErrorMessage(requestError));
         }
       })
       .finally(() => {
@@ -67,7 +75,24 @@ export function EquipmentViewPage({
   }, [visibleId]);
 
   useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
+  useEffect(() => {
+    setHistory([]);
+    setHistoryError(null);
+    setHasLoadedHistory(false);
+    setIsHistoryLoading(false);
+  }, [visibleId]);
+
+  useEffect(() => {
     let isMounted = true;
+
+    if (activeTab !== "history" || hasLoadedHistory) {
+      return () => {
+        isMounted = false;
+      };
+    }
 
     setHistory([]);
     setHistoryError(null);
@@ -77,11 +102,12 @@ export function EquipmentViewPage({
       .then((historyData) => {
         if (isMounted) {
           setHistory(historyData);
+          setHasLoadedHistory(true);
         }
       })
-      .catch((requestError: Error) => {
+      .catch((requestError) => {
         if (isMounted) {
-          setHistoryError(requestError.message);
+          setHistoryError(getApiErrorMessage(requestError));
         }
       })
       .finally(() => {
@@ -93,7 +119,7 @@ export function EquipmentViewPage({
     return () => {
       isMounted = false;
     };
-  }, [visibleId]);
+  }, [activeTab, hasLoadedHistory, visibleId]);
 
   return (
     <div className="equipment-view-page">
@@ -107,12 +133,15 @@ export function EquipmentViewPage({
       {equipment ? (
         <EquipmentCardView
           canEdit={canEditEquipment(userRole)}
-          canManageMaintenanceSettings={canManageEquipmentEvents(userRole)}
+          canManageEquipmentEvents={canManageEquipmentEvents(userRole)}
+          canManageMaintenanceSettings={canManageMaintenanceSettings(userRole)}
+          currentUserId={currentUserId}
           equipment={equipment}
           history={history}
           historyError={historyError}
           initialTab={initialTab}
           isHistoryLoading={isHistoryLoading}
+          onTabChange={setActiveTab}
           returnTo={returnTo}
         />
       ) : null}

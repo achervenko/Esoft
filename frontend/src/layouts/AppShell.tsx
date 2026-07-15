@@ -99,6 +99,7 @@ export function AppShell({
         ) : null}
         {equipmentViewId !== null ? (
           <EquipmentViewPage
+            currentUserId={user?.id ?? null}
             initialTab={equipmentViewTab}
             returnTo={equipmentViewReturnTo}
             userRole={user?.role ?? null}

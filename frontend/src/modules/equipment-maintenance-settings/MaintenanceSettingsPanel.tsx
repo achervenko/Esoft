@@ -1,16 +1,6 @@
 import { Plus } from "lucide-react";
-import { useEffect, useState } from "react";
-import {
-  createMaintenanceSetting,
-  deleteMaintenanceSetting,
-  getAvailableMaintenanceTypes,
-  getMaintenanceSettings,
-  updateMaintenanceSetting,
-  ApiRequestError,
-  type MaintenanceType,
-  type MaintenanceSetting,
-  type MaintenanceSettingsResponse,
-} from "../../shared/api/equipment-api";
+import { useState } from "react";
+import type { MaintenanceSetting } from "../../shared/api/maintenance/maintenance.types";
 import "../../shared/ui/AdminPage.css";
 import { ConfirmDialog } from "../../shared/ui/ConfirmDialog";
 import { Notice } from "../../shared/ui/Notice";
@@ -18,7 +8,8 @@ import { MaintenanceSettingFormModal } from "./MaintenanceSettingFormModal";
 import type { MaintenanceSettingFormPayload } from "./MaintenanceSettingFormModal";
 import { MaintenanceSettingsTable } from "./MaintenanceSettingsTable";
 import { buildMaintenanceSettingUpdatePayload } from "./maintenance-setting-form-utils";
-import { getMaintenanceSettingsErrorMessage } from "./maintenance-settings-errors";
+import { useMaintenanceSettingActions } from "./useMaintenanceSettingActions";
+import { useMaintenanceSettingsData } from "./useMaintenanceSettingsData";
 import "./MaintenanceSettingsPanel.css";
 
 type MaintenanceSettingsPanelProps = {
@@ -34,176 +25,60 @@ export function MaintenanceSettingsPanel({
   canManage,
   visibleId,
 }: MaintenanceSettingsPanelProps) {
-  const [settingsResponse, setSettingsResponse] =
-    useState<MaintenanceSettingsResponse | null>(null);
-  const [availableMaintenanceTypes, setAvailableMaintenanceTypes] = useState<
-    MaintenanceType[]
-  >([]);
-  const [activeForm, setActiveForm] = useState<ActiveForm | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAvailableTypesLoading, setIsAvailableTypesLoading] =
-    useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [availableTypesError, setAvailableTypesError] = useState<string | null>(
-    null,
+  return (
+    <MaintenanceSettingsPanelContent
+      canManage={canManage}
+      key={visibleId}
+      visibleId={visibleId}
+    />
   );
+}
+
+function MaintenanceSettingsPanelContent({
+  canManage,
+  visibleId,
+}: MaintenanceSettingsPanelProps) {
+  const [activeForm, setActiveForm] = useState<ActiveForm | null>(null);
   const [deleteCandidate, setDeleteCandidate] =
     useState<MaintenanceSetting | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [formErrorCode, setFormErrorCode] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    setIsLoading(true);
-    setIsAvailableTypesLoading(false);
-    setSettingsResponse(null);
-    setAvailableMaintenanceTypes([]);
-    setActiveForm(null);
-    setDeleteCandidate(null);
-    setDeleteError(null);
-    setIsDeleting(false);
-    setError(null);
-    setAvailableTypesError(null);
-    setFormErrorCode(null);
-    setMessage(null);
-
-    getMaintenanceSettings(visibleId)
-      .then((settingsData) => {
-        if (isMounted) {
-          setSettingsResponse(settingsData);
-        }
-      })
-      .catch((requestError) => {
-        if (isMounted) {
-          setError(getMaintenanceSettingsErrorMessage(requestError));
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      });
-
-    if (canManage) {
-      void loadAvailableMaintenanceTypes({
-        shouldApply: () => isMounted,
-      });
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [canManage, visibleId]);
-
-  const runSavingAction = async (
-    action: () => Promise<MaintenanceSettingsResponse>,
-    successMessage: string,
-  ) => {
-    setIsSaving(true);
-    setError(null);
-    setFormErrorCode(null);
-    setMessage(null);
-
-    try {
-      const previousSettingsResponse = settingsResponse;
-      const nextSettingsResponse = await action();
-      setSettingsResponse(nextSettingsResponse);
-      setAvailableMaintenanceTypes((currentAvailableTypes) =>
-        reconcileAvailableMaintenanceTypes(
-          currentAvailableTypes,
-          nextSettingsResponse,
-          previousSettingsResponse,
-        ),
-      );
-      setActiveForm(null);
-      setMessage(successMessage);
-      setAvailableTypesError(null);
-
-      if (canManage) {
-        void refreshAvailableMaintenanceTypes({ silentError: true });
-      }
-    } catch (requestError) {
-      const errorMessage = getMaintenanceSettingsErrorMessage(requestError);
-
-      if (requestError instanceof ApiRequestError) {
-        setFormErrorCode(requestError.code ?? null);
-
-        if (requestError.code === "MAINTENANCE_SETTING_NOT_FOUND") {
-          setActiveForm(null);
-
-          try {
-            await reloadMaintenanceSettingsData();
-            setError(null);
-            setMessage("Данные обновлены.");
-            return;
-          } catch (reloadError) {
-            setError(getMaintenanceSettingsErrorMessage(reloadError));
-            return;
-          }
-        }
-      }
-
-      setError(errorMessage);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const reloadMaintenanceSettingsData = async () => {
-    const settingsData = await getMaintenanceSettings(visibleId);
-
-    setSettingsResponse(settingsData);
-
-    if (canManage) {
-      await refreshAvailableMaintenanceTypes();
-    } else {
-      setAvailableMaintenanceTypes([]);
-    }
-  };
-
-  const refreshAvailableMaintenanceTypes = async (options?: {
-    silentError?: boolean;
-  }) => {
-    await loadAvailableMaintenanceTypes(options);
-  };
-
-  const loadAvailableMaintenanceTypes = async (options?: {
-    silentError?: boolean;
-    shouldApply?: () => boolean;
-  }) => {
-    setIsAvailableTypesLoading(true);
-    setAvailableTypesError(null);
-
-    try {
-      const nextAvailableMaintenanceTypes =
-        await getAvailableMaintenanceTypes(visibleId);
-
-      if (options?.shouldApply?.() !== false) {
-        setAvailableMaintenanceTypes(
-          nextAvailableMaintenanceTypes.maintenanceTypes,
-        );
-      }
-    } catch (requestError) {
-      if (options?.shouldApply?.() !== false && !options?.silentError) {
-        setAvailableTypesError(getMaintenanceSettingsErrorMessage(requestError));
-      }
-    } finally {
-      if (options?.shouldApply?.() !== false) {
-        setIsAvailableTypesLoading(false);
-      }
-    }
-  };
+  const {
+    applySettingsResponse,
+    availableMaintenanceTypes,
+    availableTypesError,
+    clearDataError,
+    error,
+    isAvailableTypesLoading,
+    isLoading,
+    reloadAvailableMaintenanceTypes,
+    reloadMaintenanceSettings,
+    settingsResponse,
+  } = useMaintenanceSettingsData({ canManage, visibleId });
+  const {
+    clearDeleteError,
+    clearFormError,
+    createSetting,
+    deleteError,
+    deleteSetting,
+    formErrorCode,
+    isDeleting,
+    isSaving,
+    updateSetting,
+  } = useMaintenanceSettingActions({
+    canManage,
+    applySettingsResponse,
+    reloadAvailableMaintenanceTypes,
+    reloadMaintenanceSettings,
+    settingsResponse,
+    visibleId,
+  });
 
   const openForm = (form: ActiveForm) => {
-    setFormErrorCode(null);
+    clearFormError();
     setActiveForm(form);
   };
 
-  const handleSubmit = (payload: MaintenanceSettingFormPayload) => {
+  const handleSubmit = async (payload: MaintenanceSettingFormPayload) => {
     if (!activeForm) {
       return;
     }
@@ -211,16 +86,21 @@ export function MaintenanceSettingsPanel({
     if (activeForm.mode === "create" && payload.maintenanceTypeId) {
       const maintenanceTypeId = payload.maintenanceTypeId;
 
-      void runSavingAction(
-        () =>
-          createMaintenanceSetting(visibleId, {
-            checklistTemplateId: payload.checklistTemplateId,
-            maintenanceTypeId,
-            executionType: payload.executionType,
-            periodicity: payload.periodicity,
-          }),
-        "Настройка обслуживания добавлена.",
-      );
+      clearDataError();
+      setMessage(null);
+
+      const result = await createSetting({
+        checklistTemplateId: payload.checklistTemplateId,
+        maintenanceTypeId,
+        executionType: payload.executionType,
+        periodicity: payload.periodicity,
+      });
+
+      if (result.success) {
+        setActiveForm(null);
+        setMessage(result.message);
+      }
+
       return;
     }
 
@@ -230,24 +110,26 @@ export function MaintenanceSettingsPanel({
         buildMaintenanceSettingUpdatePayload(activeForm.setting, payload);
 
       if (Object.keys(updatePayload).length === 0) {
-        setError("Нет изменений для сохранения.");
         return;
       }
 
-      void runSavingAction(
-        () =>
-          updateMaintenanceSetting(
-            visibleId,
-            activeForm.setting.id,
-            updatePayload,
-          ),
-        "Настройка обслуживания обновлена.",
+      clearDataError();
+      setMessage(null);
+
+      const result = await updateSetting(
+        activeForm.setting.id,
+        updatePayload,
       );
+
+      if (result.success) {
+        setActiveForm(null);
+        setMessage(result.message);
+      }
     }
   };
 
   const handleDelete = (setting: MaintenanceSetting) => {
-    setDeleteError(null);
+    clearDeleteError();
     setDeleteCandidate(setting);
   };
 
@@ -257,60 +139,22 @@ export function MaintenanceSettingsPanel({
     }
 
     setDeleteCandidate(null);
-    setDeleteError(null);
+    clearDeleteError();
   };
 
   const confirmDelete = async () => {
-    if (!deleteCandidate || isDeleting) {
+    if (!deleteCandidate) {
       return;
     }
 
-    setIsDeleting(true);
-    setDeleteError(null);
-    setError(null);
+    clearDataError();
     setMessage(null);
 
-    try {
-      const previousSettingsResponse = settingsResponse;
-      const nextSettingsResponse = await deleteMaintenanceSetting(
-        visibleId,
-        deleteCandidate.id,
-      );
-      setSettingsResponse(nextSettingsResponse);
-      setAvailableMaintenanceTypes((currentAvailableTypes) =>
-        reconcileAvailableMaintenanceTypes(
-          currentAvailableTypes,
-          nextSettingsResponse,
-          previousSettingsResponse,
-        ),
-      );
+    const result = await deleteSetting(deleteCandidate.id);
+
+    if (result.success) {
       setDeleteCandidate(null);
-      setMessage("Настройка обслуживания удалена.");
-      setAvailableTypesError(null);
-
-      if (canManage) {
-        void refreshAvailableMaintenanceTypes({ silentError: true });
-      }
-    } catch (requestError) {
-      if (
-        requestError instanceof ApiRequestError &&
-        requestError.code === "MAINTENANCE_SETTING_NOT_FOUND"
-      ) {
-        try {
-          await reloadMaintenanceSettingsData();
-          setDeleteCandidate(null);
-          setDeleteError(null);
-          setMessage("Настройка уже удалена. Данные обновлены.");
-          return;
-        } catch (reloadError) {
-          setDeleteError(getMaintenanceSettingsErrorMessage(reloadError));
-          return;
-        }
-      }
-
-      setDeleteError(getMaintenanceSettingsErrorMessage(requestError));
-    } finally {
-      setIsDeleting(false);
+      setMessage(result.message);
     }
   };
 
@@ -351,7 +195,7 @@ export function MaintenanceSettingsPanel({
             <span>Не удалось загрузить доступные виды обслуживания.</span>
             <button
               disabled={isAvailableTypesLoading}
-              onClick={() => void refreshAvailableMaintenanceTypes()}
+              onClick={() => void reloadAvailableMaintenanceTypes()}
               type="button"
             >
               Повторить
@@ -383,7 +227,11 @@ export function MaintenanceSettingsPanel({
           isSaving={isSaving}
           mode={activeForm.mode}
           onClose={() => {
-            setFormErrorCode(null);
+            if (isSaving) {
+              return;
+            }
+
+            clearFormError();
             setActiveForm(null);
           }}
           onSubmit={handleSubmit}
@@ -413,36 +261,4 @@ export function MaintenanceSettingsPanel({
       ) : null}
     </section>
   );
-}
-
-function reconcileAvailableMaintenanceTypes(
-  currentAvailableTypes: MaintenanceType[],
-  nextSettingsResponse: MaintenanceSettingsResponse,
-  previousSettingsResponse: MaintenanceSettingsResponse | null,
-) {
-  const typeById = new Map<number, MaintenanceType>();
-
-  for (const maintenanceType of currentAvailableTypes) {
-    typeById.set(maintenanceType.id, maintenanceType);
-  }
-
-  for (const setting of previousSettingsResponse?.settings ?? []) {
-    typeById.set(setting.maintenanceType.id, setting.maintenanceType);
-  }
-
-  for (const setting of nextSettingsResponse.settings) {
-    typeById.set(setting.maintenanceType.id, setting.maintenanceType);
-  }
-
-  const assignedTypeIds = new Set(
-    nextSettingsResponse.settings.map((setting) => setting.maintenanceType.id),
-  );
-
-  return Array.from(typeById.values())
-    .filter(
-      (maintenanceType) =>
-        !assignedTypeIds.has(maintenanceType.id) &&
-        maintenanceType.isActive !== false,
-    )
-    .sort((left, right) => left.name.localeCompare(right.name, "ru"));
 }

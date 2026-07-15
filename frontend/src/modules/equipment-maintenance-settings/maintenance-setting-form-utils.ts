@@ -3,7 +3,7 @@ import type {
   MaintenancePeriodicity,
   MaintenanceSetting,
   MaintenanceSettingUpdatePayload,
-} from "../../shared/api/equipment-api";
+} from "../../shared/api/maintenance/maintenance.types";
 
 export type PeriodicityForm = {
   years: string;

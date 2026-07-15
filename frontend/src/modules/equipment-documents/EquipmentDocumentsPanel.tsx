@@ -6,9 +6,11 @@ import {
   getEquipmentFiles,
   setEquipmentFilePrimary,
   uploadEquipmentFile,
-  type EquipmentFile,
-  type StorageDocumentType,
-} from "../../shared/api/equipment-api";
+} from "../../shared/api/equipment-files/equipment-files.api";
+import type {
+  EquipmentFile,
+  StorageDocumentType,
+} from "../../shared/api/equipment-files/equipment-files.types";
 import { Notice } from "../../shared/ui/Notice";
 import { PdfPreviewModal } from "../../shared/ui/PdfPreviewModal";
 import { UnsavedChangesGuard } from "../../shared/ui/UnsavedChangesGuard";

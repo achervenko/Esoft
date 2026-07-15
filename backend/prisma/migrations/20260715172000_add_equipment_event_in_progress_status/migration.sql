@@ -1,0 +1,3 @@
+ALTER TYPE equipment_event_status
+    ADD VALUE IF NOT EXISTS 'IN_PROGRESS'
+    AFTER 'CREATED';

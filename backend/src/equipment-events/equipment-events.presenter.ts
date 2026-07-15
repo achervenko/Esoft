@@ -29,9 +29,7 @@ export function toEquipmentEventListResponse(event: EquipmentEventListRecord) {
       name: event.eventType.name,
       code: event.eventType.code,
     },
-    responsibles: event.responsibles.map((item) =>
-      toEmployeeResponse(item.employee),
-    ),
+    responsibles: event.responsibles.map((item) => toUserResponse(item.user)),
     checklist: event.checklistTemplateId
       ? { id: event.checklistTemplateId }
       : null,
@@ -71,9 +69,7 @@ export function toEquipmentEventDetailResponse(event: EquipmentEventDetailRecord
       code: event.eventType.code,
     },
     createdBy: toEmployeeResponse(event.createdByEmployee),
-    responsibles: event.responsibles.map((item) =>
-      toEmployeeResponse(item.employee),
-    ),
+    responsibles: event.responsibles.map((item) => toUserResponse(item.user)),
     checklist: event.checklistTemplateId
       ? { id: event.checklistTemplateId }
       : null,
@@ -88,6 +84,15 @@ type EmployeeLike = {
   position: string;
 };
 
+type ResponsibleUserLike = {
+  employeeUser: {
+    employee: EmployeeLike;
+  } | null;
+  id: string;
+  name: string;
+  role: string | null;
+};
+
 function toEmployeeResponse(employee: EmployeeLike) {
   return {
     id: employee.id,
@@ -95,6 +100,21 @@ function toEmployeeResponse(employee: EmployeeLike) {
       .filter(Boolean)
       .join(' '),
     position: employee.position,
+  };
+}
+
+function toUserResponse(user: ResponsibleUserLike) {
+  const employee = user.employeeUser?.employee;
+
+  return {
+    id: user.id,
+    fullName: employee
+      ? [employee.lastName, employee.firstName, employee.middleName]
+          .filter(Boolean)
+          .join(' ')
+      : user.name,
+    position: employee?.position ?? '',
+    role: user.role,
   };
 }
 

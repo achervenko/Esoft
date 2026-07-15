@@ -1,9 +1,14 @@
 export type EquipmentViewTab =
-  "details" | "documents" | "history" | "maintenance-settings";
+  | "details"
+  | "documents"
+  | "events"
+  | "history"
+  | "maintenance-settings";
 
 const equipmentViewTabs = new Set<EquipmentViewTab>([
   "details",
   "documents",
+  "events",
   "history",
   "maintenance-settings",
 ]);

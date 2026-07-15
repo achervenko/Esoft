@@ -17,6 +17,7 @@ model User {
   accounts             Account[]
   auditLogs            AuditLog[]
   employeeUser         EmployeeUser?
+  eventResponsibilities EquipmentEventResponsible[]
   photo                UserPhoto?
   uploadedUserPhotos   UserPhoto[]   @relation("UploadedUserPhotos")
   uploadedStorageFiles StorageFile[] @relation("UploadedStorageFiles")

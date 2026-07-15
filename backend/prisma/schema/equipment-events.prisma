@@ -8,6 +8,7 @@ enum EquipmentEventSource {
 enum EquipmentEventStatus {
   DRAFT
   CREATED
+  IN_PROGRESS
   COMPLETED
   CANCELLED
 
@@ -49,11 +50,11 @@ model EquipmentEvent {
 
 model EquipmentEventResponsible {
   equipmentEventId Int            @map("equipment_event_id")
-  employeeId       Int            @map("employee_id")
+  userId           String         @map("user_id")
   equipmentEvent   EquipmentEvent @relation(fields: [equipmentEventId], references: [id], onDelete: Cascade)
-  employee         Employee       @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  user             User           @relation(fields: [userId], references: [id], onDelete: Restrict)
 
-  @@id([equipmentEventId, employeeId], map: "pk_equipment_event_responsibles")
-  @@index([employeeId], map: "idx_event_responsibles_employee_id")
+  @@id([equipmentEventId, userId], map: "pk_equipment_event_responsibles")
+  @@index([userId], map: "idx_event_responsibles_user_id")
   @@map("equipment_event_responsibles")
 }
