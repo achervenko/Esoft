@@ -33,12 +33,31 @@ model EquipmentEventType {
   @@map("equipment_event_types")
 }
 
+enum EquipmentMaintenancePeriodicityUnit {
+  DAY
+  WEEK
+  MONTH
+  YEAR
+
+  @@map("equipment_maintenance_periodicity_unit")
+}
+
+enum EquipmentMaintenanceExecutionType {
+  INTERNAL
+  EXTERNAL
+
+  @@map("equipment_maintenance_execution_type")
+}
+
 model EquipmentModelEventType {
-  equipmentModelId Int                @map("equipment_model_id")
-  eventTypeId      Int                @map("event_type_id")
-  checklistTemplateId Int?            @map("checklist_template_id")
-  equipmentModel   EquipmentModel     @relation(fields: [equipmentModelId], references: [id], onDelete: Restrict)
-  eventType        EquipmentEventType @relation(fields: [eventTypeId], references: [id], onDelete: Restrict)
+  equipmentModelId  Int                                 @map("equipment_model_id")
+  eventTypeId       Int                                 @map("event_type_id")
+  checklistTemplateId Int?                              @map("checklist_template_id")
+  periodicityValue  Int?                                @map("periodicity_value")
+  periodicityUnit   EquipmentMaintenancePeriodicityUnit? @map("periodicity_unit")
+  executionType     EquipmentMaintenanceExecutionType    @map("execution_type")
+  equipmentModel    EquipmentModel                      @relation(fields: [equipmentModelId], references: [id], onDelete: Restrict)
+  eventType         EquipmentEventType                  @relation(fields: [eventTypeId], references: [id], onDelete: Restrict)
 
   @@id([equipmentModelId, eventTypeId], map: "pk_equipment_model_event_types")
   @@map("equipment_model_event_types")
