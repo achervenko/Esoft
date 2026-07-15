@@ -1,40 +1,23 @@
-import {
-  EquipmentMaintenanceExecutionType,
-  EquipmentMaintenancePeriodicityUnit,
-} from '@prisma/client';
+import { EquipmentMaintenanceExecutionType } from '@prisma/client';
 import { throwMaintenanceSettingBadRequest } from './maintenance-settings.errors';
-
-const MAX_EVENT_TYPE_NAME_LENGTH = 64;
-const MAX_EVENT_TYPE_CODE_LENGTH = 32;
 
 export type CreateMaintenanceSettingDto = {
   checklistTemplateId?: unknown;
-  eventTypeId?: unknown;
   executionType?: unknown;
+  maintenanceTypeId?: unknown;
   periodicity?: unknown;
-  periodicityUnit?: unknown;
-  periodicityValue?: unknown;
 };
 
 export type UpdateMaintenanceSettingDto = {
   checklistTemplateId?: unknown;
   executionType?: unknown;
   periodicity?: unknown;
-  periodicityUnit?: unknown;
-  periodicityValue?: unknown;
-};
-
-export type CreateMaintenanceEventTypeDto = MaintenanceSettingBaseDto & {
-  code?: unknown;
-  name?: unknown;
 };
 
 type MaintenanceSettingBaseDto = {
   checklistTemplateId?: unknown;
   executionType?: unknown;
   periodicity?: unknown;
-  periodicityUnit?: unknown;
-  periodicityValue?: unknown;
 };
 
 export type MaintenanceBaseSettingInput = {
@@ -44,7 +27,7 @@ export type MaintenanceBaseSettingInput = {
 };
 
 export type MaintenanceSettingInput = MaintenanceBaseSettingInput & {
-  eventTypeId: number;
+  maintenanceTypeId: number;
 };
 
 export type MaintenanceSettingUpdateInput = {
@@ -53,14 +36,11 @@ export type MaintenanceSettingUpdateInput = {
   periodicity?: PeriodicityInput | null;
 };
 
-export type MaintenanceEventTypeInput = MaintenanceBaseSettingInput & {
-  code: string;
-  name: string;
-};
-
-type PeriodicityInput = {
-  unit: EquipmentMaintenancePeriodicityUnit;
-  value: number;
+export type PeriodicityInput = {
+  years: number;
+  months: number;
+  weeks: number;
+  days: number;
 };
 
 export function parseCreateMaintenanceSettingDto(
@@ -71,10 +51,10 @@ export function parseCreateMaintenanceSettingDto(
 
   return {
     ...setting,
-    eventTypeId: parseRequiredPositiveInteger(
-      payload.eventTypeId,
-      'EVENT_TYPE_REQUIRED',
-      'Укажите тип события.',
+    maintenanceTypeId: parseRequiredPositiveInteger(
+      payload.maintenanceTypeId,
+      'MAINTENANCE_TYPE_REQUIRED',
+      'Укажите вид обслуживания.',
     ),
   };
 }
@@ -84,6 +64,13 @@ export function parseUpdateMaintenanceSettingDto(
 ): MaintenanceSettingUpdateInput {
   const payload = ensurePayload(dto);
   const result: MaintenanceSettingUpdateInput = {};
+
+  if ('maintenanceTypeId' in payload) {
+    throwMaintenanceSettingBadRequest(
+      'MAINTENANCE_TYPE_INVALID',
+      'Вид обслуживания нельзя изменить в настройке.',
+    );
+  }
 
   if ('checklistTemplateId' in payload) {
     result.checklistTemplateId = parseNullablePositiveInteger(
@@ -111,19 +98,6 @@ export function parseUpdateMaintenanceSettingDto(
   return result;
 }
 
-export function parseCreateMaintenanceEventTypeDto(
-  dto: CreateMaintenanceEventTypeDto | undefined,
-): MaintenanceEventTypeInput {
-  const payload = ensurePayload(dto);
-  const setting = parseBaseSettingInput(payload);
-
-  return {
-    ...setting,
-    code: parseEventTypeCode(payload.code),
-    name: parseEventTypeName(payload.name),
-  };
-}
-
 function ensurePayload<T extends Record<string, unknown>>(
   dto: T | undefined,
 ): T {
@@ -135,53 +109,6 @@ function ensurePayload<T extends Record<string, unknown>>(
   }
 
   return dto;
-}
-
-function parseEventTypeName(value: unknown) {
-  if (typeof value !== 'string' || !value.trim()) {
-    throwMaintenanceSettingBadRequest(
-      'EVENT_TYPE_NAME_REQUIRED',
-      'Укажите название типа события.',
-    );
-  }
-
-  const name = value.trim();
-
-  if (name.length > MAX_EVENT_TYPE_NAME_LENGTH) {
-    throwMaintenanceSettingBadRequest(
-      'EVENT_TYPE_NAME_TOO_LONG',
-      'Название типа события слишком длинное.',
-    );
-  }
-
-  return name;
-}
-
-function parseEventTypeCode(value: unknown) {
-  if (typeof value !== 'string' || !value.trim()) {
-    throwMaintenanceSettingBadRequest(
-      'EVENT_TYPE_CODE_REQUIRED',
-      'Укажите код типа события.',
-    );
-  }
-
-  const code = value.trim().toUpperCase();
-
-  if (code.length > MAX_EVENT_TYPE_CODE_LENGTH) {
-    throwMaintenanceSettingBadRequest(
-      'EVENT_TYPE_CODE_TOO_LONG',
-      'Код типа события слишком длинный.',
-    );
-  }
-
-  if (!/^[A-Z][A-Z0-9_]*$/.test(code)) {
-    throwMaintenanceSettingBadRequest(
-      'EVENT_TYPE_CODE_INVALID',
-      'Код должен начинаться с латинской буквы и содержать только A-Z, 0-9 и _.',
-    );
-  }
-
-  return code;
 }
 
 function parseBaseSettingInput(
@@ -199,43 +126,28 @@ function parseBaseSettingInput(
 }
 
 function parseOptionalPeriodicity(payload: Record<string, unknown>) {
-  if ('periodicity' in payload && hasFlatPeriodicityPayload(payload)) {
+  assertNoFlatPeriodicityFields(payload);
+
+  if (!('periodicity' in payload)) {
+    return null;
+  }
+
+  if (payload.periodicity === null) {
+    return null;
+  }
+
+  if (
+    !payload.periodicity ||
+    typeof payload.periodicity !== 'object' ||
+    Array.isArray(payload.periodicity)
+  ) {
     throwMaintenanceSettingBadRequest(
-      'PERIODICITY_FORMAT_CONFLICT',
-      'Передайте периодичность либо объектом, либо плоскими полями.',
+      'PERIODICITY_INVALID',
+      'Укажите корректную периодичность.',
     );
   }
 
-  if ('periodicity' in payload) {
-    if (payload.periodicity === null) {
-      return null;
-    }
-
-    if (
-      !payload.periodicity ||
-      typeof payload.periodicity !== 'object' ||
-      Array.isArray(payload.periodicity)
-    ) {
-      throwMaintenanceSettingBadRequest(
-        'PERIODICITY_INVALID',
-        'Укажите корректную периодичность.',
-      );
-    }
-
-    const periodicity = payload.periodicity as Record<string, unknown>;
-
-    return parsePeriodicityPair(periodicity.value, periodicity.unit);
-  }
-
-  if (!hasFlatPeriodicityPayload(payload)) {
-    return null;
-  }
-
-  if (payload.periodicityValue === null && payload.periodicityUnit === null) {
-    return null;
-  }
-
-  return parsePeriodicityPair(payload.periodicityValue, payload.periodicityUnit);
+  return parsePeriodicity(payload.periodicity as Record<string, unknown>);
 }
 
 function parseRequiredExecutionType(value: unknown) {
@@ -254,39 +166,92 @@ function parseRequiredExecutionType(value: unknown) {
   return value as EquipmentMaintenanceExecutionType;
 }
 
-function parseRequiredPeriodicityUnit(value: unknown) {
+function parsePeriodicity(value: Record<string, unknown>): PeriodicityInput {
+  assertAllowedPeriodicityFields(value);
+
+  const periodicity = {
+    years: parseOptionalNonNegativeInteger(value.years),
+    months: parseOptionalNonNegativeInteger(value.months),
+    weeks: parseOptionalNonNegativeInteger(value.weeks),
+    days: parseOptionalNonNegativeInteger(value.days),
+  };
+
   if (
-    typeof value !== 'string' ||
-    !Object.values(EquipmentMaintenancePeriodicityUnit).includes(
-      value as EquipmentMaintenancePeriodicityUnit,
-    )
+    periodicity.days === 0 &&
+    periodicity.months === 0 &&
+    periodicity.weeks === 0 &&
+    periodicity.years === 0
   ) {
     throwMaintenanceSettingBadRequest(
-      'PERIODICITY_UNIT_INVALID',
-      'Укажите корректную единицу периодичности.',
+      'PERIODICITY_VALUE_INVALID',
+      'Укажите периодичность больше нуля.',
     );
   }
 
-  return value as EquipmentMaintenancePeriodicityUnit;
+  return periodicity;
 }
 
-function parsePeriodicityPair(value: unknown, unit: unknown) {
-  return {
-    unit: parseRequiredPeriodicityUnit(unit),
-    value: parseRequiredPositiveInteger(
-      value,
-      'PERIODICITY_VALUE_INVALID',
-      'Периодичность должна быть положительным числом.',
-    ),
-  };
+function assertAllowedPeriodicityFields(value: Record<string, unknown>) {
+  const allowedFields = new Set(['days', 'months', 'weeks', 'years']);
+  const unknownField = Object.keys(value).find(
+    (field) => !allowedFields.has(field),
+  );
+
+  if (unknownField) {
+    throwMaintenanceSettingBadRequest(
+      'PERIODICITY_INVALID',
+      'Периодичность содержит неизвестные поля.',
+    );
+  }
+}
+
+function parseOptionalNonNegativeInteger(value: unknown) {
+  if (value === undefined || value === null || value === '') {
+    return 0;
+  }
+
+  return parseRequiredNonNegativeInteger(
+    value,
+    'PERIODICITY_VALUE_INVALID',
+    'Периодичность должна состоять из неотрицательных целых чисел.',
+  );
+}
+
+function parseRequiredNonNegativeInteger(
+  value: unknown,
+  code: string,
+  message: string,
+) {
+  if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) {
+    return value;
+  }
+
+  if (typeof value === 'string' && /^(0|[1-9]\d*)$/.test(value)) {
+    const parsed = Number(value);
+
+    if (Number.isSafeInteger(parsed)) {
+      return parsed;
+    }
+  }
+
+  throwMaintenanceSettingBadRequest(code, message);
 }
 
 function hasPeriodicityPayload(payload: Record<string, unknown>) {
-  return 'periodicity' in payload || hasFlatPeriodicityPayload(payload);
+  if ('periodicityValue' in payload || 'periodicityUnit' in payload) {
+    return true;
+  }
+
+  return 'periodicity' in payload;
 }
 
-function hasFlatPeriodicityPayload(payload: Record<string, unknown>) {
-  return 'periodicityValue' in payload || 'periodicityUnit' in payload;
+function assertNoFlatPeriodicityFields(payload: Record<string, unknown>) {
+  if ('periodicityValue' in payload || 'periodicityUnit' in payload) {
+    throwMaintenanceSettingBadRequest(
+      'PERIODICITY_FORMAT_CONFLICT',
+      'Передайте периодичность объектом periodicity.',
+    );
+  }
 }
 
 function parseNullablePositiveInteger(
@@ -306,7 +271,7 @@ function parseRequiredPositiveInteger(
   code: string,
   message: string,
 ) {
-  if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+  if (typeof value === 'number' && Number.isSafeInteger(value) && value > 0) {
     return value;
   }
 

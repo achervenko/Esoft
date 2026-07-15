@@ -238,20 +238,20 @@ export class EquipmentEventsAssertions {
       );
     }
 
-    const modelEventType = await tx.equipmentModelEventType.findUnique({
+    const maintenanceSetting = await tx.equipmentMaintenanceSetting.findUnique({
       where: {
-        equipmentModelId_eventTypeId: {
+        equipmentModelId_maintenanceTypeId: {
           equipmentModelId: params.equipmentModelId,
-          eventTypeId: params.eventTypeId,
+          maintenanceTypeId: params.eventTypeId,
         },
       },
-      select: { eventTypeId: true },
+      select: { id: true },
     });
 
-    if (!modelEventType) {
+    if (!maintenanceSetting) {
       throwEquipmentEventBadRequest(
         'EVENT_TYPE_NOT_AVAILABLE_FOR_MODEL',
-        'Этот тип события недоступен для модели оборудования.',
+        'Этот вид обслуживания недоступен для модели оборудования.',
       );
     }
   }

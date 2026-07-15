@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 type AdminModalProps = {
   children: ReactNode;
@@ -7,7 +8,7 @@ type AdminModalProps = {
 };
 
 export function AdminModal({ children, onClose, title }: AdminModalProps) {
-  return (
+  return createPortal(
     <div
       className="admin-modal-backdrop"
       onMouseDown={onClose}
@@ -27,6 +28,7 @@ export function AdminModal({ children, onClose, title }: AdminModalProps) {
         </header>
         {children}
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }

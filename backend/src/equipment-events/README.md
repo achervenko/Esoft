@@ -183,11 +183,15 @@ UPDATE_EMPTY
 
 ## Maintenance settings
 
-Настройки обслуживания живут внутри модуля событий, потому что работают с
-связкой `equipment_model_event_types`: модель оборудования → тип события.
-
+Настройки обслуживания моделей задаются таблицей
+`equipment_maintenance_settings`: модель оборудования → вид обслуживания.
 Фронтенд всегда работает через `equipment.visibleId`; `modelId` наружу не
 передаётся.
+
+Доступ:
+
+- просмотр — любой авторизованный пользователь;
+- изменение — `admin`, `chief_engineer`.
 
 ### GET /api/equipment/:visibleId/maintenance-settings
 
@@ -202,17 +206,19 @@ UPDATE_EMPTY
   "affectedEquipmentCount": 8,
   "settings": [
     {
+      "id": 10,
       "checklistTemplateId": null,
-      "eventType": {
+      "maintenanceType": {
         "id": 2,
-        "code": "MAINTENANCE",
         "name": "Техническое обслуживание",
         "isActive": true
       },
       "executionType": "INTERNAL",
       "periodicity": {
-        "value": 3,
-        "unit": "MONTH"
+        "years": 1,
+        "months": 2,
+        "weeks": 0,
+        "days": 5
       }
     }
   ]
@@ -222,47 +228,63 @@ UPDATE_EMPTY
 `affectedEquipmentCount` показывает, сколько карточек оборудования той же
 модели затронет изменение настроек.
 
-### GET /api/equipment/:visibleId/maintenance-settings/available-event-types
+### GET /api/equipment/:visibleId/maintenance-settings/available-types
 
-Возвращает активные типы событий, которые ещё не назначены модели оборудования.
+Возвращает активные виды обслуживания, которые ещё не настроены для модели
+оборудования:
+
+```json
+{
+  "maintenanceTypes": [
+    {
+      "id": 3,
+      "name": "Диагностика"
+    }
+  ]
+}
+```
 
 ### POST /api/equipment/:visibleId/maintenance-settings
 
-Назначает существующий тип события модели оборудования.
+Добавляет настройку существующего вида обслуживания для модели оборудования.
 
 Body:
 
 ```json
 {
-  "eventTypeId": 2,
+  "maintenanceTypeId": 2,
   "checklistTemplateId": null,
   "executionType": "INTERNAL",
   "periodicity": null
 }
 ```
 
-Для периодического события дополнительно передаются:
+Для периодического обслуживания передаётся:
 
 ```json
 {
-  "eventTypeId": 2,
+  "maintenanceTypeId": 2,
   "checklistTemplateId": null,
   "executionType": "INTERNAL",
   "periodicity": {
-    "value": 3,
-    "unit": "MONTH"
+    "years": 0,
+    "months": 3,
+    "weeks": 0,
+    "days": 0
   }
 }
 ```
 
-`periodicity` — основной формат для нового фронтенда. Для переходного периода
-backend также принимает плоские поля `periodicityValue` и `periodicityUnit`, но
-смешивать объект и плоские поля в одном запросе нельзя.
+`periodicity` передаётся только объектом или `null`. Компоненты `years`,
+`months`, `weeks`, `days` должны быть целыми неотрицательными числами. Если
+компонент не передан, backend нормализует его в `0`. Если объект передан, хотя
+бы один компонент должен быть больше `0`. Старые плоские поля
+`periodicityValue` и `periodicityUnit` не используются.
 
 `checklistTemplateId` на текущем этапе хранится как nullable ID. Проверка
 существования и активности шаблона будет добавлена вместе с `ChecklistModule`.
 
-### PATCH /api/equipment/:visibleId/maintenance-settings/:eventTypeId
+### PATCH /api/equipment/:visibleId/maintenance-settings/:settingId
 
 Изменяет настройку. Можно передать одно или несколько полей:
 
@@ -271,8 +293,10 @@ backend также принимает плоские поля `periodicityValue`
   "checklistTemplateId": null,
   "executionType": "EXTERNAL",
   "periodicity": {
-    "value": 6,
-    "unit": "MONTH"
+    "years": 0,
+    "months": 6,
+    "weeks": 0,
+    "days": 0
   }
 }
 ```
@@ -285,51 +309,14 @@ backend также принимает плоские поля `periodicityValue`
 }
 ```
 
-Временно поддерживается и плоская очистка, но оба поля должны передаваться
-вместе:
-
-```json
-{
-  "periodicityValue": null,
-  "periodicityUnit": null
-}
-```
-
-Передача только одного `null` приведёт к ошибке валидации.
 `checklistTemplateId: null` очищает шаблон чек-листа. `executionType`
-обязателен на уровне БД и не может быть очищен.
+обязателен на уровне БД и не может быть очищен. `maintenanceTypeId` в PATCH не
+изменяется.
 
-### DELETE /api/equipment/:visibleId/maintenance-settings/:eventTypeId
+### DELETE /api/equipment/:visibleId/maintenance-settings/:settingId
 
-Удаляет связь типа события с моделью оборудования. Настройка удаляется для всей
-модели оборудования; уже созданные события не удаляются и не изменяются.
-
-### POST /api/equipment/:visibleId/maintenance-settings/event-types
-
-Создаёт новый тип события и сразу назначает его модели оборудования.
-
-Body:
-
-```json
-{
-  "name": "Техническое обслуживание",
-  "code": "MAINTENANCE",
-  "checklistTemplateId": null,
-  "executionType": "INTERNAL",
-  "periodicity": {
-    "value": 3,
-    "unit": "MONTH"
-  }
-}
-```
-
-`code` — технический код: латинские заглавные буквы, цифры и `_`, первый символ
-обязательно буква. Примеры: `MAINTENANCE`, `WEEKLY_DIAGNOSTICS`.
-
-Доступ:
-
-- просмотр — любой авторизованный пользователь;
-- изменение — `admin`, `chief_engineer`.
+Удаляет настройку вида обслуживания для всей модели оборудования. Уже созданные
+события не удаляются и не изменяются.
 
 ### Ошибки Maintenance settings
 
@@ -339,12 +326,99 @@ Body:
 MAINTENANCE_SETTING_NOT_FOUND
 MAINTENANCE_SETTING_ALREADY_EXISTS
 MAINTENANCE_SETTING_UPDATE_EMPTY
-EVENT_TYPE_CODE_ALREADY_EXISTS
-EVENT_TYPE_NAME_ALREADY_EXISTS
+MAINTENANCE_TYPE_REQUIRED
+MAINTENANCE_TYPE_INVALID
+MAINTENANCE_TYPE_NOT_FOUND
+MAINTENANCE_TYPE_INACTIVE
+CHECKLIST_TEMPLATE_ID_INVALID
 EXECUTION_TYPE_INVALID
 PERIODICITY_INVALID
 PERIODICITY_FORMAT_CONFLICT
 PERIODICITY_VALUE_INVALID
-PERIODICITY_UNIT_INVALID
+REQUEST_BODY_REQUIRED
+```
+
+## Maintenance types
+
+Справочник видов обслуживания управляется отдельным API.
+
+Доступ:
+
+- `GET /api/maintenance-types` без `includeInactive` — любой авторизованный пользователь;
+- создание, изменение, включение, отключение и просмотр неактивных записей — только `admin`.
+
+### GET /api/maintenance-types
+
+Возвращает активные виды обслуживания. Query:
+
+```text
+includeInactive?: boolean
+```
+
+`includeInactive=true` доступен только `admin`.
+
+Ответ:
+
+```json
+{
+  "maintenanceTypes": [
+    {
+      "id": 1,
+      "name": "ТО-1",
+      "code": "TO_1",
+      "isActive": true
+    }
+  ]
+}
+```
+
+### POST /api/maintenance-types
+
+Создаёт вид обслуживания. Доступен только `admin`.
+
+```json
+{
+  "name": "ТО-1",
+  "code": "TO_1"
+}
+```
+
+`code` — технический код: латинские заглавные буквы, цифры и `_`, первый символ
+обязательно буква.
+
+### PATCH /api/maintenance-types/:id
+
+Переименовывает вид обслуживания. Доступен только `admin`.
+
+```json
+{
+  "name": "ТО-1"
+}
+```
+
+### POST /api/maintenance-types/:id/activate
+
+Включает вид обслуживания. Доступен только `admin`.
+
+### POST /api/maintenance-types/:id/deactivate
+
+Отключает вид обслуживания. Доступен только `admin`.
+
+### Ошибки Maintenance types
+
+Основные коды:
+
+```text
+MAINTENANCE_TYPE_NOT_FOUND
+MAINTENANCE_TYPE_NAME_REQUIRED
+MAINTENANCE_TYPE_NAME_TOO_LONG
+MAINTENANCE_TYPE_CODE_REQUIRED
+MAINTENANCE_TYPE_CODE_TOO_LONG
+MAINTENANCE_TYPE_CODE_INVALID
+MAINTENANCE_TYPE_CODE_ALREADY_EXISTS
+MAINTENANCE_TYPE_NAME_ALREADY_EXISTS
+MAINTENANCE_TYPE_ALREADY_ACTIVE
+MAINTENANCE_TYPE_ALREADY_INACTIVE
+INCLUDE_INACTIVE_INVALID
 REQUEST_BODY_REQUIRED
 ```

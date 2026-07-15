@@ -13,10 +13,8 @@ import type { Auth } from '../../auth/auth.config';
 import { assertCanManageEquipmentEvents } from '../../auth/role-permissions';
 import { MaintenanceSettingsService } from './maintenance-settings.service';
 import {
-  type CreateMaintenanceEventTypeDto,
   type CreateMaintenanceSettingDto,
   type UpdateMaintenanceSettingDto,
-  parseCreateMaintenanceEventTypeDto,
   parseCreateMaintenanceSettingDto,
   parseUpdateMaintenanceSettingDto,
 } from './maintenance-settings.validation';
@@ -35,12 +33,14 @@ export class MaintenanceSettingsController {
     return this.maintenanceSettingsService.getSettings(visibleId);
   }
 
-  @Get('available-event-types')
-  getAvailableEventTypes(
+  @Get('available-types')
+  getAvailableMaintenanceTypes(
     @Param('visibleId', ParseIntPipe) visibleId: number,
     @Session() _session: UserSession<Auth>,
   ) {
-    return this.maintenanceSettingsService.getAvailableEventTypes(visibleId);
+    return this.maintenanceSettingsService.getAvailableMaintenanceTypes(
+      visibleId,
+    );
   }
 
   @Post()
@@ -58,10 +58,10 @@ export class MaintenanceSettingsController {
     );
   }
 
-  @Patch(':eventTypeId')
+  @Patch(':settingId')
   updateSetting(
     @Param('visibleId', ParseIntPipe) visibleId: number,
-    @Param('eventTypeId', ParseIntPipe) eventTypeId: number,
+    @Param('settingId', ParseIntPipe) settingId: number,
     @Body() dto: UpdateMaintenanceSettingDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
@@ -69,38 +69,23 @@ export class MaintenanceSettingsController {
 
     return this.maintenanceSettingsService.updateSetting(
       visibleId,
-      eventTypeId,
+      settingId,
       parseUpdateMaintenanceSettingDto(dto),
       session.user.id,
     );
   }
 
-  @Delete(':eventTypeId')
+  @Delete(':settingId')
   deleteSetting(
     @Param('visibleId', ParseIntPipe) visibleId: number,
-    @Param('eventTypeId', ParseIntPipe) eventTypeId: number,
+    @Param('settingId', ParseIntPipe) settingId: number,
     @Session() session: UserSession<Auth>,
   ) {
     assertCanManageEquipmentEvents(session.user.role);
 
     return this.maintenanceSettingsService.deleteSetting(
       visibleId,
-      eventTypeId,
-      session.user.id,
-    );
-  }
-
-  @Post('event-types')
-  createEventTypeAndSetting(
-    @Param('visibleId', ParseIntPipe) visibleId: number,
-    @Body() dto: CreateMaintenanceEventTypeDto | undefined,
-    @Session() session: UserSession<Auth>,
-  ) {
-    assertCanManageEquipmentEvents(session.user.role);
-
-    return this.maintenanceSettingsService.createEventTypeAndSetting(
-      visibleId,
-      parseCreateMaintenanceEventTypeDto(dto),
+      settingId,
       session.user.id,
     );
   }

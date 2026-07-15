@@ -7,8 +7,7 @@ export const maintenanceSettingsEquipmentSelect = {
   visibleId: true,
 } satisfies Prisma.EquipmentSelect;
 
-export const maintenanceSettingsEventTypeSelect = {
-  code: true,
+export const maintenanceSettingsMaintenanceTypeSelect = {
   id: true,
   isActive: true,
   name: true,
@@ -16,22 +15,26 @@ export const maintenanceSettingsEventTypeSelect = {
 
 export const maintenanceSettingSelect = {
   checklistTemplateId: true,
-  eventType: {
-    select: maintenanceSettingsEventTypeSelect,
-  },
   executionType: true,
-  periodicityUnit: true,
-  periodicityValue: true,
-} satisfies Prisma.EquipmentModelEventTypeSelect;
+  id: true,
+  maintenanceType: {
+    select: maintenanceSettingsMaintenanceTypeSelect,
+  },
+  periodicityDays: true,
+  periodicityMonths: true,
+  periodicityWeeks: true,
+  periodicityYears: true,
+} satisfies Prisma.EquipmentMaintenanceSettingSelect;
 
 export type MaintenanceSettingsEquipmentRecord = Prisma.EquipmentGetPayload<{
   select: typeof maintenanceSettingsEquipmentSelect;
 }>;
 
-export type MaintenanceSettingRecord = Prisma.EquipmentModelEventTypeGetPayload<{
-  select: typeof maintenanceSettingSelect;
-}>;
+export type MaintenanceSettingRecord =
+  Prisma.EquipmentMaintenanceSettingGetPayload<{
+    select: typeof maintenanceSettingSelect;
+  }>;
 
-export type MaintenanceEventTypeRecord = Prisma.EquipmentEventTypeGetPayload<{
-  select: typeof maintenanceSettingsEventTypeSelect;
+export type MaintenanceTypeRecord = Prisma.EquipmentEventTypeGetPayload<{
+  select: typeof maintenanceSettingsMaintenanceTypeSelect;
 }>;

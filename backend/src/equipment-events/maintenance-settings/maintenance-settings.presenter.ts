@@ -1,7 +1,7 @@
 import type {
-  MaintenanceEventTypeRecord,
   MaintenanceSettingRecord,
   MaintenanceSettingsEquipmentRecord,
+  MaintenanceTypeRecord,
 } from './maintenance-settings.relations';
 
 export function presentMaintenanceSettings(
@@ -19,15 +19,13 @@ export function presentMaintenanceSettings(
   };
 }
 
-export function presentAvailableEventTypes(
-  eventTypes: MaintenanceEventTypeRecord[],
+export function presentAvailableMaintenanceTypes(
+  maintenanceTypes: MaintenanceTypeRecord[],
 ) {
   return {
-    eventTypes: eventTypes.map((eventType) => ({
-      code: eventType.code,
-      id: eventType.id,
-      isActive: eventType.isActive,
-      name: eventType.name,
+    maintenanceTypes: maintenanceTypes.map((maintenanceType) => ({
+      id: maintenanceType.id,
+      name: maintenanceType.name,
     })),
   };
 }
@@ -35,19 +33,31 @@ export function presentAvailableEventTypes(
 function presentMaintenanceSetting(setting: MaintenanceSettingRecord) {
   return {
     checklistTemplateId: setting.checklistTemplateId,
-    eventType: {
-      code: setting.eventType.code,
-      id: setting.eventType.id,
-      isActive: setting.eventType.isActive,
-      name: setting.eventType.name,
-    },
     executionType: setting.executionType,
-    periodicity:
-      setting.periodicityValue === null || setting.periodicityUnit === null
-        ? null
-        : {
-            unit: setting.periodicityUnit,
-            value: setting.periodicityValue,
-          },
+    id: setting.id,
+    maintenanceType: {
+      id: setting.maintenanceType.id,
+      isActive: setting.maintenanceType.isActive,
+      name: setting.maintenanceType.name,
+    },
+    periodicity: presentPeriodicity(setting),
   };
+}
+
+function presentPeriodicity(setting: MaintenanceSettingRecord) {
+  if (
+    setting.periodicityDays !== null &&
+    setting.periodicityMonths !== null &&
+    setting.periodicityWeeks !== null &&
+    setting.periodicityYears !== null
+  ) {
+    return {
+      years: setting.periodicityYears,
+      months: setting.periodicityMonths,
+      weeks: setting.periodicityWeeks,
+      days: setting.periodicityDays,
+    };
+  }
+
+  return null;
 }

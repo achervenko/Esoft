@@ -6,29 +6,28 @@ import type {
 
 type BuildSettingCreateDataParams = {
   equipmentModelId: number;
-  eventTypeId: number;
+  maintenanceTypeId: number;
   input: MaintenanceBaseSettingInput;
 };
 
 export function buildSettingCreateData({
   equipmentModelId,
-  eventTypeId,
+  maintenanceTypeId,
   input,
-}: BuildSettingCreateDataParams): Prisma.EquipmentModelEventTypeCreateInput {
+}: BuildSettingCreateDataParams): Prisma.EquipmentMaintenanceSettingCreateInput {
   return {
     checklistTemplateId: input.checklistTemplateId,
     equipmentModel: { connect: { id: equipmentModelId } },
-    eventType: { connect: { id: eventTypeId } },
     executionType: input.executionType,
-    periodicityUnit: input.periodicity?.unit ?? null,
-    periodicityValue: input.periodicity?.value ?? null,
+    maintenanceType: { connect: { id: maintenanceTypeId } },
+    ...buildPeriodicityData(input.periodicity),
   };
 }
 
 export function buildSettingUpdateData(
   input: MaintenanceSettingUpdateInput,
-): Prisma.EquipmentModelEventTypeUpdateInput {
-  const data: Prisma.EquipmentModelEventTypeUpdateInput = {};
+): Prisma.EquipmentMaintenanceSettingUpdateInput {
+  const data: Prisma.EquipmentMaintenanceSettingUpdateInput = {};
 
   if ('checklistTemplateId' in input) {
     data.checklistTemplateId = input.checklistTemplateId;
@@ -39,9 +38,19 @@ export function buildSettingUpdateData(
   }
 
   if ('periodicity' in input) {
-    data.periodicityUnit = input.periodicity?.unit ?? null;
-    data.periodicityValue = input.periodicity?.value ?? null;
+    Object.assign(data, buildPeriodicityData(input.periodicity));
   }
 
   return data;
+}
+
+function buildPeriodicityData(
+  periodicity: MaintenanceBaseSettingInput['periodicity'] | undefined,
+) {
+  return {
+    periodicityDays: periodicity?.days ?? null,
+    periodicityMonths: periodicity?.months ?? null,
+    periodicityWeeks: periodicity?.weeks ?? null,
+    periodicityYears: periodicity?.years ?? null,
+  };
 }

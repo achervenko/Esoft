@@ -52,38 +52,24 @@ function throwMaintenanceSettingUniqueConflict(
 ): never {
   const target = getPrismaErrorTarget(error);
 
-  if (hasTarget(target, 'code', 'equipment_event_types_code')) {
-    throwMaintenanceSettingConflict(
-      'EVENT_TYPE_CODE_ALREADY_EXISTS',
-      'Тип события с таким кодом уже существует.',
-    );
-  }
-
-  if (hasTarget(target, 'name', 'equipment_event_types_name')) {
-    throwMaintenanceSettingConflict(
-      'EVENT_TYPE_NAME_ALREADY_EXISTS',
-      'Тип события с таким названием уже существует.',
-    );
-  }
-
   if (
     hasTarget(
       target,
       'equipmentModelId',
       'equipment_model_id',
-      'pk_equipment_model_event_types',
+      'uq_equipment_maintenance_settings_model_type',
     ) ||
-    hasTarget(target, 'eventTypeId', 'event_type_id')
+    hasTarget(target, 'maintenanceTypeId', 'maintenance_type_id')
   ) {
     throwMaintenanceSettingConflict(
       'MAINTENANCE_SETTING_ALREADY_EXISTS',
-      'Этот тип события уже назначен модели оборудования.',
+      'Этот вид обслуживания уже настроен для модели оборудования.',
     );
   }
 
   throwMaintenanceSettingConflict(
     'MAINTENANCE_SETTING_ALREADY_EXISTS',
-    'Такая настройка или тип события уже существует.',
+    'Такая настройка или вид обслуживания уже существует.',
   );
 }
 

@@ -30,16 +30,26 @@ export class MaintenanceSettingsAssertions {
     return equipment;
   }
 
-  async assertActiveEventType(tx: Prisma.TransactionClient, eventTypeId: number) {
-    const eventType = await tx.equipmentEventType.findUnique({
+  async assertActiveMaintenanceType(
+    tx: Prisma.TransactionClient,
+    maintenanceTypeId: number,
+  ) {
+    const maintenanceType = await tx.equipmentEventType.findUnique({
       select: { id: true, isActive: true },
-      where: { id: eventTypeId },
+      where: { id: maintenanceTypeId },
     });
 
-    if (!eventType || !eventType.isActive) {
+    if (!maintenanceType) {
       throwMaintenanceSettingNotFound(
-        'EVENT_TYPE_NOT_FOUND',
-        'Активный тип события не найден.',
+        'MAINTENANCE_TYPE_NOT_FOUND',
+        'Вид обслуживания не найден.',
+      );
+    }
+
+    if (!maintenanceType.isActive) {
+      throwMaintenanceSettingNotFound(
+        'MAINTENANCE_TYPE_INACTIVE',
+        'Вид обслуживания отключён.',
       );
     }
   }
@@ -47,14 +57,14 @@ export class MaintenanceSettingsAssertions {
   async assertSettingDoesNotExist(
     tx: Prisma.TransactionClient,
     equipmentModelId: number,
-    eventTypeId: number,
+    maintenanceTypeId: number,
   ) {
-    const setting = await tx.equipmentModelEventType.findUnique({
-      select: { eventTypeId: true },
+    const setting = await tx.equipmentMaintenanceSetting.findUnique({
+      select: { id: true },
       where: {
-        equipmentModelId_eventTypeId: {
+        equipmentModelId_maintenanceTypeId: {
           equipmentModelId,
-          eventTypeId,
+          maintenanceTypeId,
         },
       },
     });
@@ -62,7 +72,7 @@ export class MaintenanceSettingsAssertions {
     if (setting) {
       throwMaintenanceSettingConflict(
         'MAINTENANCE_SETTING_ALREADY_EXISTS',
-        'Этот тип события уже назначен модели оборудования.',
+        'Этот вид обслуживания уже настроен для модели оборудования.',
       );
     }
   }
@@ -70,15 +80,13 @@ export class MaintenanceSettingsAssertions {
   async assertSettingExists(
     tx: Prisma.TransactionClient,
     equipmentModelId: number,
-    eventTypeId: number,
+    settingId: number,
   ) {
-    const setting = await tx.equipmentModelEventType.findUnique({
+    const setting = await tx.equipmentMaintenanceSetting.findFirst({
       select: maintenanceSettingSelect,
       where: {
-        equipmentModelId_eventTypeId: {
-          equipmentModelId,
-          eventTypeId,
-        },
+        equipmentModelId,
+        id: settingId,
       },
     });
 
@@ -90,25 +98,5 @@ export class MaintenanceSettingsAssertions {
     }
 
     return setting;
-  }
-
-  async assertEventTypeCodeAndNameAreFree(
-    tx: Prisma.TransactionClient,
-    code: string,
-    name: string,
-  ) {
-    const eventType = await tx.equipmentEventType.findFirst({
-      select: { id: true },
-      where: {
-        OR: [{ code }, { name }],
-      },
-    });
-
-    if (eventType) {
-      throwMaintenanceSettingConflict(
-        'EVENT_TYPE_ALREADY_EXISTS',
-        'Тип события с таким названием или кодом уже существует.',
-      );
-    }
   }
 }

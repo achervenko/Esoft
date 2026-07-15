@@ -3,7 +3,6 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MaintenanceSettingsAssertions } from './maintenance-settings.assertions';
 import {
-  writeMaintenanceEventTypeCreatedAudit,
   writeMaintenanceSettingCreatedAudit,
   writeMaintenanceSettingDeletedAudit,
   writeMaintenanceSettingUpdatedAudit,
@@ -11,7 +10,7 @@ import {
 import { throwMaintenanceSettingPrismaError } from './maintenance-settings.errors';
 import {
   maintenanceSettingSelect,
-  maintenanceSettingsEventTypeSelect,
+  maintenanceSettingsMaintenanceTypeSelect,
   type MaintenanceSettingsEquipmentRecord,
 } from './maintenance-settings.relations';
 import {
@@ -19,11 +18,10 @@ import {
   buildSettingUpdateData,
 } from './maintenance-settings.persistence';
 import {
-  presentAvailableEventTypes,
+  presentAvailableMaintenanceTypes,
   presentMaintenanceSettings,
 } from './maintenance-settings.presenter';
 import type {
-  MaintenanceEventTypeInput,
   MaintenanceSettingInput,
   MaintenanceSettingUpdateInput,
 } from './maintenance-settings.validation';
@@ -46,35 +44,35 @@ export class MaintenanceSettingsService {
     });
   }
 
-  getAvailableEventTypes(visibleId: number) {
+  getAvailableMaintenanceTypes(visibleId: number) {
     return this.prisma.$transaction(async (tx) => {
       const equipment = await this.assertions.loadEquipmentByVisibleId(
         tx,
         visibleId,
       );
 
-      const assignedSettings = await tx.equipmentModelEventType.findMany({
-        select: { eventTypeId: true },
+      const assignedSettings = await tx.equipmentMaintenanceSetting.findMany({
+        select: { maintenanceTypeId: true },
         where: { equipmentModelId: equipment.modelId },
       });
 
-      const assignedEventTypeIds = assignedSettings.map(
-        (setting) => setting.eventTypeId,
+      const assignedMaintenanceTypeIds = assignedSettings.map(
+        (setting) => setting.maintenanceTypeId,
       );
 
-      const eventTypes = await tx.equipmentEventType.findMany({
+      const maintenanceTypes = await tx.equipmentEventType.findMany({
         orderBy: [{ name: 'asc' }, { id: 'asc' }],
-        select: maintenanceSettingsEventTypeSelect,
+        select: maintenanceSettingsMaintenanceTypeSelect,
         where: {
           id:
-            assignedEventTypeIds.length > 0
-              ? { notIn: assignedEventTypeIds }
+            assignedMaintenanceTypeIds.length > 0
+              ? { notIn: assignedMaintenanceTypeIds }
               : undefined,
           isActive: true,
         },
       });
 
-      return presentAvailableEventTypes(eventTypes);
+      return presentAvailableMaintenanceTypes(maintenanceTypes);
     });
   }
 
@@ -90,19 +88,23 @@ export class MaintenanceSettingsService {
           visibleId,
         );
 
-        await this.assertions.assertActiveEventType(tx, input.eventTypeId);
+        await this.assertions.assertActiveMaintenanceType(
+          tx,
+          input.maintenanceTypeId,
+        );
         await this.assertions.assertSettingDoesNotExist(
           tx,
           equipment.modelId,
-          input.eventTypeId,
+          input.maintenanceTypeId,
         );
 
-        await tx.equipmentModelEventType.create({
+        const createdSetting = await tx.equipmentMaintenanceSetting.create({
           data: buildSettingCreateData({
             equipmentModelId: equipment.modelId,
-            eventTypeId: input.eventTypeId,
+            maintenanceTypeId: input.maintenanceTypeId,
             input,
           }),
+          select: { id: true },
         });
 
         const [affectedEquipmentCount, setting] = await Promise.all([
@@ -110,7 +112,7 @@ export class MaintenanceSettingsService {
           this.assertions.assertSettingExists(
             tx,
             equipment.modelId,
-            input.eventTypeId,
+            createdSetting.id,
           ),
         ]);
 
@@ -130,7 +132,7 @@ export class MaintenanceSettingsService {
 
   async updateSetting(
     visibleId: number,
-    eventTypeId: number,
+    settingId: number,
     input: MaintenanceSettingUpdateInput,
     userId?: string | null,
   ) {
@@ -144,23 +146,18 @@ export class MaintenanceSettingsService {
         const oldSetting = await this.assertions.assertSettingExists(
           tx,
           equipment.modelId,
-          eventTypeId,
+          settingId,
         );
 
-        await tx.equipmentModelEventType.update({
+        await tx.equipmentMaintenanceSetting.update({
           data: buildSettingUpdateData(input),
-          where: {
-            equipmentModelId_eventTypeId: {
-              equipmentModelId: equipment.modelId,
-              eventTypeId,
-            },
-          },
+          where: { id: settingId },
         });
 
         const newSetting = await this.assertions.assertSettingExists(
           tx,
           equipment.modelId,
-          eventTypeId,
+          settingId,
         );
 
         await writeMaintenanceSettingUpdatedAudit(tx, {
@@ -179,7 +176,7 @@ export class MaintenanceSettingsService {
 
   async deleteSetting(
     visibleId: number,
-    eventTypeId: number,
+    settingId: number,
     userId?: string | null,
   ) {
     try {
@@ -192,87 +189,20 @@ export class MaintenanceSettingsService {
         const setting = await this.assertions.assertSettingExists(
           tx,
           equipment.modelId,
-          eventTypeId,
+          settingId,
         );
         const affectedEquipmentCount = await this.countAffectedEquipment(
           tx,
           equipment.modelId,
         );
 
-        await tx.equipmentModelEventType.delete({
+        await tx.equipmentMaintenanceSetting.delete({
           where: {
-            equipmentModelId_eventTypeId: {
-              equipmentModelId: equipment.modelId,
-              eventTypeId,
-            },
+            id: settingId,
           },
         });
 
         await writeMaintenanceSettingDeletedAudit(tx, {
-          affectedEquipmentCount,
-          equipment,
-          setting,
-          userId,
-        });
-
-        return this.buildSettingsResponse(tx, equipment);
-      });
-    } catch (error) {
-      throwMaintenanceSettingPrismaError(error);
-    }
-  }
-
-  async createEventTypeAndSetting(
-    visibleId: number,
-    input: MaintenanceEventTypeInput,
-    userId?: string | null,
-  ) {
-    try {
-      return await this.prisma.$transaction(async (tx) => {
-        const equipment = await this.assertions.loadEquipmentByVisibleId(
-          tx,
-          visibleId,
-        );
-
-        await this.assertions.assertEventTypeCodeAndNameAreFree(
-          tx,
-          input.code,
-          input.name,
-        );
-
-        const eventType = await tx.equipmentEventType.create({
-          data: {
-            code: input.code,
-            name: input.name,
-          },
-          select: { id: true },
-        });
-
-        await writeMaintenanceEventTypeCreatedAudit(tx, {
-          code: input.code,
-          eventTypeId: eventType.id,
-          name: input.name,
-          userId,
-        });
-
-        await tx.equipmentModelEventType.create({
-          data: buildSettingCreateData({
-            equipmentModelId: equipment.modelId,
-            eventTypeId: eventType.id,
-            input,
-          }),
-        });
-
-        const [affectedEquipmentCount, setting] = await Promise.all([
-          this.countAffectedEquipment(tx, equipment.modelId),
-          this.assertions.assertSettingExists(
-            tx,
-            equipment.modelId,
-            eventType.id,
-          ),
-        ]);
-
-        await writeMaintenanceSettingCreatedAudit(tx, {
           affectedEquipmentCount,
           equipment,
           setting,
@@ -294,8 +224,8 @@ export class MaintenanceSettingsService {
       tx,
       equipment.modelId,
     );
-    const settings = await tx.equipmentModelEventType.findMany({
-      orderBy: [{ eventType: { name: 'asc' } }, { eventTypeId: 'asc' }],
+    const settings = await tx.equipmentMaintenanceSetting.findMany({
+      orderBy: [{ maintenanceType: { name: 'asc' } }, { id: 'asc' }],
       select: maintenanceSettingSelect,
       where: { equipmentModelId: equipment.modelId },
     });

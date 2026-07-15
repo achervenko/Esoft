@@ -34,9 +34,9 @@ export async function writeMaintenanceSettingCreatedAudit(
       auditLine(
         params,
         AuditAction.CREATE,
-        'Тип события',
+        'Вид обслуживания',
         null,
-        eventTypeLabel(params.setting),
+        maintenanceTypeLabel(params.setting),
       ),
       auditLine(
         params,
@@ -58,6 +58,13 @@ export async function writeMaintenanceSettingCreatedAudit(
         'Шаблон чек-листа',
         null,
         checklistLabel(params.setting),
+      ),
+      auditLine(
+        params,
+        AuditAction.CREATE,
+        'Оборудование',
+        null,
+        params.equipment.name,
       ),
       auditLine(
         params,
@@ -111,8 +118,8 @@ export async function writeMaintenanceSettingDeletedAudit(
       auditLine(
         params,
         AuditAction.DELETE,
-        'Тип события',
-        eventTypeLabel(params.setting),
+        'Вид обслуживания',
+        maintenanceTypeLabel(params.setting),
         null,
       ),
       auditLine(
@@ -139,45 +146,17 @@ export async function writeMaintenanceSettingDeletedAudit(
       auditLine(
         params,
         AuditAction.DELETE,
+        'Оборудование',
+        params.equipment.name,
+        null,
+      ),
+      auditLine(
+        params,
+        AuditAction.DELETE,
         'Оборудования этой модели',
         params.affectedEquipmentCount,
         null,
       ),
-    ],
-  });
-}
-
-export async function writeMaintenanceEventTypeCreatedAudit(
-  tx: Prisma.TransactionClient,
-  params: {
-    code: string;
-    eventTypeId: number;
-    name: string;
-    userId?: string | null;
-  },
-) {
-  await tx.auditLog.createMany({
-    data: [
-      {
-        action: AuditAction.CREATE,
-        entityId: params.eventTypeId,
-        entityType: 'equipment_event_type',
-        fieldName: 'Название типа события',
-        module: AuditModule.EQUIPMENT,
-        newValue: params.name,
-        oldValue: null,
-        userId: params.userId ?? null,
-      },
-      {
-        action: AuditAction.CREATE,
-        entityId: params.eventTypeId,
-        entityType: 'equipment_event_type',
-        fieldName: 'Код типа события',
-        module: AuditModule.EQUIPMENT,
-        newValue: params.code,
-        oldValue: null,
-        userId: params.userId ?? null,
-      },
     ],
   });
 }
@@ -191,12 +170,13 @@ function auditLine(
 ) {
   return {
     action,
-    entityId: params.equipment.modelId,
+    entityId: params.setting.id,
     entityType: 'equipment_maintenance_setting',
     fieldName: settingFieldName(params.setting, fieldName),
     module: AuditModule.EQUIPMENT,
     newValue: formatOperationValue(newValue),
-    oldValue: action === AuditAction.CREATE ? null : formatOperationValue(oldValue),
+    oldValue:
+      action === AuditAction.CREATE ? null : formatOperationValue(oldValue),
     userId: params.userId ?? null,
   };
 }
@@ -209,7 +189,7 @@ function comparisonLine(
 ) {
   return {
     action: AuditAction.UPDATE,
-    entityId: params.equipment.modelId,
+    entityId: params.newSetting.id,
     entityType: 'equipment_maintenance_setting',
     fieldName: settingFieldName(params.newSetting, fieldName),
     module: AuditModule.EQUIPMENT,
@@ -219,20 +199,65 @@ function comparisonLine(
   };
 }
 
-function settingFieldName(setting: MaintenanceSettingRecord, fieldName: string) {
-  return `${eventTypeLabel(setting)} — ${fieldName}`;
+function settingFieldName(
+  setting: MaintenanceSettingRecord,
+  fieldName: string,
+) {
+  return `${maintenanceTypeLabel(setting)} — ${fieldName}`;
 }
 
-function eventTypeLabel(setting: MaintenanceSettingRecord) {
-  return `${setting.eventType.name} [${setting.eventType.code}] #${setting.eventType.id}`;
+function maintenanceTypeLabel(setting: MaintenanceSettingRecord) {
+  return `${setting.maintenanceType.name} #${setting.maintenanceType.id}`;
 }
 
 function periodicityLabel(setting: MaintenanceSettingRecord) {
-  if (setting.periodicityValue === null || setting.periodicityUnit === null) {
+  if (
+    setting.periodicityYears === null ||
+    setting.periodicityMonths === null ||
+    setting.periodicityWeeks === null ||
+    setting.periodicityDays === null
+  ) {
     return null;
   }
 
-  return `${setting.periodicityValue} ${setting.periodicityUnit}`;
+  return [
+    durationPart(setting.periodicityYears, ['год', 'года', 'лет']),
+    durationPart(setting.periodicityMonths, ['месяц', 'месяца', 'месяцев']),
+    durationPart(setting.periodicityWeeks, ['неделя', 'недели', 'недель']),
+    durationPart(setting.periodicityDays, ['день', 'дня', 'дней']),
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+function durationPart(value: number, forms: [string, string, string]) {
+  if (value === 0) {
+    return null;
+  }
+
+  return `${value} ${pluralizeRu(value, forms)}`;
+}
+
+function pluralizeRu(
+  value: number,
+  [one, few, many]: [string, string, string],
+) {
+  const lastTwoDigits = value % 100;
+  const lastDigit = value % 10;
+
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
+    return many;
+  }
+
+  if (lastDigit === 1) {
+    return one;
+  }
+
+  if (lastDigit >= 2 && lastDigit <= 4) {
+    return few;
+  }
+
+  return many;
 }
 
 function checklistLabel(setting: MaintenanceSettingRecord) {

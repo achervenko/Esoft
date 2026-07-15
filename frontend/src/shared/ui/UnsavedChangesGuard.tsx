@@ -1,7 +1,5 @@
-import { TriangleAlert } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
-import './UnsavedChangesGuard.css';
+import { useEffect, useRef, useState } from 'react';
+import { ConfirmDialog } from './ConfirmDialog';
 
 type UnsavedChangesGuardProps = {
   hasChanges: boolean;
@@ -9,10 +7,11 @@ type UnsavedChangesGuardProps = {
 
 export function UnsavedChangesGuard({ hasChanges }: UnsavedChangesGuardProps) {
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const isConfirmedNavigationRef = useRef(false);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (!hasChanges) {
+      if (!hasChanges || isConfirmedNavigationRef.current) {
         return;
       }
 
@@ -84,51 +83,33 @@ export function UnsavedChangesGuard({ hasChanges }: UnsavedChangesGuardProps) {
 
   const leavePage = () => {
     const nextHref = pendingHref;
+    isConfirmedNavigationRef.current = true;
     setPendingHref(null);
 
     if (nextHref.startsWith('#')) {
       window.location.hash = nextHref;
+      isConfirmedNavigationRef.current = false;
       return;
     }
 
-    window.location.href = nextHref;
+    try {
+      window.location.href = nextHref;
+    } catch (error) {
+      isConfirmedNavigationRef.current = false;
+      throw error;
+    }
   };
 
-  return createPortal(
-    <div
-      aria-labelledby="unsaved-changes-title"
-      aria-modal="true"
-      className="unsaved-changes-backdrop"
-      role="dialog"
-    >
-      <div className="unsaved-changes-dialog">
-        <div className="unsaved-changes-message">
-          <TriangleAlert aria-hidden="true" size={26} />
-          <div>
-            <h2 id="unsaved-changes-title">Есть несохраненные изменения</h2>
-            <p>Выйти без сохранения?</p>
-          </div>
-        </div>
-
-        <div className="unsaved-changes-actions">
-          <button
-            className="unsaved-changes-secondary"
-            onClick={closeDialog}
-            type="button"
-          >
-            Остаться
-          </button>
-          <button
-            className="unsaved-changes-primary"
-            onClick={leavePage}
-            type="button"
-          >
-            Выйти
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body,
+  return (
+    <ConfirmDialog
+      cancelLabel="Остаться"
+      confirmLabel="Выйти"
+      description="Выйти без сохранения?"
+      onCancel={closeDialog}
+      onConfirm={leavePage}
+      title="Есть несохраненные изменения"
+      variant="danger"
+    />
   );
 }
 

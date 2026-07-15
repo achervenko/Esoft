@@ -111,6 +111,63 @@ export type EquipmentFile = {
   sizeBytes: string;
 };
 
+export type MaintenancePeriodicity = {
+  years: number;
+  months: number;
+  weeks: number;
+  days: number;
+};
+
+export type MaintenanceExecutionType = "INTERNAL" | "EXTERNAL";
+
+export type MaintenanceType = {
+  code?: string;
+  id: number;
+  isActive?: boolean;
+  name: string;
+};
+
+export type MaintenanceSetting = {
+  checklistTemplateId: number | null;
+  executionType: MaintenanceExecutionType;
+  id: number;
+  maintenanceType: {
+    id: number;
+    isActive: boolean;
+    name: string;
+  };
+  periodicity: MaintenancePeriodicity | null;
+};
+
+export type MaintenanceSettingsResponse = {
+  affectedEquipmentCount: number;
+  equipment: {
+    name: string;
+    visibleId: number;
+  };
+  settings: MaintenanceSetting[];
+};
+
+export type AvailableMaintenanceTypesResponse = {
+  maintenanceTypes: MaintenanceType[];
+};
+
+export type MaintenanceSettingBasePayload = {
+  checklistTemplateId: number | null;
+  executionType: MaintenanceExecutionType;
+  periodicity: MaintenancePeriodicity | null;
+};
+
+export type MaintenanceSettingPayload = MaintenanceSettingBasePayload & {
+  maintenanceTypeId: number;
+};
+
+export type MaintenanceSettingUpdatePayload = {
+  checklistTemplateId?: number | null;
+  executionType?: MaintenanceExecutionType;
+  periodicity?: MaintenancePeriodicity | null;
+};
+
 const API_URL = import.meta.env.VITE_API_URL || "";
 const UPLOAD_TIMEOUT_MS = 120_000;
 
@@ -163,6 +220,57 @@ export function getEquipmentCard(visibleId: number) {
 
 export function getEquipmentHistory(visibleId: number) {
   return request<EquipmentHistoryItem[]>(`/api/equipment/${visibleId}/history`);
+}
+
+export function getMaintenanceSettings(visibleId: number) {
+  return request<MaintenanceSettingsResponse>(
+    `/api/equipment/${visibleId}/maintenance-settings`,
+  );
+}
+
+export function getAvailableMaintenanceTypes(visibleId: number) {
+  return request<AvailableMaintenanceTypesResponse>(
+    `/api/equipment/${visibleId}/maintenance-settings/available-types`,
+  );
+}
+
+export function createMaintenanceSetting(
+  visibleId: number,
+  payload: MaintenanceSettingPayload,
+) {
+  return request<MaintenanceSettingsResponse>(
+    `/api/equipment/${visibleId}/maintenance-settings`,
+    {
+      body: JSON.stringify(payload),
+      method: "POST",
+    },
+  );
+}
+
+export function updateMaintenanceSetting(
+  visibleId: number,
+  settingId: number,
+  payload: MaintenanceSettingUpdatePayload,
+) {
+  return request<MaintenanceSettingsResponse>(
+    `/api/equipment/${visibleId}/maintenance-settings/${settingId}`,
+    {
+      body: JSON.stringify(payload),
+      method: "PATCH",
+    },
+  );
+}
+
+export function deleteMaintenanceSetting(
+  visibleId: number,
+  settingId: number,
+) {
+  return request<MaintenanceSettingsResponse>(
+    `/api/equipment/${visibleId}/maintenance-settings/${settingId}`,
+    {
+      method: "DELETE",
+    },
+  );
 }
 
 export function createEquipment(payload: CreateEquipmentPayload) {

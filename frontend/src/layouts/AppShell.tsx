@@ -1,4 +1,5 @@
 import { Sidebar } from "../modules/sidebar";
+import { parseEquipmentViewTab } from "../modules/equipment-card";
 import { DashboardPage } from "../pages/DashboardPage";
 import { DictionariesPage } from "../pages/DictionariesPage";
 import { EquipmentCreatePage } from "../pages/EquipmentCreatePage";
@@ -8,8 +9,14 @@ import { EquipmentViewPage } from "../pages/EquipmentViewPage";
 import { ProfilePage } from "../pages/ProfilePage";
 import { SearchPage } from "../pages/SearchPage";
 import { UsersPage } from "../pages/UsersPage";
-import type { EmployeeProfile, UserPhoto } from "../shared/api/user-profile-api";
-import { getHashRouteParam, getSafeReturnTo } from "../shared/lib/hash-navigation";
+import type {
+  EmployeeProfile,
+  UserPhoto,
+} from "../shared/api/user-profile-api";
+import {
+  getHashRouteParam,
+  getSafeReturnTo,
+} from "../shared/lib/hash-navigation";
 import "./AppShell.css";
 
 type AppShellUser = {
@@ -29,7 +36,12 @@ type AppShellProps = {
   user: AppShellUser | null;
 };
 
-export function AppShell({ onLogout, onUserRefresh, route, user }: AppShellProps) {
+export function AppShell({
+  onLogout,
+  onUserRefresh,
+  route,
+  user,
+}: AppShellProps) {
   const isDashboardRoute = route === "#/dashboard";
   const isDictionariesRoute = route === "#/dictionaries";
   const isEquipmentRoute = route === "#/equipment";
@@ -37,7 +49,9 @@ export function AppShell({ onLogout, onUserRefresh, route, user }: AppShellProps
   const isSearchRoute = route === "#/search" || route.startsWith("#/search?");
   const isUsersRoute = route === "#/users";
   const isEquipmentCreateRoute = route === "#/equipment/create";
-  const equipmentEditMatch = route.match(/^#\/equipment\/(\d+)\/edit(?:\?.*)?$/);
+  const equipmentEditMatch = route.match(
+    /^#\/equipment\/(\d+)\/edit(?:\?.*)?$/,
+  );
   const equipmentEditId = equipmentEditMatch
     ? Number(equipmentEditMatch[1])
     : null;
@@ -47,17 +61,13 @@ export function AppShell({ onLogout, onUserRefresh, route, user }: AppShellProps
   const equipmentEditReturnTo = getSafeReturnTo(
     getHashRouteParam(route, "returnTo"),
   );
-  const equipmentViewMatch = route.match(
-    /^#\/equipment\/(\d+)(?:\?.*)?$/,
-  );
+  const equipmentViewMatch = route.match(/^#\/equipment\/(\d+)(?:\?.*)?$/);
   const equipmentViewId = equipmentViewMatch
     ? Number(equipmentViewMatch[1])
     : null;
-  const equipmentViewTabParam = getHashRouteParam(route, "tab");
-  const equipmentViewTab =
-    equipmentViewTabParam === "documents" || equipmentViewTabParam === "history"
-      ? equipmentViewTabParam
-      : "details";
+  const equipmentViewTab = parseEquipmentViewTab(
+    getHashRouteParam(route, "tab"),
+  );
   const equipmentViewReturnTo = getSafeReturnTo(
     getHashRouteParam(route, "returnTo"),
   );

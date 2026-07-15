@@ -1,1 +1,5 @@
-export { canCreateEquipment, canEditEquipment } from './equipment-permissions';
+export {
+  canCreateEquipment,
+  canEditEquipment,
+  canManageEquipmentEvents,
+} from './equipment-permissions';

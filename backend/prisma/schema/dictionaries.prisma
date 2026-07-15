@@ -1,7 +1,7 @@
 model Manufacturer {
-  id        Int         @id @default(autoincrement())
-  name      String      @unique @db.VarChar(128)
-  isActive  Boolean     @default(true) @map("is_active")
+  id        Int              @id @default(autoincrement())
+  name      String           @unique @db.VarChar(128)
+  isActive  Boolean          @default(true) @map("is_active")
   equipment Equipment[]
   models    EquipmentModel[]
 
@@ -9,13 +9,13 @@ model Manufacturer {
 }
 
 model EquipmentModel {
-  id             Int          @id @default(autoincrement())
-  name           String       @db.VarChar(128)
-  isActive       Boolean      @default(true) @map("is_active")
-  manufacturerId Int          @map("manufacturer_id")
-  manufacturer   Manufacturer @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
-  equipment      Equipment[]
-  eventTypes     EquipmentModelEventType[]
+  id                  Int                           @id @default(autoincrement())
+  name                String                        @db.VarChar(128)
+  isActive            Boolean                       @default(true) @map("is_active")
+  manufacturerId      Int                           @map("manufacturer_id")
+  manufacturer        Manufacturer                  @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
+  equipment           Equipment[]
+  maintenanceSettings EquipmentMaintenanceSetting[]
 
   @@unique([manufacturerId, name], map: "uq_equipment_models_manufacturer_name")
   @@index([manufacturerId], map: "idx_equipment_models_manufacturer_id")
@@ -23,23 +23,14 @@ model EquipmentModel {
 }
 
 model EquipmentEventType {
-  id         Int                       @id @default(autoincrement())
-  name       String                    @unique(map: "uq_equipment_event_types_name") @db.VarChar(64)
-  code       String                    @unique(map: "uq_equipment_event_types_code") @db.VarChar(32)
-  isActive   Boolean                   @default(true) @map("is_active")
-  models     EquipmentModelEventType[]
-  events     EquipmentEvent[]
+  id                  Int                           @id @default(autoincrement())
+  name                String                        @unique(map: "uq_equipment_event_types_name") @db.VarChar(64)
+  code                String                        @unique(map: "uq_equipment_event_types_code") @db.VarChar(32)
+  isActive            Boolean                       @default(true) @map("is_active")
+  events              EquipmentEvent[]
+  maintenanceSettings EquipmentMaintenanceSetting[]
 
   @@map("equipment_event_types")
-}
-
-enum EquipmentMaintenancePeriodicityUnit {
-  DAY
-  WEEK
-  MONTH
-  YEAR
-
-  @@map("equipment_maintenance_periodicity_unit")
 }
 
 enum EquipmentMaintenanceExecutionType {
@@ -49,18 +40,25 @@ enum EquipmentMaintenanceExecutionType {
   @@map("equipment_maintenance_execution_type")
 }
 
-model EquipmentModelEventType {
-  equipmentModelId  Int                                 @map("equipment_model_id")
-  eventTypeId       Int                                 @map("event_type_id")
+model EquipmentMaintenanceSetting {
+  id                  Int                               @id @default(autoincrement())
+  equipmentModelId    Int                               @map("equipment_model_id")
+  maintenanceTypeId   Int                               @map("maintenance_type_id")
+  executionType       EquipmentMaintenanceExecutionType @map("execution_type")
+  periodicityYears    Int?                              @map("periodicity_years")
+  periodicityMonths   Int?                              @map("periodicity_months")
+  periodicityWeeks    Int?                              @map("periodicity_weeks")
+  periodicityDays     Int?                              @map("periodicity_days")
   checklistTemplateId Int?                              @map("checklist_template_id")
-  periodicityValue  Int?                                @map("periodicity_value")
-  periodicityUnit   EquipmentMaintenancePeriodicityUnit? @map("periodicity_unit")
-  executionType     EquipmentMaintenanceExecutionType    @map("execution_type")
-  equipmentModel    EquipmentModel                      @relation(fields: [equipmentModelId], references: [id], onDelete: Restrict)
-  eventType         EquipmentEventType                  @relation(fields: [eventTypeId], references: [id], onDelete: Restrict)
+  createdAt           DateTime                          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime                          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@id([equipmentModelId, eventTypeId], map: "pk_equipment_model_event_types")
-  @@map("equipment_model_event_types")
+  equipmentModel  EquipmentModel    @relation(fields: [equipmentModelId], references: [id], onDelete: Restrict)
+  maintenanceType EquipmentEventType @relation(fields: [maintenanceTypeId], references: [id], onDelete: Restrict)
+
+  @@unique([equipmentModelId, maintenanceTypeId], map: "uq_equipment_maintenance_settings_model_type")
+  @@index([maintenanceTypeId], map: "idx_equipment_maintenance_settings_type_id")
+  @@map("equipment_maintenance_settings")
 }
 
 model Country {
