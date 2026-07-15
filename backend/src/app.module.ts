@@ -4,8 +4,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AppAuthModule } from './auth/auth.module';
 import { DictionariesAdminModule } from './dictionaries-admin/dictionaries-admin.module';
+import { EquipmentEventsModule } from './equipment-events/equipment-events.module';
 import { EquipmentModule } from './equipment/equipment.module';
-import { PrismaService } from './prisma/prisma.service';
 import { SearchModule } from './search/search.module';
 import { StorageModule } from './storage/storage.module';
 import { UsersAdminModule } from './users-admin/users-admin.module';
@@ -16,6 +16,7 @@ import { UsersModule } from './users/users.module';
     ConfigModule.forRoot({ isGlobal: true }),
     AppAuthModule,
     DictionariesAdminModule,
+    EquipmentEventsModule,
     EquipmentModule,
     SearchModule,
     StorageModule,
@@ -23,6 +24,6 @@ import { UsersModule } from './users/users.module';
     UsersModule,
   ],
   controllers: [AppController],
-  providers: [AppService, PrismaService],
+  providers: [AppService],
 })
 export class AppModule {}

@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaModule } from '../../prisma/prisma.module';
 import { IdentityNumberingService } from './identity-numbering.service';
 
 @Module({
-  providers: [IdentityNumberingService, PrismaService],
+  imports: [PrismaModule],
+  providers: [IdentityNumberingService],
   exports: [IdentityNumberingService],
 })
 export class NumberingModule {}

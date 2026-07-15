@@ -6,6 +6,7 @@ enum EquipmentEventSource {
 }
 
 enum EquipmentEventStatus {
+  DRAFT
   CREATED
   COMPLETED
   CANCELLED
@@ -24,12 +25,14 @@ model EquipmentEvent {
   factDate            DateTime?            @map("fact_date") @db.Date
   createdByEmployeeId Int                  @map("created_by_employee_id")
   createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  version             Int                  @default(1)
 
   equipment           Equipment            @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
   eventType           EquipmentEventType    @relation(fields: [eventTypeId], references: [id], onDelete: Restrict)
   createdByEmployee   Employee             @relation("EquipmentEventCreatedBy", fields: [createdByEmployeeId], references: [id], onDelete: Restrict)
   responsibles         EquipmentEventResponsible[]
 
+  @@index([id, version], map: "idx_equipment_events_id_version")
   @@map("equipment_events")
 }
 

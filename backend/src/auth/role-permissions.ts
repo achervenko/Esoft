@@ -6,6 +6,11 @@ const rolesAllowedToManageFiles = new Set([
   'engineer',
 ]);
 
+const rolesAllowedToManageEquipmentEvents = new Set([
+  'admin',
+  'chief_engineer',
+]);
+
 export function assertCanManageFiles(role: unknown) {
   if (!role || !rolesAllowedToManageFiles.has(String(role))) {
     throw new ForbiddenException({
@@ -29,5 +34,14 @@ export function assertAdmin(role: unknown) {
 export function assertCanEditEquipment(role: unknown) {
   if (!role || !rolesAllowedToManageFiles.has(String(role))) {
     throw new ForbiddenException('Недостаточно прав для редактирования.');
+  }
+}
+
+export function assertCanManageEquipmentEvents(role: unknown) {
+  if (!role || !rolesAllowedToManageEquipmentEvents.has(String(role))) {
+    throw new ForbiddenException({
+      code: 'FORBIDDEN',
+      message: 'Недостаточно прав для управления событиями оборудования.',
+    });
   }
 }

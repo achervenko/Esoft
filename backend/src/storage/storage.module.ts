@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { ImageProcessingModule } from '../image-processing/image-processing.module';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaModule } from '../prisma/prisma.module';
 import { loadStorageConfig } from './config/storage-config.loader';
 import { FilesController } from './files.controller';
 import { s3ClientProvider } from './s3/s3-client.provider';
@@ -15,7 +15,7 @@ import { StorageOwnerService } from './storage-owner.service';
 import { STORAGE_CONFIG } from './storage.tokens';
 
 @Module({
-  imports: [AuditModule, ImageProcessingModule],
+  imports: [AuditModule, ImageProcessingModule, PrismaModule],
   controllers: [FilesController, StorageController],
   exports: [StorageFileService, StorageObjectService, StorageOwnerService],
   providers: [
@@ -24,7 +24,6 @@ import { STORAGE_CONFIG } from './storage.tokens';
       useFactory: loadStorageConfig,
     },
     s3ClientProvider,
-    PrismaService,
     StorageFilePrimaryService,
     StorageFileService,
     StorageFileUploadService,
