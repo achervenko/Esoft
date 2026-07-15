@@ -33,7 +33,7 @@ Query:
 
 ```text
 equipmentVisibleId?: number
-eventTypeId?: number
+maintenanceTypeId?: number
 status?: DRAFT | CREATED | COMPLETED | CANCELLED
 responsibleEmployeeId?: number
 dateFrom?: YYYY-MM-DD
@@ -57,17 +57,17 @@ id DESC
 
 Возвращает карточку события.
 
-## POST /api/equipment-events/manual
+## POST /api/equipment/:visibleId/events/manual
 
-Создаёт ручное событие.
+Создаёт ручное событие внутри карточки оборудования.
 
 Body:
 
 ```json
 {
-  "equipmentVisibleId": 1,
-  "eventTypeId": 1,
+  "maintenanceTypeId": 1,
   "factDate": "2026-07-15",
+  "note": "Внеплановая диагностика после вибрации",
   "responsibleEmployeeIds": [1, 2]
 }
 ```
@@ -76,8 +76,12 @@ Body:
 
 - `factDate` обязательна и не может быть в будущем;
 - минимум один ответственный обязателен после дедупликации;
-- тип события должен быть активен;
-- тип события должен быть доступен модели оборудования.
+- вид обслуживания должен быть активен;
+- для модели оборудования должна существовать настройка этого вида обслуживания.
+- `maintenanceSettingId` сохраняется как ссылка на настройку обслуживания и
+  станет `null`, если настройку удалить;
+- `executionType`, `checklistTemplateId` и выбранный вид обслуживания
+  сохраняются в событие снимком на момент создания.
 
 Результат:
 
@@ -97,6 +101,7 @@ Body:
 {
   "version": 1,
   "factDate": "2026-07-14",
+  "note": "Комментарий уточнён",
   "responsibleEmployeeIds": [2, 3]
 }
 ```
@@ -105,8 +110,9 @@ Body:
 
 ```text
 equipmentVisibleId?: number
-eventTypeId?: number
+maintenanceTypeId?: number
 factDate?: YYYY-MM-DD
+note?: string | null
 responsibleEmployeeIds?: number[]
 version: number
 ```
@@ -115,7 +121,9 @@ version: number
 
 Если PATCH не меняет бизнес-данные, событие возвращается без увеличения
 `version` и без audit-записи. До `updateMany` сервис сравнивает оборудование,
-тип события, фактическую дату и множество ответственных.
+вид обслуживания, фактическую дату, комментарий и множество ответственных. При
+изменении оборудования или вида обслуживания снимок настройки обслуживания
+пересчитывается.
 
 ## POST /api/equipment-events/:id/complete
 
@@ -168,8 +176,11 @@ entityId = event.id
 
 ```text
 EQUIPMENT_NOT_FOUND
-EVENT_TYPE_NOT_FOUND
-EVENT_TYPE_NOT_AVAILABLE_FOR_MODEL
+MAINTENANCE_TYPE_NOT_FOUND
+MAINTENANCE_TYPE_INACTIVE
+MAINTENANCE_TYPE_INVALID
+MAINTENANCE_TYPE_REQUIRED
+MAINTENANCE_SETTING_NOT_FOUND
 RESPONSIBLES_REQUIRED
 RESPONSIBLE_NOT_FOUND
 USER_EMPLOYEE_NOT_FOUND

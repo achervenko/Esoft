@@ -55,6 +55,7 @@ model EquipmentMaintenanceSetting {
 
   equipmentModel  EquipmentModel    @relation(fields: [equipmentModelId], references: [id], onDelete: Restrict)
   maintenanceType EquipmentEventType @relation(fields: [maintenanceTypeId], references: [id], onDelete: Restrict)
+  events           EquipmentEvent[]
 
   @@unique([equipmentModelId, maintenanceTypeId], map: "uq_equipment_maintenance_settings_model_type")
   @@index([maintenanceTypeId], map: "idx_equipment_maintenance_settings_type_id")

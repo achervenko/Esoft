@@ -14,8 +14,9 @@ import { EquipmentEventsAssertions } from './equipment-events.assertions';
 export type CreateManualEquipmentEventCommand = {
   kind: 'manual';
   equipmentVisibleId: number;
-  eventTypeId: number;
   factDate: Date;
+  maintenanceTypeId: number;
+  note: string | null;
   responsibleEmployeeIds: number[];
 };
 
@@ -57,17 +58,23 @@ export class EquipmentEventsCreator {
     const responsibleEmployeeIds = [
       ...new Set(command.responsibleEmployeeIds),
     ];
+    const maintenanceTypeId =
+      command.kind === 'manual' ? command.maintenanceTypeId : command.eventTypeId;
 
-    const equipment = await this.assertions.loadValidEventCreationInput(tx, {
-      equipmentVisibleId: command.equipmentVisibleId,
-      eventTypeId: command.eventTypeId,
-      responsibleEmployeeIds,
-    });
+    const { equipment, maintenanceSetting } =
+      await this.assertions.loadValidEventCreationInput(tx, {
+        equipmentVisibleId: command.equipmentVisibleId,
+        maintenanceTypeId,
+        responsibleEmployeeIds,
+      });
 
     const event = await tx.equipmentEvent.create({
       data: this.toCreateData(command, {
+        checklistTemplateId: maintenanceSetting.checklistTemplateId,
         createdByEmployeeId,
         equipmentId: equipment.id,
+        executionType: maintenanceSetting.executionType,
+        maintenanceSettingId: maintenanceSetting.id,
       }),
     });
 
@@ -90,15 +97,19 @@ export class EquipmentEventsCreator {
   private toCreateData(
     command: CreateEquipmentEventCommand,
     common: {
+      checklistTemplateId: number | null;
       createdByEmployeeId: number;
       equipmentId: number;
+      executionType: Prisma.EquipmentEventUncheckedCreateInput['executionType'];
+      maintenanceSettingId: number;
     },
   ): Prisma.EquipmentEventUncheckedCreateInput {
     if (command.kind === 'manual') {
       return {
         ...common,
-        eventTypeId: command.eventTypeId,
+        eventTypeId: command.maintenanceTypeId,
         factDate: command.factDate,
+        note: command.note,
         originalPlannedDate: null,
         plannedDate: null,
         source: EquipmentEventSource.MANUAL,

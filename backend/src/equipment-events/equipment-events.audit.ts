@@ -14,8 +14,12 @@ export type EquipmentEventAuditSnapshot = {
   eventTypeCode: string;
   eventTypeId: number;
   eventTypeName: string;
+  executionType: string;
   factDate: Date | null;
   id: number;
+  checklistTemplateId: number | null;
+  maintenanceSettingId: number | null;
+  note: string | null;
   originalPlannedDate: Date | null;
   plannedDate: Date | null;
   responsibles: string[];
@@ -45,8 +49,12 @@ export async function getEquipmentEventAuditSnapshot(
     eventTypeCode: event.eventType.code,
     eventTypeId: event.eventType.id,
     eventTypeName: event.eventType.name,
+    executionType: event.executionType,
     factDate: event.factDate,
     id: event.id,
+    checklistTemplateId: event.checklistTemplateId,
+    maintenanceSettingId: event.maintenanceSettingId,
+    note: event.note,
     originalPlannedDate: event.originalPlannedDate,
     plannedDate: event.plannedDate,
     responsibles: event.responsibles.map((item) => employeeLabel(item.employee)),
@@ -65,8 +73,19 @@ export async function writeEquipmentEventCreatedAudit(
   await tx.auditLog.createMany({
     data: [
       auditLine(params, 'Оборудование', equipmentLabel(params.event)),
-      auditLine(params, 'Тип события', eventTypeLabel(params.event)),
-      auditLine(params, 'Источник', params.event.source),
+      auditLine(params, 'Вид обслуживания', eventTypeLabel(params.event)),
+      auditLine(
+        params,
+        'Настройка обслуживания',
+        formatNullableId(params.event.maintenanceSettingId),
+      ),
+      auditLine(params, 'Способ выполнения', params.event.executionType),
+      auditLine(
+        params,
+        'Шаблон чек-листа',
+        formatNullableId(params.event.checklistTemplateId),
+      ),
+      auditLine(params, 'Основание события', params.event.source),
       auditLine(params, 'Статус', params.event.status),
       auditLine(params, 'Фактическая дата', formatDate(params.event.factDate)),
       auditLine(
@@ -80,6 +99,7 @@ export async function writeEquipmentEventCreatedAudit(
         formatDate(params.event.originalPlannedDate),
       ),
       auditLine(params, 'Ответственные', responsibleList(params.event)),
+      auditLine(params, 'Комментарий', formatNullableText(params.event.note)),
     ],
   });
 }
@@ -136,9 +156,24 @@ function buildUpdateLines(params: {
       oldValue: equipmentLabel(params.oldEvent),
     },
     {
-      fieldName: 'Тип события',
+      fieldName: 'Вид обслуживания',
       newValue: eventTypeLabel(params.newEvent),
       oldValue: eventTypeLabel(params.oldEvent),
+    },
+    {
+      fieldName: 'Настройка обслуживания',
+      newValue: formatNullableId(params.newEvent.maintenanceSettingId),
+      oldValue: formatNullableId(params.oldEvent.maintenanceSettingId),
+    },
+    {
+      fieldName: 'Способ выполнения',
+      newValue: params.newEvent.executionType,
+      oldValue: params.oldEvent.executionType,
+    },
+    {
+      fieldName: 'Шаблон чек-листа',
+      newValue: formatNullableId(params.newEvent.checklistTemplateId),
+      oldValue: formatNullableId(params.oldEvent.checklistTemplateId),
     },
     {
       fieldName: 'Фактическая дата',
@@ -149,6 +184,11 @@ function buildUpdateLines(params: {
       fieldName: 'Ответственные',
       newValue: responsibleList(params.newEvent),
       oldValue: responsibleList(params.oldEvent),
+    },
+    {
+      fieldName: 'Комментарий',
+      newValue: formatNullableText(params.newEvent.note),
+      oldValue: formatNullableText(params.oldEvent.note),
     },
   ];
 
@@ -213,4 +253,12 @@ function responsibleList(event: EquipmentEventAuditSnapshot) {
 
 function formatDate(value: Date | null) {
   return value?.toISOString().slice(0, 10) ?? 'не указано';
+}
+
+function formatNullableId(value: number | null) {
+  return value === null ? 'не указано' : `#${value}`;
+}
+
+function formatNullableText(value: string | null) {
+  return value ?? 'не указано';
 }

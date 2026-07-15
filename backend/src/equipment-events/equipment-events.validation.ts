@@ -2,9 +2,9 @@ import { EquipmentEventStatus } from '@prisma/client';
 import { throwEquipmentEventBadRequest } from './equipment-events.errors';
 
 export type CreateManualEquipmentEventDto = {
-  equipmentVisibleId?: unknown;
-  eventTypeId?: unknown;
   factDate?: unknown;
+  maintenanceTypeId?: unknown;
+  note?: unknown;
   responsibleEmployeeIds?: unknown;
 };
 
@@ -14,8 +14,9 @@ export type CompleteEquipmentEventDto = {
 
 export type UpdateDraftEquipmentEventDto = {
   equipmentVisibleId?: unknown;
-  eventTypeId?: unknown;
   factDate?: unknown;
+  maintenanceTypeId?: unknown;
+  note?: unknown;
   responsibleEmployeeIds?: unknown;
   version?: unknown;
 };
@@ -24,8 +25,8 @@ export type EquipmentEventsQueryDto = {
   dateFrom?: unknown;
   dateTo?: unknown;
   equipmentVisibleId?: unknown;
-  eventTypeId?: unknown;
   limit?: unknown;
+  maintenanceTypeId?: unknown;
   offset?: unknown;
   responsibleEmployeeId?: unknown;
   status?: unknown;
@@ -33,8 +34,9 @@ export type EquipmentEventsQueryDto = {
 
 export type CreateManualEquipmentEventData = {
   equipmentVisibleId: number;
-  eventTypeId: number;
   factDate: Date;
+  maintenanceTypeId: number;
+  note: string | null;
   responsibleEmployeeIds: number[];
 };
 
@@ -44,8 +46,9 @@ export type CompleteEquipmentEventData = {
 
 export type UpdateDraftEquipmentEventData = {
   equipmentVisibleId?: number;
-  eventTypeId?: number;
   factDate?: Date;
+  maintenanceTypeId?: number;
+  note?: string | null;
   responsibleEmployeeIds?: number[];
   version: number;
 };
@@ -54,8 +57,8 @@ export type EquipmentEventsQuery = {
   dateFrom?: Date;
   dateTo?: Date;
   equipmentVisibleId?: number;
-  eventTypeId?: number;
   limit: number;
+  maintenanceTypeId?: number;
   offset: number;
   responsibleEmployeeId?: number;
   status?: EquipmentEventStatus;
@@ -67,25 +70,23 @@ const BUSINESS_TIME_ZONE = 'Europe/Moscow';
 
 export function parseCreateManualEventDto(
   dto: CreateManualEquipmentEventDto | undefined,
+  equipmentVisibleId: number,
 ): CreateManualEquipmentEventData {
   const body = dto ?? {};
 
   return {
-    equipmentVisibleId: parsePositiveInteger(
-      body.equipmentVisibleId,
-      'EQUIPMENT_REQUIRED',
-      'Укажите оборудование.',
-    ),
-    eventTypeId: parsePositiveInteger(
-      body.eventTypeId,
-      'EVENT_TYPE_REQUIRED',
-      'Укажите тип события.',
-    ),
+    equipmentVisibleId,
     factDate: parseRequiredFactDate(
       body.factDate,
       'FACT_DATE_REQUIRED',
       'Укажите фактическую дату события.',
     ),
+    maintenanceTypeId: parsePositiveInteger(
+      body.maintenanceTypeId,
+      'MAINTENANCE_TYPE_REQUIRED',
+      'Укажите вид обслуживания.',
+    ),
+    note: parseOptionalNullableText(body.note, 'NOTE_INVALID'),
     responsibleEmployeeIds: parseResponsibleEmployeeIds(
       body.responsibleEmployeeIds,
     ),
@@ -124,11 +125,6 @@ export function parseUpdateDraftEventDto(
       'EQUIPMENT_INVALID',
       'Некорректный ID оборудования.',
     ),
-    eventTypeId: parseOptionalPositiveInteger(
-      body.eventTypeId,
-      'EVENT_TYPE_INVALID',
-      'Некорректный тип события.',
-    ),
     factDate:
       body.factDate === undefined ||
       body.factDate === null ||
@@ -139,6 +135,15 @@ export function parseUpdateDraftEventDto(
             'FACT_DATE_INVALID',
             'Некорректная фактическая дата.',
           ),
+    maintenanceTypeId: parseOptionalPositiveInteger(
+      body.maintenanceTypeId,
+      'MAINTENANCE_TYPE_INVALID',
+      'Некорректный вид обслуживания.',
+    ),
+    note:
+      body.note === undefined
+        ? undefined
+        : parseOptionalNullableText(body.note, 'NOTE_INVALID'),
     responsibleEmployeeIds:
       body.responsibleEmployeeIds === undefined
         ? undefined
@@ -152,8 +157,9 @@ export function parseUpdateDraftEventDto(
 
   if (
     data.equipmentVisibleId === undefined &&
-    data.eventTypeId === undefined &&
     data.factDate === undefined &&
+    data.maintenanceTypeId === undefined &&
+    data.note === undefined &&
     data.responsibleEmployeeIds === undefined
   ) {
     throwEquipmentEventBadRequest(
@@ -176,10 +182,10 @@ export function parseEquipmentEventsQuery(
       'EQUIPMENT_INVALID',
       'Некорректный ID оборудования.',
     ),
-    eventTypeId: parseOptionalPositiveInteger(
-      query.eventTypeId,
-      'EVENT_TYPE_INVALID',
-      'Некорректный тип события.',
+    maintenanceTypeId: parseOptionalPositiveInteger(
+      query.maintenanceTypeId,
+      'MAINTENANCE_TYPE_INVALID',
+      'Некорректный вид обслуживания.',
     ),
     limit: parseLimit(query.limit),
     offset: parseOffset(query.offset),
@@ -299,6 +305,20 @@ function parseOptionalPositiveInteger(
   return parsePositiveInteger(value, code, message);
 }
 
+function parseOptionalNullableText(value: unknown, code: string) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value !== 'string') {
+    throwEquipmentEventBadRequest(code, 'Некорректный комментарий.');
+  }
+
+  const trimmedValue = value.trim();
+
+  return trimmedValue ? trimmedValue : null;
+}
+
 function parsePositiveInteger(value: unknown, code: string, message: string) {
   const numberValue = parseIntegerValue(value);
 
@@ -355,13 +375,15 @@ function parseDateString(value: unknown, code: string, message: string) {
 
 function parseIntegerValue(value: unknown) {
   if (typeof value === 'number') {
-    return Number.isInteger(value) && Number.isFinite(value)
+    return Number.isSafeInteger(value)
       ? value
       : undefined;
   }
 
   if (typeof value === 'string' && /^(0|[1-9]\d*)$/.test(value)) {
-    return Number(value);
+    const numberValue = Number(value);
+
+    return Number.isSafeInteger(numberValue) ? numberValue : undefined;
   }
 
   return undefined;

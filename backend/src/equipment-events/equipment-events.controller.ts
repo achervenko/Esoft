@@ -23,11 +23,11 @@ import {
   parseUpdateDraftEventDto,
 } from './equipment-events.validation';
 
-@Controller('api/equipment-events')
+@Controller('api')
 export class EquipmentEventsController {
   constructor(private readonly equipmentEventsService: EquipmentEventsService) {}
 
-  @Get()
+  @Get('equipment-events')
   findAll(
     @Query() query: EquipmentEventsQueryDto,
     @Session() _session: UserSession<Auth>,
@@ -35,7 +35,7 @@ export class EquipmentEventsController {
     return this.equipmentEventsService.findAll(parseEquipmentEventsQuery(query));
   }
 
-  @Get(':id')
+  @Get('equipment-events/:id')
   findOne(
     @Param('id', ParseIntPipe) id: number,
     @Session() _session: UserSession<Auth>,
@@ -43,20 +43,21 @@ export class EquipmentEventsController {
     return this.equipmentEventsService.findOne(id);
   }
 
-  @Post('manual')
+  @Post('equipment/:visibleId/events/manual')
   createManual(
+    @Param('visibleId', ParseIntPipe) visibleId: number,
     @Body() dto: CreateManualEquipmentEventDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
     assertCanManageEquipmentEvents(session.user.role);
 
     return this.equipmentEventsService.createManual(
-      parseCreateManualEventDto(dto),
+      parseCreateManualEventDto(dto, visibleId),
       session.user.id,
     );
   }
 
-  @Post(':id/complete')
+  @Post('equipment-events/:id/complete')
   complete(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: CompleteEquipmentEventDto | undefined,
@@ -71,7 +72,7 @@ export class EquipmentEventsController {
     );
   }
 
-  @Patch(':id')
+  @Patch('equipment-events/:id')
   updateDraft(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateDraftEquipmentEventDto | undefined,
@@ -86,7 +87,7 @@ export class EquipmentEventsController {
     );
   }
 
-  @Post(':id/cancel')
+  @Post('equipment-events/:id/cancel')
   cancel(
     @Param('id', ParseIntPipe) id: number,
     @Session() session: UserSession<Auth>,

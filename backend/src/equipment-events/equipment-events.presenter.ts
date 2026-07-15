@@ -9,7 +9,11 @@ export function toEquipmentEventListResponse(event: EquipmentEventListRecord) {
     source: event.source,
     status: event.status,
     version: event.version,
+    maintenanceSettingId: event.maintenanceSettingId,
+    executionType: event.executionType,
+    checklistTemplateId: event.checklistTemplateId,
     factDate: formatDate(event.factDate),
+    note: event.note,
     plannedDate: formatDate(event.plannedDate),
     equipment: {
       id: event.equipment.id,
@@ -20,7 +24,7 @@ export function toEquipmentEventListResponse(event: EquipmentEventListRecord) {
         name: event.equipment.model.name,
       },
     },
-    eventType: {
+    maintenanceType: {
       id: event.eventType.id,
       name: event.eventType.name,
       code: event.eventType.code,
@@ -28,7 +32,9 @@ export function toEquipmentEventListResponse(event: EquipmentEventListRecord) {
     responsibles: event.responsibles.map((item) =>
       toEmployeeResponse(item.employee),
     ),
-    checklist: null,
+    checklist: event.checklistTemplateId
+      ? { id: event.checklistTemplateId }
+      : null,
   };
 }
 
@@ -38,9 +44,13 @@ export function toEquipmentEventDetailResponse(event: EquipmentEventDetailRecord
     source: event.source,
     status: event.status,
     version: event.version,
+    maintenanceSettingId: event.maintenanceSettingId,
+    executionType: event.executionType,
+    checklistTemplateId: event.checklistTemplateId,
     originalPlannedDate: formatDate(event.originalPlannedDate),
     plannedDate: formatDate(event.plannedDate),
     factDate: formatDate(event.factDate),
+    note: event.note,
     createdAt: event.createdAt.toISOString(),
     equipment: {
       id: event.equipment.id,
@@ -55,7 +65,7 @@ export function toEquipmentEventDetailResponse(event: EquipmentEventDetailRecord
         },
       },
     },
-    eventType: {
+    maintenanceType: {
       id: event.eventType.id,
       name: event.eventType.name,
       code: event.eventType.code,
@@ -64,7 +74,9 @@ export function toEquipmentEventDetailResponse(event: EquipmentEventDetailRecord
     responsibles: event.responsibles.map((item) =>
       toEmployeeResponse(item.employee),
     ),
-    checklist: null,
+    checklist: event.checklistTemplateId
+      ? { id: event.checklistTemplateId }
+      : null,
   };
 }
 

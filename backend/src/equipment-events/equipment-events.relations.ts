@@ -67,14 +67,18 @@ const responsiblesResponseSelect = {
 } satisfies Prisma.EquipmentEventResponsibleFindManyArgs;
 
 export const equipmentEventListSelect = {
+  checklistTemplateId: true,
   equipment: {
     select: equipmentListSelect,
   },
   eventType: {
     select: eventTypeResponseSelect,
   },
+  executionType: true,
   factDate: true,
   id: true,
+  maintenanceSettingId: true,
+  note: true,
   plannedDate: true,
   responsibles: responsiblesResponseSelect,
   source: true,
@@ -83,6 +87,7 @@ export const equipmentEventListSelect = {
 } satisfies Prisma.EquipmentEventSelect;
 
 export const equipmentEventDetailSelect = {
+  checklistTemplateId: true,
   createdAt: true,
   createdByEmployee: {
     select: employeeResponseSelect,
@@ -93,8 +98,11 @@ export const equipmentEventDetailSelect = {
   eventType: {
     select: eventTypeResponseSelect,
   },
+  executionType: true,
   factDate: true,
   id: true,
+  maintenanceSettingId: true,
+  note: true,
   originalPlannedDate: true,
   plannedDate: true,
   responsibles: responsiblesResponseSelect,
@@ -104,6 +112,7 @@ export const equipmentEventDetailSelect = {
 } satisfies Prisma.EquipmentEventSelect;
 
 export const equipmentEventAuditSelect = {
+  checklistTemplateId: true,
   equipment: {
     select: {
       name: true,
@@ -117,8 +126,11 @@ export const equipmentEventAuditSelect = {
       name: true,
     },
   },
+  executionType: true,
   factDate: true,
   id: true,
+  maintenanceSettingId: true,
+  note: true,
   originalPlannedDate: true,
   plannedDate: true,
   responsibles: {

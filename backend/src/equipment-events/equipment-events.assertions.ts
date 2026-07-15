@@ -39,7 +39,7 @@ export class EquipmentEventsAssertions {
     tx: Prisma.TransactionClient,
     params: {
       equipmentVisibleId: number;
-      eventTypeId: number;
+      maintenanceTypeId: number;
       responsibleEmployeeIds: number[];
     },
   ) {
@@ -60,14 +60,14 @@ export class EquipmentEventsAssertions {
       );
     }
 
-    await this.assertActiveApplicableEventType(tx, {
+    const maintenanceSetting = await this.loadActiveApplicableMaintenanceSetting(tx, {
       equipmentModelId: equipment.modelId,
-      eventTypeId: params.eventTypeId,
+      maintenanceTypeId: params.maintenanceTypeId,
     });
 
     await this.assertEmployeesExist(tx, params.responsibleEmployeeIds);
 
-    return equipment;
+    return { equipment, maintenanceSetting };
   }
 
   async assertEventCanBeCompleted(
@@ -149,7 +149,7 @@ export class EquipmentEventsAssertions {
     params: {
       equipmentVisibleId?: number;
       eventId: number;
-      eventTypeId?: number;
+      maintenanceTypeId?: number;
       responsibleEmployeeIds?: number[];
     },
   ) {
@@ -165,12 +165,14 @@ export class EquipmentEventsAssertions {
         eventTypeId: true,
         factDate: true,
         id: true,
+        note: true,
         responsibles: {
           select: {
             employeeId: true,
           },
         },
         status: true,
+        version: true,
       },
     });
 
@@ -190,18 +192,18 @@ export class EquipmentEventsAssertions {
 
     const shouldValidateEventType =
       params.equipmentVisibleId !== undefined ||
-      params.eventTypeId !== undefined;
+      params.maintenanceTypeId !== undefined;
     const equipment = params.equipmentVisibleId
       ? await this.loadEquipmentByVisibleId(tx, params.equipmentVisibleId)
       : event.equipment;
-    const eventTypeId = params.eventTypeId ?? event.eventTypeId;
+    const maintenanceTypeId = params.maintenanceTypeId ?? event.eventTypeId;
 
-    if (shouldValidateEventType) {
-      await this.assertActiveApplicableEventType(tx, {
-        equipmentModelId: equipment.modelId,
-        eventTypeId,
-      });
-    }
+    const maintenanceSetting = shouldValidateEventType
+      ? await this.loadActiveApplicableMaintenanceSetting(tx, {
+          equipmentModelId: equipment.modelId,
+          maintenanceTypeId,
+        })
+      : undefined;
 
     if (params.responsibleEmployeeIds) {
       await this.assertEmployeesExist(tx, params.responsibleEmployeeIds);
@@ -209,32 +211,42 @@ export class EquipmentEventsAssertions {
 
     return {
       currentFactDate: event.factDate,
+      currentNote: event.note,
       currentResponsibleEmployeeIds: event.responsibles.map(
         (item) => item.employeeId,
       ),
       equipmentId:
         equipment.id === event.equipment.id ? undefined : equipment.id,
       eventTypeId:
-        eventTypeId === event.eventTypeId ? undefined : eventTypeId,
+        maintenanceTypeId === event.eventTypeId ? undefined : maintenanceTypeId,
+      maintenanceSetting,
+      version: event.version,
     };
   }
 
-  private async assertActiveApplicableEventType(
+  private async loadActiveApplicableMaintenanceSetting(
     tx: Prisma.TransactionClient,
     params: {
       equipmentModelId: number;
-      eventTypeId: number;
+      maintenanceTypeId: number;
     },
   ) {
     const eventType = await tx.equipmentEventType.findUnique({
-      where: { id: params.eventTypeId },
+      where: { id: params.maintenanceTypeId },
       select: { id: true, isActive: true },
     });
 
-    if (!eventType || !eventType.isActive) {
+    if (!eventType) {
       throwEquipmentEventNotFound(
-        'EVENT_TYPE_NOT_FOUND',
-        'Тип события не найден или отключён.',
+        'MAINTENANCE_TYPE_NOT_FOUND',
+        'Вид обслуживания не найден.',
+      );
+    }
+
+    if (!eventType.isActive) {
+      throwEquipmentEventBadRequest(
+        'MAINTENANCE_TYPE_INACTIVE',
+        'Вид обслуживания отключён.',
       );
     }
 
@@ -242,18 +254,24 @@ export class EquipmentEventsAssertions {
       where: {
         equipmentModelId_maintenanceTypeId: {
           equipmentModelId: params.equipmentModelId,
-          maintenanceTypeId: params.eventTypeId,
+          maintenanceTypeId: params.maintenanceTypeId,
         },
       },
-      select: { id: true },
+      select: {
+        checklistTemplateId: true,
+        executionType: true,
+        id: true,
+      },
     });
 
     if (!maintenanceSetting) {
       throwEquipmentEventBadRequest(
-        'EVENT_TYPE_NOT_AVAILABLE_FOR_MODEL',
-        'Этот вид обслуживания недоступен для модели оборудования.',
+        'MAINTENANCE_SETTING_NOT_FOUND',
+        'Настройка обслуживания для этого вида не найдена.',
       );
     }
+
+    return maintenanceSetting;
   }
 
   private async loadEquipmentByVisibleId(

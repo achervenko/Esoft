@@ -41,7 +41,9 @@ export class EquipmentEventsService {
       ...(query.equipmentVisibleId
         ? { equipment: { visibleId: query.equipmentVisibleId } }
         : {}),
-      ...(query.eventTypeId ? { eventTypeId: query.eventTypeId } : {}),
+      ...(query.maintenanceTypeId
+        ? { eventTypeId: query.maintenanceTypeId }
+        : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.responsibleEmployeeId
         ? {
@@ -102,8 +104,9 @@ export class EquipmentEventsService {
       {
         kind: 'manual',
         equipmentVisibleId: data.equipmentVisibleId,
-        eventTypeId: data.eventTypeId,
         factDate: data.factDate,
+        maintenanceTypeId: data.maintenanceTypeId,
+        note: data.note,
         responsibleEmployeeIds: data.responsibleEmployeeIds,
       },
       userId,
@@ -121,10 +124,11 @@ export class EquipmentEventsService {
       const updateInput = await this.assertions.loadValidDraftUpdateInput(tx, {
         equipmentVisibleId: data.equipmentVisibleId,
         eventId: id,
-        eventTypeId: data.eventTypeId,
+        maintenanceTypeId: data.maintenanceTypeId,
         responsibleEmployeeIds: data.responsibleEmployeeIds,
       });
       const oldAuditSnapshot = await getEquipmentEventAuditSnapshot(tx, id);
+      this.assertDraftVersionMatches(updateInput.version, data.version);
       const hasChanges = this.hasDraftChanges(updateInput, data);
 
       if (!hasChanges) {
@@ -144,7 +148,16 @@ export class EquipmentEventsService {
           ...(updateInput.eventTypeId
             ? { eventTypeId: updateInput.eventTypeId }
             : {}),
+          ...(updateInput.maintenanceSetting
+            ? {
+                checklistTemplateId:
+                  updateInput.maintenanceSetting.checklistTemplateId,
+                executionType: updateInput.maintenanceSetting.executionType,
+                maintenanceSettingId: updateInput.maintenanceSetting.id,
+              }
+            : {}),
           ...(data.factDate ? { factDate: data.factDate } : {}),
+          ...(data.note !== undefined ? { note: data.note } : {}),
           status: EquipmentEventStatus.DRAFT,
           version: {
             increment: 1,
@@ -160,11 +173,13 @@ export class EquipmentEventsService {
       }
 
       if (data.responsibleEmployeeIds) {
+        const responsibleEmployeeIds = normalizeIds(data.responsibleEmployeeIds);
+
         await tx.equipmentEventResponsible.deleteMany({
           where: { equipmentEventId: id },
         });
         await tx.equipmentEventResponsible.createMany({
-          data: data.responsibleEmployeeIds.map((employeeId) => ({
+          data: responsibleEmployeeIds.map((employeeId) => ({
             employeeId,
             equipmentEventId: id,
           })),
@@ -201,7 +216,7 @@ export class EquipmentEventsService {
         );
       }
 
-      await this.assertChecklistAllowsCompletion(id);
+      await this.assertChecklistAllowsCompletion(tx, id);
 
       const updateResult = await tx.equipmentEvent.updateMany({
         where: {
@@ -274,16 +289,35 @@ export class EquipmentEventsService {
     return this.findOne(updatedEventId);
   }
 
-  private async assertChecklistAllowsCompletion(_eventId: number) {
+  private async assertChecklistAllowsCompletion(
+    _tx: Prisma.TransactionClient,
+    _eventId: number,
+  ) {
     return;
+  }
+
+  private assertDraftVersionMatches(currentVersion: number, expectedVersion: number) {
+    if (currentVersion !== expectedVersion) {
+      throwEquipmentEventConflict(
+        'EVENT_VERSION_CONFLICT',
+        'Событие уже изменено другим запросом. Обновите данные и повторите действие.',
+      );
+    }
   }
 
   private hasDraftChanges(
     updateInput: {
       currentFactDate: Date | null;
+      currentNote: string | null;
       currentResponsibleEmployeeIds: number[];
       equipmentId?: number;
       eventTypeId?: number;
+      maintenanceSetting?: {
+        checklistTemplateId: number | null;
+        executionType: Prisma.EquipmentEventUpdateInput['executionType'];
+        id: number;
+      };
+      version: number;
     },
     data: UpdateDraftEquipmentEventData,
   ) {
@@ -291,6 +325,7 @@ export class EquipmentEventsService {
       updateInput.equipmentId !== undefined ||
       updateInput.eventTypeId !== undefined ||
       this.hasFactDateChange(updateInput.currentFactDate, data.factDate) ||
+      this.hasNoteChange(updateInput.currentNote, data.note) ||
       this.hasResponsibleEmployeesChange(
         updateInput.currentResponsibleEmployeeIds,
         data.responsibleEmployeeIds,
@@ -315,6 +350,10 @@ export class EquipmentEventsService {
     }
 
     return normalizeIds(currentIds).join(',') !== normalizeIds(nextIds).join(',');
+  }
+
+  private hasNoteChange(currentValue: string | null, nextValue?: string | null) {
+    return nextValue !== undefined && currentValue !== nextValue;
   }
 }
 
