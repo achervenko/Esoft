@@ -1,11 +1,11 @@
 model Employee {
-  id                   Int            @id @default(autoincrement())
-  lastName             String         @map("last_name") @db.VarChar(64)
-  firstName            String         @map("first_name") @db.VarChar(64)
-  middleName           String?        @map("middle_name") @db.VarChar(64)
-  position             String         @db.VarChar(64)
+  id                   Int              @id @default(autoincrement())
+  lastName             String           @map("last_name") @db.VarChar(64)
+  firstName            String           @map("first_name") @db.VarChar(64)
+  middleName           String?          @map("middle_name") @db.VarChar(64)
+  position             String           @db.VarChar(64)
   employeeUsers        EmployeeUser[]
-  responsibleEquipment Equipment[]    @relation("EquipmentResponsibleEmployee")
+  responsibleEquipment Equipment[]      @relation("EquipmentResponsibleEmployee")
   createdEvents        EquipmentEvent[] @relation("EquipmentEventCreatedBy")
 
   @@index([lastName, firstName, middleName], map: "idx_employees_full_name")

@@ -55,7 +55,7 @@ export async function writeMaintenanceSettingCreatedAudit(
       auditLine(
         params,
         AuditAction.CREATE,
-        'Шаблон чек-листа',
+        'Шаблоны чек-листов',
         null,
         checklistLabel(params.setting),
       ),
@@ -96,7 +96,7 @@ export async function writeMaintenanceSettingUpdatedAudit(
     ),
     comparisonLine(
       params,
-      'Шаблон чек-листа',
+      'Шаблоны чек-листов',
       checklistLabel(params.oldSetting),
       checklistLabel(params.newSetting),
     ),
@@ -139,7 +139,7 @@ export async function writeMaintenanceSettingDeletedAudit(
       auditLine(
         params,
         AuditAction.DELETE,
-        'Шаблон чек-листа',
+        'Шаблоны чек-листов',
         checklistLabel(params.setting),
         null,
       ),
@@ -212,19 +212,23 @@ function maintenanceTypeLabel(setting: MaintenanceSettingRecord) {
 
 function periodicityLabel(setting: MaintenanceSettingRecord) {
   if (
-    setting.periodicityYears === null ||
-    setting.periodicityMonths === null ||
-    setting.periodicityWeeks === null ||
+    setting.periodicityYears === null &&
+    setting.periodicityMonths === null &&
+    setting.periodicityWeeks === null &&
     setting.periodicityDays === null
   ) {
     return null;
   }
 
   return [
-    durationPart(setting.periodicityYears, ['год', 'года', 'лет']),
-    durationPart(setting.periodicityMonths, ['месяц', 'месяца', 'месяцев']),
-    durationPart(setting.periodicityWeeks, ['неделя', 'недели', 'недель']),
-    durationPart(setting.periodicityDays, ['день', 'дня', 'дней']),
+    durationPart(setting.periodicityYears ?? 0, ['год', 'года', 'лет']),
+    durationPart(setting.periodicityMonths ?? 0, [
+      'месяц',
+      'месяца',
+      'месяцев',
+    ]),
+    durationPart(setting.periodicityWeeks ?? 0, ['неделя', 'недели', 'недель']),
+    durationPart(setting.periodicityDays ?? 0, ['день', 'дня', 'дней']),
   ]
     .filter(Boolean)
     .join(' ');
@@ -261,9 +265,24 @@ function pluralizeRu(
 }
 
 function checklistLabel(setting: MaintenanceSettingRecord) {
-  return setting.checklistTemplateId === null
-    ? null
-    : `Шаблон #${setting.checklistTemplateId}`;
+  if (setting.checklistTemplateLinks.length === 0) {
+    return null;
+  }
+
+  return [...setting.checklistTemplateLinks]
+    .sort(
+      (left, right) =>
+        left.sortOrder - right.sortOrder ||
+        left.checklistTemplateId - right.checklistTemplateId,
+    )
+    .map((link) =>
+      [
+        `Шаблон #${link.checklistTemplateId}`,
+        link.isRequired ? 'обязательный' : 'необязательный',
+        `порядок ${link.sortOrder}`,
+      ].join(', '),
+    )
+    .join('; ');
 }
 
 function formatOperationValue(value: unknown) {

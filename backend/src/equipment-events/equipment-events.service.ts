@@ -38,13 +38,14 @@ export class EquipmentEventsService {
     const createdEventId = await this.creator.create(
       {
         kind: 'manual',
+        checklistAssignments: data.checklistAssignments,
         equipmentVisibleId: data.equipmentVisibleId,
         maintenanceTypeId: data.maintenanceTypeId,
         note: data.note,
         plannedDate: data.plannedDate,
         responsibleUserIds: data.responsibleUserIds,
       },
-      userId,
+      { kind: 'user', userId },
     );
 
     return this.queryService.findOne(createdEventId);

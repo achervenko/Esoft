@@ -8,6 +8,7 @@ import {
 } from "./equipment-events-utils";
 
 type EquipmentEventsTableProps = {
+  canEditEvents: boolean;
   canManageEvents: boolean;
   currentUserId?: string | null;
   events: EquipmentEventItem[];
@@ -19,6 +20,7 @@ type EquipmentEventsTableProps = {
 };
 
 const columns = (
+  canEditEvents: boolean,
   canManageEvents: boolean,
   currentUserId: string | null | undefined,
   handlers: Pick<
@@ -89,7 +91,7 @@ const columns = (
           <button onClick={() => handlers.onOpen(event)} type="button">
             Открыть
           </button>
-          {canManageEvents && event.status === "CREATED" ? (
+          {canEditEvents && event.status === "CREATED" ? (
             <button onClick={() => handlers.onEdit(event)} type="button">
               Изменить
             </button>
@@ -121,6 +123,7 @@ const columns = (
 ];
 
 export function EquipmentEventsTable({
+  canEditEvents,
   canManageEvents,
   currentUserId = null,
   events,
@@ -132,7 +135,7 @@ export function EquipmentEventsTable({
 }: EquipmentEventsTableProps) {
   return (
     <DataTable
-      columns={columns(canManageEvents, currentUserId, {
+      columns={columns(canEditEvents, canManageEvents, currentUserId, {
         onCancel,
         onComplete,
         onEdit,

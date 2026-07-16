@@ -1,0 +1,152 @@
+enum ChecklistAnswerType {
+  BOOLEAN
+  INTEGER
+  DECIMAL
+  TEXT
+  DATE
+
+  @@map("checklist_answer_type")
+}
+
+enum ChecklistStatus {
+  CREATED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  INVALIDATED
+
+  @@map("checklist_status")
+}
+
+enum ChecklistResult {
+  PASSED
+  FAILED
+  WITH_REMARKS
+
+  @@map("checklist_result")
+}
+
+model ChecklistModule {
+  id              Int                       @id @default(autoincrement())
+  name            String                    @unique(map: "uq_checklist_modules_name") @db.VarChar(128)
+  description     String?
+  isActive        Boolean                   @default(true) @map("is_active")
+  createdAt       DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy       String                    @map("created_by")
+  createdByUser   User                      @relation("ChecklistModuleCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  updatedAt       DateTime                  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  updatedBy       String?                   @map("updated_by")
+  updatedByUser   User?                     @relation("ChecklistModuleUpdatedBy", fields: [updatedBy], references: [id], onDelete: Restrict)
+  questions       ChecklistQuestion[]
+  templateModules ChecklistTemplateModule[]
+
+  @@index([isActive], map: "idx_checklist_modules_is_active")
+  @@map("checklist_modules")
+}
+
+model ChecklistQuestion {
+  id                Int                         @id @default(autoincrement())
+  checklistModuleId Int                         @map("checklist_module_id")
+  questionText      String                      @map("question_text")
+  answerType        ChecklistAnswerType         @map("answer_type")
+  isActive          Boolean                     @default(true) @map("is_active")
+  createdAt         DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy         String                      @map("created_by")
+  createdByUser     User                        @relation("ChecklistQuestionCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  updatedAt         DateTime                    @default(now()) @map("updated_at") @db.Timestamptz(6)
+  updatedBy         String?                     @map("updated_by")
+  updatedByUser     User?                       @relation("ChecklistQuestionUpdatedBy", fields: [updatedBy], references: [id], onDelete: Restrict)
+  module            ChecklistModule             @relation(fields: [checklistModuleId], references: [id], onDelete: Restrict)
+  templateQuestions ChecklistTemplateQuestion[]
+
+  @@index([checklistModuleId], map: "idx_checklist_questions_module_id")
+  @@index([answerType], map: "idx_checklist_questions_answer_type")
+  @@index([isActive], map: "idx_checklist_questions_is_active")
+  @@map("checklist_questions")
+}
+
+model ChecklistTemplate {
+  id                      Int                                            @id @default(autoincrement())
+  equipmentModelId        Int                                            @map("equipment_model_id")
+  maintenanceTypeId       Int                                            @map("maintenance_type_id")
+  name                    String                                         @db.VarChar(160)
+  description             String?
+  isPublished             Boolean                                        @default(false) @map("is_published")
+  isActive                Boolean                                        @default(false) @map("is_active")
+  basedOnTemplateId       Int?                                           @map("based_on_template_id")
+  createdAt               DateTime                                       @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy               String                                         @map("created_by")
+  createdByUser           User                                           @relation("ChecklistTemplateCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  updatedAt               DateTime                                       @default(now()) @map("updated_at") @db.Timestamptz(6)
+  updatedBy               String?                                        @map("updated_by")
+  updatedByUser           User?                                          @relation("ChecklistTemplateUpdatedBy", fields: [updatedBy], references: [id], onDelete: Restrict)
+  publishedAt             DateTime?                                      @map("published_at") @db.Timestamptz(6)
+  publishedBy             String?                                        @map("published_by")
+  publishedByUser         User?                                          @relation("ChecklistTemplatePublishedBy", fields: [publishedBy], references: [id], onDelete: Restrict)
+  archivedAt              DateTime?                                      @map("archived_at") @db.Timestamptz(6)
+  archivedBy              String?                                        @map("archived_by")
+  archivedByUser          User?                                          @relation("ChecklistTemplateArchivedBy", fields: [archivedBy], references: [id], onDelete: Restrict)
+  version                 Int                                            @default(1)
+  equipmentModel          EquipmentModel                                 @relation(fields: [equipmentModelId], references: [id], onDelete: Restrict)
+  maintenanceType         EquipmentEventType                             @relation(fields: [maintenanceTypeId], references: [id], onDelete: Restrict)
+  basedOnTemplate         ChecklistTemplate?                             @relation("ChecklistTemplateCopy", fields: [basedOnTemplateId], references: [id], onDelete: SetNull)
+  copiedTemplates         ChecklistTemplate[]                            @relation("ChecklistTemplateCopy")
+  modules                 ChecklistTemplateModule[]
+  maintenanceSettingLinks EquipmentMaintenanceSettingChecklistTemplate[]
+
+  @@index([equipmentModelId], map: "idx_checklist_templates_equipment_model_id")
+  @@index([maintenanceTypeId], map: "idx_checklist_templates_maintenance_type_id")
+  @@index([isActive], map: "idx_checklist_templates_is_active")
+  @@index([isPublished], map: "idx_checklist_templates_is_published")
+  @@index([basedOnTemplateId], map: "idx_checklist_templates_based_on_id")
+  @@map("checklist_templates")
+}
+
+model ChecklistTemplateModule {
+  id                  Int                         @id @default(autoincrement())
+  checklistTemplateId Int                         @map("checklist_template_id")
+  checklistModuleId   Int                         @map("checklist_module_id")
+  moduleNameSnapshot  String                      @map("module_name_snapshot") @db.VarChar(128)
+  sortOrder           Int                         @map("sort_order")
+  template            ChecklistTemplate           @relation(fields: [checklistTemplateId], references: [id], onDelete: Cascade)
+  module              ChecklistModule             @relation(fields: [checklistModuleId], references: [id], onDelete: Restrict)
+  questions           ChecklistTemplateQuestion[]
+
+  @@unique([checklistTemplateId, checklistModuleId], map: "uq_checklist_template_modules_module")
+  @@unique([checklistTemplateId, sortOrder], map: "uq_checklist_template_modules_sort")
+  @@map("checklist_template_modules")
+}
+
+model ChecklistTemplateQuestion {
+  id                        Int                     @id @default(autoincrement())
+  checklistTemplateModuleId Int                     @map("checklist_template_module_id")
+  checklistQuestionId       Int                     @map("checklist_question_id")
+  questionTextSnapshot      String                  @map("question_text_snapshot")
+  answerTypeSnapshot        ChecklistAnswerType     @map("answer_type_snapshot")
+  sortOrder                 Int                     @map("sort_order")
+  isRequired                Boolean                 @default(true) @map("is_required")
+  templateModule            ChecklistTemplateModule @relation(fields: [checklistTemplateModuleId], references: [id], onDelete: Cascade)
+  question                  ChecklistQuestion       @relation(fields: [checklistQuestionId], references: [id], onDelete: Restrict)
+
+  @@unique([checklistTemplateModuleId, checklistQuestionId], map: "uq_checklist_template_questions_question")
+  @@unique([checklistTemplateModuleId, sortOrder], map: "uq_checklist_template_questions_sort")
+  @@map("checklist_template_questions")
+}
+
+model EquipmentMaintenanceSettingChecklistTemplate {
+  id                   Int                         @id @default(autoincrement())
+  maintenanceSettingId Int                         @map("maintenance_setting_id")
+  checklistTemplateId  Int                         @map("checklist_template_id")
+  isRequired           Boolean                     @default(true) @map("is_required")
+  sortOrder            Int                         @map("sort_order")
+  createdAt            DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy            String                      @map("created_by")
+  createdByUser        User                        @relation("MaintenanceSettingChecklistTemplateCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  maintenanceSetting   EquipmentMaintenanceSetting @relation(fields: [maintenanceSettingId], references: [id], onDelete: Cascade)
+  checklistTemplate    ChecklistTemplate           @relation(fields: [checklistTemplateId], references: [id], onDelete: Restrict)
+
+  @@unique([maintenanceSettingId, checklistTemplateId], map: "uq_setting_checklist_templates_template")
+  @@unique([maintenanceSettingId, sortOrder], map: "uq_setting_checklist_templates_sort")
+  @@index([checklistTemplateId], map: "idx_setting_checklist_templates_template_id")
+  @@map("equipment_maintenance_setting_checklist_templates")
+}

@@ -1,4 +1,5 @@
 import { throwEquipmentEventBadRequest } from './equipment-events.errors';
+import { type EquipmentEventChecklistAssignment } from './equipment-events.validation.types';
 
 const BUSINESS_TIME_ZONE = 'Europe/Moscow';
 
@@ -30,6 +31,67 @@ export function parseResponsibleUserIds(value: unknown) {
   }
 
   return ids;
+}
+
+export function parseChecklistAssignments(
+  value: unknown,
+  responsibleUserIds: string[],
+): EquipmentEventChecklistAssignment[] {
+  if (value === undefined || value === null) {
+    return [];
+  }
+
+  if (!Array.isArray(value)) {
+    throwEquipmentEventBadRequest(
+      'CHECKLIST_ASSIGNMENTS_INVALID',
+      'Некорректные назначения чек-листов.',
+    );
+  }
+
+  const responsibleUserIdSet = new Set(responsibleUserIds);
+  const templateIds = new Set<number>();
+
+  return value.map((item) => {
+    if (!item || typeof item !== 'object') {
+      throwEquipmentEventBadRequest(
+        'CHECKLIST_ASSIGNMENT_INVALID',
+        'Некорректное назначение чек-листа.',
+      );
+    }
+
+    const payload = item as Record<string, unknown>;
+    const checklistTemplateId = parsePositiveInteger(
+      payload.checklistTemplateId,
+      'CHECKLIST_TEMPLATE_INVALID',
+      'Некорректный шаблон чек-листа.',
+    );
+    const assignedUserId = parseRequiredNonEmptyString(
+      payload.assignedUserId,
+      'CHECKLIST_ASSIGNED_USER_INVALID',
+      'Некорректный исполнитель чек-листа.',
+    );
+
+    if (templateIds.has(checklistTemplateId)) {
+      throwEquipmentEventBadRequest(
+        'CHECKLIST_ASSIGNMENT_DUPLICATE',
+        'Шаблон чек-листа назначен несколько раз.',
+      );
+    }
+
+    if (!responsibleUserIdSet.has(assignedUserId)) {
+      throwEquipmentEventBadRequest(
+        'CHECKLIST_ASSIGNED_USER_NOT_RESPONSIBLE',
+        'Исполнитель чек-листа должен быть ответственным за событие.',
+      );
+    }
+
+    templateIds.add(checklistTemplateId);
+
+    return {
+      assignedUserId,
+      checklistTemplateId,
+    };
+  });
 }
 
 export function parseOptionalNonEmptyString(
@@ -69,7 +131,11 @@ export function parseOptionalPositiveInteger(
 }
 
 export function parseOptionalNullableText(value: unknown, code: string) {
-  if (value === undefined || value === null) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
     return null;
   }
 
@@ -101,7 +167,11 @@ export function parseOptionalDate(value: unknown, code: string) {
     return undefined;
   }
 
-  return parseRequiredDate(value, code, 'Дата должна быть в формате ГГГГ-ММ-ДД.');
+  return parseRequiredDate(
+    value,
+    code,
+    'Дата должна быть в формате ГГГГ-ММ-ДД.',
+  );
 }
 
 export function parseRequiredFactDate(

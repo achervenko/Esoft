@@ -1,24 +1,37 @@
 import type { MaintenanceExecutionType } from "../maintenance/maintenance.types";
 
 export type EquipmentEventStatus =
-  | "DRAFT"
-  | "CREATED"
-  | "IN_PROGRESS"
-  | "COMPLETED"
-  | "CANCELLED";
+  "CREATED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 
 export type EquipmentEventSource = "MANUAL" | "PLANNED";
 
-export type EquipmentEventEmployee = {
+export type EquipmentEventChecklistStatus =
+  "CREATED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED" | "INVALIDATED";
+
+export type EquipmentEventResponsible = {
   fullName: string;
   id: string;
   position: string;
   role: string | null;
 };
 
+export type EquipmentEventCreator = {
+  fullName: string;
+  id: number;
+  position: string;
+};
+
+export type EquipmentEventChecklist = {
+  assignedUserId: string;
+  checklistTemplateId: number;
+  id: number;
+  isRequired: boolean;
+  sortOrder: number;
+  status: EquipmentEventChecklistStatus;
+};
+
 export type EquipmentEventItem = {
-  checklist: { id: number } | null;
-  checklistTemplateId: number | null;
+  checklists: EquipmentEventChecklist[];
   equipment: {
     id: number;
     model: {
@@ -39,7 +52,7 @@ export type EquipmentEventItem = {
   };
   note: string | null;
   plannedDate: string | null;
-  responsibles: EquipmentEventEmployee[];
+  responsibles: EquipmentEventResponsible[];
   source: EquipmentEventSource;
   status: EquipmentEventStatus;
   version: number;
@@ -47,7 +60,7 @@ export type EquipmentEventItem = {
 
 export type EquipmentEventDetail = EquipmentEventItem & {
   createdAt: string;
-  createdBy: EquipmentEventEmployee;
+  createdBy: EquipmentEventCreator;
   originalPlannedDate: string | null;
 };
 
@@ -59,10 +72,17 @@ export type EquipmentEventsQuery = {
 };
 
 export type CreateManualEquipmentEventPayload = {
+  checklistAssignments: EquipmentEventChecklistAssignment[];
+  equipmentVisibleId: number;
   maintenanceTypeId: number;
   note?: string | null;
   plannedDate: string;
   responsibleUserIds: string[];
+};
+
+export type EquipmentEventChecklistAssignment = {
+  assignedUserId: string;
+  checklistTemplateId: number;
 };
 
 export type UpdateCreatedEquipmentEventPayload = {

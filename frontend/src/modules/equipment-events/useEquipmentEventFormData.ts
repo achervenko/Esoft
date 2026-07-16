@@ -5,7 +5,7 @@ import {
 import { getApiErrorMessage } from "../../shared/api/api-error";
 import { getMaintenanceSettings } from "../../shared/api/maintenance/maintenance.api";
 import type { MaintenanceSetting } from "../../shared/api/maintenance/maintenance.types";
-import type { ResponsibleUserOption } from "./EquipmentEventFormModal";
+import type { ResponsibleUserOption } from "./equipment-event-form.types";
 
 export function useEquipmentEventFormData(
   visibleId: number,
@@ -24,6 +24,8 @@ export function useEquipmentEventFormData(
     async (options?: { shouldApply?: () => boolean }) => {
       setIsLoading(true);
       setError(null);
+      setMaintenanceSettings([]);
+      setResponsibleUsers([]);
 
       try {
         const [settingsResponse, responsibleUsersResponse] =
@@ -64,6 +66,8 @@ export function useEquipmentEventFormData(
 
     if (enabled) {
       void reload({ shouldApply: () => isMounted });
+    } else {
+      setIsLoading(false);
     }
 
     return () => {

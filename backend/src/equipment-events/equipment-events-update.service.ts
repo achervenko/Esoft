@@ -5,7 +5,7 @@ import {
   getEquipmentEventAuditSnapshot,
   writeEquipmentEventUpdatedAudit,
 } from './equipment-events.audit';
-import { EquipmentEventsAssertions } from './equipment-events.assertions';
+import { EquipmentEventInputLoader } from './equipment-event-input.loader';
 import { throwEquipmentEventConflict } from './equipment-events.errors';
 import { EquipmentEventsQueryService } from './equipment-events-query.service';
 import { type UpdateCreatedEquipmentEventData } from './equipment-events.validation';
@@ -13,7 +13,7 @@ import { type UpdateCreatedEquipmentEventData } from './equipment-events.validat
 @Injectable()
 export class EquipmentEventsUpdateService {
   constructor(
-    private readonly assertions: EquipmentEventsAssertions,
+    private readonly inputLoader: EquipmentEventInputLoader,
     private readonly prisma: PrismaService,
     private readonly queryService: EquipmentEventsQueryService,
   ) {}
@@ -24,12 +24,15 @@ export class EquipmentEventsUpdateService {
     userId?: string | null,
   ) {
     const updatedEventId = await this.prisma.$transaction(async (tx) => {
-      const updateInput = await this.assertions.loadValidCreatedUpdateInput(tx, {
-        equipmentVisibleId: data.equipmentVisibleId,
-        eventId: id,
-        maintenanceTypeId: data.maintenanceTypeId,
-        responsibleUserIds: data.responsibleUserIds,
-      });
+      const updateInput = await this.inputLoader.loadValidCreatedUpdateInput(
+        tx,
+        {
+          equipmentVisibleId: data.equipmentVisibleId,
+          eventId: id,
+          maintenanceTypeId: data.maintenanceTypeId,
+          responsibleUserIds: data.responsibleUserIds,
+        },
+      );
       const oldAuditSnapshot = await getEquipmentEventAuditSnapshot(tx, id);
       this.assertVersionMatches(updateInput.version, data.version);
       const hasChanges = this.hasCreatedEventChanges(updateInput, data);
@@ -53,8 +56,6 @@ export class EquipmentEventsUpdateService {
             : {}),
           ...(updateInput.maintenanceSetting
             ? {
-                checklistTemplateId:
-                  updateInput.maintenanceSetting.checklistTemplateId,
                 executionType: updateInput.maintenanceSetting.executionType,
                 maintenanceSettingId: updateInput.maintenanceSetting.id,
               }
@@ -101,7 +102,10 @@ export class EquipmentEventsUpdateService {
     return this.queryService.findOne(updatedEventId);
   }
 
-  private assertVersionMatches(currentVersion: number, expectedVersion: number) {
+  private assertVersionMatches(
+    currentVersion: number,
+    expectedVersion: number,
+  ) {
     if (currentVersion !== expectedVersion) {
       throwEquipmentEventConflict(
         'EVENT_VERSION_CONFLICT',
@@ -118,7 +122,6 @@ export class EquipmentEventsUpdateService {
       equipmentId?: number;
       eventTypeId?: number;
       maintenanceSetting?: {
-        checklistTemplateId: number | null;
         executionType: Prisma.EquipmentEventUpdateInput['executionType'];
         id: number;
       };
@@ -130,7 +133,10 @@ export class EquipmentEventsUpdateService {
       updateInput.equipmentId !== undefined ||
       updateInput.eventTypeId !== undefined ||
       this.hasNoteChange(updateInput.currentNote, data.note) ||
-      this.hasPlannedDateChange(updateInput.currentPlannedDate, data.plannedDate) ||
+      this.hasPlannedDateChange(
+        updateInput.currentPlannedDate,
+        data.plannedDate,
+      ) ||
       this.hasResponsibleUsersChange(
         updateInput.currentResponsibleUserIds,
         data.responsibleUserIds,
@@ -157,7 +163,10 @@ export class EquipmentEventsUpdateService {
     );
   }
 
-  private hasNoteChange(currentValue: string | null, nextValue?: string | null) {
+  private hasNoteChange(
+    currentValue: string | null,
+    nextValue?: string | null,
+  ) {
     return nextValue !== undefined && currentValue !== nextValue;
   }
 }

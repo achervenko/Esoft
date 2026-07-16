@@ -2,6 +2,8 @@ import type {
   MaintenanceExecutionType,
   MaintenancePeriodicity,
   MaintenanceSetting,
+  MaintenanceSettingChecklistTemplate,
+  MaintenanceSettingChecklistTemplatePayload,
   MaintenanceSettingUpdatePayload,
 } from "../../shared/api/maintenance/maintenance.types";
 
@@ -13,10 +15,20 @@ export type PeriodicityForm = {
 };
 
 export type MaintenanceSettingUpdateSource = {
-  checklistTemplateId: number | null;
+  checklistTemplates: MaintenanceSettingChecklistTemplatePayload[];
   executionType: MaintenanceExecutionType;
   periodicity: MaintenancePeriodicity | null;
 };
+
+export type ChecklistTemplateFormItem = {
+  clientId: string;
+  checklistTemplateId: string;
+  isRequired: boolean;
+};
+
+export type ParseChecklistTemplatesResult =
+  | { ok: true; value: MaintenanceSettingChecklistTemplatePayload[] }
+  | { ok: false; reason: "duplicate" | "invalid-id" };
 
 export type ParsePeriodicityResult =
   | { ok: true; value: MaintenancePeriodicity | null }
@@ -40,11 +52,11 @@ export function toPeriodicityForm(
   };
 }
 
-export function parseNullablePositiveInteger(value: string) {
+function parsePositiveInteger(value: string) {
   const trimmedValue = value.trim();
 
   if (!trimmedValue) {
-    return null;
+    return undefined;
   }
 
   if (!/^[1-9]\d*$/.test(trimmedValue)) {
@@ -54,6 +66,60 @@ export function parseNullablePositiveInteger(value: string) {
   const parsedValue = Number(trimmedValue);
 
   return Number.isSafeInteger(parsedValue) ? parsedValue : undefined;
+}
+
+export function toChecklistTemplateFormItems(
+  checklistTemplates: MaintenanceSettingChecklistTemplate[] = [],
+): ChecklistTemplateFormItem[] {
+  return [...checklistTemplates]
+    .sort(
+      (left, right) =>
+        left.sortOrder - right.sortOrder ||
+        left.checklistTemplateId - right.checklistTemplateId,
+    )
+    .map((template) => ({
+      checklistTemplateId: String(template.checklistTemplateId),
+      clientId: String(template.checklistTemplateId),
+      isRequired: template.isRequired,
+    }));
+}
+
+export function createEmptyChecklistTemplateFormItem(
+  index: number,
+): ChecklistTemplateFormItem {
+  return {
+    checklistTemplateId: "",
+    clientId: `new-${Date.now()}-${index}`,
+    isRequired: true,
+  };
+}
+
+export function parseChecklistTemplateFormItems(
+  items: ChecklistTemplateFormItem[],
+): ParseChecklistTemplatesResult {
+  const checklistTemplateIds = new Set<number>();
+  const checklistTemplates: MaintenanceSettingChecklistTemplatePayload[] = [];
+
+  for (const [index, item] of items.entries()) {
+    const checklistTemplateId = parsePositiveInteger(item.checklistTemplateId);
+
+    if (checklistTemplateId === undefined) {
+      return { ok: false, reason: "invalid-id" };
+    }
+
+    if (checklistTemplateIds.has(checklistTemplateId)) {
+      return { ok: false, reason: "duplicate" };
+    }
+
+    checklistTemplateIds.add(checklistTemplateId);
+    checklistTemplates.push({
+      checklistTemplateId,
+      isRequired: item.isRequired,
+      sortOrder: index + 1,
+    });
+  }
+
+  return { ok: true, value: checklistTemplates };
 }
 
 export function parsePeriodicityForm(
@@ -96,8 +162,13 @@ export function buildMaintenanceSettingUpdatePayload(
 ): MaintenanceSettingUpdatePayload {
   const updatePayload: MaintenanceSettingUpdatePayload = {};
 
-  if (setting.checklistTemplateId !== payload.checklistTemplateId) {
-    updatePayload.checklistTemplateId = payload.checklistTemplateId;
+  if (
+    !areChecklistTemplatePayloadsEqual(
+      setting.checklistTemplates,
+      payload.checklistTemplates,
+    )
+  ) {
+    updatePayload.checklistTemplates = payload.checklistTemplates;
   }
 
   if (setting.executionType !== payload.executionType) {
@@ -141,4 +212,34 @@ function parseNonNegativeInteger(value: string) {
   const parsedValue = Number(trimmedValue);
 
   return Number.isSafeInteger(parsedValue) ? parsedValue : undefined;
+}
+
+function areChecklistTemplatePayloadsEqual(
+  left: MaintenanceSettingChecklistTemplate[],
+  right: MaintenanceSettingChecklistTemplatePayload[],
+) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  const sortedLeft = [...left].sort(
+    (first, second) =>
+      first.sortOrder - second.sortOrder ||
+      first.checklistTemplateId - second.checklistTemplateId,
+  );
+  const sortedRight = [...right].sort(
+    (first, second) =>
+      first.sortOrder - second.sortOrder ||
+      first.checklistTemplateId - second.checklistTemplateId,
+  );
+
+  return sortedLeft.every((leftItem, index) => {
+    const rightItem = sortedRight[index];
+
+    return (
+      leftItem.checklistTemplateId === rightItem.checklistTemplateId &&
+      leftItem.isRequired === rightItem.isRequired &&
+      leftItem.sortOrder === rightItem.sortOrder
+    );
+  });
 }

@@ -2,12 +2,14 @@ import { Prisma } from '@prisma/client';
 import type {
   MaintenanceBaseSettingInput,
   MaintenanceSettingUpdateInput,
-} from './maintenance-settings.validation';
+} from './maintenance-settings.types';
 
 type BuildSettingCreateDataParams = {
   equipmentModelId: number;
   maintenanceTypeId: number;
-  input: MaintenanceBaseSettingInput;
+  input: MaintenanceBaseSettingInput & {
+    createdBy?: string;
+  };
 };
 
 export function buildSettingCreateData({
@@ -15,8 +17,13 @@ export function buildSettingCreateData({
   maintenanceTypeId,
   input,
 }: BuildSettingCreateDataParams): Prisma.EquipmentMaintenanceSettingCreateInput {
+  const checklistTemplateLinks = buildChecklistTemplateLinks(
+    input.checklistTemplates,
+    input.createdBy,
+  );
+
   return {
-    checklistTemplateId: input.checklistTemplateId,
+    checklistTemplateLinks,
     equipmentModel: { connect: { id: equipmentModelId } },
     executionType: input.executionType,
     maintenanceType: { connect: { id: maintenanceTypeId } },
@@ -24,14 +31,32 @@ export function buildSettingCreateData({
   };
 }
 
+function buildChecklistTemplateLinks(
+  checklistTemplates: MaintenanceBaseSettingInput['checklistTemplates'],
+  createdBy?: string,
+) {
+  if (checklistTemplates.length === 0) {
+    return undefined;
+  }
+
+  if (!createdBy) {
+    throw new Error('createdBy is required to create checklist template links.');
+  }
+
+  return {
+    create: checklistTemplates.map((item) => ({
+      checklistTemplate: { connect: { id: item.checklistTemplateId } },
+      createdByUser: { connect: { id: createdBy } },
+      isRequired: item.isRequired,
+      sortOrder: item.sortOrder,
+    })),
+  };
+}
+
 export function buildSettingUpdateData(
   input: MaintenanceSettingUpdateInput,
 ): Prisma.EquipmentMaintenanceSettingUpdateInput {
   const data: Prisma.EquipmentMaintenanceSettingUpdateInput = {};
-
-  if ('checklistTemplateId' in input) {
-    data.checklistTemplateId = input.checklistTemplateId;
-  }
 
   if ('executionType' in input) {
     data.executionType = input.executionType;

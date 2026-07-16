@@ -1,6 +1,7 @@
 import { EquipmentEventStatus } from '@prisma/client';
 
 export type CreateManualEquipmentEventDto = {
+  checklistAssignments?: unknown;
   maintenanceTypeId?: unknown;
   note?: unknown;
   plannedDate?: unknown;
@@ -32,11 +33,17 @@ export type EquipmentEventsQueryDto = {
 };
 
 export type CreateManualEquipmentEventData = {
+  checklistAssignments: EquipmentEventChecklistAssignment[];
   equipmentVisibleId: number;
   maintenanceTypeId: number;
   note: string | null;
   plannedDate: Date;
   responsibleUserIds: string[];
+};
+
+export type EquipmentEventChecklistAssignment = {
+  assignedUserId: string;
+  checklistTemplateId: number;
 };
 
 export type CompleteEquipmentEventData = {

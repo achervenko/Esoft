@@ -13,6 +13,20 @@ type MaintenanceSettingsTableProps = {
   settings: MaintenanceSetting[];
 };
 
+function getSortedChecklistTemplates(setting: MaintenanceSetting) {
+  return [...setting.checklistTemplates].sort(
+    (left, right) =>
+      left.sortOrder - right.sortOrder ||
+      left.checklistTemplateId - right.checklistTemplateId,
+  );
+}
+
+function formatChecklistTemplatesSortValue(setting: MaintenanceSetting) {
+  return getSortedChecklistTemplates(setting)
+    .map((template) => `${template.name} #${template.checklistTemplateId}`)
+    .join(", ");
+}
+
 const columns = (
   canManage: boolean,
   onEdit: (setting: MaintenanceSetting) => void,
@@ -43,12 +57,21 @@ const columns = (
   },
   {
     key: "checklistTemplate",
-    label: "Шаблон",
+    label: "Шаблоны",
     render: (setting) =>
-      setting.checklistTemplateId
-        ? `#${setting.checklistTemplateId}`
-        : "Не указан",
-    sortValue: (setting) => setting.checklistTemplateId ?? 0,
+      setting.checklistTemplates.length > 0 ? (
+        <div className="maintenance-settings-checklist-list">
+          {getSortedChecklistTemplates(setting).map((template) => (
+            <span key={template.checklistTemplateId}>
+              {template.name} #{template.checklistTemplateId} (
+              {template.isRequired ? "обязательный" : "необязательный"})
+            </span>
+          ))}
+        </div>
+      ) : (
+        "Не назначены"
+      ),
+    sortValue: formatChecklistTemplatesSortValue,
   },
   ...(canManage
     ? [

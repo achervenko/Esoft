@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AppAuthModule } from './auth/auth.module';
+import { ChecklistsModule } from './checklists/checklists.module';
 import { DictionariesAdminModule } from './dictionaries-admin/dictionaries-admin.module';
 import { EquipmentEventsModule } from './equipment-events/equipment-events.module';
 import { EquipmentModule } from './equipment/equipment.module';
@@ -15,6 +16,7 @@ import { UsersModule } from './users/users.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     AppAuthModule,
+    ChecklistsModule,
     DictionariesAdminModule,
     EquipmentEventsModule,
     EquipmentModule,

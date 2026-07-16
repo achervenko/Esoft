@@ -7,6 +7,7 @@ import {
   toEquipmentEventListResponse,
 } from './equipment-events.presenter';
 import {
+  type EquipmentEventChecklistRecord,
   equipmentEventDetailSelect,
   equipmentEventListSelect,
 } from './equipment-events.relations';
@@ -57,7 +58,13 @@ export class EquipmentEventsQueryService {
       take: query.limit,
     });
 
-    return events.map(toEquipmentEventListResponse);
+    const checklistsByEventId = await this.loadChecklistsByEventId(
+      events.map((event) => event.id),
+    );
+
+    return events.map((event) =>
+      toEquipmentEventListResponse(event, checklistsByEventId.get(event.id)),
+    );
   }
 
   async findOne(id: number) {
@@ -73,7 +80,12 @@ export class EquipmentEventsQueryService {
       );
     }
 
-    return toEquipmentEventDetailResponse(event);
+    const checklistsByEventId = await this.loadChecklistsByEventId([event.id]);
+
+    return toEquipmentEventDetailResponse(
+      event,
+      checklistsByEventId.get(event.id),
+    );
   }
 
   async findResponsibleUsers() {
@@ -131,5 +143,49 @@ export class EquipmentEventsQueryService {
         ];
       }),
     };
+  }
+
+  private async loadChecklistsByEventId(eventIds: number[]) {
+    const checklistsByEventId = new Map<
+      number,
+      EquipmentEventChecklistRecord[]
+    >();
+
+    if (eventIds.length === 0) {
+      return checklistsByEventId;
+    }
+
+    const checklists = await this.prisma.$queryRaw<
+      Array<EquipmentEventChecklistRecord & { equipmentEventId: number }>
+    >`
+      SELECT
+        id,
+        equipment_event_id AS "equipmentEventId",
+        checklist_template_id AS "checklistTemplateId",
+        assigned_user_id AS "assignedUserId",
+        is_required AS "isRequired",
+        status,
+        sort_order AS "sortOrder"
+      FROM checklists
+      WHERE equipment_event_id IN (${Prisma.join(eventIds)})
+      ORDER BY equipment_event_id, sort_order, id
+    `;
+
+    for (const checklist of checklists) {
+      const eventChecklists =
+        checklistsByEventId.get(checklist.equipmentEventId) ?? [];
+
+      eventChecklists.push({
+        assignedUserId: checklist.assignedUserId,
+        checklistTemplateId: checklist.checklistTemplateId,
+        id: checklist.id,
+        isRequired: checklist.isRequired,
+        sortOrder: checklist.sortOrder,
+        status: checklist.status,
+      });
+      checklistsByEventId.set(checklist.equipmentEventId, eventChecklists);
+    }
+
+    return checklistsByEventId;
   }
 }

@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { ChecklistStatus, Prisma } from '@prisma/client';
 
 const employeeResponseSelect = {
   firstName: true,
@@ -71,7 +71,6 @@ const responsiblesResponseSelect = {
 } satisfies Prisma.EquipmentEventResponsibleFindManyArgs;
 
 export const equipmentEventListSelect = {
-  checklistTemplateId: true,
   equipment: {
     select: equipmentListSelect,
   },
@@ -91,7 +90,6 @@ export const equipmentEventListSelect = {
 } satisfies Prisma.EquipmentEventSelect;
 
 export const equipmentEventDetailSelect = {
-  checklistTemplateId: true,
   createdAt: true,
   createdByEmployee: {
     select: employeeResponseSelect,
@@ -116,7 +114,6 @@ export const equipmentEventDetailSelect = {
 } satisfies Prisma.EquipmentEventSelect;
 
 export const equipmentEventAuditSelect = {
-  checklistTemplateId: true,
   equipment: {
     select: {
       name: true,
@@ -174,3 +171,12 @@ export type EquipmentEventDetailRecord = Prisma.EquipmentEventGetPayload<{
 export type EquipmentEventAuditRecord = Prisma.EquipmentEventGetPayload<{
   select: typeof equipmentEventAuditSelect;
 }>;
+
+export type EquipmentEventChecklistRecord = {
+  assignedUserId: string;
+  checklistTemplateId: number;
+  id: number;
+  isRequired: boolean;
+  sortOrder: number;
+  status: ChecklistStatus;
+};

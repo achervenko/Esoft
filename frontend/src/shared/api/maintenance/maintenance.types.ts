@@ -14,8 +14,21 @@ export type MaintenanceType = {
   name: string;
 };
 
+export type MaintenanceSettingChecklistTemplate = {
+  checklistTemplateId: number;
+  isRequired: boolean;
+  name: string;
+  sortOrder: number;
+};
+
+export type MaintenanceSettingChecklistTemplatePayload = {
+  checklistTemplateId: number;
+  isRequired: boolean;
+  sortOrder: number;
+};
+
 export type MaintenanceSetting = {
-  checklistTemplateId: number | null;
+  checklistTemplates: MaintenanceSettingChecklistTemplate[];
   executionType: MaintenanceExecutionType;
   id: number;
   maintenanceType: {
@@ -40,7 +53,7 @@ export type AvailableMaintenanceTypesResponse = {
 };
 
 export type MaintenanceSettingBasePayload = {
-  checklistTemplateId: number | null;
+  checklistTemplates: MaintenanceSettingChecklistTemplatePayload[];
   executionType: MaintenanceExecutionType;
   periodicity: MaintenancePeriodicity | null;
 };
@@ -50,7 +63,7 @@ export type MaintenanceSettingPayload = MaintenanceSettingBasePayload & {
 };
 
 export type MaintenanceSettingUpdatePayload = {
-  checklistTemplateId?: number | null;
+  checklistTemplates?: MaintenanceSettingChecklistTemplatePayload[];
   executionType?: MaintenanceExecutionType;
   periodicity?: MaintenancePeriodicity | null;
 };

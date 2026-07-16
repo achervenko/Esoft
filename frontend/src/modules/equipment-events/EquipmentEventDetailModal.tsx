@@ -1,6 +1,7 @@
 import type { EquipmentEventDetail } from "../../shared/api/equipment-events/equipment-events.types";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import {
+  equipmentEventChecklistStatusLabels,
   equipmentEventExecutionTypeLabels,
   equipmentEventSourceLabels,
   equipmentEventStatusLabels,
@@ -17,10 +18,24 @@ export function EquipmentEventDetailModal({
   event,
   onClose,
 }: EquipmentEventDetailModalProps) {
+  const responsibleNameById = new Map(
+    event.responsibles.map((responsible) => [
+      responsible.id,
+      responsible.fullName,
+    ]),
+  );
+
   return (
     <AdminModal onClose={onClose} title="Событие оборудования">
       <div className="equipment-event-detail">
         <dl>
+          <div>
+            <dt>Оборудование</dt>
+            <dd>
+              ID {event.equipment.visibleId} - {event.equipment.name},{" "}
+              {event.equipment.model.name}
+            </dd>
+          </div>
           <div>
             <dt>Вид обслуживания</dt>
             <dd>{event.maintenanceType.name}</dd>
@@ -38,6 +53,10 @@ export function EquipmentEventDetailModal({
             <dd>{formatDateValue(event.plannedDate)}</dd>
           </div>
           <div>
+            <dt>Первоначальная плановая дата</dt>
+            <dd>{formatDateValue(event.originalPlannedDate)}</dd>
+          </div>
+          <div>
             <dt>Фактическая дата</dt>
             <dd>{formatDateValue(event.factDate)}</dd>
           </div>
@@ -46,11 +65,28 @@ export function EquipmentEventDetailModal({
             <dd>{equipmentEventExecutionTypeLabels[event.executionType]}</dd>
           </div>
           <div>
-            <dt>Шаблон чек-листа</dt>
+            <dt>Чек-листы</dt>
             <dd>
-              {event.checklistTemplateId
-                ? `#${event.checklistTemplateId}`
-                : "Не указан"}
+              {event.checklists.length > 0
+                ? event.checklists
+                    .map(
+                      (checklist) => {
+                        const assignedUserName =
+                          responsibleNameById.get(checklist.assignedUserId) ??
+                          `ID ${checklist.assignedUserId}`;
+
+                        return [
+                          `#${checklist.checklistTemplateId}`,
+                          equipmentEventChecklistStatusLabels[checklist.status],
+                          assignedUserName,
+                          checklist.isRequired
+                            ? "обязательный"
+                            : "необязательный",
+                        ].join(", ");
+                      },
+                    )
+                    .join("; ")
+                : "Не назначены"}
             </dd>
           </div>
           <div>

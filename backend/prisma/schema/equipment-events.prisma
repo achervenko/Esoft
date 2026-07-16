@@ -16,27 +16,26 @@ enum EquipmentEventStatus {
 }
 
 model EquipmentEvent {
-  id                  Int                  @id @default(autoincrement())
-  equipmentId         Int                  @map("equipment_id")
-  eventTypeId         Int                  @map("event_type_id")
-  maintenanceSettingId Int?                @map("maintenance_setting_id")
-  executionType       EquipmentMaintenanceExecutionType @map("execution_type")
-  checklistTemplateId Int?                 @map("checklist_template_id")
-  source              EquipmentEventSource
-  status              EquipmentEventStatus @default(CREATED)
-  originalPlannedDate DateTime?            @map("original_planned_date") @db.Date
-  plannedDate         DateTime?            @map("planned_date") @db.Date
-  factDate            DateTime?            @map("fact_date") @db.Date
-  note                String?
-  createdByEmployeeId Int                  @map("created_by_employee_id")
-  createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
-  version             Int                  @default(1)
+  id                   Int                               @id @default(autoincrement())
+  equipmentId          Int                               @map("equipment_id")
+  eventTypeId          Int                               @map("event_type_id")
+  maintenanceSettingId Int?                              @map("maintenance_setting_id")
+  executionType        EquipmentMaintenanceExecutionType @map("execution_type")
+  source               EquipmentEventSource
+  status               EquipmentEventStatus              @default(CREATED)
+  originalPlannedDate  DateTime?                         @map("original_planned_date") @db.Date
+  plannedDate          DateTime?                         @map("planned_date") @db.Date
+  factDate             DateTime?                         @map("fact_date") @db.Date
+  note                 String?
+  createdByEmployeeId  Int                               @map("created_by_employee_id")
+  createdAt            DateTime                          @default(now()) @map("created_at") @db.Timestamptz(6)
+  version              Int                               @default(1)
 
-  equipment           Equipment            @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
-  eventType           EquipmentEventType    @relation(fields: [eventTypeId], references: [id], onDelete: Restrict)
-  maintenanceSetting  EquipmentMaintenanceSetting? @relation(fields: [maintenanceSettingId], references: [id], onDelete: SetNull)
-  createdByEmployee   Employee             @relation("EquipmentEventCreatedBy", fields: [createdByEmployeeId], references: [id], onDelete: Restrict)
-  responsibles         EquipmentEventResponsible[]
+  equipment          Equipment                    @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
+  eventType          EquipmentEventType           @relation(fields: [eventTypeId], references: [id], onDelete: Restrict)
+  maintenanceSetting EquipmentMaintenanceSetting? @relation(fields: [maintenanceSettingId], references: [id], onDelete: SetNull)
+  createdByEmployee  Employee                     @relation("EquipmentEventCreatedBy", fields: [createdByEmployeeId], references: [id], onDelete: Restrict)
+  responsibles       EquipmentEventResponsible[]
 
   @@index([equipmentId], map: "idx_equipment_events_equipment_id")
   @@index([eventTypeId], map: "idx_equipment_events_event_type_id")

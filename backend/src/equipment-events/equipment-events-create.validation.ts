@@ -1,4 +1,5 @@
 import {
+  parseChecklistAssignments,
   parseOptionalNullableText,
   parsePositiveInteger,
   parseRequiredDate,
@@ -17,21 +18,26 @@ export function parseCreateManualEventDto(
   equipmentVisibleId: number,
 ): CreateManualEquipmentEventData {
   const body = dto ?? {};
+  const responsibleUserIds = parseResponsibleUserIds(body.responsibleUserIds);
 
   return {
+    checklistAssignments: parseChecklistAssignments(
+      body.checklistAssignments,
+      responsibleUserIds,
+    ),
     equipmentVisibleId,
     maintenanceTypeId: parsePositiveInteger(
       body.maintenanceTypeId,
       'MAINTENANCE_TYPE_REQUIRED',
       'Укажите вид обслуживания.',
     ),
-    note: parseOptionalNullableText(body.note, 'NOTE_INVALID'),
+    note: parseOptionalNullableText(body.note, 'NOTE_INVALID') ?? null,
     plannedDate: parseRequiredDate(
       body.plannedDate,
       'PLANNED_DATE_REQUIRED',
       'Укажите плановую дату события.',
     ),
-    responsibleUserIds: parseResponsibleUserIds(body.responsibleUserIds),
+    responsibleUserIds,
   };
 }
 

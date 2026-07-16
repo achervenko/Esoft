@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
-import { EquipmentEventsAssertions } from './equipment-events.assertions';
+import { EquipmentEventAccessAssertions } from './equipment-event-access.assertions';
+import { EquipmentEventChecklistAssertions } from './equipment-event-checklist.assertions';
+import { EquipmentEventChecklistCreator } from './equipment-event-checklist.creator';
+import { EquipmentEventInputLoader } from './equipment-event-input.loader';
+import { EquipmentEventStateAssertions } from './equipment-event-state.assertions';
 import { EquipmentEventsController } from './equipment-events.controller';
 import { EquipmentEventsCreator } from './equipment-events.creator';
 import { EquipmentEventsLifecycleService } from './equipment-events-lifecycle.service';
@@ -21,7 +25,11 @@ import { MaintenanceTypesService } from './maintenance-types/maintenance-types.s
     MaintenanceTypesController,
   ],
   providers: [
-    EquipmentEventsAssertions,
+    EquipmentEventAccessAssertions,
+    EquipmentEventChecklistAssertions,
+    EquipmentEventChecklistCreator,
+    EquipmentEventInputLoader,
+    EquipmentEventStateAssertions,
     EquipmentEventsCreator,
     EquipmentEventsLifecycleService,
     EquipmentEventsQueryService,

@@ -6,7 +6,7 @@ import {
   writeEquipmentEventStatusAudit,
   writeEquipmentEventUpdatedAudit,
 } from './equipment-events.audit';
-import { EquipmentEventsAssertions } from './equipment-events.assertions';
+import { EquipmentEventStateAssertions } from './equipment-event-state.assertions';
 import {
   throwEquipmentEventBadRequest,
   throwEquipmentEventConflict,
@@ -17,7 +17,7 @@ import { type CompleteEquipmentEventData } from './equipment-events.validation';
 @Injectable()
 export class EquipmentEventsLifecycleService {
   constructor(
-    private readonly assertions: EquipmentEventsAssertions,
+    private readonly stateAssertions: EquipmentEventStateAssertions,
     private readonly prisma: PrismaService,
     private readonly queryService: EquipmentEventsQueryService,
   ) {}
@@ -28,7 +28,7 @@ export class EquipmentEventsLifecycleService {
     userId?: string | null,
   ) {
     const updatedEventId = await this.prisma.$transaction(async (tx) => {
-      const event = await this.assertions.assertEventCanBeCompleted(
+      const event = await this.stateAssertions.assertEventCanBeCompleted(
         tx,
         id,
         userId,
@@ -43,7 +43,6 @@ export class EquipmentEventsLifecycleService {
         );
       }
 
-      await this.assertChecklistAllowsCompletion(tx, id);
       const oldAuditSnapshot = await getEquipmentEventAuditSnapshot(tx, id);
 
       const updateResult = await tx.equipmentEvent.updateMany({
@@ -54,6 +53,9 @@ export class EquipmentEventsLifecycleService {
         data: {
           factDate,
           status: EquipmentEventStatus.COMPLETED,
+          version: {
+            increment: 1,
+          },
         },
       });
 
@@ -85,7 +87,11 @@ export class EquipmentEventsLifecycleService {
 
   async start(id: number, userId?: string | null) {
     const updatedEventId = await this.prisma.$transaction(async (tx) => {
-      const event = await this.assertions.assertEventCanBeStarted(tx, id, userId);
+      const event = await this.stateAssertions.assertEventCanBeStarted(
+        tx,
+        id,
+        userId,
+      );
 
       const updateResult = await tx.equipmentEvent.updateMany({
         where: {
@@ -94,6 +100,9 @@ export class EquipmentEventsLifecycleService {
         },
         data: {
           status: EquipmentEventStatus.IN_PROGRESS,
+          version: {
+            increment: 1,
+          },
         },
       });
 
@@ -120,7 +129,10 @@ export class EquipmentEventsLifecycleService {
 
   async cancel(id: number, userId?: string | null) {
     const updatedEventId = await this.prisma.$transaction(async (tx) => {
-      const event = await this.assertions.assertEventCanBeCancelled(tx, id);
+      const event = await this.stateAssertions.assertEventCanBeCancelled(
+        tx,
+        id,
+      );
 
       const updateResult = await tx.equipmentEvent.updateMany({
         where: {
@@ -134,6 +146,9 @@ export class EquipmentEventsLifecycleService {
         },
         data: {
           status: EquipmentEventStatus.CANCELLED,
+          version: {
+            increment: 1,
+          },
         },
       });
 
@@ -143,6 +158,8 @@ export class EquipmentEventsLifecycleService {
           'Событие в текущем статусе нельзя отменить.',
         );
       }
+
+      await this.cancelActiveChecklists(tx, id, userId);
 
       const auditSnapshot = await getEquipmentEventAuditSnapshot(tx, id);
       await writeEquipmentEventStatusAudit(tx, {
@@ -158,10 +175,27 @@ export class EquipmentEventsLifecycleService {
     return this.queryService.findOne(updatedEventId);
   }
 
-  private async assertChecklistAllowsCompletion(
-    _tx: Prisma.TransactionClient,
-    _eventId: number,
+  private async cancelActiveChecklists(
+    tx: Prisma.TransactionClient,
+    eventId: number,
+    userId?: string | null,
   ) {
-    return;
+    if (!userId) {
+      throwEquipmentEventBadRequest(
+        'SESSION_REQUIRED',
+        'Сессия пользователя не найдена.',
+      );
+    }
+
+    await tx.$executeRaw`
+      UPDATE checklists
+      SET
+        status = 'CANCELLED',
+        cancelled_at = now(),
+        cancelled_by = ${userId},
+        cancellation_reason = 'Событие оборудования отменено.'
+      WHERE equipment_event_id = ${eventId}
+        AND status IN ('CREATED', 'IN_PROGRESS')
+    `;
   }
 }

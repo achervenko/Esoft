@@ -1,9 +1,13 @@
 import type {
+  EquipmentEventChecklistRecord,
   EquipmentEventDetailRecord,
   EquipmentEventListRecord,
 } from './equipment-events.relations';
 
-export function toEquipmentEventListResponse(event: EquipmentEventListRecord) {
+export function toEquipmentEventListResponse(
+  event: EquipmentEventListRecord,
+  checklists: EquipmentEventChecklistRecord[] = [],
+) {
   return {
     id: event.id,
     source: event.source,
@@ -11,7 +15,6 @@ export function toEquipmentEventListResponse(event: EquipmentEventListRecord) {
     version: event.version,
     maintenanceSettingId: event.maintenanceSettingId,
     executionType: event.executionType,
-    checklistTemplateId: event.checklistTemplateId,
     factDate: formatDate(event.factDate),
     note: event.note,
     plannedDate: formatDate(event.plannedDate),
@@ -29,14 +32,15 @@ export function toEquipmentEventListResponse(event: EquipmentEventListRecord) {
       name: event.eventType.name,
       code: event.eventType.code,
     },
+    checklists: checklists.map(toChecklistResponse),
     responsibles: event.responsibles.map((item) => toUserResponse(item.user)),
-    checklist: event.checklistTemplateId
-      ? { id: event.checklistTemplateId }
-      : null,
   };
 }
 
-export function toEquipmentEventDetailResponse(event: EquipmentEventDetailRecord) {
+export function toEquipmentEventDetailResponse(
+  event: EquipmentEventDetailRecord,
+  checklists: EquipmentEventChecklistRecord[] = [],
+) {
   return {
     id: event.id,
     source: event.source,
@@ -44,7 +48,6 @@ export function toEquipmentEventDetailResponse(event: EquipmentEventDetailRecord
     version: event.version,
     maintenanceSettingId: event.maintenanceSettingId,
     executionType: event.executionType,
-    checklistTemplateId: event.checklistTemplateId,
     originalPlannedDate: formatDate(event.originalPlannedDate),
     plannedDate: formatDate(event.plannedDate),
     factDate: formatDate(event.factDate),
@@ -69,10 +72,8 @@ export function toEquipmentEventDetailResponse(event: EquipmentEventDetailRecord
       code: event.eventType.code,
     },
     createdBy: toEmployeeResponse(event.createdByEmployee),
+    checklists: checklists.map(toChecklistResponse),
     responsibles: event.responsibles.map((item) => toUserResponse(item.user)),
-    checklist: event.checklistTemplateId
-      ? { id: event.checklistTemplateId }
-      : null,
   };
 }
 
@@ -115,6 +116,17 @@ function toUserResponse(user: ResponsibleUserLike) {
       : user.name,
     position: employee?.position ?? '',
     role: user.role,
+  };
+}
+
+function toChecklistResponse(checklist: EquipmentEventChecklistRecord) {
+  return {
+    id: checklist.id,
+    checklistTemplateId: checklist.checklistTemplateId,
+    assignedUserId: checklist.assignedUserId,
+    isRequired: checklist.isRequired,
+    status: checklist.status,
+    sortOrder: checklist.sortOrder,
   };
 }
 

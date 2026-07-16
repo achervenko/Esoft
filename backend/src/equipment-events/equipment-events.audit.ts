@@ -17,7 +17,6 @@ export type EquipmentEventAuditSnapshot = {
   executionType: string;
   factDate: Date | null;
   id: number;
-  checklistTemplateId: number | null;
   maintenanceSettingId: number | null;
   note: string | null;
   originalPlannedDate: Date | null;
@@ -52,12 +51,13 @@ export async function getEquipmentEventAuditSnapshot(
     executionType: event.executionType,
     factDate: event.factDate,
     id: event.id,
-    checklistTemplateId: event.checklistTemplateId,
     maintenanceSettingId: event.maintenanceSettingId,
     note: event.note,
     originalPlannedDate: event.originalPlannedDate,
     plannedDate: event.plannedDate,
-    responsibles: event.responsibles.map((item) => responsibleUserLabel(item.user)),
+    responsibles: event.responsibles
+      .map((item) => responsibleUserLabel(item.user))
+      .sort((left, right) => left.localeCompare(right)),
     source: event.source,
     status: event.status,
   };
@@ -80,19 +80,10 @@ export async function writeEquipmentEventCreatedAudit(
         formatNullableId(params.event.maintenanceSettingId),
       ),
       auditLine(params, 'Способ выполнения', params.event.executionType),
-      auditLine(
-        params,
-        'Шаблон чек-листа',
-        formatNullableId(params.event.checklistTemplateId),
-      ),
       auditLine(params, 'Основание события', params.event.source),
       auditLine(params, 'Статус', params.event.status),
       auditLine(params, 'Фактическая дата', formatDate(params.event.factDate)),
-      auditLine(
-        params,
-        'Плановая дата',
-        formatDate(params.event.plannedDate),
-      ),
+      auditLine(params, 'Плановая дата', formatDate(params.event.plannedDate)),
       auditLine(
         params,
         'Первоначальная плановая дата',
@@ -169,11 +160,6 @@ function buildUpdateLines(params: {
       fieldName: 'Способ выполнения',
       newValue: params.newEvent.executionType,
       oldValue: params.oldEvent.executionType,
-    },
-    {
-      fieldName: 'Шаблон чек-листа',
-      newValue: formatNullableId(params.newEvent.checklistTemplateId),
-      oldValue: formatNullableId(params.oldEvent.checklistTemplateId),
     },
     {
       fieldName: 'Фактическая дата',

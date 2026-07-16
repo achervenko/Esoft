@@ -58,24 +58,32 @@
   font-weight: 750;
 }
 
+.maintenance-settings-checklist-list {
+  min-width: 220px;
+  display: grid;
+  gap: 4px;
+  white-space: normal;
+}
+
+.maintenance-settings-checklist-list span {
+  overflow-wrap: anywhere;
+}
+
 .maintenance-settings-form .select-dropdown-trigger {
+  width: 100%;
   min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   border: 1px solid #d7dce3;
   border-radius: 8px;
   padding: 0 12px;
   background: #ffffff;
   color: #15171c;
+  cursor: pointer;
   font: inherit;
   font-size: 14px;
   font-weight: 700;
-}
-
-.maintenance-settings-form .select-dropdown-trigger {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
 }
 
 .maintenance-settings-checkbox {
@@ -91,6 +99,79 @@
   width: 18px;
   height: 18px;
   accent-color: #111111;
+}
+
+.maintenance-checklist-templates {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.maintenance-checklist-templates.has-error {
+  border-color: #d92d20;
+  background: #fffafa;
+}
+
+.maintenance-checklist-templates legend {
+  padding: 0 6px;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.maintenance-checklist-templates > div {
+  display: grid;
+  gap: 10px;
+}
+
+.maintenance-checklist-empty {
+  margin: 0;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.maintenance-checklist-template-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.maintenance-checklist-template-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.maintenance-checklist-template-actions button,
+.maintenance-checklist-add {
+  min-height: 34px;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #ffffff;
+  color: #303744;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.maintenance-checklist-template-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.maintenance-checklist-template-actions .maintenance-checklist-remove {
+  border-color: #f3b3ad;
+  color: #b42318;
+}
+
+.maintenance-checklist-add {
+  justify-self: start;
 }
 
 .maintenance-periodicity-presets {
@@ -114,7 +195,8 @@
   font-weight: 800;
 }
 
-.maintenance-periodicity-presets button:hover {
+.maintenance-periodicity-presets button:hover,
+.maintenance-periodicity-presets button:focus-visible {
   border-color: #111111;
   color: #111111;
 }
@@ -146,7 +228,16 @@
 
 @media (max-width: 760px) {
   .maintenance-settings-actions,
-  .maintenance-settings-inline-error,
+  .maintenance-settings-inline-error {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .maintenance-checklist-template-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
   .maintenance-periodicity-fieldset {
     display: grid;
     grid-template-columns: 1fr;
