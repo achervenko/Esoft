@@ -58,6 +58,7 @@ model ChecklistQuestion {
   updatedByUser     User?                       @relation("ChecklistQuestionUpdatedBy", fields: [updatedBy], references: [id], onDelete: Restrict)
   module            ChecklistModule             @relation(fields: [checklistModuleId], references: [id], onDelete: Restrict)
   templateQuestions ChecklistTemplateQuestion[]
+  checklistDetails  ChecklistDetail[]
 
   @@index([checklistModuleId], map: "idx_checklist_questions_module_id")
   @@index([answerType], map: "idx_checklist_questions_answer_type")
@@ -93,6 +94,7 @@ model ChecklistTemplate {
   copiedTemplates         ChecklistTemplate[]                            @relation("ChecklistTemplateCopy")
   modules                 ChecklistTemplateModule[]
   maintenanceSettingLinks EquipmentMaintenanceSettingChecklistTemplate[]
+  checklists              Checklist[]
 
   @@index([equipmentModelId], map: "idx_checklist_templates_equipment_model_id")
   @@index([maintenanceTypeId], map: "idx_checklist_templates_maintenance_type_id")
@@ -127,6 +129,7 @@ model ChecklistTemplateQuestion {
   isRequired                Boolean                 @default(true) @map("is_required")
   templateModule            ChecklistTemplateModule @relation(fields: [checklistTemplateModuleId], references: [id], onDelete: Cascade)
   question                  ChecklistQuestion       @relation(fields: [checklistQuestionId], references: [id], onDelete: Restrict)
+  checklistDetails          ChecklistDetail[]
 
   @@unique([checklistTemplateModuleId, checklistQuestionId], map: "uq_checklist_template_questions_question")
   @@unique([checklistTemplateModuleId, sortOrder], map: "uq_checklist_template_questions_sort")
@@ -149,4 +152,81 @@ model EquipmentMaintenanceSettingChecklistTemplate {
   @@unique([maintenanceSettingId, sortOrder], map: "uq_setting_checklist_templates_sort")
   @@index([checklistTemplateId], map: "idx_setting_checklist_templates_template_id")
   @@map("equipment_maintenance_setting_checklist_templates")
+}
+
+model Checklist {
+  id                   Int             @id @default(autoincrement())
+  equipmentEventId     Int             @map("equipment_event_id")
+  equipmentId          Int             @map("equipment_id")
+  checklistTemplateId  Int             @map("checklist_template_id")
+  assignedUserId       String          @map("assigned_user_id")
+  isRequired           Boolean         @default(true) @map("is_required")
+  sortOrder            Int             @map("sort_order")
+  status               ChecklistStatus @default(CREATED)
+  result               ChecklistResult?
+  checklistDate        DateTime?       @map("checklist_date") @db.Date
+  startedAt            DateTime?       @map("started_at") @db.Timestamptz(6)
+  startedBy            String?         @map("started_by")
+  completedAt          DateTime?       @map("completed_at") @db.Timestamptz(6)
+  completedBy          String?         @map("completed_by")
+  comment              String?
+  cancelledAt          DateTime?       @map("cancelled_at") @db.Timestamptz(6)
+  cancelledBy          String?         @map("cancelled_by")
+  cancellationReason   String?         @map("cancellation_reason")
+  invalidatedAt        DateTime?       @map("invalidated_at") @db.Timestamptz(6)
+  invalidatedBy        String?         @map("invalidated_by")
+  invalidationReason   String?         @map("invalidation_reason")
+  createdAt            DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy            String          @map("created_by")
+  version              Int             @default(1)
+  equipmentEvent       EquipmentEvent   @relation(fields: [equipmentEventId], references: [id], onDelete: Restrict)
+  equipment            Equipment        @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
+  checklistTemplate    ChecklistTemplate @relation(fields: [checklistTemplateId], references: [id], onDelete: Restrict)
+  assignedUser         User             @relation("ChecklistAssignedUser", fields: [assignedUserId], references: [id], onDelete: Restrict)
+  createdByUser        User             @relation("ChecklistCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  startedByUser        User?            @relation("ChecklistStartedBy", fields: [startedBy], references: [id], onDelete: SetNull)
+  completedByUser      User?            @relation("ChecklistCompletedBy", fields: [completedBy], references: [id], onDelete: SetNull)
+  cancelledByUser      User?            @relation("ChecklistCancelledBy", fields: [cancelledBy], references: [id], onDelete: Restrict)
+  invalidatedByUser    User?            @relation("ChecklistInvalidatedBy", fields: [invalidatedBy], references: [id], onDelete: Restrict)
+  details              ChecklistDetail[]
+
+  @@unique([equipmentEventId, checklistTemplateId], map: "uq_checklists_event_template")
+  @@unique([equipmentEventId, sortOrder], map: "uq_checklists_event_sort")
+  @@index([equipmentEventId], map: "idx_checklists_event_id")
+  @@index([equipmentId], map: "idx_checklists_equipment_id")
+  @@index([checklistTemplateId], map: "idx_checklists_template_id")
+  @@index([assignedUserId], map: "idx_checklists_assigned_user_id")
+  @@index([status], map: "idx_checklists_status")
+  @@map("checklists")
+}
+
+model ChecklistDetail {
+  id                          Int                 @id @default(autoincrement())
+  checklistId                 Int                 @map("checklist_id")
+  checklistTemplateQuestionId Int?                @map("checklist_template_question_id")
+  checklistQuestionId         Int?                @map("checklist_question_id")
+  moduleName                  String              @map("module_name")
+  moduleSortOrder             Int                 @map("module_sort_order")
+  questionText                String              @map("question_text")
+  answerType                  ChecklistAnswerType @map("answer_type")
+  questionSortOrder           Int                 @map("question_sort_order")
+  isRequired                  Boolean             @map("is_required")
+  answerBoolean               Boolean?            @map("answer_boolean")
+  answerInteger               Int?                @map("answer_integer")
+  answerDecimal               Decimal?            @map("answer_decimal") @db.Decimal(18, 6)
+  answerText                  String?             @map("answer_text")
+  answerDate                  DateTime?           @map("answer_date") @db.Date
+  answeredAt                  DateTime?           @map("answered_at") @db.Timestamptz(6)
+  answeredBy                  String?             @map("answered_by")
+  checklist                   Checklist           @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  templateQuestion            ChecklistTemplateQuestion? @relation(fields: [checklistTemplateQuestionId], references: [id], onDelete: SetNull)
+  question                    ChecklistQuestion?  @relation(fields: [checklistQuestionId], references: [id], onDelete: SetNull)
+  answeredByUser              User?               @relation("ChecklistDetailAnsweredBy", fields: [answeredBy], references: [id], onDelete: SetNull)
+
+  @@unique([checklistId, moduleSortOrder, questionSortOrder], map: "uq_checklist_details_order")
+  @@index([checklistId], map: "idx_checklist_details_checklist_id")
+  @@index([checklistTemplateQuestionId], map: "idx_checklist_details_template_question_id")
+  @@index([checklistQuestionId], map: "idx_checklist_details_question_id")
+  @@index([answeredBy], map: "idx_checklist_details_answered_by")
+  @@map("checklist_details")
 }

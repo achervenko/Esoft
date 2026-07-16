@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -15,6 +16,10 @@ export function throwChecklistConflict(
   details?: Record<string, unknown>,
 ): never {
   throw new ConflictException({ code, message, details });
+}
+
+export function throwChecklistForbidden(code: string, message: string): never {
+  throw new ForbiddenException({ code, message });
 }
 
 export function throwChecklistNotFound(code: string, message: string): never {

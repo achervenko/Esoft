@@ -27,6 +27,13 @@ model User {
   publishedChecklistTemplates                     ChecklistTemplate[]                            @relation("ChecklistTemplatePublishedBy")
   archivedChecklistTemplates                      ChecklistTemplate[]                            @relation("ChecklistTemplateArchivedBy")
   createdMaintenanceSettingChecklistTemplateLinks EquipmentMaintenanceSettingChecklistTemplate[] @relation("MaintenanceSettingChecklistTemplateCreatedBy")
+  assignedChecklists                              Checklist[]                                    @relation("ChecklistAssignedUser")
+  createdChecklists                               Checklist[]                                    @relation("ChecklistCreatedBy")
+  startedChecklists                               Checklist[]                                    @relation("ChecklistStartedBy")
+  completedChecklists                             Checklist[]                                    @relation("ChecklistCompletedBy")
+  cancelledChecklists                             Checklist[]                                    @relation("ChecklistCancelledBy")
+  invalidatedChecklists                           Checklist[]                                    @relation("ChecklistInvalidatedBy")
+  answeredChecklistDetails                        ChecklistDetail[]                              @relation("ChecklistDetailAnsweredBy")
   photo                                           UserPhoto?
   uploadedUserPhotos                              UserPhoto[]                                    @relation("UploadedUserPhotos")
   uploadedStorageFiles                            StorageFile[]                                  @relation("UploadedStorageFiles")

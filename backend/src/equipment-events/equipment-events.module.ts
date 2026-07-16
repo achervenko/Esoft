@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
+import { ChecklistsModule } from '../checklists/checklists.module';
 import { EquipmentEventAccessAssertions } from './equipment-event-access.assertions';
 import { EquipmentEventChecklistAssertions } from './equipment-event-checklist.assertions';
 import { EquipmentEventChecklistCreator } from './equipment-event-checklist.creator';
@@ -18,7 +19,7 @@ import { MaintenanceTypesController } from './maintenance-types/maintenance-type
 import { MaintenanceTypesService } from './maintenance-types/maintenance-types.service';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, ChecklistsModule],
   controllers: [
     EquipmentEventsController,
     MaintenanceSettingsController,

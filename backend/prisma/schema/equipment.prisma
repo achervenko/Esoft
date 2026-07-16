@@ -29,11 +29,11 @@ model Equipment {
   responsibleEmployeeId Int              @map("responsible_employee_id")
   responsibleEmployee   Employee         @relation("EquipmentResponsibleEmployee", fields: [responsibleEmployeeId], references: [id], onDelete: Restrict)
   events                EquipmentEvent[]
+  checklists            Checklist[]
   status                EquipmentStatus  @default(ACTIVE)
   operationText         String?          @map("operation_text")
   notes                 String?
 
-  @@index([visibleId], map: "idx_equipment_visible_id")
   @@index([serialNumber], map: "idx_equipment_serial_number")
   @@index([status], map: "idx_equipment_status")
   @@index([modelId], map: "idx_equipment_model_id")

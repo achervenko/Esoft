@@ -36,6 +36,7 @@ model EquipmentEvent {
   maintenanceSetting EquipmentMaintenanceSetting? @relation(fields: [maintenanceSettingId], references: [id], onDelete: SetNull)
   createdByEmployee  Employee                     @relation("EquipmentEventCreatedBy", fields: [createdByEmployeeId], references: [id], onDelete: Restrict)
   responsibles       EquipmentEventResponsible[]
+  checklists         Checklist[]
 
   @@index([equipmentId], map: "idx_equipment_events_equipment_id")
   @@index([eventTypeId], map: "idx_equipment_events_event_type_id")
