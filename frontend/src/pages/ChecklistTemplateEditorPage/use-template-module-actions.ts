@@ -56,7 +56,7 @@ export function useTemplateModuleActions({
             questions.find(
               (question) =>
                 question.id === questionId &&
-                question.module?.id === checklistModuleId,
+                question.checklistModuleId === checklistModuleId,
             ),
           )
           .filter((question): question is ChecklistQuestion => Boolean(question))

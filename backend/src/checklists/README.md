@@ -16,9 +16,9 @@ checklists/
 
 ## Доступ
 
-Административные endpoints модулей, вопросов и шаблонов требуют роль `admin`.
-Идентификаторы пользователей для полей `createdBy`, `updatedBy`,
-`publishedBy`, `archivedBy` берутся только из сессии.
+Административные endpoints модулей, вопросов и шаблонов требуют роль `admin`
+или `chief_engineer`. Идентификаторы пользователей для полей `createdBy`,
+`updatedBy`, `publishedBy`, `archivedBy` берутся только из сессии.
 
 Рабочие endpoints `/api/checklists` доступны авторизованным пользователям по
 правилам назначения чек-листов и роли пользователя.
@@ -31,6 +31,8 @@ checklists/
 GET  /api/checklist-modules
 GET  /api/checklist-modules/:id
 POST /api/checklist-modules
+PATCH /api/checklist-modules/reorder
+PATCH /api/checklist-modules/:moduleId/questions/reorder
 PATCH /api/checklist-modules/:id
 POST /api/checklist-modules/:id/activate
 POST /api/checklist-modules/:id/deactivate
@@ -59,9 +61,14 @@ POST   /api/checklist-templates/:id/archive
 ## Бизнес-правила
 
 - Модули и вопросы не удаляются физически, только активируются и деактивируются.
+- Для активных модулей поддерживается явный каталоговый `sortOrder`.
+- Для активных вопросов внутри модуля поддерживается явный `sortOrder`.
+- Вопрос может временно не принадлежать ни одному модулю:
+  `checklistModuleId = null`, `sortOrder = null`.
 - Деактивированные модули и вопросы нельзя добавлять в новые шаблоны.
+- Вопрос шаблона должен принадлежать тому же модулю, что и секция шаблона.
 - Новый шаблон собирается на frontend локально и создаётся одним запросом.
-- Созданный шаблон сразу становится действующим.
+- Созданный шаблон сразу становится действующим (`ACTIVE`).
 - Действующий шаблон нельзя редактировать по шагам.
 - Архивирование шаблона удаляет его связи с настройками обслуживания, но не
   изменяет уже созданные события и экземпляры чек-листов.
@@ -84,6 +91,10 @@ ACTIVE -> ARCHIVED
   обслуживания. Архивирование удаляет связи с настройками обслуживания, но
   сохраняет сам шаблон, уже созданные события и экземпляры чек-листов.
 
+Техническое поле `isPublished` всегда равно `true` для шаблонов, доступных
+через API этого модуля. Фильтрация по `isPublished` запрещена; для клиентов
+доступно только бизнес-состояние `state`.
+
 Создание шаблона проверяет:
 
 - структура шаблона валидна;
@@ -95,7 +106,8 @@ ACTIVE -> ARCHIVED
 ## Создание и архивирование шаблонов
 
 `POST /api/checklist-templates` создаёт готовый действующий шаблон одним
-запросом и не требует `version`.
+запросом и не требует `version`. Поля `equipmentModelId`, `maintenanceTypeId`,
+`isActive`, `isPublished` этим методом передавать нельзя.
 
 Пример body:
 
@@ -125,6 +137,74 @@ ACTIVE -> ARCHIVED
 {
   "reason": "Заменён новым шаблоном",
   "version": 3
+}
+```
+
+## Каталог модулей и вопросов
+
+### GET /api/checklist-modules
+
+Query:
+
+```text
+isActive?: boolean
+search?: string
+sortBy?: name | createdAt | updatedAt | sortOrder
+sortDirection?: asc | desc
+page?: number = 1
+limit?: number = 20, max 100
+```
+
+По умолчанию модули сортируются по `sortOrder asc`.
+
+### PATCH /api/checklist-modules/reorder
+
+Меняет порядок всех активных модулей одним запросом. В `items` нужно передать
+полный активный набор без пропусков и повторов по `sortOrder`.
+
+```json
+{
+  "items": [
+    { "id": 3, "sortOrder": 1 },
+    { "id": 1, "sortOrder": 2 }
+  ]
+}
+```
+
+### GET /api/checklist-questions
+
+Query:
+
+```text
+checklistModuleId?: number | null
+moduleId?: number | null
+answerType?: BOOLEAN | INTEGER | DECIMAL | TEXT | DATE
+isActive?: boolean
+search?: string
+sortBy?: questionText | createdAt | updatedAt | sortOrder
+sortDirection?: asc | desc
+page?: number = 1
+limit?: number = 20, max 100
+```
+
+- `checklistModuleId` и `moduleId` равнозначны.
+- `checklistModuleId = null` возвращает вопросы без модуля.
+- Если фильтр по модулю не передан, список по умолчанию идёт по
+  `createdAt desc, id desc`.
+- Если фильтр по модулю передан, список по умолчанию идёт по `sortOrder asc`.
+
+### PATCH /api/checklist-modules/:moduleId/questions/reorder
+
+Меняет порядок всех активных вопросов конкретного модуля. `moduleId` должен
+существовать, а `items` должны покрывать полный активный набор вопросов этого
+модуля без пропусков и повторов.
+
+```json
+{
+  "items": [
+    { "id": 12, "sortOrder": 1 },
+    { "id": 15, "sortOrder": 2 }
+  ]
 }
 ```
 
@@ -224,7 +304,7 @@ id ASC
 
 Вопросы возвращают:
 
-```text
+```
 checklistDetailId
 questionId?: number | null
 text

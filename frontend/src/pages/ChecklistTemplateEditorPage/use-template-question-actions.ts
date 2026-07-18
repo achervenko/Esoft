@@ -37,7 +37,7 @@ export function useTemplateQuestionActions({
               questions.find(
                 (question) =>
                   question.id === questionId &&
-                  question.module?.id === module.checklistModuleId,
+                  question.checklistModuleId === module.checklistModuleId,
               ),
             )
             .filter((question): question is ChecklistQuestion =>
