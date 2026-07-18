@@ -13,7 +13,9 @@ export function EquipmentEventResponsibleFields({
 }: EquipmentEventResponsibleFieldsProps) {
   return (
     <fieldset className="equipment-event-responsibles">
-      <legend>Ответственные</legend>
+      <legend>
+        Ответственные<b aria-hidden="true">*</b>
+      </legend>
       <div>
         {users.map((user) => {
           const isChecked = responsibleUserIds.includes(user.id);

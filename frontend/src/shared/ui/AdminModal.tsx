@@ -1,9 +1,11 @@
 import type { KeyboardEvent, ReactNode } from "react";
 import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
+import { getFocusableElements } from "./focusable-elements";
 
 type AdminModalProps = {
   children: ReactNode;
+  className?: string;
   isCloseDisabled?: boolean;
   onClose: () => void;
   title: string;
@@ -11,11 +13,13 @@ type AdminModalProps = {
 
 export function AdminModal({
   children,
+  className,
   isCloseDisabled = false,
   onClose,
   title,
 }: AdminModalProps) {
   const dialogRef = useRef<HTMLElement | null>(null);
+  const dialogId = useId();
   const titleId = useId();
 
   const handleClose = () => {
@@ -70,19 +74,23 @@ export function AdminModal({
       return;
     }
 
-    const firstElement = focusableElements[0];
-    const lastElement = focusableElements[focusableElements.length - 1];
+    const currentIndex = focusableElements.indexOf(
+      document.activeElement as HTMLElement,
+    );
 
-    if (event.shiftKey && document.activeElement === firstElement) {
+    if (currentIndex < 0) {
       event.preventDefault();
-      lastElement.focus();
+      focusableElements[0].focus();
       return;
     }
 
-    if (!event.shiftKey && document.activeElement === lastElement) {
-      event.preventDefault();
-      firstElement.focus();
-    }
+    event.preventDefault();
+
+    const nextIndex = event.shiftKey
+      ? (currentIndex - 1 + focusableElements.length) % focusableElements.length
+      : (currentIndex + 1) % focusableElements.length;
+
+    focusableElements[nextIndex]?.focus();
   };
 
   return createPortal(
@@ -94,7 +102,8 @@ export function AdminModal({
       <section
         aria-labelledby={titleId}
         aria-modal="true"
-        className="admin-modal"
+        className={["admin-modal", className].filter(Boolean).join(" ")}
+        data-admin-modal-id={dialogId}
         onKeyDown={handleKeyDown}
         onMouseDown={(event) => event.stopPropagation()}
         ref={dialogRef}
@@ -117,46 +126,4 @@ export function AdminModal({
     </div>,
     document.body,
   );
-}
-
-function getFocusableElements(container: HTMLElement) {
-  const selector = [
-    "a[href]",
-    "button:not([disabled])",
-    "input:not([disabled])",
-    "select:not([disabled])",
-    "textarea:not([disabled])",
-    "[tabindex]:not([tabindex='-1'])",
-  ].join(",");
-
-  return Array.from(container.querySelectorAll<HTMLElement>(selector)).filter(
-    (element) =>
-      !element.hasAttribute("disabled") &&
-      element.getAttribute("aria-hidden") !== "true" &&
-      isElementVisible(element, container),
-  );
-}
-
-function isElementVisible(element: HTMLElement, container: HTMLElement) {
-  if (element.getClientRects().length === 0) {
-    return false;
-  }
-
-  let currentElement: HTMLElement | null = element;
-
-  while (currentElement && currentElement !== container.parentElement) {
-    const style = window.getComputedStyle(currentElement);
-
-    if (style.display === "none" || style.visibility === "hidden") {
-      return false;
-    }
-
-    if (currentElement === container) {
-      break;
-    }
-
-    currentElement = currentElement.parentElement;
-  }
-
-  return true;
 }

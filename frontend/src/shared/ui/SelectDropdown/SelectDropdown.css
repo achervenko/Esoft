@@ -70,6 +70,18 @@
   font-weight: 800;
 }
 
+.select-dropdown-menu button.disabled,
+.select-dropdown-menu button:disabled {
+  background: #f8fafc;
+  color: #98a2b3;
+  cursor: not-allowed;
+}
+
+.select-dropdown-menu button.disabled:hover,
+.select-dropdown-menu button:disabled:hover {
+  background: #f8fafc;
+}
+
 .select-dropdown-option-content {
   min-width: 0;
   flex: 1;

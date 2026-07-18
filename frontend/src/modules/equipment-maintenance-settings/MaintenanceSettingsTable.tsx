@@ -19,10 +19,10 @@ function formatChecklistTemplate(setting: MaintenanceSetting) {
   }
 
   if (setting.defaultChecklistTemplate.state === "ARCHIVED") {
-    return `${setting.defaultChecklistTemplate.name} #${setting.defaultChecklistTemplate.checklistTemplateId} (Шаблон удалён)`;
+    return `${setting.defaultChecklistTemplate.name} (Шаблон удалён)`;
   }
 
-  return `${setting.defaultChecklistTemplate.name} #${setting.defaultChecklistTemplate.checklistTemplateId}`;
+  return setting.defaultChecklistTemplate.name;
 }
 
 const columns = (

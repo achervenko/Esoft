@@ -49,6 +49,7 @@ export function EquipmentEventFormModal({
 
   return (
     <AdminModal
+      className="equipment-event-form-modal"
       onClose={onClose}
       title={mode === "edit" ? "Редактирование события" : "Назначить событие"}
     >

@@ -1,3 +1,7 @@
+import {
+  SelectDropdown,
+  type SelectDropdownOption,
+} from "../../shared/ui/SelectDropdown";
 import type { ChecklistTemplateListItem } from "../../shared/api/checklists";
 import type { ResponsibleUserOption } from "./equipment-event-form.types";
 
@@ -19,6 +23,12 @@ export function EquipmentEventChecklistAssignments({
   const selectedResponsibleOptions = users.filter((user) =>
     responsibleUserIds.includes(user.id),
   );
+  const checklistTemplateDropdownOptions = checklistTemplateOptions.map(
+    (template) => ({
+      label: template.name,
+      value: String(template.id),
+    }),
+  );
 
   if (selectedResponsibleOptions.length === 0) {
     return null;
@@ -34,36 +44,67 @@ export function EquipmentEventChecklistAssignments({
           const hasSelectedTemplateInActiveOptions = checklistTemplateOptions.some(
             (template) => String(template.id) === selectedTemplateId,
           );
-          const options = hasSelectedTemplateInActiveOptions || !selectedTemplateId
-            ? checklistTemplateOptions
-            : [
-                ...checklistTemplateOptions,
+          const options: SelectDropdownOption[] =
+            hasSelectedTemplateInActiveOptions || !selectedTemplateId
+              ? checklistTemplateDropdownOptions
+              : [
+                ...checklistTemplateDropdownOptions,
                 {
-                  id: Number(selectedTemplateId),
-                  name: `Шаблон #${selectedTemplateId} (архивный)`,
+                  disabled: true,
+                  label: `Шаблон #${selectedTemplateId} (архивный)`,
+                  value: selectedTemplateId,
                 },
               ];
 
           return (
-            <label key={user.id}>
-              <span>{user.name}</span>
-              <select
-                onChange={(selectEvent) =>
-                  onAssign(user.id, selectEvent.target.value)
-                }
-                value={selectedTemplateId}
+            <div
+              className="equipment-event-checklist-assignment"
+              key={user.id}
+            >
+              <span
+                className="equipment-event-checklist-assignment__responsible"
+                title={user.name}
               >
-                <option value="">Выберите шаблон</option>
-                {options.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+                {formatResponsibleName(user.name)}
+              </span>
+              <div className="equipment-event-checklist-assignment__select">
+                <SelectDropdown
+                  onChange={(checklistTemplateId) =>
+                    onAssign(user.id, checklistTemplateId)
+                  }
+                  options={options}
+                  placeholder="Выберите шаблон"
+                  required
+                  value={selectedTemplateId}
+                />
+              </div>
+            </div>
           );
         })}
       </div>
     </fieldset>
   );
+}
+
+function formatResponsibleName(fullName: string) {
+  const parts = fullName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (parts.length === 0) {
+    return "";
+  }
+
+  if (parts.length === 1) {
+    return parts[0];
+  }
+
+  const [lastName, firstName, middleName] = parts;
+  const initials = [firstName, middleName]
+    .filter(Boolean)
+    .map((part) => `${part[0]}.`)
+    .join("");
+
+  return initials ? `${lastName} ${initials}` : lastName;
 }

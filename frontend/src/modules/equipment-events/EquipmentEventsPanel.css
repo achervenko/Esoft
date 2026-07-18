@@ -125,6 +125,31 @@
   outline-offset: 0;
 }
 
+.admin-modal.equipment-event-form-modal {
+  max-height: calc(100dvh - 24px);
+}
+
+.admin-modal.equipment-event-form-modal .equipment-event-form {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 0;
+}
+
+.admin-modal.equipment-event-form-modal .admin-form-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin: 0 -18px;
+  padding: 14px 18px 18px;
+  background: linear-gradient(
+    to top,
+    rgba(255, 255, 255, 1) 72%,
+    rgba(255, 255, 255, 0.94) 100%
+  );
+  border-top: 1px solid #eef0f3;
+}
+
 .equipment-event-responsibles {
   display: grid;
   gap: 10px;
@@ -146,6 +171,33 @@
   overflow-y: auto;
   display: grid;
   gap: 8px;
+}
+
+.equipment-event-checklist-assignment {
+  min-height: 34px;
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) minmax(220px, 320px);
+  gap: 12px;
+  align-items: center;
+}
+
+.equipment-event-checklist-assignment__responsible {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #15171c;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.equipment-event-checklist-assignment__select {
+  width: 100%;
+  min-width: 0;
+}
+
+.equipment-event-checklist-assignment__select .select-dropdown-field {
+  margin: 0;
 }
 
 .equipment-event-responsibles label {
@@ -207,6 +259,14 @@
 }
 
 @media (max-width: 720px) {
+  .admin-modal.equipment-event-form-modal {
+    max-height: calc(100dvh - 16px);
+  }
+
+  .equipment-event-checklist-assignment {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .equipment-event-detail dl {
     grid-template-columns: 1fr;
   }
