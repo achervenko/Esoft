@@ -9,6 +9,7 @@ import { EquipmentCreatePage } from "../pages/EquipmentCreatePage";
 import { EquipmentEditPage } from "../pages/EquipmentEditPage";
 import { EquipmentPage } from "../pages/EquipmentPage";
 import { EquipmentViewPage } from "../pages/EquipmentViewPage";
+import { MyChecklistsPage } from "../pages/my-checklists";
 import { ProfilePage } from "../pages/ProfilePage";
 import { SearchPage } from "../pages/SearchPage";
 import { UsersPage } from "../pages/UsersPage";
@@ -50,6 +51,8 @@ export function AppShell({
     route === "#/checklist-admin" || route.startsWith("#/checklist-admin?");
   const isDictionariesRoute = route === "#/dictionaries";
   const isEquipmentRoute = route === "#/equipment";
+  const isMyChecklistsRoute =
+    route === "#/my-checklists" || route.startsWith("#/my-checklists?");
   const isProfileRoute = route === "#/profile";
   const isSearchRoute = route === "#/search" || route.startsWith("#/search?");
   const isUsersRoute = route === "#/users";
@@ -123,6 +126,12 @@ export function AppShell({
         {isEquipmentRoute ? (
           <EquipmentPage userRole={user?.role ?? null} />
         ) : null}
+        {isMyChecklistsRoute ? (
+          <MyChecklistsPage
+            currentUserId={user?.id ?? null}
+            route={route}
+          />
+        ) : null}
         {isSearchRoute ? <SearchPage /> : null}
         {isProfileRoute ? <ProfilePage user={user} /> : null}
         {isEquipmentCreateRoute ? (
@@ -138,7 +147,6 @@ export function AppShell({
         ) : null}
         {equipmentViewId !== null ? (
           <EquipmentViewPage
-            currentUserId={user?.id ?? null}
             initialTab={equipmentViewTab}
             returnTo={equipmentViewReturnTo}
             userRole={user?.role ?? null}
@@ -147,7 +155,6 @@ export function AppShell({
         ) : null}
         {isUsersRoute ? (
           <UsersPage
-            currentUserId={user?.id ?? null}
             onCurrentUserChanged={onUserRefresh}
             userRole={user?.role ?? null}
           />

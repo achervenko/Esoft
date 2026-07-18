@@ -22,7 +22,6 @@ import { Notice } from "../../shared/ui/Notice";
 import "./EquipmentViewPage.css";
 
 type EquipmentViewPageProps = {
-  currentUserId?: string | null;
   initialTab?: EquipmentViewTab;
   returnTo: string;
   userRole: string | null;
@@ -30,7 +29,6 @@ type EquipmentViewPageProps = {
 };
 
 export function EquipmentViewPage({
-  currentUserId = null,
   initialTab = "details",
   returnTo,
   userRole,
@@ -135,7 +133,6 @@ export function EquipmentViewPage({
           canEdit={canEditEquipment(userRole)}
           canManageEquipmentEvents={canManageEquipmentEvents(userRole)}
           canManageMaintenanceSettings={canManageMaintenanceSettings(userRole)}
-          currentUserId={currentUserId}
           equipment={equipment}
           history={history}
           historyError={historyError}

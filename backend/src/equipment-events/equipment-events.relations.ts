@@ -173,9 +173,21 @@ export type EquipmentEventAuditRecord = Prisma.EquipmentEventGetPayload<{
 }>;
 
 export type EquipmentEventChecklistRecord = {
+  assignedUser: {
+    fullName: string;
+    id: string;
+    position: string;
+  };
   assignedUserId: string;
   checklistTemplateId: number;
   id: number;
+  progress: {
+    answered: number;
+    requiredAnswered: number;
+    requiredTotal: number;
+    total: number;
+  };
   sortOrder: number;
   status: ChecklistStatus;
+  templateName: string;
 };

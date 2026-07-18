@@ -1,4 +1,5 @@
 import type {
+  EquipmentEventChecklist,
   EquipmentEventChecklistStatus,
   EquipmentEventSource,
   EquipmentEventStatus,
@@ -58,4 +59,23 @@ export function formatEventResponsibles(
   responsibles: Array<{ fullName: string }>,
 ) {
   return responsibles.map((employee) => employee.fullName).join(", ") || "Не указаны";
+}
+
+export function formatChecklistProgress(progress: {
+  answered: number;
+  total: number;
+}) {
+  return `${progress.answered} из ${progress.total}`;
+}
+
+export function formatChecklistCompletionSummary(checklists: EquipmentEventChecklist[]) {
+  if (checklists.length === 0) {
+    return "Чек-листы не назначены";
+  }
+
+  const completedCount = checklists.filter(
+    (checklist) => checklist.status === "COMPLETED",
+  ).length;
+
+  return `Чек-листы: ${completedCount} из ${checklists.length} завершено`;
 }

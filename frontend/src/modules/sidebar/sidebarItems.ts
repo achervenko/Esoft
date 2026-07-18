@@ -1,4 +1,4 @@
-import { BookCheck, BookOpen, Factory, Gauge, Search, Users } from "lucide-react";
+import { BookCheck, BookOpen, ClipboardList, Factory, Gauge, Search, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type SidebarItem = {
@@ -21,6 +21,11 @@ export const sidebarSections: SidebarSection[] = [
         href: "#/dashboard",
         icon: Gauge,
         label: "Панель",
+      },
+      {
+        href: "#/my-checklists",
+        icon: ClipboardList,
+        label: "Мои чек-листы",
       },
       {
         href: "#/equipment",
@@ -53,6 +58,7 @@ export const sidebarSections: SidebarSection[] = [
         href: "#/checklist-admin",
         icon: BookCheck,
         label: "Чек-листы",
+        roles: ["admin", "chief_engineer"],
       },
     ],
   },

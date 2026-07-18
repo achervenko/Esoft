@@ -3,6 +3,7 @@ import { DataTable, type DataTableColumn } from "../../shared/ui/DataTable";
 import {
   equipmentEventExecutionTypeLabels,
   equipmentEventStatusLabels,
+  formatChecklistCompletionSummary,
   formatDateValue,
   formatEventResponsibles,
 } from "./equipment-events-utils";
@@ -10,23 +11,16 @@ import {
 type EquipmentEventsTableProps = {
   canEditEvents: boolean;
   canManageEvents: boolean;
-  currentUserId?: string | null;
   events: EquipmentEventItem[];
   onCancel: (event: EquipmentEventItem) => void;
-  onComplete: (event: EquipmentEventItem) => void;
   onEdit: (event: EquipmentEventItem) => void;
   onOpen: (event: EquipmentEventItem) => void;
-  onStart: (event: EquipmentEventItem) => void;
 };
 
 const columns = (
   canEditEvents: boolean,
   canManageEvents: boolean,
-  currentUserId: string | null | undefined,
-  handlers: Pick<
-    EquipmentEventsTableProps,
-    "onCancel" | "onComplete" | "onEdit" | "onOpen" | "onStart"
-  >,
+  handlers: Pick<EquipmentEventsTableProps, "onCancel" | "onEdit" | "onOpen">,
 ): Array<DataTableColumn<EquipmentEventItem, string>> => [
   {
     key: "maintenanceType",
@@ -79,13 +73,15 @@ const columns = (
     sortValue: (event) => formatEventResponsibles(event.responsibles),
   },
   {
+    key: "checklists",
+    label: "Чек-листы",
+    render: (event) => formatChecklistCompletionSummary(event.checklists),
+    sortValue: (event) => formatChecklistCompletionSummary(event.checklists),
+  },
+  {
     key: "actions",
     label: "",
     render: (event) => {
-      const canProcessEvent =
-        Boolean(currentUserId) &&
-        event.responsibles.some((employee) => employee.id === currentUserId);
-
       return (
         <div className="equipment-events-actions">
           <button onClick={() => handlers.onOpen(event)} type="button">
@@ -94,16 +90,6 @@ const columns = (
           {canEditEvents && event.status === "CREATED" ? (
             <button onClick={() => handlers.onEdit(event)} type="button">
               Изменить
-            </button>
-          ) : null}
-          {canProcessEvent && event.status === "CREATED" ? (
-            <button onClick={() => handlers.onStart(event)} type="button">
-              Взять в работу
-            </button>
-          ) : null}
-          {canProcessEvent && event.status === "IN_PROGRESS" ? (
-            <button onClick={() => handlers.onComplete(event)} type="button">
-              Завершить
             </button>
           ) : null}
           {canManageEvents &&
@@ -125,22 +111,17 @@ const columns = (
 export function EquipmentEventsTable({
   canEditEvents,
   canManageEvents,
-  currentUserId = null,
   events,
   onCancel,
-  onComplete,
   onEdit,
   onOpen,
-  onStart,
 }: EquipmentEventsTableProps) {
   return (
     <DataTable
-      columns={columns(canEditEvents, canManageEvents, currentUserId, {
+      columns={columns(canEditEvents, canManageEvents, {
         onCancel,
-        onComplete,
         onEdit,
         onOpen,
-        onStart,
       })}
       defaultSort={{ direction: "desc", key: "plannedDate" }}
       getRowKey={(event) => event.id}

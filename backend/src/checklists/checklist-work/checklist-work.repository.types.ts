@@ -8,19 +8,28 @@ import {
 export type LockedChecklistEvent = {
   eventId: number;
   eventStatus: EquipmentEventStatus;
+  factDate: Date | null;
 };
 
 export type LockedChecklist = {
   assignedUserId: string;
   equipmentEventId: number;
   id: number;
-  isRequired: boolean;
   status: ChecklistStatus;
   version: number;
 };
 
+export type LockedEventChecklistRow = {
+  assignedUserId: string;
+  id: number;
+  status: ChecklistStatus;
+};
+
 export type ChecklistListRow = {
   answered: bigint;
+  assignedUserFullName: string;
+  assignedUserId: string;
+  assignedUserPosition: string;
   checklistTemplateId: number;
   equipmentModelName: string;
   equipmentName: string;
@@ -29,7 +38,6 @@ export type ChecklistListRow = {
   eventPlannedDate: Date | null;
   eventStatus: EquipmentEventStatus;
   id: number;
-  isRequired: boolean;
   maintenanceTypeId: number;
   maintenanceTypeName: string;
   requiredAnswered: bigint;
@@ -38,12 +46,12 @@ export type ChecklistListRow = {
   status: ChecklistStatus;
   templateName: string;
   total: bigint;
+  version: number;
 };
 
 export type ChecklistDetailRow = ChecklistListRow & {
   completedAt: Date | null;
   startedAt: Date | null;
-  version: number;
 };
 
 export type ChecklistDetailQuestionRow = {

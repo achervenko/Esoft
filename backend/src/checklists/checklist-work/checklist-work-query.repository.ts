@@ -26,10 +26,21 @@ export class ChecklistWorkQueryRepository {
         filtered_checklists AS (
           SELECT
             checklist.id,
+            checklist.version,
             checklist.status,
-            checklist.is_required AS "isRequired",
             checklist.sort_order AS "sortOrder",
             checklist.checklist_template_id AS "checklistTemplateId",
+            checklist.assigned_user_id AS "assignedUserId",
+            COALESCE(
+              NULLIF(
+                TRIM(
+                  CONCAT_WS(' ', assigned_employee.last_name, assigned_employee.first_name, assigned_employee.middle_name)
+                ),
+                ''
+              ),
+              assigned_user.name
+            ) AS "assignedUserFullName",
+            COALESCE(assigned_employee.position, '') AS "assignedUserPosition",
             template.name AS "templateName",
             event.id AS "eventId",
             event.status AS "eventStatus",
@@ -54,6 +65,12 @@ export class ChecklistWorkQueryRepository {
             ON equipment_model.id = equipment.model_id
           JOIN checklist_templates template
             ON template.id = checklist.checklist_template_id
+          JOIN "user" assigned_user
+            ON assigned_user.id = checklist.assigned_user_id
+          LEFT JOIN employee_users assigned_employee_user
+            ON assigned_employee_user.user_id = assigned_user.id
+          LEFT JOIN employees assigned_employee
+            ON assigned_employee.id = assigned_employee_user.employee_id
           LEFT JOIN checklist_progress progress
             ON progress.checklist_id = checklist.id
           WHERE (${params.canViewAll} OR checklist.assigned_user_id = ${params.userId})
@@ -149,9 +166,18 @@ export class ChecklistWorkQueryRepository {
         checklist.started_at AS "startedAt",
         checklist.completed_at AS "completedAt",
         checklist.assigned_user_id AS "assignedUserId",
-        checklist.is_required AS "isRequired",
         checklist.sort_order AS "sortOrder",
         checklist.checklist_template_id AS "checklistTemplateId",
+        COALESCE(
+          NULLIF(
+            TRIM(
+              CONCAT_WS(' ', assigned_employee.last_name, assigned_employee.first_name, assigned_employee.middle_name)
+            ),
+            ''
+          ),
+          assigned_user.name
+        ) AS "assignedUserFullName",
+        COALESCE(assigned_employee.position, '') AS "assignedUserPosition",
         template.name AS "templateName",
         event.id AS "eventId",
         event.status AS "eventStatus",
@@ -177,6 +203,12 @@ export class ChecklistWorkQueryRepository {
         ON equipment_model.id = equipment.model_id
       JOIN checklist_templates template
         ON template.id = checklist.checklist_template_id
+      JOIN "user" assigned_user
+        ON assigned_user.id = checklist.assigned_user_id
+      LEFT JOIN employee_users assigned_employee_user
+        ON assigned_employee_user.user_id = assigned_user.id
+      LEFT JOIN employees assigned_employee
+        ON assigned_employee.id = assigned_employee_user.employee_id
       LEFT JOIN (
         ${checklistProgressGroupedByChecklistSql()}
       ) progress

@@ -13,11 +13,9 @@ import type { Auth } from '../auth/auth.config';
 import { assertCanManageEquipmentEvents } from '../auth/role-permissions';
 import { EquipmentEventsService } from './equipment-events.service';
 import {
-  type CompleteEquipmentEventDto,
   type CreateManualEquipmentEventDto,
   type EquipmentEventsQueryDto,
   type UpdateCreatedEquipmentEventDto,
-  parseCompleteEventDto,
   parseCreateManualEventDto,
   parseEquipmentEventsQuery,
   parseUpdateCreatedEventDto,
@@ -66,27 +64,6 @@ export class EquipmentEventsController {
       parseCreateManualEventDto(dto, visibleId),
       session.user.id,
     );
-  }
-
-  @Post('equipment-events/:id/complete')
-  complete(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: CompleteEquipmentEventDto | undefined,
-    @Session() session: UserSession<Auth>,
-  ) {
-    return this.equipmentEventsService.complete(
-      id,
-      parseCompleteEventDto(dto),
-      session.user.id,
-    );
-  }
-
-  @Post('equipment-events/:id/start')
-  start(
-    @Param('id', ParseIntPipe) id: number,
-    @Session() session: UserSession<Auth>,
-  ) {
-    return this.equipmentEventsService.start(id, session.user.id);
   }
 
   @Patch('equipment-events/:id')

@@ -1,7 +1,6 @@
+import { getBusinessTodayDateString } from '../application/business-date';
 import { throwEquipmentEventBadRequest } from './equipment-events.errors';
 import { type EquipmentEventChecklistAssignment } from './equipment-events.validation.types';
-
-const BUSINESS_TIME_ZONE = 'Europe/Moscow';
 
 export function parseResponsibleUserIds(value: unknown) {
   if (!Array.isArray(value)) {
@@ -246,20 +245,7 @@ export function parseIntegerValue(value: unknown) {
 }
 
 export function getTodayDateString() {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    day: '2-digit',
-    month: '2-digit',
-    timeZone: BUSINESS_TIME_ZONE,
-    year: 'numeric',
-  }).formatToParts(new Date());
-
-  const values = Object.fromEntries(
-    parts
-      .filter((part) => part.type !== 'literal')
-      .map((part) => [part.type, part.value]),
-  );
-
-  return `${values.year}-${values.month}-${values.day}`;
+  return getBusinessTodayDateString();
 }
 
 export function parseRequiredDate(

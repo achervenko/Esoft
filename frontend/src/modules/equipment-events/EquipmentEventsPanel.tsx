@@ -8,13 +8,11 @@ import "./EquipmentEventsPanel.css";
 
 type EquipmentEventsPanelProps = {
   canManageEvents: boolean;
-  currentUserId?: string | null;
   visibleId: number;
 };
 
 export function EquipmentEventsPanel({
   canManageEvents,
-  currentUserId = null,
   visibleId,
 }: EquipmentEventsPanelProps) {
   const panel = useEquipmentEventsPanel({ canManageEvents, visibleId });
@@ -47,14 +45,11 @@ export function EquipmentEventsPanel({
         <EquipmentEventsPanelState
           canEditEvents={panel.canEditEvents}
           canManageEvents={canManageEvents}
-          currentUserId={currentUserId}
           events={panel.events}
           isLoading={panel.isLoading}
           onCancel={panel.requestCancel}
-          onComplete={panel.requestComplete}
           onEdit={panel.handleEdit}
           onOpen={(event) => void panel.handleOpenDetail(event)}
-          onStart={(event) => void panel.handleStart(event)}
         />
       </section>
 
@@ -66,10 +61,8 @@ export function EquipmentEventsPanel({
         modalState={panel.modalState}
         onCancel={panel.handleCancel}
         onCloseCancel={panel.closeCancel}
-        onCloseComplete={panel.closeComplete}
         onCloseDetail={panel.closeDetail}
         onCloseForm={panel.closeForm}
-        onComplete={panel.handleComplete}
         onFormSubmit={panel.handleFormSubmit}
         responsibleUsers={panel.responsibleUsers}
       />

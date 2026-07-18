@@ -1,6 +1,5 @@
 import { request } from "../api-client";
 import type {
-  CompleteEquipmentEventPayload,
   CreateManualEquipmentEventPayload,
   EquipmentEventDetail,
   EquipmentEventItem,
@@ -19,6 +18,18 @@ export function getEquipmentEvents(
 
   if (query.maintenanceTypeId !== undefined) {
     searchParams.set("maintenanceTypeId", String(query.maintenanceTypeId));
+  }
+
+  if (query.dateFrom) {
+    searchParams.set("dateFrom", query.dateFrom);
+  }
+
+  if (query.dateTo) {
+    searchParams.set("dateTo", query.dateTo);
+  }
+
+  if (query.responsibleUserId) {
+    searchParams.set("responsibleUserId", query.responsibleUserId);
   }
 
   if (query.status) {
@@ -69,28 +80,6 @@ export function updateCreatedEquipmentEvent(
     body: JSON.stringify(payload),
     method: "PATCH",
   });
-}
-
-export function completeEquipmentEvent(
-  eventId: number,
-  payload: CompleteEquipmentEventPayload = {},
-) {
-  return request<EquipmentEventDetail>(
-    `/api/equipment-events/${eventId}/complete`,
-    {
-      body: JSON.stringify(payload),
-      method: "POST",
-    },
-  );
-}
-
-export function startEquipmentEvent(eventId: number) {
-  return request<EquipmentEventDetail>(
-    `/api/equipment-events/${eventId}/start`,
-    {
-      method: "POST",
-    },
-  );
 }
 
 export function cancelEquipmentEvent(eventId: number) {

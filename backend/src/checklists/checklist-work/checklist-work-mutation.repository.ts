@@ -7,6 +7,7 @@ import type {
   ChecklistDetailAnswerRow,
   LockedChecklist,
   LockedChecklistEvent,
+  LockedEventChecklistRow,
 } from './checklist-work.repository.types';
 
 @Injectable()
@@ -48,7 +49,10 @@ export class ChecklistWorkMutationRepository {
 
   lockEvent(tx: Prisma.TransactionClient, eventId: number) {
     return tx.$queryRaw<LockedChecklistEvent[]>`
-      SELECT id AS "eventId", status AS "eventStatus"
+      SELECT
+        id AS "eventId",
+        status AS "eventStatus",
+        fact_date AS "factDate"
       FROM equipment_events
       WHERE id = ${eventId}
       FOR UPDATE
@@ -63,6 +67,36 @@ export class ChecklistWorkMutationRepository {
     });
   }
 
+  lockEventChecklists(
+    tx: Prisma.TransactionClient,
+    eventId: number,
+  ): Promise<LockedEventChecklistRow[]> {
+    return tx.$queryRaw<LockedEventChecklistRow[]>`
+      SELECT
+        id,
+        assigned_user_id AS "assignedUserId",
+        status
+      FROM checklists
+      WHERE equipment_event_id = ${eventId}
+      ORDER BY id
+      FOR UPDATE
+    `;
+  }
+
+  async loadResponsibleUserIds(
+    tx: Prisma.TransactionClient,
+    eventId: number,
+  ) {
+    const rows = await tx.$queryRaw<Array<{ userId: string }>>`
+      SELECT user_id AS "userId"
+      FROM equipment_event_responsibles
+      WHERE equipment_event_id = ${eventId}
+      ORDER BY id
+    `;
+
+    return rows.map((row) => row.userId);
+  }
+
   async lockActiveEventChecklists(
     tx: Prisma.TransactionClient,
     eventId: number,
@@ -70,11 +104,10 @@ export class ChecklistWorkMutationRepository {
     return tx.$queryRaw<
       Array<{
         id: number;
-        isRequired: boolean;
         status: ChecklistStatus;
       }>
     >`
-      SELECT id, is_required AS "isRequired", status
+      SELECT id, status
       FROM checklists
       WHERE equipment_event_id = ${eventId}
         AND status IN ('CREATED', 'IN_PROGRESS')
@@ -145,7 +178,6 @@ export class ChecklistWorkMutationRepository {
         id,
         equipment_event_id AS "equipmentEventId",
         assigned_user_id AS "assignedUserId",
-        is_required AS "isRequired",
         status,
         version
       FROM checklists

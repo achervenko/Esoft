@@ -3,7 +3,7 @@ import type {
   ChecklistDetailQuestionRow,
   ChecklistDetailRow,
   ChecklistListRow,
-} from './checklist-work.repository';
+} from './checklist-work.repository.types';
 
 type ProgressLike = {
   answered: bigint;
@@ -31,7 +31,6 @@ export function presentChecklistDetail(
     completedAt: checklist.completedAt?.toISOString() ?? null,
     modules: presentModules(questions),
     startedAt: checklist.startedAt?.toISOString() ?? null,
-    version: checklist.version,
   };
 }
 
@@ -51,8 +50,13 @@ function presentChecklistListItem(row: ChecklistListRow) {
   return {
     id: row.id,
     status: row.status,
-    isRequired: row.isRequired,
     sortOrder: row.sortOrder,
+    version: row.version,
+    assignedUser: {
+      id: row.assignedUserId,
+      fullName: row.assignedUserFullName,
+      position: row.assignedUserPosition,
+    },
     template: {
       id: row.checklistTemplateId,
       name: row.templateName,

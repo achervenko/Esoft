@@ -1,4 +1,3 @@
-import type { ChecklistTemplateListItem } from "../../shared/api/checklists";
 import type { EquipmentEventDetail } from "../../shared/api/equipment-events/equipment-events.types";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import {
@@ -6,31 +5,17 @@ import {
   equipmentEventExecutionTypeLabels,
   equipmentEventSourceLabels,
   equipmentEventStatusLabels,
+  formatChecklistProgress,
   formatDateValue,
   formatEventResponsibles,
 } from "./equipment-events-utils";
 
 type EquipmentEventDetailModalProps = {
-  checklistTemplates: ChecklistTemplateListItem[];
   event: EquipmentEventDetail;
   onClose: () => void;
 };
 
-export function EquipmentEventDetailModal({
-  checklistTemplates,
-  event,
-  onClose,
-}: EquipmentEventDetailModalProps) {
-  const responsibleNameById = new Map(
-    event.responsibles.map((responsible) => [
-      responsible.id,
-      responsible.fullName,
-    ]),
-  );
-  const checklistTemplateNameById = new Map(
-    checklistTemplates.map((template) => [template.id, template.name]),
-  );
-
+export function EquipmentEventDetailModal({ event, onClose }: EquipmentEventDetailModalProps) {
   return (
     <AdminModal onClose={onClose} title="Событие оборудования">
       <div className="equipment-event-detail">
@@ -74,28 +59,18 @@ export function EquipmentEventDetailModal({
           <div>
             <dt>Чек-листы</dt>
             <dd>
-              {event.checklists.length > 0
-                ? event.checklists
-                    .map(
-                      (checklist) => {
-                        const assignedUserName =
-                          responsibleNameById.get(checklist.assignedUserId) ??
-                          `ID ${checklist.assignedUserId}`;
-                        const checklistTemplateName =
-                          checklistTemplateNameById.get(
-                            checklist.checklistTemplateId,
-                          ) ??
-                          `Шаблон #${checklist.checklistTemplateId}`;
-
-                        return [
-                          checklistTemplateName,
-                          equipmentEventChecklistStatusLabels[checklist.status],
-                          assignedUserName,
-                        ].join(", ");
-                      },
-                    )
-                    .join("; ")
-                : "Не назначены"}
+              {event.checklists.length > 0 ? (
+                <ul className="equipment-event-detail-checklists">
+                  {event.checklists.map((checklist) => (
+                    <li key={checklist.id}>
+                      <strong>{checklist.assignedUser.fullName}</strong>: {" "}
+                      {checklist.templateName}, {equipmentEventChecklistStatusLabels[checklist.status]}, {formatChecklistProgress(checklist.progress)}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                "Не назначены"
+              )}
             </dd>
           </div>
           <div>

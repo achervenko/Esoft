@@ -4,7 +4,6 @@ import { EquipmentEventsLifecycleService } from './equipment-events-lifecycle.se
 import { EquipmentEventsQueryService } from './equipment-events-query.service';
 import { EquipmentEventsUpdateService } from './equipment-events-update.service';
 import {
-  type CompleteEquipmentEventData,
   type CreateManualEquipmentEventData,
   type EquipmentEventsQuery,
   type UpdateCreatedEquipmentEventData,
@@ -57,18 +56,6 @@ export class EquipmentEventsService {
     userId?: string | null,
   ) {
     return this.updateService.updateCreated(id, data, userId);
-  }
-
-  complete(
-    id: number,
-    data: CompleteEquipmentEventData,
-    userId?: string | null,
-  ) {
-    return this.lifecycleService.complete(id, data, userId);
-  }
-
-  start(id: number, userId?: string | null) {
-    return this.lifecycleService.start(id, userId);
   }
 
   cancel(id: number, userId?: string | null) {

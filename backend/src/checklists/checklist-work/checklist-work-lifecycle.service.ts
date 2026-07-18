@@ -1,6 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { AuditAction, ChecklistStatus, Prisma } from '@prisma/client';
+import {
+  AuditAction,
+  ChecklistStatus,
+  EquipmentEventStatus,
+  Prisma,
+} from '@prisma/client';
+import { getBusinessTodayDate } from '../../application/business-date';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  getEquipmentEventAuditSnapshot,
+  writeEquipmentEventStatusAudit,
+  writeEquipmentEventUpdatedAudit,
+} from '../../equipment-events/equipment-events.audit';
 import { writeChecklistAudit } from '../checklist-common/checklists.audit';
 import { throwChecklistConflict } from '../checklist-common/checklists.errors';
 import { ChecklistWorkAssertions } from './checklist-work.assertions';
@@ -31,12 +42,79 @@ export class ChecklistWorkLifecycleService {
         await this.mutationRepository.lockChecklistForMutation(tx, id);
 
       this.assertions.assertAssigned(checklist.assignedUserId, actorUserId);
-      this.assertions.assertEventInProgress(event.eventStatus);
       this.assertions.assertVersion(checklist.version, input.version);
       this.assertions.assertChecklistStatus(
         checklist.status,
         ChecklistStatus.CREATED,
       );
+      this.assertions.assertEventCanBeStarted(event.eventStatus);
+
+      if (event.eventStatus === EquipmentEventStatus.CREATED) {
+        const [eventChecklists, responsibleUserIds] = await Promise.all([
+          this.mutationRepository.lockEventChecklists(
+            tx,
+            checklist.equipmentEventId,
+          ),
+          this.mutationRepository.loadResponsibleUserIds(
+            tx,
+            checklist.equipmentEventId,
+          ),
+        ]);
+
+        this.assertions.assertStartAssignments({
+          checklists: eventChecklists,
+          responsibleUserIds,
+        });
+
+        const updateEventResult = await tx.equipmentEvent.updateMany({
+          where: {
+            id: checklist.equipmentEventId,
+            status: EquipmentEventStatus.CREATED,
+          },
+          data: {
+            status: EquipmentEventStatus.IN_PROGRESS,
+            version: {
+              increment: 1,
+            },
+          },
+        });
+
+        if (updateEventResult.count !== 1) {
+          throwChecklistConflict(
+            'CHECKLIST_EVENT_STATUS_CONFLICT',
+            'Событие в текущем статусе нельзя начать через чек-лист.',
+          );
+        }
+
+        await tx.$executeRaw`
+          UPDATE checklists
+          SET
+            status = 'IN_PROGRESS',
+            started_at = now(),
+            started_by = ${actorUserId},
+            version = version + 1
+          WHERE id = ${id}
+        `;
+
+        const auditSnapshot = await getEquipmentEventAuditSnapshot(
+          tx,
+          checklist.equipmentEventId,
+        );
+        await writeEquipmentEventStatusAudit(tx, {
+          event: auditSnapshot,
+          newStatus: EquipmentEventStatus.IN_PROGRESS,
+          oldStatus: event.eventStatus,
+          userId: actorUserId,
+        });
+        await this.writeStatusAudit(tx, {
+          checklistId: id,
+          newStatus: ChecklistStatus.IN_PROGRESS,
+          oldStatus: checklist.status,
+          userId: actorUserId,
+        });
+
+        return;
+      }
 
       await tx.$executeRaw`
         UPDATE checklists
@@ -93,6 +171,67 @@ export class ChecklistWorkLifecycleService {
         oldStatus: checklist.status,
         userId: actorUserId,
       });
+
+      const eventChecklists = await this.mutationRepository.lockEventChecklists(
+        tx,
+        checklist.equipmentEventId,
+      );
+
+      if (
+        eventChecklists.length > 0 &&
+        eventChecklists.every(
+          (eventChecklist) => eventChecklist.status === ChecklistStatus.COMPLETED,
+        )
+      ) {
+        const previousAuditSnapshot = await getEquipmentEventAuditSnapshot(
+          tx,
+          checklist.equipmentEventId,
+        );
+        const nextFactDate = event.factDate ?? getBusinessTodayDate();
+
+        const updateEventResult = await tx.equipmentEvent.updateMany({
+          where: {
+            id: checklist.equipmentEventId,
+            status: EquipmentEventStatus.IN_PROGRESS,
+          },
+          data: {
+            factDate: nextFactDate,
+            status: EquipmentEventStatus.COMPLETED,
+            version: {
+              increment: 1,
+            },
+          },
+        });
+
+        if (updateEventResult.count !== 1) {
+          throwChecklistConflict(
+            'CHECKLIST_EVENT_STATUS_CONFLICT',
+            'Событие в текущем статусе нельзя завершить через чек-лист.',
+          );
+        }
+
+        const auditSnapshot = await getEquipmentEventAuditSnapshot(
+          tx,
+          checklist.equipmentEventId,
+        );
+        await writeEquipmentEventStatusAudit(tx, {
+          event: auditSnapshot,
+          newStatus: EquipmentEventStatus.COMPLETED,
+          oldStatus: event.eventStatus,
+          userId: actorUserId,
+        });
+
+        if (
+          previousAuditSnapshot.factDate?.toISOString() !==
+          auditSnapshot.factDate?.toISOString()
+        ) {
+          await writeEquipmentEventUpdatedAudit(tx, {
+            newEvent: auditSnapshot,
+            oldEvent: previousAuditSnapshot,
+            userId: actorUserId,
+          });
+        }
+      }
     });
 
     return this.queryService.get(id, { userId: actorUserId });

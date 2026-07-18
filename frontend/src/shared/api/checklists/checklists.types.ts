@@ -1,6 +1,15 @@
+import type { EquipmentEventStatus } from "../equipment-events/equipment-events.types";
+
 export type ChecklistAnswerType = "BOOLEAN" | "INTEGER" | "DECIMAL" | "TEXT" | "DATE";
 
 export type ChecklistTemplateState = "ACTIVE" | "ARCHIVED";
+
+export type ChecklistWorkStatus =
+  | "CREATED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "INVALIDATED";
 
 export type ChecklistPageResponse<T> = {
   items: T[];
@@ -107,6 +116,106 @@ export type ChecklistTemplatePayload = {
 export type ChecklistReorderItem = {
   id: number;
   sortOrder: number;
+};
+
+export type ChecklistWorkAssignedUser = {
+  fullName: string;
+  id: string;
+  position: string;
+};
+
+export type ChecklistWorkProgress = {
+  answered: number;
+  requiredAnswered: number;
+  requiredTotal: number;
+  total: number;
+};
+
+export type ChecklistWorkListItem = {
+  assignedUser: ChecklistWorkAssignedUser;
+  equipment: {
+    model: {
+      name: string;
+    };
+    name: string;
+    visibleId: number;
+  };
+  event: {
+    id: number;
+    maintenanceType: {
+      id: number;
+      name: string;
+    };
+    plannedDate: string | null;
+    status: EquipmentEventStatus;
+  };
+  id: number;
+  progress: ChecklistWorkProgress;
+  sortOrder: number;
+  status: ChecklistWorkStatus;
+  template: {
+    id: number;
+    name: string;
+  };
+  version: number;
+};
+
+export type ChecklistWorkQuestion = {
+  answer: boolean | number | string | null;
+  answerType: ChecklistAnswerType;
+  answeredAt: string | null;
+  checklistDetailId: number;
+  isRequired: boolean;
+  questionId: number | null;
+  sortOrder: number;
+  text: string;
+};
+
+export type ChecklistWorkModule = {
+  moduleKey: number;
+  name: string;
+  questions: ChecklistWorkQuestion[];
+  sortOrder: number;
+};
+
+export type ChecklistWorkDetail = ChecklistWorkListItem & {
+  completedAt: string | null;
+  modules: ChecklistWorkModule[];
+  startedAt: string | null;
+};
+
+export type ChecklistWorkListResponse = {
+  items: ChecklistWorkListItem[];
+  total: number;
+};
+
+export type ChecklistWorkQuery = {
+  dateFrom?: string;
+  dateTo?: string;
+  equipmentVisibleId?: number;
+  eventId?: number;
+  limit?: number;
+  offset?: number;
+  status?: ChecklistWorkStatus | ChecklistWorkStatus[];
+};
+
+export type ChecklistWorkVersionPayload = {
+  version: number;
+};
+
+export type ChecklistWorkAnswerPayload = {
+  checklistDetailId: number;
+  value: boolean | number | string | null;
+};
+
+export type ChecklistWorkAnswersPayload = ChecklistWorkVersionPayload & {
+  answers: ChecklistWorkAnswerPayload[];
+};
+
+export type ChecklistWorkProgressResponse = {
+  id: number;
+  progress: ChecklistWorkProgress;
+  version: number;
 };
 
 export const checklistAnswerTypeLabels: Record<ChecklistAnswerType, string> = {

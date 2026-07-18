@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { EquipmentEventItem } from "../../shared/api/equipment-events/equipment-events.types";
-import type { EquipmentEventFormPayload } from "./EquipmentEventFormModal";
+import type { EquipmentEventFormPayload } from "./equipment-event-form.types";
 import { useEquipmentEventActions } from "./useEquipmentEventActions";
 import { useEquipmentEventDetail } from "./useEquipmentEventDetail";
 import { useEquipmentEventFormData } from "./useEquipmentEventFormData";
@@ -40,10 +40,8 @@ export function useEquipmentEventsPanel({
     activeAction,
     cancelEvent,
     clearActionError,
-    completeEvent,
     createEvent,
     refreshError,
-    startEvent,
     updateEvent,
   } = useEquipmentEventActions({ reloadEvents, visibleId });
   const {
@@ -56,16 +54,12 @@ export function useEquipmentEventsPanel({
     activeForm,
     cancelCandidate,
     clearCancel,
-    clearComplete,
     clearForm,
     closeCancel,
-    closeComplete,
     closeForm,
-    completeCandidate,
     modalState,
     openForm,
     requestCancel,
-    requestComplete,
     resetModals,
   } = useEquipmentEventsPanelModals({
     canCloseActionModal: activeAction === null,
@@ -73,8 +67,7 @@ export function useEquipmentEventsPanel({
     clearMessage,
   });
 
-  const topLevelActionError =
-    !activeForm && !completeCandidate && !cancelCandidate ? actionError : null;
+  const topLevelActionError = !activeForm && !cancelCandidate ? actionError : null;
   const canEditEvents =
     canManageEvents &&
     !isFormDataLoading &&
@@ -150,27 +143,6 @@ export function useEquipmentEventsPanel({
     }
   };
 
-  const handleStart = async (event: EquipmentEventItem) => {
-    clearMessage();
-
-    if (await startEvent(event.id)) {
-      setMessage("Событие взято в работу.");
-    }
-  };
-
-  const handleComplete = async (factDate: string) => {
-    if (!completeCandidate) {
-      return;
-    }
-
-    clearMessage();
-
-    if (await completeEvent(completeCandidate.id, { factDate })) {
-      clearComplete();
-      setMessage("Событие завершено.");
-    }
-  };
-
   const handleCancel = async () => {
     if (!cancelCandidate) {
       return;
@@ -189,17 +161,14 @@ export function useEquipmentEventsPanel({
     actionError,
     canEditEvents,
     closeCancel,
-    closeComplete,
     closeDetail,
     closeForm,
     events,
     formDataError,
     handleCancel,
-    handleComplete,
     handleEdit,
     handleFormSubmit,
     handleOpenDetail,
-    handleStart,
     isCreateDisabled,
     isDetailLoading,
     isFormDataLoading,
@@ -216,7 +185,6 @@ export function useEquipmentEventsPanel({
     refreshError,
     reloadFormData,
     requestCancel,
-    requestComplete,
     responsibleUsers,
     shouldShowMissingSettings,
     topLevelActionError,

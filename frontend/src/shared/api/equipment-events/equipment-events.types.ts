@@ -22,11 +22,23 @@ export type EquipmentEventCreator = {
 };
 
 export type EquipmentEventChecklist = {
+  assignedUser: {
+    fullName: string;
+    id: string;
+    position: string;
+  };
   assignedUserId: string;
   checklistTemplateId: number;
   id: number;
+  progress: {
+    answered: number;
+    requiredAnswered: number;
+    requiredTotal: number;
+    total: number;
+  };
   sortOrder: number;
   status: EquipmentEventChecklistStatus;
+  templateName: string;
 };
 
 export type EquipmentEventItem = {
@@ -104,10 +116,6 @@ export type UpdateCreatedEquipmentEventPayload = {
   plannedDate?: string;
   responsibleUserIds?: string[];
   version: number;
-};
-
-export type CompleteEquipmentEventPayload = {
-  factDate?: string;
 };
 
 export type EquipmentEventResponsibleUser = {

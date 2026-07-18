@@ -1,13 +1,10 @@
 import { useCallback, useRef, useState } from "react";
 import {
   cancelEquipmentEvent,
-  completeEquipmentEvent,
   createManualEquipmentEvent,
-  startEquipmentEvent,
   updateCreatedEquipmentEvent,
 } from "../../shared/api/equipment-events/equipment-events.api";
 import type {
-  CompleteEquipmentEventPayload,
   CreateManualEquipmentEventPayload,
   UpdateCreatedEquipmentEventPayload,
 } from "../../shared/api/equipment-events/equipment-events.types";
@@ -16,8 +13,6 @@ import { getApiErrorMessage } from "../../shared/api/api-error";
 export type EquipmentEventAction =
   | "create"
   | "edit"
-  | "start"
-  | "complete"
   | "cancel"
   | null;
 
@@ -93,17 +88,6 @@ export function useEquipmentEventActions({
     [runAction],
   );
 
-  const startEvent = useCallback(
-    (eventId: number) => runAction("start", () => startEquipmentEvent(eventId)),
-    [runAction],
-  );
-
-  const completeEvent = useCallback(
-    (eventId: number, payload: CompleteEquipmentEventPayload) =>
-      runAction("complete", () => completeEquipmentEvent(eventId, payload)),
-    [runAction],
-  );
-
   const cancelEvent = useCallback(
     (eventId: number) =>
       runAction("cancel", () => cancelEquipmentEvent(eventId)),
@@ -115,10 +99,8 @@ export function useEquipmentEventActions({
     activeAction,
     cancelEvent,
     clearActionError: clearActionErrors,
-    completeEvent,
     createEvent,
     refreshError,
-    startEvent,
     updateEvent,
   };
 }

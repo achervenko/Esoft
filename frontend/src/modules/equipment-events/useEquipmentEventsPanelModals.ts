@@ -18,8 +18,6 @@ export function useEquipmentEventsPanelModals({
 }: UseEquipmentEventsPanelModalsParams) {
   const [activeForm, setActiveForm] =
     useState<EquipmentEventsPanelActiveForm | null>(null);
-  const [completeCandidate, setCompleteCandidate] =
-    useState<EquipmentEventItem | null>(null);
   const [cancelCandidate, setCancelCandidate] =
     useState<EquipmentEventItem | null>(null);
 
@@ -27,12 +25,6 @@ export function useEquipmentEventsPanelModals({
     clearActionError();
     clearMessage();
     setActiveForm(form);
-  }, [clearActionError, clearMessage]);
-
-  const requestComplete = useCallback((event: EquipmentEventItem) => {
-    clearActionError();
-    clearMessage();
-    setCompleteCandidate(event);
   }, [clearActionError, clearMessage]);
 
   const requestCancel = useCallback((event: EquipmentEventItem) => {
@@ -48,13 +40,6 @@ export function useEquipmentEventsPanelModals({
     }
   }, [canCloseActionModal, clearActionError]);
 
-  const closeComplete = useCallback(() => {
-    if (canCloseActionModal) {
-      setCompleteCandidate(null);
-      clearActionError();
-    }
-  }, [canCloseActionModal, clearActionError]);
-
   const closeCancel = useCallback(() => {
     if (canCloseActionModal) {
       setCancelCandidate(null);
@@ -66,40 +51,30 @@ export function useEquipmentEventsPanelModals({
     setActiveForm(null);
   }, []);
 
-  const clearComplete = useCallback(() => {
-    setCompleteCandidate(null);
-  }, []);
-
   const clearCancel = useCallback(() => {
     setCancelCandidate(null);
   }, []);
 
   const resetModals = useCallback(() => {
     setActiveForm(null);
-    setCompleteCandidate(null);
     setCancelCandidate(null);
   }, []);
 
   const modalState: Omit<EquipmentEventsPanelModalState, "detailEvent"> = {
     activeForm,
     cancelCandidate,
-    completeCandidate,
   };
 
   return {
     activeForm,
     cancelCandidate,
     clearCancel,
-    clearComplete,
     clearForm,
     closeCancel,
-    closeComplete,
     closeForm,
-    completeCandidate,
     modalState,
     openForm,
     requestCancel,
-    requestComplete,
     resetModals,
   };
 }

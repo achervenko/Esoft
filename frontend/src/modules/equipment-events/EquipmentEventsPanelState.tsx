@@ -4,27 +4,21 @@ import { EquipmentEventsTable } from "./EquipmentEventsTable";
 type EquipmentEventsPanelStateProps = {
   canEditEvents: boolean;
   canManageEvents: boolean;
-  currentUserId?: string | null;
   events: EquipmentEventItem[];
   isLoading: boolean;
   onCancel: (event: EquipmentEventItem) => void;
-  onComplete: (event: EquipmentEventItem) => void;
   onEdit: (event: EquipmentEventItem) => void;
   onOpen: (event: EquipmentEventItem) => void;
-  onStart: (event: EquipmentEventItem) => void;
 };
 
 export function EquipmentEventsPanelState({
   canEditEvents,
   canManageEvents,
-  currentUserId = null,
   events,
   isLoading,
   onCancel,
-  onComplete,
   onEdit,
   onOpen,
-  onStart,
 }: EquipmentEventsPanelStateProps) {
   if (isLoading) {
     return <p className="admin-state">Загрузка событий...</p>;
@@ -40,13 +34,10 @@ export function EquipmentEventsPanelState({
     <EquipmentEventsTable
       canEditEvents={canEditEvents}
       canManageEvents={canManageEvents}
-      currentUserId={currentUserId}
       events={events}
       onCancel={onCancel}
-      onComplete={onComplete}
       onEdit={onEdit}
       onOpen={onOpen}
-      onStart={onStart}
     />
   );
 }

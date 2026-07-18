@@ -9,6 +9,12 @@ import type {
   ChecklistTemplateDetail,
   ChecklistTemplateListItem,
   ChecklistTemplatePayload,
+  ChecklistWorkAnswersPayload,
+  ChecklistWorkDetail,
+  ChecklistWorkListResponse,
+  ChecklistWorkQuery,
+  ChecklistWorkProgressResponse,
+  ChecklistWorkVersionPayload,
 } from "./checklists.types";
 
 type QueryValue = boolean | number | string | null | undefined;
@@ -138,4 +144,54 @@ export function archiveChecklistTemplate(id: number, version: number, reason?: s
       method: "POST",
     },
   );
+}
+
+export function getChecklistWorkItems(query: ChecklistWorkQuery = {}) {
+  const status = Array.isArray(query.status) ? query.status.join(",") : query.status;
+
+  return request<ChecklistWorkListResponse>(
+    `/api/checklists${toQuery({
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
+      equipmentVisibleId: query.equipmentVisibleId,
+      eventId: query.eventId,
+      limit: query.limit,
+      offset: query.offset,
+      status,
+    })}`,
+  );
+}
+
+export function getChecklistWorkDetail(id: number) {
+  return request<ChecklistWorkDetail>(`/api/checklists/${id}`);
+}
+
+export function startChecklistWork(
+  id: number,
+  payload: ChecklistWorkVersionPayload,
+) {
+  return request<ChecklistWorkDetail>(`/api/checklists/${id}/start`, {
+    body: JSON.stringify(payload),
+    method: "POST",
+  });
+}
+
+export function saveChecklistWorkAnswers(
+  id: number,
+  payload: ChecklistWorkAnswersPayload,
+) {
+  return request<ChecklistWorkProgressResponse>(`/api/checklists/${id}/answers`, {
+    body: JSON.stringify(payload),
+    method: "PATCH",
+  });
+}
+
+export function completeChecklistWork(
+  id: number,
+  payload: ChecklistWorkVersionPayload,
+) {
+  return request<ChecklistWorkDetail>(`/api/checklists/${id}/complete`, {
+    body: JSON.stringify(payload),
+    method: "POST",
+  });
 }

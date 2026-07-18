@@ -1,13 +1,12 @@
 import type { ChecklistTemplateListItem } from "../../shared/api/checklists";
 import type { MaintenanceSetting } from "../../shared/api/maintenance/maintenance.types";
 import { ConfirmDialog } from "../../shared/ui/ConfirmDialog";
-import { CompleteEquipmentEventModal } from "./CompleteEquipmentEventModal";
 import { EquipmentEventDetailModal } from "./EquipmentEventDetailModal";
-import {
-  EquipmentEventFormModal,
-  type EquipmentEventFormPayload,
-} from "./EquipmentEventFormModal";
-import type { ResponsibleUserOption } from "./equipment-event-form.types";
+import { EquipmentEventFormModal } from "./EquipmentEventFormModal";
+import type {
+  EquipmentEventFormPayload,
+  ResponsibleUserOption,
+} from "./equipment-event-form.types";
 import type { EquipmentEventAction } from "./useEquipmentEventActions";
 import type { EquipmentEventsPanelModalState } from "./equipment-events-panel.types";
 
@@ -19,10 +18,8 @@ type EquipmentEventsPanelModalsProps = {
   modalState: EquipmentEventsPanelModalState;
   onCancel: () => Promise<void>;
   onCloseCancel: () => void;
-  onCloseComplete: () => void;
   onCloseDetail: () => void;
   onCloseForm: () => void;
-  onComplete: (factDate: string) => Promise<void>;
   onFormSubmit: (payload: EquipmentEventFormPayload) => Promise<void>;
   responsibleUsers: ResponsibleUserOption[];
 };
@@ -35,10 +32,8 @@ export function EquipmentEventsPanelModals({
   modalState,
   onCancel,
   onCloseCancel,
-  onCloseComplete,
   onCloseDetail,
   onCloseForm,
-  onComplete,
   onFormSubmit,
   responsibleUsers,
 }: EquipmentEventsPanelModalsProps) {
@@ -55,16 +50,6 @@ export function EquipmentEventsPanelModals({
           mode={modalState.activeForm.mode}
           onClose={onCloseForm}
           onSubmit={(payload) => void onFormSubmit(payload)}
-        />
-      ) : null}
-
-      {modalState.completeCandidate ? (
-        <CompleteEquipmentEventModal
-          error={actionError}
-          event={modalState.completeCandidate}
-          isSaving={activeAction === "complete"}
-          onClose={onCloseComplete}
-          onSubmit={(factDate) => void onComplete(factDate)}
         />
       ) : null}
 
@@ -85,7 +70,6 @@ export function EquipmentEventsPanelModals({
 
       {modalState.detailEvent ? (
         <EquipmentEventDetailModal
-          checklistTemplates={checklistTemplates}
           event={modalState.detailEvent}
           onClose={onCloseDetail}
         />

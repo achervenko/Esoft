@@ -1,0 +1,32 @@
+import type { EquipmentHistoryItem } from "../../shared/api/equipment/equipment.types";
+import { EquipmentHistoryView } from "./EquipmentHistoryView";
+
+type EquipmentHistoryTabProps = {
+  error: string | null;
+  history: EquipmentHistoryItem[];
+  isLoading: boolean;
+};
+
+export function EquipmentHistoryTab({
+  error,
+  history,
+  isLoading,
+}: EquipmentHistoryTabProps) {
+  return (
+    <section className="equipment-card-tab-panel" role="tabpanel">
+      {error ? (
+        <section className="equipment-card-view-section">
+          <h2>История изменений</h2>
+          <p className="equipment-card-muted">{error}</p>
+        </section>
+      ) : isLoading ? (
+        <section className="equipment-card-view-section">
+          <h2>История изменений</h2>
+          <p className="equipment-card-muted">Загрузка истории...</p>
+        </section>
+      ) : (
+        <EquipmentHistoryView history={history} />
+      )}
+    </section>
+  );
+}
