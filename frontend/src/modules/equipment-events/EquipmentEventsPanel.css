@@ -167,6 +167,8 @@
 }
 
 .equipment-event-responsibles > div {
+  width: 100%;
+  min-width: 0;
   max-height: 180px;
   overflow-y: auto;
   display: grid;
@@ -174,6 +176,9 @@
 }
 
 .equipment-event-checklist-assignment {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 248px;
   gap: 14px;
@@ -197,6 +202,9 @@
 }
 
 .equipment-event-checklist-assignment__select .select-dropdown-field {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   margin: 0;
 }
 
@@ -212,7 +220,7 @@
   height: 16px;
 }
 
-.equipment-event-responsibles label {
+.equipment-event-responsibles label:not(.select-dropdown-field) {
   min-height: 34px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
