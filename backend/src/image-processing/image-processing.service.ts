@@ -24,14 +24,7 @@ export class ImageProcessingService {
     this.assertFileIsPresent(params.file);
     this.assertFileMeta(params.file, params.constraints);
 
-    const normalizedBuffer = await this.decodeAndNormalize(
-      params.file.buffer,
-      params.constraints.maxPixelCount,
-    );
-    const metadata = await this.readMetadata(
-      normalizedBuffer,
-      params.constraints.maxPixelCount,
-    );
+    const metadata = await this.readMetadata(params.file.buffer);
     const width = metadata.width ?? 0;
     const height = metadata.height ?? 0;
 
@@ -49,9 +42,16 @@ export class ImageProcessingService {
     if (width * height > params.constraints.maxPixelCount) {
       throw new BadRequestException({
         code: 'IMAGE_PIXEL_LIMIT_EXCEEDED',
-        message: 'Разрешение фото не должно превышать 25 МП.',
+        message: `Разрешение фото не должно превышать ${formatMegapixels(
+          params.constraints.maxPixelCount,
+        )}.`,
       });
     }
+
+    const normalizedBuffer = await this.decodeAndNormalize(
+      params.file.buffer,
+      params.constraints.maxPixelCount,
+    );
 
     return Promise.all(
       params.versions.map(async (version) => ({
@@ -96,7 +96,9 @@ export class ImageProcessingService {
     if (file.size > constraints.maxFileSizeBytes) {
       throw new BadRequestException({
         code: 'FILE_TOO_LARGE',
-        message: 'Размер фото не должен превышать 10 МБ.',
+        message: `Размер фото не должен превышать ${formatMegabytes(
+          constraints.maxFileSizeBytes,
+        )}.`,
       });
     }
 
@@ -120,9 +122,9 @@ export class ImageProcessingService {
     }
   }
 
-  private async readMetadata(buffer: Buffer, maxPixelCount: number) {
+  private async readMetadata(buffer: Buffer) {
     try {
-      return await sharp(buffer, { limitInputPixels: maxPixelCount }).metadata();
+      return await sharp(buffer, { limitInputPixels: false }).metadata();
     } catch {
       throwInvalidImage();
     }
@@ -146,4 +148,21 @@ function throwInvalidImage(): never {
     code: 'INVALID_IMAGE',
     message: 'Не удалось прочитать изображение. Выберите другой файл.',
   });
+}
+
+function formatMegabytes(bytes: number) {
+  return `${formatLimitNumber(bytes / (1024 * 1024))} МБ`;
+}
+
+function formatMegapixels(pixels: number) {
+  return `${formatLimitNumber(pixels / 1_000_000)} МП`;
+}
+
+function formatLimitNumber(value: number) {
+  return Number.isInteger(value)
+    ? String(value)
+    : value.toLocaleString('ru-RU', {
+        maximumFractionDigits: 1,
+        minimumFractionDigits: 0,
+      });
 }

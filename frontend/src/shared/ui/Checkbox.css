@@ -1,0 +1,83 @@
+.app-checkbox {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #3f4652;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  text-align: left;
+  user-select: none;
+}
+
+.app-checkbox input {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  opacity: 0;
+}
+
+.app-checkbox-control {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #111111;
+  border-radius: 50%;
+  background: #ffffff;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    opacity 160ms ease;
+}
+
+.app-checkbox-control,
+.app-checkbox-control *,
+.app-checkbox-label {
+  pointer-events: none;
+}
+
+.app-checkbox-control span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #111111;
+  opacity: 0;
+  transform: scale(0.4);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.app-checkbox input:checked + .app-checkbox-control {
+  background: #111111;
+}
+
+.app-checkbox input:checked + .app-checkbox-control span {
+  opacity: 1;
+  transform: scale(1);
+  background: #ffffff;
+}
+
+.app-checkbox:hover .app-checkbox-control {
+  background: #f3f3f3;
+}
+
+.app-checkbox:hover input:checked + .app-checkbox-control {
+  background: #111111;
+}
+
+.app-checkbox input:focus-visible + .app-checkbox-control {
+  outline: 2px solid #621bfe;
+  outline-offset: 4px;
+}
+
+.app-checkbox.disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}

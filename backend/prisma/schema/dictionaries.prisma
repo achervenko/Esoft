@@ -16,7 +16,6 @@ model EquipmentModel {
   manufacturer        Manufacturer                  @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
   equipment           Equipment[]
   maintenanceSettings EquipmentMaintenanceSetting[]
-  checklistTemplates  ChecklistTemplate[]
 
   @@unique([manufacturerId, name], map: "uq_equipment_models_manufacturer_name")
   @@index([manufacturerId], map: "idx_equipment_models_manufacturer_id")
@@ -30,7 +29,6 @@ model EquipmentEventType {
   isActive            Boolean                       @default(true) @map("is_active")
   events              EquipmentEvent[]
   maintenanceSettings EquipmentMaintenanceSetting[]
-  checklistTemplates  ChecklistTemplate[]
 
   @@map("equipment_event_types")
 }

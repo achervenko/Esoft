@@ -40,12 +40,15 @@ function MaintenanceSettingsPanelContent({
         <MaintenanceSettingsPanelHeader
           availableTypesError={panel.availableTypesError}
           canManage={canManage}
+          checklistTemplatesError={panel.checklistTemplatesError}
           isAvailableTypesLoading={panel.isAvailableTypesLoading}
+          isChecklistTemplatesLoading={panel.isChecklistTemplatesLoading}
           isCreateDisabled={panel.isCreateDisabled}
           onCreate={panel.openCreateForm}
           onReloadAvailableTypes={() =>
             void panel.reloadAvailableMaintenanceTypes()
           }
+          onReloadChecklistTemplates={() => void panel.reloadChecklistTemplates()}
         />
 
         <MaintenanceSettingsPanelState
@@ -59,6 +62,7 @@ function MaintenanceSettingsPanelContent({
 
       <MaintenanceSettingsPanelModals
         availableMaintenanceTypes={panel.availableMaintenanceTypes}
+        checklistTemplates={panel.checklistTemplates}
         deleteError={panel.deleteError}
         formErrorCode={panel.formErrorCode}
         isDeleting={panel.isDeleting}

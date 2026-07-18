@@ -27,7 +27,10 @@ export class ChecklistWorkMutationRepository {
     tx: Prisma.TransactionClient,
     checklistId: number,
   ): Promise<{ checklist: LockedChecklist; event: LockedChecklistEvent }> {
-    const eventId = await this.findChecklistEventIdInTransaction(tx, checklistId);
+    const eventId = await this.findChecklistEventIdInTransaction(
+      tx,
+      checklistId,
+    );
 
     if (eventId === null) {
       throwChecklistNotFound('CHECKLIST_NOT_FOUND', 'Чек-лист не найден.');

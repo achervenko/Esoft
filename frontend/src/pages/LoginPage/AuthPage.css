@@ -1,0 +1,47 @@
+.auth-shell {
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: minmax(360px, 1fr) minmax(420px, 1fr);
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.empty-page {
+  min-height: 100svh;
+  background: #ffffff;
+}
+
+.auth-visual {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 46px;
+  background: #e9e9e9;
+  overflow: hidden;
+}
+
+.auth-panel {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 40px;
+  background: #ffffff;
+}
+
+.auth-card {
+  width: min(430px, 100%);
+}
+
+@media (max-width: 900px) {
+  .auth-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-visual {
+    display: none;
+  }
+
+  .auth-panel {
+    padding: 28px;
+  }
+}

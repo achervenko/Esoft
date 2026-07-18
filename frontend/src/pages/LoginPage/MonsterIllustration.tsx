@@ -1,3 +1,5 @@
+import './MonsterScene.css';
+
 type MonsterIllustrationProps = {
   eyeTransform: string;
   isShaking: boolean;

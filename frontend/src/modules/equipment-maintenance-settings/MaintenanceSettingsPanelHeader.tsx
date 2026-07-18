@@ -3,19 +3,25 @@ import { Plus } from "lucide-react";
 type MaintenanceSettingsPanelHeaderProps = {
   availableTypesError: string | null;
   canManage: boolean;
+  checklistTemplatesError: string | null;
   isAvailableTypesLoading: boolean;
+  isChecklistTemplatesLoading: boolean;
   isCreateDisabled: boolean;
   onCreate: () => void;
   onReloadAvailableTypes: () => void;
+  onReloadChecklistTemplates: () => void;
 };
 
 export function MaintenanceSettingsPanelHeader({
   availableTypesError,
   canManage,
+  checklistTemplatesError,
   isAvailableTypesLoading,
+  isChecklistTemplatesLoading,
   isCreateDisabled,
   onCreate,
   onReloadAvailableTypes,
+  onReloadChecklistTemplates,
 }: MaintenanceSettingsPanelHeaderProps) {
   return (
     <>
@@ -45,6 +51,19 @@ export function MaintenanceSettingsPanelHeader({
           <button
             disabled={isAvailableTypesLoading}
             onClick={onReloadAvailableTypes}
+            type="button"
+          >
+            Повторить
+          </button>
+        </div>
+      ) : null}
+
+      {canManage && checklistTemplatesError ? (
+        <div className="maintenance-settings-inline-error">
+          <span>Не удалось загрузить шаблоны чек-листов.</span>
+          <button
+            disabled={isChecklistTemplatesLoading}
+            onClick={onReloadChecklistTemplates}
             type="button"
           >
             Повторить

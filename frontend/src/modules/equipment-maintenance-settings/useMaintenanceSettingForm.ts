@@ -13,7 +13,6 @@ import type {
 } from "../../shared/api/maintenance/maintenance.types";
 import {
   buildMaintenanceSettingUpdatePayload,
-  emptyPeriodicityForm,
   parseChecklistTemplateFormItems,
   parsePeriodicityForm,
   toPeriodicityForm,
@@ -28,6 +27,7 @@ import { useMaintenanceChecklistTemplates } from "./useMaintenanceChecklistTempl
 type UseMaintenanceSettingFormParams = Pick<
   MaintenanceSettingFormModalProps,
   | "availableMaintenanceTypes"
+  | "checklistTemplates"
   | "isSaving"
   | "mode"
   | "onSubmit"
@@ -44,6 +44,7 @@ type InitialFormValues = {
 
 export function useMaintenanceSettingForm({
   availableMaintenanceTypes,
+  checklistTemplates: publishedChecklistTemplates,
   isSaving,
   mode,
   onSubmit,
@@ -60,6 +61,9 @@ export function useMaintenanceSettingForm({
       setting,
     );
   }
+
+  const initialChecklistTemplates =
+    initialFormValuesRef.current.checklistTemplates;
 
   const [maintenanceTypeId, setMaintenanceTypeId] = useState("");
   const [executionType, setExecutionType] = useState<MaintenanceExecutionType>(
@@ -108,6 +112,30 @@ export function useMaintenanceSettingForm({
     [availableMaintenanceTypes],
   );
 
+  const checklistTemplateOptions = useMemo(() => {
+    const options = publishedChecklistTemplates.map((template) => ({
+      label: template.name,
+      value: String(template.id),
+    }));
+    const optionIds = new Set(options.map((option) => option.value));
+
+    initialChecklistTemplates.forEach((template) => {
+      const value = String(template.checklistTemplateId);
+
+      if (!optionIds.has(value)) {
+        options.push({
+          label: template.name,
+          value,
+        });
+        optionIds.add(value);
+      }
+    });
+
+    return options.sort((left, right) =>
+      left.label.localeCompare(right.label, "ru"),
+    );
+  }, [initialChecklistTemplates, publishedChecklistTemplates]);
+
   const updateMaintenanceTypeId = useCallback(
     (value: string) => {
       setMaintenanceTypeId(value);
@@ -139,7 +167,6 @@ export function useMaintenanceSettingForm({
 
   const togglePeriodicity = (checked: boolean) => {
     setHasPeriodicity(checked);
-    setPeriodicity(emptyPeriodicityForm);
     clearError();
   };
 
@@ -243,6 +270,7 @@ export function useMaintenanceSettingForm({
     hasPeriodicity,
     maintenanceTypeId,
     maintenanceTypeOptions,
+    checklistTemplateOptions,
     moveChecklistTemplate,
     periodicity,
     removeChecklistTemplate,

@@ -51,37 +51,19 @@ export class ChecklistTemplateQueryService {
     query: TemplateQuery,
   ): Prisma.ChecklistTemplateWhereInput {
     return {
-      equipmentModelId: query.equipmentModelId,
       isActive:
         query.state === 'ACTIVE'
           ? true
           : query.state === 'ARCHIVED'
             ? false
             : query.isActive,
-      isPublished:
-        query.state === 'DRAFT'
-          ? false
-          : query.state === 'ACTIVE' || query.state === 'ARCHIVED'
-            ? true
-            : query.isPublished,
-      maintenanceTypeId: query.maintenanceTypeId,
+      isPublished: true,
       OR: query.search
         ? [
             { name: { contains: query.search, mode: 'insensitive' } },
             { description: { contains: query.search, mode: 'insensitive' } },
-            {
-              equipmentModel: {
-                name: { contains: query.search, mode: 'insensitive' },
-              },
-            },
-            {
-              maintenanceType: {
-                name: { contains: query.search, mode: 'insensitive' },
-              },
-            },
           ]
         : undefined,
     };
   }
 }
-

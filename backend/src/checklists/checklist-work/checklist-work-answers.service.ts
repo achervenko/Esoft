@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { AuditAction, ChecklistAnswerType, ChecklistStatus, Prisma } from '@prisma/client';
+import {
+  AuditAction,
+  ChecklistAnswerType,
+  ChecklistStatus,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { writeChecklistAudit } from '../checklist-common/checklists.audit';
 import {
@@ -71,7 +76,10 @@ export class ChecklistWorkAnswersService {
         this.parseAnswer(answer, answerRowById.get(answer.checklistDetailId)),
       );
       const changedAnswers = parsedAnswers.filter((answer) =>
-        this.hasAnswerChange(answer, answerRowById.get(answer.checklistDetailId)),
+        this.hasAnswerChange(
+          answer,
+          answerRowById.get(answer.checklistDetailId),
+        ),
       );
 
       if (changedAnswers.length === 0) {

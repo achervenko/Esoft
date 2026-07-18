@@ -61,12 +61,39 @@
 }
 
 .select-dropdown-menu button:hover,
+.select-dropdown-menu button.active,
 .select-dropdown-menu button.selected {
   background: #f4f6f8;
 }
 
 .select-dropdown-menu button.selected {
   font-weight: 800;
+}
+
+.select-dropdown-option-content {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.select-dropdown-option-muted {
+  min-width: 0;
+  color: #687280;
+}
+
+.select-dropdown-option-indicator {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+}
+
+.select-dropdown-option-indicator.inactive {
+  background: #f5b700;
+  box-shadow: 0 0 0 3px rgba(245, 183, 0, 0.16);
 }
 
 .form-field.has-error .select-dropdown-trigger {

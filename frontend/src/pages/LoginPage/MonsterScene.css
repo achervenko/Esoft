@@ -1,0 +1,185 @@
+.monster-scene,
+.monster-scene *,
+.blue-box,
+.blue-box *,
+.black-box,
+.black-box *,
+.yellow-box,
+.yellow-box *,
+.orange-box,
+.orange-box * {
+  pointer-events: none;
+}
+
+.monster-scene {
+  position: relative;
+  width: min(500px, 92%);
+  height: 306px;
+}
+
+.blue-box {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 140px;
+  height: 300px;
+  background: #6336ff;
+  border: 0;
+  transform: translateX(-58%);
+}
+
+.blue-eye,
+.black-eye {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.blue-eye {
+  top: 7%;
+}
+
+.blue-eye-left {
+  left: 30%;
+}
+
+.blue-eye-right {
+  left: 62%;
+}
+
+.blue-eye span,
+.black-eye span {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #000000;
+  transition:
+    transform 250ms ease,
+    border-radius 250ms ease;
+}
+
+.black-box {
+  position: absolute;
+  right: 21%;
+  bottom: 0;
+  width: 90px;
+  height: 200px;
+  background: #18324f;
+  border: 0;
+}
+
+.black-eye {
+  top: 9%;
+}
+
+.black-eye-left {
+  left: 29%;
+}
+
+.black-eye-right {
+  left: 59%;
+}
+
+.yellow-box {
+  position: absolute;
+  right: 10%;
+  bottom: 0;
+  width: 90px;
+  height: 135px;
+  border-radius: 50px 50px 0 0;
+  background: #c7c83a;
+}
+
+.yellow-eye {
+  position: absolute;
+  top: 16%;
+  left: 42%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #111820;
+  transition:
+    transform 250ms ease,
+    border-radius 250ms ease;
+}
+
+.yellow-mouth {
+  position: absolute;
+  top: 30%;
+  left: 0;
+  width: 46px;
+  height: 4px;
+  background: #111820;
+  transition: transform 250ms ease;
+}
+
+.orange-box {
+  position: absolute;
+  left: 24%;
+  bottom: 0;
+  width: 220px;
+  height: 100px;
+  border-radius: 100px 100px 0 0;
+  background: #d98555;
+}
+
+.orange-eye {
+  position: absolute;
+  top: 21%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #163147;
+  transition:
+    transform 250ms ease,
+    border-radius 250ms ease;
+}
+
+.orange-eye-left {
+  left: 38%;
+}
+
+.orange-eye-right {
+  left: 54%;
+}
+
+.orange-mouth {
+  position: absolute;
+  top: 36%;
+  left: 44%;
+  width: 19px;
+  height: 9px;
+  border-radius: 0 0 100px 100px;
+  background: #111820;
+  transition: transform 250ms ease;
+}
+
+@keyframes headShake {
+  0% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(5deg);
+  }
+  40% {
+    transform: rotate(-5deg);
+  }
+  60% {
+    transform: rotate(4deg);
+  }
+  80% {
+    transform: rotate(-4deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+.head-shake {
+  animation: headShake 600ms ease-in-out;
+}

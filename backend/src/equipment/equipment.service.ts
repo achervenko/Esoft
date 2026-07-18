@@ -1,11 +1,18 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuditModule, StorageOwnerModule } from '@prisma/client';
 import { IdentityNumberingService } from '../application/numbering/identity-numbering.service';
 import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EquipmentSearchProjector } from '../search/equipment-search.projector';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
-import { getEquipmentAuditChanges, toAuditUserName } from './equipment-audit.mapper';
+import {
+  getEquipmentAuditChanges,
+  toAuditUserName,
+} from './equipment-audit.mapper';
 import { EQUIPMENT_IDENTITY_TARGET } from './equipment.constants';
 import { buildEquipmentData } from './equipment-data.mapper';
 import { toEquipmentCreateOptions } from './equipment-options.presenter';
@@ -34,26 +41,32 @@ export class EquipmentService {
   }
 
   async getCreateOptions() {
-    const [manufacturers, models, countries, sections, employees, nextVisibleId] =
-      await Promise.all([
-        this.prisma.manufacturer.findMany({ orderBy: { name: 'asc' } }),
-        this.prisma.equipmentModel.findMany({
-          orderBy: [{ manufacturer: { name: 'asc' } }, { name: 'asc' }],
-        }),
-        this.prisma.country.findMany({ orderBy: { name: 'asc' } }),
-        this.prisma.section.findMany({
-          include: { workshop: true },
-          orderBy: [{ workshop: { name: 'asc' } }, { name: 'asc' }],
-        }),
-        this.prisma.employee.findMany({
-          orderBy: [
-            { lastName: 'asc' },
-            { firstName: 'asc' },
-            { middleName: 'asc' },
-          ],
-        }),
-        this.numbering.getNextId(EQUIPMENT_IDENTITY_TARGET),
-      ]);
+    const [
+      manufacturers,
+      models,
+      countries,
+      sections,
+      employees,
+      nextVisibleId,
+    ] = await Promise.all([
+      this.prisma.manufacturer.findMany({ orderBy: { name: 'asc' } }),
+      this.prisma.equipmentModel.findMany({
+        orderBy: [{ manufacturer: { name: 'asc' } }, { name: 'asc' }],
+      }),
+      this.prisma.country.findMany({ orderBy: { name: 'asc' } }),
+      this.prisma.section.findMany({
+        include: { workshop: true },
+        orderBy: [{ workshop: { name: 'asc' } }, { name: 'asc' }],
+      }),
+      this.prisma.employee.findMany({
+        orderBy: [
+          { lastName: 'asc' },
+          { firstName: 'asc' },
+          { middleName: 'asc' },
+        ],
+      }),
+      this.numbering.getNextId(EQUIPMENT_IDENTITY_TARGET),
+    ]);
 
     return toEquipmentCreateOptions({
       nextVisibleId,
@@ -85,9 +98,7 @@ export class EquipmentService {
     });
 
     if (!equipment) {
-      throw new NotFoundException(
-        'РћР±РѕСЂСѓРґРѕРІР°РЅРёРµ РЅРµ РЅР°Р№РґРµРЅРѕ.',
-      );
+      throw new NotFoundException('Оборудование не найдено.');
     }
 
     const history = await this.prisma.auditLog.findMany({
@@ -118,7 +129,7 @@ export class EquipmentService {
       newValue: item.newValue,
       oldValue: item.oldValue,
       timeZone: item.timeZone,
-      user: item.user ? toAuditUserName(item.user) : 'РќРµ СѓРєР°Р·Р°РЅ',
+      user: item.user ? toAuditUserName(item.user) : 'Не указан',
     }));
   }
 

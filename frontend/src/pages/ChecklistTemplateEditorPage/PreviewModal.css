@@ -1,0 +1,77 @@
+.checklist-editor-preview {
+  display: grid;
+  gap: 14px;
+  overflow-y: auto;
+  padding: 18px;
+}
+
+.checklist-editor-preview h3,
+.checklist-editor-preview p {
+  margin: 0;
+}
+
+.checklist-editor-preview-description {
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.checklist-editor-preview-question {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid #e3e6eb;
+  padding-top: 10px;
+}
+
+.checklist-editor-preview-question-header {
+  display: grid;
+  gap: 6px;
+  color: #15171c;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.checklist-editor-preview-question b {
+  margin-left: 4px;
+  color: #b42318;
+}
+
+.checklist-editor-preview-question small {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.checklist-editor-preview-question input,
+.checklist-editor-preview-question textarea {
+  width: 100%;
+  border: 1px solid #d6dbe3;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #f5f7fa;
+  color: #4b5563;
+  font: inherit;
+}
+
+.checklist-editor-preview-question textarea {
+  min-height: 74px;
+  resize: vertical;
+}
+
+.checklist-editor-preview-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.checklist-editor-preview-radio-group label {
+  width: max-content;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.checklist-editor-preview-radio-group input {
+  width: auto;
+  padding: 0;
+}

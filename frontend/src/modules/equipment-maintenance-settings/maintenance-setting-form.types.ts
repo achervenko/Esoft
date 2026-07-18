@@ -1,3 +1,4 @@
+import type { ChecklistTemplateListItem } from "../../shared/api/checklists";
 import type {
   MaintenanceType,
   MaintenanceExecutionType,
@@ -19,6 +20,7 @@ export type MaintenanceSettingFormPayload = {
 
 export type MaintenanceSettingFormModalProps = {
   availableMaintenanceTypes: MaintenanceType[];
+  checklistTemplates: ChecklistTemplateListItem[];
   isSaving: boolean;
   mode: MaintenanceSettingFormMode;
   onClose: () => void;

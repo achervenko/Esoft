@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { Auth } from '../../auth/auth.config';
-import { assertAdmin } from '../../auth/role-permissions';
+import { assertCanManageChecklists } from '../../auth/role-permissions';
 import { ChecklistQuestionsService } from './checklist-questions.service';
 import {
   type ChecklistQuestionPayloadDto,
@@ -29,7 +29,7 @@ export class ChecklistQuestionsController {
     @Query() query: ChecklistQuestionsQueryDto,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
+    assertCanManageChecklists(session.user.role);
 
     return this.questionsService.list(parseChecklistQuestionsQuery(query));
   }
@@ -39,7 +39,7 @@ export class ChecklistQuestionsController {
     @Param('id', ParseIntPipe) id: number,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
+    assertCanManageChecklists(session.user.role);
 
     return this.questionsService.get(id);
   }
@@ -49,7 +49,7 @@ export class ChecklistQuestionsController {
     @Body() dto: ChecklistQuestionPayloadDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
+    assertCanManageChecklists(session.user.role);
 
     return this.questionsService.create(
       parseChecklistQuestionPayload(dto),
@@ -63,7 +63,7 @@ export class ChecklistQuestionsController {
     @Body() dto: ChecklistQuestionPayloadDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
+    assertCanManageChecklists(session.user.role);
 
     return this.questionsService.update(
       id,
@@ -77,7 +77,7 @@ export class ChecklistQuestionsController {
     @Param('id', ParseIntPipe) id: number,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
+    assertCanManageChecklists(session.user.role);
 
     return this.questionsService.activate(id, session.user.id);
   }
@@ -87,7 +87,7 @@ export class ChecklistQuestionsController {
     @Param('id', ParseIntPipe) id: number,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
+    assertCanManageChecklists(session.user.role);
 
     return this.questionsService.deactivate(id, session.user.id);
   }

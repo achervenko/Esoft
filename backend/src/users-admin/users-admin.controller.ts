@@ -80,7 +80,10 @@ export class UsersAdminController {
   ) {
     assertAdmin(session.user.role);
 
-    return this.employeeAdminService.deleteEmployee(employeeId, session.user.id);
+    return this.employeeAdminService.deleteEmployee(
+      employeeId,
+      session.user.id,
+    );
   }
 
   @Get('accounts')

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ChecklistStatus, EquipmentEventStatus, Prisma } from '@prisma/client';
+import { EquipmentEventStatus, Prisma } from '@prisma/client';
 import {
   ChecklistEventCompletionService,
   type LockedEventChecklistForCompletion,
@@ -262,10 +262,7 @@ export class EquipmentEventsLifecycleService {
     };
   }
 
-  private lockActiveChecklists(
-    tx: Prisma.TransactionClient,
-    eventId: number,
-  ) {
+  private lockActiveChecklists(tx: Prisma.TransactionClient, eventId: number) {
     return tx.$queryRaw<LockedEventChecklistForCompletion[]>`
       SELECT
         id,

@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { parsePassword } from './users-admin.validation';
 import {
@@ -10,8 +11,14 @@ import { UsersAdminAssertionsService } from './users-admin-assertions.service';
 import { UsersAdminAuditService } from './users-admin-audit.service';
 import { toAdminUserDto } from './users-admin.mapper';
 
+type AdminUserWithRelations = Prisma.UserGetPayload<{
+  include: typeof adminUserInclude;
+}>;
+
 @Injectable()
 export class UserCredentialsAdminService {
+  private readonly logger = new Logger(UserCredentialsAdminService.name);
+
   constructor(
     private readonly assertions: UsersAdminAssertionsService,
     private readonly audit: UsersAdminAuditService,
@@ -25,44 +32,42 @@ export class UserCredentialsAdminService {
   ) {
     await this.assertions.assertUserExists(userId);
 
-    const passwordHash = await hashUserPassword(parsePassword(payload.password));
-    const account = await this.findCredentialAccount(userId);
+    const passwordHash = await hashUserPassword(
+      parsePassword(payload.password),
+    );
+    const user = await this.prisma.$transaction(async (tx) => {
+      await this.lockUserCredentials(tx, userId);
+      const account = await this.findCredentialAccount(tx, userId);
 
-    if (account) {
-      await this.prisma.account.update({
-        data: { password: passwordHash },
-        where: { id: account.id },
-      });
-    } else {
-      await this.prisma.account.create({
-        data: {
-          accountId: userId,
-          id: randomUUID(),
-          password: passwordHash,
-          providerId: CREDENTIAL_PROVIDER_ID,
-          userId,
-        },
-      });
-    }
-
-    const user = await this.prisma.user.findUniqueOrThrow({
-      include: {
-        employeeUser: {
-          include: {
-            employee: true,
+      if (account) {
+        await tx.account.update({
+          data: { password: passwordHash },
+          where: { id: account.id },
+        });
+      } else {
+        await tx.account.create({
+          data: {
+            accountId: userId,
+            id: randomUUID(),
+            password: passwordHash,
+            providerId: CREDENTIAL_PROVIDER_ID,
+            userId,
           },
-        },
-        photo: true,
-      },
-      where: { id: userId },
+        });
+      }
+
+      return tx.user.findUniqueOrThrow({
+        include: adminUserInclude,
+        where: { id: userId },
+      });
     });
-    await this.audit.logUserPasswordChanged(toAdminUserDto(user), actorUserId);
+    await this.logPasswordChangedBestEffort(user, actorUserId);
 
     return { ok: true };
   }
 
-  private findCredentialAccount(userId: string) {
-    return this.prisma.account.findFirst({
+  private findCredentialAccount(tx: Prisma.TransactionClient, userId: string) {
+    return tx.account.findFirst({
       select: { id: true },
       where: {
         accountId: userId,
@@ -71,4 +76,36 @@ export class UserCredentialsAdminService {
       },
     });
   }
+
+  private lockUserCredentials(tx: Prisma.TransactionClient, userId: string) {
+    return tx.$executeRaw`
+      SELECT pg_advisory_xact_lock(hashtext(${'user_credentials:' + userId}))
+    `;
+  }
+
+  private async logPasswordChangedBestEffort(
+    user: AdminUserWithRelations,
+    actorUserId?: string | null,
+  ) {
+    try {
+      await this.audit.logUserPasswordChanged(
+        toAdminUserDto(user),
+        actorUserId,
+      );
+    } catch (error) {
+      this.logger.error(
+        'Failed to write user password change audit log',
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+  }
 }
+
+const adminUserInclude = {
+  employeeUser: {
+    include: {
+      employee: true,
+    },
+  },
+  photo: true,
+};

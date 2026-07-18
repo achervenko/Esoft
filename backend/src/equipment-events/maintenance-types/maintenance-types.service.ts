@@ -149,7 +149,10 @@ export class MaintenanceTypesService {
     }
   }
 
-  private async loadType(id: number, tx: Prisma.TransactionClient = this.prisma) {
+  private async loadType(
+    id: number,
+    tx: Prisma.TransactionClient = this.prisma,
+  ) {
     const maintenanceType = await tx.equipmentEventType.findUnique({
       select: maintenanceTypeSelect,
       where: { id },

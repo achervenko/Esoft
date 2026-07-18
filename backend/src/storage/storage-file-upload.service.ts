@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -59,17 +60,9 @@ export class StorageFileUploadService {
       ...params.file,
       originalname: normalizeOriginalFileName(params.file.originalname),
     };
-    assertStorageFileMatchesDocumentType({
+    await assertStorageFileMatchesDocumentType({
       documentType: params.documentType,
       file,
-    });
-
-    const activeFilesBeforeUpload = await this.ownerStorage.findActiveFiles(
-      params.owner,
-    );
-    this.assertDocumentCanBeAdded({
-      activeFiles: activeFilesBeforeUpload,
-      documentType: params.documentType,
     });
 
     const storedObject = await this.putObjectSafely({
@@ -88,10 +81,6 @@ export class StorageFileUploadService {
       storedObject,
       userId: params.userId,
       documentType: params.documentType,
-      isPrimary: this.shouldMakePrimary({
-        activeFiles: activeFilesBeforeUpload,
-        documentType: params.documentType,
-      }),
     });
     const activeFiles = await this.ownerStorage.findActiveFiles(params.owner);
     const displayName = toStorageFileDisplayNameInList(
@@ -99,7 +88,7 @@ export class StorageFileUploadService {
       activeFiles,
     );
 
-    await this.writeAudit({
+    await this.writeAuditBestEffort({
       action: AuditAction.FILE_UPLOAD,
       audit: params.audit,
       newValue: displayName,
@@ -113,31 +102,51 @@ export class StorageFileUploadService {
   private async createStorageFileSafely(params: {
     documentType: StorageDocumentType;
     file: UploadedFileInput;
-    isPrimary: boolean;
     owner: StorageOwnerContext;
     storedObject: { bucket: string; key: string };
     userId?: string | null;
   }) {
     try {
-      return await this.prisma.storageFile.create({
-        data: {
-          bucket: params.storedObject.bucket,
+      return await this.prisma.$transaction(async (tx) => {
+        await this.lockOwnerFiles(tx, params.owner);
+        const activeFilesBeforeUpload = await this.findActiveOwnerFiles(
+          tx,
+          params.owner,
+        );
+
+        this.assertDocumentCanBeAdded({
+          activeFiles: activeFilesBeforeUpload,
           documentType: params.documentType,
-          isPrimary: params.isPrimary,
-          mimeType: params.file.mimetype || 'application/octet-stream',
-          objectKey: params.storedObject.key,
-          originalName: params.file.originalname,
-          ownerEntityId: params.owner.entityId,
-          ownerEntityType: params.owner.entityType,
-          ownerModule: params.owner.module,
-          sizeBytes: BigInt(params.file.size),
-          uploadedByUserId: params.userId ?? null,
-        },
+        });
+
+        return tx.storageFile.create({
+          data: {
+            bucket: params.storedObject.bucket,
+            documentType: params.documentType,
+            isPrimary: this.shouldMakePrimary({
+              activeFiles: activeFilesBeforeUpload,
+              documentType: params.documentType,
+            }),
+            mimeType: params.file.mimetype || 'application/octet-stream',
+            objectKey: params.storedObject.key,
+            originalName: params.file.originalname,
+            ownerEntityId: params.owner.entityId,
+            ownerEntityType: params.owner.entityType,
+            ownerModule: params.owner.module,
+            sizeBytes: BigInt(params.file.size),
+            uploadedByUserId: params.userId ?? null,
+          },
+        });
       });
     } catch (error) {
       await this.objectStorage
         .deleteObject(params.storedObject.key)
         .catch(() => null);
+
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
       this.logger.error(
         `Failed to save uploaded file metadata: ${params.storedObject.key}`,
         error instanceof Error ? error.stack : String(error),
@@ -147,14 +156,13 @@ export class StorageFileUploadService {
         throw new InternalServerErrorException({
           code: 'DATABASE_ERROR',
           message:
-            '\u0424\u0430\u0439\u043b \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043d, \u043d\u043e \u043d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0441\u0432\u0435\u0434\u0435\u043d\u0438\u044f \u043e \u0434\u043e\u043a\u0443\u043c\u0435\u043d\u0442\u0435.',
+            'Файл загружен, но не удалось сохранить сведения о документе.',
         });
       }
 
       throw new InternalServerErrorException({
         code: 'UPLOAD_FAILED',
-        message:
-          '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u043a\u0443. \u0418\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u044f \u043e\u0442\u043c\u0435\u043d\u0435\u043d\u044b.',
+        message: 'Не удалось завершить загрузку. Изменения отменены.',
       });
     }
   }
@@ -174,7 +182,7 @@ export class StorageFileUploadService {
     if (hasActiveDocument) {
       throw createStorageFileBadRequest(
         'DOCUMENT_ALREADY_EXISTS',
-        '\u041f\u0430\u0441\u043f\u043e\u0440\u0442 \u0434\u043b\u044f \u044d\u0442\u043e\u0433\u043e \u043e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u044f \u0443\u0436\u0435 \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043d. \u0423\u0434\u0430\u043b\u0438\u0442\u0435 \u0435\u0433\u043e \u043f\u0435\u0440\u0435\u0434 \u0437\u0430\u0433\u0440\u0443\u0437\u043a\u043e\u0439 \u043d\u043e\u0432\u043e\u0433\u043e.',
+        'Паспорт для этого оборудования уже загружен. Удалите его перед загрузкой нового.',
       );
     }
   }
@@ -207,9 +215,58 @@ export class StorageFileUploadService {
 
       throw new ServiceUnavailableException({
         code: 'STORAGE_UNAVAILABLE',
-        message:
-          '\u0425\u0440\u0430\u043d\u0438\u043b\u0438\u0449\u0435 \u0444\u0430\u0439\u043b\u043e\u0432 \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e.',
+        message: 'Хранилище файлов временно недоступно.',
       });
+    }
+  }
+
+  private async findActiveOwnerFiles(
+    tx: Prisma.TransactionClient,
+    owner: StorageOwnerContext,
+  ) {
+    return tx.storageFile.findMany({
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      where: {
+        deletedAt: null,
+        ownerEntityId: owner.entityId,
+        ownerEntityType: owner.entityType,
+        ownerModule: owner.module,
+      },
+    });
+  }
+
+  private lockOwnerFiles(
+    tx: Prisma.TransactionClient,
+    owner: StorageOwnerContext,
+  ) {
+    return tx.$executeRaw`
+      SELECT pg_advisory_xact_lock(hashtext(${this.getOwnerLockKey(owner)}))
+    `;
+  }
+
+  private getOwnerLockKey(owner: StorageOwnerContext) {
+    return [
+      'storage_files',
+      owner.module,
+      owner.entityType,
+      owner.entityId,
+    ].join(':');
+  }
+
+  private async writeAuditBestEffort(params: {
+    action: AuditAction;
+    audit: StorageAuditContext;
+    newValue: string | null;
+    oldValue: string | null;
+    userId?: string | null;
+  }) {
+    try {
+      await this.writeAudit(params);
+    } catch (error) {
+      this.logger.error(
+        'Failed to write storage file audit log',
+        error instanceof Error ? error.stack : String(error),
+      );
     }
   }
 
@@ -226,7 +283,7 @@ export class StorageFileUploadService {
       entityType: params.audit.entityType,
       fields: [
         {
-          fieldName: '\u0424\u0430\u0439\u043b',
+          fieldName: 'Файл',
           newValue: params.newValue,
           oldValue: params.oldValue,
         },

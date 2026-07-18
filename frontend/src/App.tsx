@@ -8,6 +8,7 @@ import {
   waitForAuthenticatedUser,
   type SessionUser,
 } from './shared/api/auth-session';
+import { markCurrentHashHistoryEntry } from './shared/lib/hash-history-marker';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -16,7 +17,10 @@ function App() {
   const [user, setUser] = useState<SessionUser | null>(null);
 
   useEffect(() => {
-    const handleHashChange = () => setRoute(getHashRoute());
+    const handleHashChange = () => {
+      markCurrentHashHistoryEntry();
+      setRoute(getHashRoute());
+    };
 
     window.addEventListener('hashchange', handleHashChange);
     handleHashChange();

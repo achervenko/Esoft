@@ -121,19 +121,23 @@ export class UsersAdminAuditService {
     });
   }
 
-  logUserPhotoUploaded(user: UserAuditData, actorUserId?: string | null) {
+  logUserPhotoUploaded(params: {
+    actorUserId?: string | null;
+    hadPreviousPhoto: boolean;
+    user: UserAuditData;
+  }) {
     return this.auditLog.writeFieldChanges({
       action: AuditAction.USER_PHOTO_UPLOAD,
-      entityType: this.userEntityType(user.id),
+      entityType: this.userEntityType(params.user.id),
       fields: [
         {
           fieldName: 'Фото пользователя',
           newValue: 'загружено',
-          oldValue: 'не указано',
+          oldValue: params.hadPreviousPhoto ? 'загружено' : 'не указано',
         },
       ],
       module: AuditModule.USERS,
-      userId: actorUserId,
+      userId: params.actorUserId,
     });
   }
 
@@ -165,11 +169,18 @@ export class UsersAdminAuditService {
     ].filter((field) => field.newValue !== field.oldValue);
   }
 
-  private userFields(newUser: UserAuditData | null, oldUser: UserAuditData | null) {
+  private userFields(
+    newUser: UserAuditData | null,
+    oldUser: UserAuditData | null,
+  ) {
     return [
       this.field('Email', newUser?.email, oldUser?.email),
       this.field('Логин', newUser?.username, oldUser?.username),
-      this.field('Роль', getRoleLabel(newUser?.role), getRoleLabel(oldUser?.role)),
+      this.field(
+        'Роль',
+        getRoleLabel(newUser?.role),
+        getRoleLabel(oldUser?.role),
+      ),
       this.field(
         'Сотрудник',
         newUser?.employee?.fullName,

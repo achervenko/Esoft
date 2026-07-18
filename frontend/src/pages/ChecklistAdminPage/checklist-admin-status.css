@@ -1,0 +1,40 @@
+.checklist-admin-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border-radius: 999px;
+  padding: 0 10px;
+  background: #eef2ff;
+  color: #27346f;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.checklist-admin-status.inactive,
+.checklist-admin-status.archived {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.checklist-admin-status.active {
+  background: #e7f7ef;
+  color: #166534;
+}
+
+.checklist-status-toggle.active {
+  border-color: #bfead0;
+  background: #edfdf3;
+  color: #087443;
+}
+
+.checklist-status-toggle.inactive {
+  border-color: #ffd0d0;
+  background: #fff5f5;
+  color: #b42318;
+}
+
+.checklist-status-toggle.blocked {
+  border-color: #f7d778;
+  background: #fffbeb;
+  color: #a15c07;
+}

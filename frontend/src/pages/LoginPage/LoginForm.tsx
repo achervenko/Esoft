@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { authClient } from '../../lib/auth-client';
+import { Checkbox } from '../../shared/ui/Checkbox';
+import './LoginForm.css';
 
 type LoginMode = 'username' | 'email';
 
@@ -116,22 +118,11 @@ export function LoginForm({
             </div>
           </label>
 
-          <button
-            aria-checked={remember}
-            className="remember-pin"
-            onClick={() => setRemember((value) => !value)}
-            role="radio"
-            type="button"
-          >
-            <span
-              aria-hidden="true"
-              className="remember-pin-indicator"
-              data-checked={remember ? '' : undefined}
-            >
-              <span />
-            </span>
-            <span>Запомнить вход</span>
-          </button>
+          <Checkbox
+            checked={remember}
+            label="Запомнить вход"
+            onChange={setRemember}
+          />
 
           {error && <p className="form-message error">{error}</p>}
           {message && <p className="form-message success">{message}</p>}

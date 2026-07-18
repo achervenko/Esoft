@@ -2,7 +2,10 @@ export function normalizeSearchText(
   values: Array<number | string | null | undefined>,
 ) {
   return values
-    .filter((value): value is number | string => value !== null && value !== undefined)
+    .filter(
+      (value): value is number | string =>
+        value !== null && value !== undefined,
+    )
     .map((value) => String(value))
     .join(' ')
     .toLowerCase()

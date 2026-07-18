@@ -40,7 +40,9 @@ function buildChecklistTemplateLinks(
   }
 
   if (!createdBy) {
-    throw new Error('createdBy is required to create checklist template links.');
+    throw new Error(
+      'createdBy is required to create checklist template links.',
+    );
   }
 
   return {

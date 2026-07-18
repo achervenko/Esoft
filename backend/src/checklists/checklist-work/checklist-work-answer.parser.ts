@@ -1,5 +1,6 @@
 import { ChecklistAnswerType, Prisma } from '@prisma/client';
 import { throwChecklistBadRequest } from '../checklist-common/checklists.errors';
+import { parseDateString } from '../checklist-common/checklists.validation';
 import type { ChecklistAnswerValue } from './checklist-work.types';
 
 export function parseAnswerValue(
@@ -93,20 +94,7 @@ export function parseDecimalAnswer(value: unknown) {
 }
 
 export function parseDateAnswer(value: unknown) {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    throwChecklistBadRequest('DATE_INVALID', 'Дата должна быть в формате ГГГГ-ММ-ДД.');
-  }
-
-  const date = new Date(`${value}T00:00:00.000Z`);
-
-  if (
-    Number.isNaN(date.getTime()) ||
-    date.toISOString().slice(0, 10) !== value
-  ) {
-    throwChecklistBadRequest('DATE_INVALID', 'Дата должна быть в формате ГГГГ-ММ-ДД.');
-  }
-
-  return value;
+  return parseDateString(value);
 }
 
 export function normalizeStoredDecimal(value: Prisma.Decimal | string | null) {

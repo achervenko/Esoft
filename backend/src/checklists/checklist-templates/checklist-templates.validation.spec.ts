@@ -1,68 +1,179 @@
 import { BadRequestException } from '@nestjs/common';
-import {
-  parseAddTemplateQuestionDto,
-  parseModuleOrderDto,
-} from './checklist-template-structure.validation';
-import {
-  parseChecklistTemplatePayload,
-  parseChecklistTemplateUpdatePayload,
-} from './checklist-template.validation';
+import { parseChecklistTemplatesQuery } from './checklist-templates-query.validation';
+import { parseChecklistTemplatePayload } from './checklist-template.validation';
 
 describe('checklist template validation', () => {
   it('rejects blank template name', () => {
     expectBadRequestCode(() =>
       parseChecklistTemplatePayload({
-        equipmentModelId: 1,
-        maintenanceTypeId: 1,
+        modules: [
+          {
+            checklistModuleId: 1,
+            questions: [{ checklistQuestionId: 10 }],
+          },
+        ],
         name: '   ',
       }),
     ).toBe('CHECKLIST_TEMPLATE_NAME_REQUIRED');
   });
 
-  it('rejects duplicate module ids in order payload', () => {
+  it('accepts full template create payloads', () => {
+    expect(
+      parseChecklistTemplatePayload({
+        description: 'Проверка',
+        modules: [
+          {
+            checklistModuleId: 1,
+            questions: [
+              { checklistQuestionId: 10, isRequired: false, sortOrder: 1 },
+              { checklistQuestionId: 11 },
+            ],
+            sortOrder: 1,
+          },
+        ],
+        name: 'Диагностика',
+      }),
+    ).toEqual({
+      description: 'Проверка',
+      modules: [
+        {
+          checklistModuleId: 1,
+          questions: [
+            { checklistQuestionId: 10, isRequired: false, sortOrder: 1 },
+            { checklistQuestionId: 11, isRequired: true, sortOrder: 2 },
+          ],
+          sortOrder: 1,
+        },
+      ],
+      name: 'Диагностика',
+    });
+  });
+
+  it('rejects duplicate module ids in create payloads', () => {
     expectBadRequestCode(() =>
-      parseModuleOrderDto({ moduleIds: [1, 2, 2], version: 1 }),
+      parseChecklistTemplatePayload({
+        modules: [
+          {
+            checklistModuleId: 1,
+            questions: [{ checklistQuestionId: 10 }],
+          },
+          {
+            checklistModuleId: 1,
+            questions: [{ checklistQuestionId: 11 }],
+          },
+        ],
+        name: 'Диагностика',
+      }),
+    ).toBe('CHECKLIST_TEMPLATE_MODULE_DUPLICATE');
+  });
+
+  it('rejects duplicate question ids in create payloads', () => {
+    expectBadRequestCode(() =>
+      parseChecklistTemplatePayload({
+        modules: [
+          {
+            checklistModuleId: 1,
+            questions: [
+              { checklistQuestionId: 10 },
+              { checklistQuestionId: 10 },
+            ],
+          },
+        ],
+        name: 'Диагностика',
+      }),
+    ).toBe('CHECKLIST_TEMPLATE_QUESTION_DUPLICATE');
+  });
+
+  it('rejects non-sequential module order in create payloads', () => {
+    expectBadRequestCode(() =>
+      parseChecklistTemplatePayload({
+        modules: [
+          {
+            checklistModuleId: 1,
+            questions: [{ checklistQuestionId: 10 }],
+            sortOrder: 1,
+          },
+          {
+            checklistModuleId: 2,
+            questions: [{ checklistQuestionId: 11 }],
+            sortOrder: 3,
+          },
+        ],
+        name: 'Диагностика',
+      }),
     ).toBe('CHECKLIST_TEMPLATE_ORDER_INVALID');
   });
 
-  it('defaults template question isRequired to true', () => {
-    expect(
-      parseAddTemplateQuestionDto({ checklistQuestionId: 10, version: 3 }),
-    ).toMatchObject({
-      checklistQuestionId: 10,
-      isRequired: true,
-      version: 3,
-    });
-  });
-
-  it('allows partial update payloads', () => {
-    expect(
-      parseChecklistTemplateUpdatePayload({
-        description: 'Новое описание',
-        version: 3,
+  it('rejects non-sequential question order in create payloads', () => {
+    expectBadRequestCode(() =>
+      parseChecklistTemplatePayload({
+        modules: [
+          {
+            checklistModuleId: 1,
+            questions: [
+              { checklistQuestionId: 10, sortOrder: 1 },
+              { checklistQuestionId: 11, sortOrder: 3 },
+            ],
+          },
+        ],
+        name: 'Диагностика',
       }),
-    ).toEqual({
-      description: 'Новое описание',
-      version: 3,
-    });
+    ).toBe('CHECKLIST_TEMPLATE_ORDER_INVALID');
   });
 
-  it('rejects empty update payloads', () => {
+  it('rejects empty module questions in create payloads', () => {
     expectBadRequestCode(() =>
-      parseChecklistTemplateUpdatePayload({ version: 3 }),
-    ).toBe('CHECKLIST_TEMPLATE_UPDATE_EMPTY');
+      parseChecklistTemplatePayload({
+        modules: [
+          {
+            checklistModuleId: 1,
+            questions: [],
+          },
+        ],
+        name: 'Диагностика',
+      }),
+    ).toBe('CHECKLIST_TEMPLATE_MODULE_EMPTY');
   });
 
-  it('rejects state fields in update payloads', () => {
-    const runtimePayload = {
-      isActive: true,
-      name: 'Шаблон ТО',
-      version: 3,
-    };
-
+  it('rejects legacy model and maintenance type fields in create payloads', () => {
     expectBadRequestCode(() =>
-      parseChecklistTemplateUpdatePayload(runtimePayload),
+      parseChecklistTemplatePayload({
+        equipmentModelId: 1,
+        maintenanceTypeId: 1,
+        modules: [
+          {
+            checklistModuleId: 1,
+            questions: [{ checklistQuestionId: 10 }],
+          },
+        ],
+        name: 'Шаблон ТО',
+      }),
     ).toBe('CHECKLIST_TEMPLATE_FIELD_FORBIDDEN');
+  });
+
+  it('rejects conflicting template state query filters', () => {
+    expectBadRequestCode(() =>
+      parseChecklistTemplatesQuery({
+        isActive: true,
+        state: 'ACTIVE',
+      }),
+    ).toBe('CHECKLIST_TEMPLATE_STATE_FILTER_CONFLICT');
+  });
+
+  it('rejects technical published query filter', () => {
+    expectBadRequestCode(() =>
+      parseChecklistTemplatesQuery({
+        isPublished: true,
+      } as never),
+    ).toBe('CHECKLIST_TEMPLATE_PUBLISHED_FILTER_FORBIDDEN');
+  });
+
+  it('rejects technical draft state query filter', () => {
+    expectBadRequestCode(() =>
+      parseChecklistTemplatesQuery({
+        state: 'DRAFT',
+      }),
+    ).toBe('CHECKLIST_TEMPLATE_STATE_INVALID');
   });
 });
 

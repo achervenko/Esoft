@@ -1,0 +1,98 @@
+.checklist-admin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.checklist-admin-page .admin-tabs {
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.checklist-admin-filters input,
+.checklist-admin-textarea {
+  min-height: 46px;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #ffffff;
+  color: #15171c;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.checklist-admin-filters input {
+  min-width: min(300px, 100%);
+}
+
+.checklist-admin-filters > .select-dropdown-field {
+  min-width: 190px;
+}
+
+.checklist-admin-filters .select-dropdown-trigger {
+  min-height: 46px;
+}
+
+.checklist-admin-filters > button {
+  min-height: 46px;
+}
+
+.checklist-admin-template-title {
+  display: grid;
+  gap: 4px;
+}
+
+.checklist-admin-template-title strong {
+  color: #15171c;
+}
+
+.checklist-admin-template-title small {
+  color: #6b7280;
+  font-weight: 700;
+}
+
+.checklist-admin-page .data-table-row-clickable {
+  cursor: pointer;
+}
+
+.checklist-admin-page .data-table-row-clickable:hover td {
+  background: #fafbfc;
+}
+
+.checklist-admin-page .data-table-row-clickable:focus-visible {
+  outline: 2px solid #111111;
+  outline-offset: -2px;
+}
+
+.checklist-admin-page .data-table th:last-child,
+.checklist-admin-page .data-table td:last-child {
+  width: 96px;
+  white-space: nowrap;
+}
+
+.checklist-admin-page .admin-table-actions {
+  flex-wrap: nowrap;
+}
+
+.checklist-admin-page .data-table-header-label {
+  display: inline-flex;
+  min-height: 20px;
+}
+
+.checklist-admin-textarea {
+  min-height: 96px;
+  resize: vertical;
+  padding: 10px 12px;
+}
+
+@media (max-width: 760px) {
+  .checklist-admin-filters {
+    display: grid;
+  }
+
+  .checklist-admin-filters > .select-dropdown-field {
+    width: 100%;
+    min-width: 0;
+  }
+}

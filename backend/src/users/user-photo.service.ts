@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { UserPhotoSize } from './user-photo-size';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageObjectService } from '../storage/storage-object.service';

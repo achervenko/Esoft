@@ -7,4 +7,3 @@ export function parseRequiredVersion(value: unknown) {
     'Некорректная версия шаблона.',
   );
 }
-

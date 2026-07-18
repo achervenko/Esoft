@@ -50,7 +50,11 @@ function getAccountLabel(user: SidebarProps["user"]) {
 }
 
 function isSidebarItemActive(activeHref: string, itemHref: string) {
-  return activeHref === itemHref || activeHref.startsWith(`${itemHref}?`);
+  return (
+    activeHref === itemHref ||
+    activeHref.startsWith(`${itemHref}?`) ||
+    activeHref.startsWith(`${itemHref}/`)
+  );
 }
 
 export function Sidebar({ onLogout, user }: SidebarProps) {
@@ -122,16 +126,20 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
       </div>
 
       <nav className="sidebar-nav" aria-label="Основное меню">
-        {sidebarSections.map((section) => (
-          <section className="sidebar-section" key={section.title}>
-            <h2>{section.title}</h2>
-            <ul>
-              {section.items
-                .filter(
-                  (item) =>
-                    !item.roles || item.roles.includes(String(userRole)),
-                )
-                .map((item) => {
+        {sidebarSections.map((section) => {
+          const visibleItems = section.items.filter(
+            (item) => !item.roles || item.roles.includes(String(userRole)),
+          );
+
+          if (visibleItems.length === 0) {
+            return null;
+          }
+
+          return (
+            <section className="sidebar-section" key={section.title}>
+              <h2>{section.title}</h2>
+              <ul>
+                {visibleItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = isSidebarItemActive(activeHref, item.href);
 
@@ -157,9 +165,10 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
                     </li>
                   );
                 })}
-            </ul>
-          </section>
-        ))}
+              </ul>
+            </section>
+          );
+        })}
       </nav>
 
       <div className="sidebar-footer">

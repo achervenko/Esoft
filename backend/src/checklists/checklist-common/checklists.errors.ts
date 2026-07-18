@@ -33,19 +33,26 @@ export function throwChecklistPrismaError(error: unknown): never {
   ) {
     const target = getPrismaErrorTarget(error);
 
-    if (hasConstraint(target, 'uq_checklist_modules_name')) {
+    if (
+      hasConstraint(target, 'uq_checklist_modules_name') ||
+      hasExactColumns(target, ['name'])
+    ) {
       throwChecklistConflict(
         'CHECKLIST_MODULE_NAME_ALREADY_EXISTS',
         'Модуль чек-листа с таким названием уже существует.',
       );
     }
 
+    if (hasConstraint(target, 'uq_checklist_modules_active_sort_order')) {
+      throwChecklistConflict(
+        'CHECKLIST_MODULE_SORT_ORDER_ALREADY_EXISTS',
+        'В справочнике уже есть активный модуль с таким порядковым номером.',
+      );
+    }
+
     if (
       hasConstraint(target, 'uq_checklist_template_modules_module') ||
-      hasExactColumns(target, [
-        'checklist_template_id',
-        'checklist_module_id',
-      ])
+      hasExactColumns(target, ['checklist_template_id', 'checklist_module_id'])
     ) {
       throwChecklistConflict(
         'CHECKLIST_TEMPLATE_MODULE_ALREADY_ADDED',
@@ -73,6 +80,15 @@ export function throwChecklistPrismaError(error: unknown): never {
       throwChecklistConflict(
         'CHECKLIST_TEMPLATE_QUESTION_ALREADY_ADDED',
         'Вопрос уже добавлен в модуль шаблона.',
+      );
+    }
+
+    if (
+      hasConstraint(target, 'uq_checklist_questions_active_module_sort_order')
+    ) {
+      throwChecklistConflict(
+        'CHECKLIST_QUESTION_SORT_ORDER_ALREADY_EXISTS',
+        'В модуле уже есть активный вопрос с таким порядковым номером.',
       );
     }
 
@@ -123,7 +139,9 @@ function hasExactColumns(target: string[], columns: string[]) {
 
   return (
     normalizedTarget.length === normalizedColumns.length &&
-    normalizedColumns.every((column, index) => normalizedTarget[index] === column)
+    normalizedColumns.every(
+      (column, index) => normalizedTarget[index] === column,
+    )
   );
 }
 

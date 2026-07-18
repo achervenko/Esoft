@@ -10,26 +10,36 @@ import {
 } from '@nestjs/common';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { Auth } from '../../auth/auth.config';
-import { assertAdmin } from '../../auth/role-permissions';
+import { assertCanManageChecklists } from '../../auth/role-permissions';
 import { ChecklistModulesService } from './checklist-modules.service';
+import { ChecklistQuestionsService } from '../checklist-questions/checklist-questions.service';
+import {
+  type ChecklistQuestionReorderPayloadDto,
+  parseChecklistQuestionReorderPayload,
+} from '../checklist-questions/checklist-questions.validation';
 import {
   type ChecklistModulePayloadDto,
+  type ChecklistReorderPayloadDto,
   type ChecklistModulesQueryDto,
   parseChecklistModulePayload,
+  parseChecklistModuleReorderPayload,
   parseChecklistModuleUpdatePayload,
   parseChecklistModulesQuery,
 } from './checklist-modules.validation';
 
 @Controller('api/checklist-modules')
 export class ChecklistModulesController {
-  constructor(private readonly modulesService: ChecklistModulesService) {}
+  constructor(
+    private readonly modulesService: ChecklistModulesService,
+    private readonly questionsService: ChecklistQuestionsService,
+  ) {}
 
   @Get()
   list(
     @Query() query: ChecklistModulesQueryDto,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
+    assertCanManageChecklists(session.user.role);
 
     return this.modulesService.list(parseChecklistModulesQuery(query));
   }
@@ -39,7 +49,7 @@ export class ChecklistModulesController {
     @Param('id', ParseIntPipe) id: number,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
+    assertCanManageChecklists(session.user.role);
 
     return this.modulesService.get(id);
   }
@@ -49,10 +59,38 @@ export class ChecklistModulesController {
     @Body() dto: ChecklistModulePayloadDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
+    assertCanManageChecklists(session.user.role);
 
     return this.modulesService.create(
       parseChecklistModulePayload(dto),
+      session.user.id,
+    );
+  }
+
+  @Patch('reorder')
+  reorder(
+    @Body() dto: ChecklistReorderPayloadDto | undefined,
+    @Session() session: UserSession<Auth>,
+  ) {
+    assertCanManageChecklists(session.user.role);
+
+    return this.modulesService.reorder(
+      parseChecklistModuleReorderPayload(dto),
+      session.user.id,
+    );
+  }
+
+  @Patch(':moduleId/questions/reorder')
+  reorderQuestions(
+    @Param('moduleId', ParseIntPipe) moduleId: number,
+    @Body() dto: ChecklistQuestionReorderPayloadDto | undefined,
+    @Session() session: UserSession<Auth>,
+  ) {
+    assertCanManageChecklists(session.user.role);
+
+    return this.questionsService.reorder(
+      moduleId,
+      parseChecklistQuestionReorderPayload(dto),
       session.user.id,
     );
   }
@@ -63,7 +101,7 @@ export class ChecklistModulesController {
     @Body() dto: ChecklistModulePayloadDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
+    assertCanManageChecklists(session.user.role);
 
     return this.modulesService.update(
       id,
@@ -77,7 +115,7 @@ export class ChecklistModulesController {
     @Param('id', ParseIntPipe) id: number,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
+    assertCanManageChecklists(session.user.role);
 
     return this.modulesService.activate(id, session.user.id);
   }
@@ -87,7 +125,7 @@ export class ChecklistModulesController {
     @Param('id', ParseIntPipe) id: number,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
+    assertCanManageChecklists(session.user.role);
 
     return this.modulesService.deactivate(id, session.user.id);
   }

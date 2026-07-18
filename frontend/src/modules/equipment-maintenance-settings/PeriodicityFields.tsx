@@ -1,4 +1,5 @@
 import type { MaintenancePeriodicity } from "../../shared/api/maintenance/maintenance.types";
+import { Checkbox } from "../../shared/ui/Checkbox";
 import type { PeriodicityForm } from "./maintenance-setting-form-utils";
 
 type PeriodicityFieldsProps = {
@@ -30,14 +31,11 @@ export function PeriodicityFields({
 }: PeriodicityFieldsProps) {
   return (
     <>
-      <label className="maintenance-settings-checkbox">
-        <input
-          checked={hasPeriodicity}
-          onChange={(event) => onHasPeriodicityChange(event.target.checked)}
-          type="checkbox"
-        />
-        <span>Задать периодичность</span>
-      </label>
+      <Checkbox
+        checked={hasPeriodicity}
+        label="Задать периодичность"
+        onChange={onHasPeriodicityChange}
+      />
 
       {hasPeriodicity ? (
         <>

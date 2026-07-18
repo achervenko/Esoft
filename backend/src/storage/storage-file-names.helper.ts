@@ -82,7 +82,10 @@ function decodeMojibakeText(value: string) {
 
   const decodedValue = Buffer.from(value, 'latin1').toString('utf8');
 
-  if (decodedValue.includes('\uFFFD') || !/[\u0400-\u04ff]/.test(decodedValue)) {
+  if (
+    decodedValue.includes('\uFFFD') ||
+    !/[\u0400-\u04ff]/.test(decodedValue)
+  ) {
     return value;
   }
 

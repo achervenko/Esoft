@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  getChecklistAdminErrorMessage,
+  getChecklistTemplates,
+  type ChecklistTemplateListItem,
+} from "../../shared/api/checklists";
+import {
   getAvailableMaintenanceTypes,
   getMaintenanceSettings,
 } from "../../shared/api/maintenance/maintenance.api";
@@ -11,12 +16,8 @@ import type {
 import { getMaintenanceSettingsErrorMessage } from "./maintenance-settings-errors";
 import { reconcileAvailableMaintenanceTypes } from "./maintenance-settings-utils";
 
-type ReloadAvailableTypesOptions = {
+type ReloadDataOptions = {
   silentError?: boolean;
-  shouldApply?: () => boolean;
-};
-
-type ReloadSettingsOptions = {
   shouldApply?: () => boolean;
 };
 
@@ -34,14 +35,23 @@ export function useMaintenanceSettingsData({
   const [availableMaintenanceTypes, setAvailableMaintenanceTypes] = useState<
     MaintenanceType[]
   >([]);
+  const [checklistTemplates, setChecklistTemplates] = useState<
+    ChecklistTemplateListItem[]
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAvailableTypesLoading, setIsAvailableTypesLoading] =
+    useState(false);
+  const [isChecklistTemplatesLoading, setIsChecklistTemplatesLoading] =
     useState(false);
   const [error, setError] = useState<string | null>(null);
   const [availableTypesError, setAvailableTypesError] = useState<string | null>(
     null,
   );
+  const [checklistTemplatesError, setChecklistTemplatesError] = useState<
+    string | null
+  >(null);
   const availableTypesRequestIdRef = useRef(0);
+  const checklistTemplatesRequestIdRef = useRef(0);
   const settingsRequestIdRef = useRef(0);
   const visibleIdRef = useRef(visibleId);
 
@@ -53,7 +63,7 @@ export function useMaintenanceSettingsData({
   );
 
   const reloadMaintenanceSettings = useCallback(async (
-    options?: ReloadSettingsOptions,
+    options?: ReloadDataOptions,
   ) => {
     const requestId = settingsRequestIdRef.current + 1;
     const requestVisibleId = visibleId;
@@ -75,7 +85,7 @@ export function useMaintenanceSettingsData({
 
   const reloadAvailableMaintenanceTypes = useCallback(
     async (
-      options?: ReloadAvailableTypesOptions,
+      options?: ReloadDataOptions,
     ): Promise<AvailableMaintenanceTypesResponse | null> => {
       const requestId = availableTypesRequestIdRef.current + 1;
       const requestVisibleId = visibleId;
@@ -115,6 +125,50 @@ export function useMaintenanceSettingsData({
     [isCurrentVisibleId, visibleId],
   );
 
+  const reloadChecklistTemplates = useCallback(
+    async (
+      options?: ReloadDataOptions,
+    ): Promise<{ items: ChecklistTemplateListItem[] } | null> => {
+      const requestId = checklistTemplatesRequestIdRef.current + 1;
+      const requestVisibleId = visibleId;
+      checklistTemplatesRequestIdRef.current = requestId;
+      const shouldApply = () =>
+        isCurrentVisibleId(requestVisibleId) &&
+        checklistTemplatesRequestIdRef.current === requestId &&
+        options?.shouldApply?.() !== false;
+
+      setIsChecklistTemplatesLoading(true);
+      setChecklistTemplatesError(null);
+
+      try {
+        const templatesResponse = await getChecklistTemplates({
+          limit: 500,
+          state: "ACTIVE",
+        });
+
+        if (!shouldApply()) {
+          return null;
+        }
+
+        setChecklistTemplates(templatesResponse.items);
+        return templatesResponse;
+      } catch (requestError) {
+        if (shouldApply() && !options?.silentError) {
+          setChecklistTemplatesError(
+            getChecklistAdminErrorMessage(requestError),
+          );
+        }
+
+        return null;
+      } finally {
+        if (shouldApply()) {
+          setIsChecklistTemplatesLoading(false);
+        }
+      }
+    },
+    [isCurrentVisibleId, visibleId],
+  );
+
   const applySettingsResponse = useCallback(
     (
       nextSettingsResponse: MaintenanceSettingsResponse,
@@ -142,10 +196,13 @@ export function useMaintenanceSettingsData({
 
     setSettingsResponse(null);
     setAvailableMaintenanceTypes([]);
+    setChecklistTemplates([]);
     setError(null);
     setAvailableTypesError(null);
+    setChecklistTemplatesError(null);
     setIsLoading(true);
     setIsAvailableTypesLoading(false);
+    setIsChecklistTemplatesLoading(false);
 
     const settingsRequest = reloadMaintenanceSettings({
       shouldApply: () => isMounted,
@@ -168,29 +225,37 @@ export function useMaintenanceSettingsData({
       void reloadAvailableMaintenanceTypes({
         shouldApply: () => isMounted,
       });
+      void reloadChecklistTemplates({
+        shouldApply: () => isMounted,
+      });
     }
 
     return () => {
       isMounted = false;
       availableTypesRequestIdRef.current += 1;
+      checklistTemplatesRequestIdRef.current += 1;
       settingsRequestIdRef.current += 1;
     };
   }, [
     canManage,
     reloadAvailableMaintenanceTypes,
+    reloadChecklistTemplates,
     reloadMaintenanceSettings,
-    visibleId,
   ]);
 
   return {
     availableMaintenanceTypes,
     availableTypesError,
+    checklistTemplates,
+    checklistTemplatesError,
     error,
     applySettingsResponse,
     clearDataError,
     isAvailableTypesLoading,
+    isChecklistTemplatesLoading,
     isLoading,
     reloadAvailableMaintenanceTypes,
+    reloadChecklistTemplates,
     reloadMaintenanceSettings,
     settingsResponse,
   };

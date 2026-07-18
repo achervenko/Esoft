@@ -3,9 +3,11 @@ import {
   parseOptionalBoolean,
   parseOptionalString,
   parsePagination,
+  parsePositiveInt,
   parseRequiredString,
   parseSearch,
   parseSortDirection,
+  assertUniqueIds,
 } from '../checklist-common/checklists.validation';
 import { throwChecklistBadRequest } from '../checklist-common/checklists.errors';
 
@@ -23,6 +25,10 @@ export type ChecklistModulePayloadDto = {
   name?: unknown;
 };
 
+export type ChecklistReorderPayloadDto = {
+  items?: unknown;
+};
+
 export function parseChecklistModulesQuery(query: ChecklistModulesQueryDto) {
   const sortBy = parseModuleSortBy(query.sortBy);
 
@@ -37,10 +43,59 @@ export function parseChecklistModulesQuery(query: ChecklistModulesQueryDto) {
     sortBy,
     sortDirection: hasValue(query.sortDirection)
       ? parseSortDirection(query.sortDirection)
-      : sortBy === 'name'
+      : sortBy === 'name' || sortBy === 'sortOrder'
         ? 'asc'
         : 'desc',
   };
+}
+
+export function parseChecklistModuleReorderPayload(
+  dto: ChecklistReorderPayloadDto | undefined,
+) {
+  const payload = ensurePayload(dto, 'Передайте порядок модулей чек-листа.');
+
+  if (!Array.isArray(payload.items)) {
+    throwChecklistBadRequest(
+      'CHECKLIST_MODULE_ORDER_ITEMS_INVALID',
+      'Передайте список модулей для изменения порядка.',
+    );
+  }
+
+  const items = payload.items.map((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throwChecklistBadRequest(
+        'CHECKLIST_MODULE_ORDER_ITEM_INVALID',
+        'Некорректная запись порядка модулей.',
+      );
+    }
+
+    const itemPayload = item as { id?: unknown; sortOrder?: unknown };
+
+    return {
+      id: parsePositiveInt(
+        itemPayload.id,
+        'CHECKLIST_MODULE_ID_INVALID',
+        'Некорректный модуль чек-листа.',
+      ),
+      sortOrder: parsePositiveInt(
+        itemPayload.sortOrder,
+        'CHECKLIST_MODULE_SORT_ORDER_INVALID',
+        'Некорректный порядок модуля чек-листа.',
+      ),
+    };
+  });
+
+  assertUniqueIds(
+    items.map((item) => item.id),
+    'CHECKLIST_MODULE_ORDER_DUPLICATE',
+  );
+  assertSequentialOrder(
+    items.map((item) => item.sortOrder),
+    'CHECKLIST_MODULE_ORDER_INVALID',
+    'Порядок модулей должен идти без пропусков с 1.',
+  );
+
+  return { items };
 }
 
 export function parseChecklistModulePayload(
@@ -93,10 +148,15 @@ function parseChecklistModuleName(value: unknown) {
 
 function parseModuleSortBy(value: unknown) {
   if (value === undefined || value === null || value === '') {
-    return 'name' as const;
+    return 'sortOrder' as const;
   }
 
-  if (value === 'name' || value === 'createdAt' || value === 'updatedAt') {
+  if (
+    value === 'name' ||
+    value === 'createdAt' ||
+    value === 'updatedAt' ||
+    value === 'sortOrder'
+  ) {
     return value;
   }
 
@@ -108,4 +168,22 @@ function parseModuleSortBy(value: unknown) {
 
 function hasValue(value: unknown) {
   return value !== undefined && value !== null && value !== '';
+}
+
+function assertSequentialOrder(
+  values: number[],
+  code: string,
+  message: string,
+) {
+  const orders = new Set(values);
+
+  if (orders.size !== values.length) {
+    throwChecklistBadRequest(code, 'Порядок содержит повторяющиеся позиции.');
+  }
+
+  for (let order = 1; order <= values.length; order += 1) {
+    if (!orders.has(order)) {
+      throwChecklistBadRequest(code, message);
+    }
+  }
 }

@@ -86,21 +86,6 @@
   font-weight: 700;
 }
 
-.maintenance-settings-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #303744;
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.maintenance-settings-checkbox input {
-  width: 18px;
-  height: 18px;
-  accent-color: #111111;
-}
-
 .maintenance-checklist-templates {
   display: grid;
   gap: 10px;

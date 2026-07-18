@@ -1,14 +1,26 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { toEmployeeDto } from './users-admin.mapper';
-import { parseEmployeePayload, throwBadRequest } from './users-admin.validation';
-import { throwNotFoundIfPrismaError, throwUserAdminNotFound } from './users-admin.errors';
+import {
+  parseEmployeePayload,
+  throwBadRequest,
+} from './users-admin.validation';
+import {
+  throwNotFoundIfPrismaError,
+  throwUserAdminNotFound,
+} from './users-admin.errors';
 import { UsersAdminAuditService } from './users-admin-audit.service';
 
 type EmployeePayload = Parameters<typeof parseEmployeePayload>[0];
+type EmployeeWithUsage = Prisma.EmployeeGetPayload<{
+  include: typeof employeeUsageInclude;
+}>;
 
 @Injectable()
 export class EmployeesAdminService {
+  private readonly logger = new Logger(EmployeesAdminService.name);
+
   constructor(
     private readonly audit: UsersAdminAuditService,
     private readonly prisma: PrismaService,
@@ -39,7 +51,7 @@ export class EmployeesAdminService {
       data: parseEmployeePayload(payload),
     });
 
-    await this.audit.logEmployeeCreated(employee, actorUserId);
+    await this.logEmployeeCreatedBestEffort(employee, actorUserId);
 
     return toEmployeeDto(employee);
   }
@@ -66,7 +78,7 @@ export class EmployeesAdminService {
         where: { id: employeeId },
       });
 
-      await this.audit.logEmployeeUpdated({
+      await this.logEmployeeUpdatedBestEffort({
         actorUserId,
         newEmployee: employee,
         oldEmployee: currentEmployee,
@@ -80,35 +92,116 @@ export class EmployeesAdminService {
   }
 
   async deleteEmployee(employeeId: number, actorUserId?: string | null) {
-    const employee = await this.prisma.employee.findUnique({
-      include: {
-        _count: {
-          select: {
-            employeeUsers: true,
-            responsibleEquipment: true,
-          },
-        },
-      },
-      where: { id: employeeId },
-    });
+    let employee: EmployeeWithUsage;
 
-    if (!employee) {
-      throwUserAdminNotFound('EMPLOYEE_NOT_FOUND');
+    try {
+      employee = await this.prisma.$transaction(async (tx) => {
+        const nextEmployee = await this.loadEmployeeWithUsage(tx, employeeId);
+
+        if (!nextEmployee) {
+          throwUserAdminNotFound('EMPLOYEE_NOT_FOUND');
+        }
+
+        this.assertEmployeeCanBeDeleted(nextEmployee);
+
+        await tx.employee.delete({ where: { id: employeeId } });
+
+        return nextEmployee;
+      });
+    } catch (error) {
+      this.throwEmployeeInUseIfPrismaDeleteError(error);
+      throwNotFoundIfPrismaError(error, 'EMPLOYEE_NOT_FOUND');
+      throw error;
     }
 
+    await this.logEmployeeDeletedBestEffort(employee, actorUserId);
+
+    return { ok: true };
+  }
+
+  private loadEmployeeWithUsage(
+    tx: Prisma.TransactionClient | PrismaService,
+    employeeId: number,
+  ) {
+    return tx.employee.findUnique({
+      include: employeeUsageInclude,
+      where: { id: employeeId },
+    });
+  }
+
+  private assertEmployeeCanBeDeleted(employee: EmployeeWithUsage) {
     if (
       employee._count.employeeUsers > 0 ||
       employee._count.responsibleEquipment > 0
     ) {
       throwBadRequest(
         'EMPLOYEE_IN_USE',
-        '\u0421\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442\u0441\u044f \u0432 \u0441\u0438\u0441\u0442\u0435\u043c\u0435. \u0423\u0434\u0430\u043b\u0435\u043d\u0438\u0435 \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e.',
+        'Сотрудник используется в системе. Удаление недоступно.',
       );
     }
+  }
 
-    await this.prisma.employee.delete({ where: { id: employeeId } });
-    await this.audit.logEmployeeDeleted(employee, actorUserId);
+  private throwEmployeeInUseIfPrismaDeleteError(error: unknown): never | void {
+    if (isPrismaForeignKeyError(error)) {
+      throwBadRequest(
+        'EMPLOYEE_IN_USE',
+        'Сотрудник используется в системе. Удаление недоступно.',
+      );
+    }
+  }
 
-    return { ok: true };
+  private async logEmployeeCreatedBestEffort(
+    employee: Parameters<UsersAdminAuditService['logEmployeeCreated']>[0],
+    actorUserId?: string | null,
+  ) {
+    try {
+      await this.audit.logEmployeeCreated(employee, actorUserId);
+    } catch (error) {
+      this.logAuditError(error);
+    }
+  }
+
+  private async logEmployeeUpdatedBestEffort(
+    params: Parameters<UsersAdminAuditService['logEmployeeUpdated']>[0],
+  ) {
+    try {
+      await this.audit.logEmployeeUpdated(params);
+    } catch (error) {
+      this.logAuditError(error);
+    }
+  }
+
+  private async logEmployeeDeletedBestEffort(
+    employee: Parameters<UsersAdminAuditService['logEmployeeDeleted']>[0],
+    actorUserId?: string | null,
+  ) {
+    try {
+      await this.audit.logEmployeeDeleted(employee, actorUserId);
+    } catch (error) {
+      this.logAuditError(error);
+    }
+  }
+
+  private logAuditError(error: unknown) {
+    this.logger.error(
+      'Failed to write employee audit log',
+      error instanceof Error ? error.stack : String(error),
+    );
   }
 }
+
+function isPrismaForeignKeyError(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2003'
+  );
+}
+
+const employeeUsageInclude = {
+  _count: {
+    select: {
+      employeeUsers: true,
+      responsibleEquipment: true,
+    },
+  },
+} as const;

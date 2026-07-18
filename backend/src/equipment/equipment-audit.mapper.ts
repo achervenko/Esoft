@@ -25,7 +25,7 @@ export function toAuditUserName(
     user.displayUsername ||
     user.username ||
     user.name ||
-    '\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c'
+    'Пользователь'
   );
 }
 
@@ -76,7 +76,9 @@ export function toEquipmentAuditValues(
   };
 }
 
-export function toNullableAuditValue(value: number | string | null | undefined) {
+export function toNullableAuditValue(
+  value: number | string | null | undefined,
+) {
   return value === null || value === undefined ? null : String(value);
 }
 

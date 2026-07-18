@@ -1,0 +1,480 @@
+.checklist-editor-page {
+  display: grid;
+  gap: 18px;
+}
+
+.checklist-editor-header {
+  display: grid;
+  gap: 10px;
+}
+
+.checklist-editor-back {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  width: max-content;
+  color: #3f4652;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.checklist-editor-title-row,
+.checklist-editor-actions,
+.checklist-editor-module-header,
+.checklist-editor-question-row,
+.checklist-editor-available-module {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.checklist-editor-title-row h1 {
+  margin: 0;
+  color: #15171c;
+  font-size: 30px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
+.checklist-editor-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.checklist-editor-description {
+  max-width: 760px;
+  margin: 0;
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.checklist-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.checklist-editor-panel {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.checklist-editor-available-panel {
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.checklist-editor-available-panel.remove-drop-active {
+  grid-template-rows: minmax(240px, 1fr);
+  align-content: stretch;
+  border-color: #fecaca;
+  background: #fff7f7;
+  box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.08);
+}
+
+.checklist-editor-available-panel.remove-drop-over {
+  border-color: #f87171;
+  background: #fff1f1;
+  box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.16);
+}
+
+.checklist-editor-panel h2,
+.checklist-editor-panel h3 {
+  margin: 0;
+  color: #15171c;
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.checklist-editor-available-list,
+.checklist-editor-structure,
+.checklist-editor-questions {
+  display: grid;
+  gap: 10px;
+}
+
+.checklist-editor-remove-drop-zone {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  border: 1px dashed rgba(248, 113, 113, 0.5);
+  border-radius: 8px;
+  background: rgba(254, 226, 226, 0.38);
+}
+
+.checklist-editor-remove-drop-zone > * {
+  color: #dc2626;
+  opacity: 0.72;
+  pointer-events: none;
+  transform: scale(1);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.checklist-editor-available-panel.remove-drop-over
+  .checklist-editor-remove-drop-zone {
+  border-color: rgba(220, 38, 38, 0.78);
+  background: rgba(254, 202, 202, 0.48);
+}
+
+.checklist-editor-available-panel.remove-drop-over
+  .checklist-editor-remove-drop-zone
+  > * {
+  opacity: 0.96;
+  transform: scale(1.08);
+}
+
+.checklist-editor-available-module,
+.checklist-editor-template-module,
+.checklist-editor-question-row {
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fafbfc;
+}
+
+.checklist-editor-available-module {
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.checklist-editor-available-module strong,
+.checklist-editor-module-header strong {
+  color: #15171c;
+}
+
+.checklist-editor-available-module-content {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.checklist-editor-available-module small,
+.checklist-editor-question-row small {
+  color: #6b7280;
+  font-weight: 750;
+}
+
+.checklist-editor-template-module {
+  position: relative;
+  display: grid;
+  gap: 10px;
+}
+
+.checklist-editor-question-row {
+  position: relative;
+  justify-content: flex-start;
+  background: #ffffff;
+}
+
+.checklist-editor-module-header {
+  justify-content: flex-start;
+}
+
+.checklist-editor-question-main {
+  display: grid;
+  gap: 4px;
+}
+
+.checklist-editor-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.checklist-editor-question-main .app-checkbox {
+  width: fit-content;
+}
+
+.checklist-editor-panel-hint {
+  margin: -4px 0 4px;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.checklist-editor-available-module:focus,
+.checklist-editor-available-module:focus-visible,
+.checklist-editor-template-module:focus,
+.checklist-editor-question-row:focus {
+  border-color: #111111;
+  outline: 2px solid rgba(17, 17, 17, 0.12);
+  outline-offset: 2px;
+}
+
+.checklist-editor-drag-handle {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #3f4652;
+  cursor: grab;
+}
+
+.checklist-editor-drag-handle:hover:not(:disabled) {
+  background: #eef0f3;
+}
+
+.checklist-editor-drag-handle:active:not(:disabled) {
+  cursor: grabbing;
+}
+
+.checklist-editor-drag-handle:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.checklist-editor-available-module.dragging,
+.checklist-editor-template-module.dragging,
+.checklist-editor-question-row.dragging {
+  border-color: #111111;
+  background: #f4f6f8;
+  opacity: 0.54;
+}
+
+.checklist-editor-structure-panel.catalog-drop-active {
+  border-color: #111111;
+  background: #fcfcfd;
+  box-shadow: inset 0 0 0 1px rgba(17, 17, 17, 0.08);
+}
+
+body.template-dragging,
+body.template-dragging * {
+  cursor: grabbing !important;
+}
+
+.checklist-editor-template-module.drop-before::before,
+.checklist-editor-template-module.drop-after::after,
+.checklist-editor-question-row.drop-before::before,
+.checklist-editor-question-row.drop-after::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  z-index: 1;
+  height: 3px;
+  border-radius: 8px;
+  background: #111111;
+}
+
+.checklist-editor-template-module.drop-before::before,
+.checklist-editor-question-row.drop-before::before {
+  top: -7px;
+}
+
+.checklist-editor-template-module.drop-after::after,
+.checklist-editor-question-row.drop-after::after {
+  bottom: -7px;
+}
+
+.checklist-structure-context-menu {
+  position: fixed;
+  z-index: 120;
+  min-width: 178px;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 6px;
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgba(15, 17, 21, 0.18);
+}
+
+.checklist-structure-context-menu button {
+  width: 100%;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 10px;
+  background: transparent;
+  cursor: pointer;
+  color: #15171c;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: left;
+}
+
+.checklist-structure-context-menu button:hover {
+  background: #fff5f5;
+}
+
+.checklist-structure-context-menu button.danger {
+  color: #b42318;
+}
+
+.template-drag-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 130;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #111111;
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+  box-shadow: 0 22px 54px rgba(15, 17, 21, 0.2);
+  color: #15171c;
+  opacity: 0.94;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.template-drag-overlay.module {
+  min-height: 72px;
+}
+
+.template-drag-overlay.question {
+  min-height: 58px;
+}
+
+.template-drag-overlay > svg {
+  flex: 0 0 auto;
+  color: #3f4652;
+}
+
+.template-drag-overlay-content {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.template-drag-overlay-content strong,
+.template-drag-overlay-content span {
+  overflow: hidden;
+  color: #15171c;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.template-drag-overlay-content small {
+  overflow: hidden;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checklist-editor-question-picker {
+  gap: 16px;
+}
+
+.checklist-editor-question-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.checklist-editor-question-picker-header span {
+  color: #15171c;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.checklist-editor-picker-action {
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: transparent;
+  color: #15171c;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.checklist-editor-picker-action:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.checklist-editor-picker-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.checklist-editor-checkbox-list {
+  max-height: 360px;
+  display: grid;
+  overflow-y: auto;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.checklist-editor-checkbox-list .app-checkbox {
+  width: 100%;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  line-height: 1.35;
+}
+
+.checklist-editor-checkbox-list .app-checkbox + .app-checkbox {
+  border-top: 1px solid #eef0f3;
+}
+
+.checklist-editor-checkbox-list .app-checkbox:hover {
+  background: #fafbfc;
+}
+
+.checklist-editor-picker-option-content {
+  display: grid;
+  gap: 4px;
+}
+
+.checklist-editor-picker-option-content span {
+  color: #15171c;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.checklist-editor-picker-option-content small {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.checklist-editor-question-picker .admin-form-actions {
+  border-top: 1px solid #eef0f3;
+  margin-top: 4px;
+  padding-top: 16px;
+}
+
+@media (max-width: 1024px) {
+  .checklist-editor-layout,
+  .checklist-editor-title-row {
+    display: grid;
+  }
+}

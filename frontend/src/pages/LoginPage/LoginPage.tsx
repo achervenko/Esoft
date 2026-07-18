@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { LoginForm } from './LoginForm';
 import { MonsterIllustration } from './MonsterIllustration';
-import './LoginPage.css';
+import './AuthPage.css';
 
 type LoginPageProps = {
   onAuthenticated: () => Promise<void>;
@@ -15,6 +15,8 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
   const [orangeMouthY, setOrangeMouthY] = useState(0);
   const [isBlinking, setIsBlinking] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
+  const blinkTimeoutRef = useRef<number | null>(null);
+  const shakeTimeoutRef = useRef<number | null>(null);
 
   const eyeTransform = showPassword
     ? 'scaleY(0.1)'
@@ -27,9 +29,34 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
       return;
     }
 
+    clearBlinkTimeout();
     setIsBlinking(true);
-    window.setTimeout(() => setIsBlinking(false), 200);
+    blinkTimeoutRef.current = window.setTimeout(() => {
+      setIsBlinking(false);
+      blinkTimeoutRef.current = null;
+    }, 200);
   };
+
+  const clearBlinkTimeout = () => {
+    if (blinkTimeoutRef.current !== null) {
+      window.clearTimeout(blinkTimeoutRef.current);
+      blinkTimeoutRef.current = null;
+    }
+  };
+
+  const clearShakeTimeout = () => {
+    if (shakeTimeoutRef.current !== null) {
+      window.clearTimeout(shakeTimeoutRef.current);
+      shakeTimeoutRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      clearBlinkTimeout();
+      clearShakeTimeout();
+    };
+  }, []);
 
   const handleMouseMove = (event: MouseEvent<HTMLElement>) => {
     if (!showPassword && !isBlinking) {
@@ -61,8 +88,12 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
         onAuthenticated={onAuthenticated}
         onFocusField={blinkEyes}
         onSuccessfulLogin={() => {
+          clearShakeTimeout();
           setIsShaking(true);
-          window.setTimeout(() => setIsShaking(false), 600);
+          shakeTimeoutRef.current = window.setTimeout(() => {
+            setIsShaking(false);
+            shakeTimeoutRef.current = null;
+          }, 600);
         }}
         onTogglePassword={() => setShowPassword((value) => !value)}
         showPassword={showPassword}

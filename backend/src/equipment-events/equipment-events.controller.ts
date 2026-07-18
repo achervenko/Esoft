@@ -25,14 +25,18 @@ import {
 
 @Controller('api')
 export class EquipmentEventsController {
-  constructor(private readonly equipmentEventsService: EquipmentEventsService) {}
+  constructor(
+    private readonly equipmentEventsService: EquipmentEventsService,
+  ) {}
 
   @Get('equipment-events')
   findAll(
     @Query() query: EquipmentEventsQueryDto,
     @Session() _session: UserSession<Auth>,
   ) {
-    return this.equipmentEventsService.findAll(parseEquipmentEventsQuery(query));
+    return this.equipmentEventsService.findAll(
+      parseEquipmentEventsQuery(query),
+    );
   }
 
   @Get('equipment-events/responsible-users')

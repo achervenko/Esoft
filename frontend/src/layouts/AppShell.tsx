@@ -1,6 +1,9 @@
 import { Sidebar } from "../modules/sidebar";
 import { parseEquipmentViewTab } from "../modules/equipment-card";
 import { DashboardPage } from "../pages/DashboardPage";
+import { ChecklistAdminPage } from "../pages/ChecklistAdminPage";
+import { ChecklistTemplateEditorPage } from "../pages/ChecklistTemplateEditorPage";
+import { ChecklistTemplateViewPage } from "../pages/ChecklistTemplateViewPage";
 import { DictionariesPage } from "../pages/DictionariesPage";
 import { EquipmentCreatePage } from "../pages/EquipmentCreatePage";
 import { EquipmentEditPage } from "../pages/EquipmentEditPage";
@@ -43,6 +46,8 @@ export function AppShell({
   user,
 }: AppShellProps) {
   const isDashboardRoute = route === "#/dashboard";
+  const isChecklistAdminRoute =
+    route === "#/checklist-admin" || route.startsWith("#/checklist-admin?");
   const isDictionariesRoute = route === "#/dictionaries";
   const isEquipmentRoute = route === "#/equipment";
   const isProfileRoute = route === "#/profile";
@@ -71,6 +76,24 @@ export function AppShell({
   const equipmentViewReturnTo = getSafeReturnTo(
     getHashRouteParam(route, "returnTo"),
   );
+  const checklistTemplateViewMatch = route.match(
+    /^#\/checklist-admin\/templates\/(\d+)(?:\?.*)?$/,
+  );
+  const isChecklistTemplateCreateRoute = route.match(
+    /^#\/checklist-admin\/templates\/new(?:\?.*)?$/,
+  );
+  const checklistTemplateViewId = checklistTemplateViewMatch
+    ? Number(checklistTemplateViewMatch[1])
+    : null;
+  const checklistTemplateCopyFromParam = getHashRouteParam(route, "copyFrom");
+  const checklistTemplateCopyFromNumber = checklistTemplateCopyFromParam
+    ? Number(checklistTemplateCopyFromParam)
+    : NaN;
+  const checklistTemplateCopyFromId = Number.isInteger(
+    checklistTemplateCopyFromNumber,
+  ) && checklistTemplateCopyFromNumber > 0
+    ? checklistTemplateCopyFromNumber
+    : null;
 
   return (
     <main className="app-shell">
@@ -78,6 +101,22 @@ export function AppShell({
 
       <section className="app-workspace" aria-label="Рабочая область">
         {isDashboardRoute ? <DashboardPage /> : null}
+        {isChecklistAdminRoute ? (
+          <ChecklistAdminPage userRole={user?.role ?? null} />
+        ) : null}
+        {isChecklistTemplateCreateRoute ? (
+          <ChecklistTemplateEditorPage
+            copyFromTemplateId={checklistTemplateCopyFromId}
+            templateId={null}
+            userRole={user?.role ?? null}
+          />
+        ) : null}
+        {checklistTemplateViewId !== null ? (
+          <ChecklistTemplateViewPage
+            templateId={checklistTemplateViewId}
+            userRole={user?.role ?? null}
+          />
+        ) : null}
         {isDictionariesRoute ? (
           <DictionariesPage userRole={user?.role ?? null} />
         ) : null}

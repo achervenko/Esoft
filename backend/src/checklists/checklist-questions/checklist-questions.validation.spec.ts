@@ -20,13 +20,34 @@ describe('checklist question validation', () => {
     expect(
       parseChecklistQuestionsQuery({
         answerType: 'BOOLEAN',
+        checklistModuleId: '3',
         isActive: 'true',
-        moduleId: '3',
       }),
     ).toMatchObject({
       answerType: 'BOOLEAN',
+      checklistModuleId: 3,
       isActive: true,
-      moduleId: 3,
+    });
+  });
+
+  it('keeps legacy moduleId query filter compatibility', () => {
+    expect(
+      parseChecklistQuestionsQuery({
+        moduleId: '4',
+      }),
+    ).toMatchObject({
+      checklistModuleId: 4,
+    });
+  });
+
+  it('prefers checklistModuleId when legacy moduleId is also passed', () => {
+    expect(
+      parseChecklistQuestionsQuery({
+        checklistModuleId: '5',
+        moduleId: '4',
+      }),
+    ).toMatchObject({
+      checklistModuleId: 5,
     });
   });
 

@@ -6,6 +6,7 @@ import { sortDataTableRows } from './data-table-model';
 export type DataTableSortDirection = 'asc' | 'desc';
 
 export type DataTableColumn<Row, SortKey extends string> = {
+  isSortable?: boolean;
   key: SortKey;
   label: string;
   render: (row: Row) => ReactNode;
@@ -19,6 +20,7 @@ type DataTableProps<Row, SortKey extends string> = {
     key: SortKey;
   };
   getRowKey: (row: Row) => string | number;
+  onRowClick?: (row: Row) => void;
   onRowDoubleClick?: (row: Row) => void;
   rows: Row[];
 };
@@ -27,6 +29,7 @@ export function DataTable<Row, SortKey extends string>({
   columns,
   defaultSort,
   getRowKey,
+  onRowClick,
   onRowDoubleClick,
   rows,
 }: DataTableProps<Row, SortKey>) {
@@ -56,23 +59,28 @@ export function DataTable<Row, SortKey extends string>({
         <tr>
           {columns.map((column) => {
             const isActive = sort.key === column.key;
+            const isSortable = column.isSortable !== false;
 
             return (
               <th key={column.key}>
-                <button
-                  aria-label={`Сортировать: ${column.label}`}
-                  className={`data-table-sort-button${isActive ? ' active' : ''}`}
-                  onClick={() => toggleSort(column.key)}
-                  type="button"
-                >
-                  <span>{column.label}</span>
-                  {isActive ? (
-                    <span
-                      aria-hidden="true"
-                      className={`data-table-sort-triangle ${sort.direction}`}
-                    />
-                  ) : null}
-                </button>
+                {isSortable ? (
+                  <button
+                    aria-label={`Сортировать: ${column.label}`}
+                    className={`data-table-sort-button${isActive ? ' active' : ''}`}
+                    onClick={() => toggleSort(column.key)}
+                    type="button"
+                  >
+                    <span>{column.label}</span>
+                    {isActive ? (
+                      <span
+                        aria-hidden="true"
+                        className={`data-table-sort-triangle ${sort.direction}`}
+                      />
+                    ) : null}
+                  </button>
+                ) : (
+                  <span className="data-table-header-label">{column.label}</span>
+                )}
               </th>
             );
           })}
@@ -81,9 +89,36 @@ export function DataTable<Row, SortKey extends string>({
       <tbody>
         {sortedRows.map((row) => (
           <tr
-            className={onRowDoubleClick ? 'data-table-row-clickable' : undefined}
+            className={
+              onRowClick || onRowDoubleClick ? 'data-table-row-clickable' : undefined
+            }
             key={getRowKey(row)}
-            onDoubleClick={() => onRowDoubleClick?.(row)}
+            onClick={(event) => {
+              if (isInteractiveEventTarget(event.target, event.currentTarget)) {
+                return;
+              }
+
+              onRowClick?.(row);
+            }}
+            onDoubleClick={(event) => {
+              if (isInteractiveEventTarget(event.target, event.currentTarget)) {
+                return;
+              }
+
+              onRowDoubleClick?.(row);
+            }}
+            onKeyDown={(event) => {
+              if (
+                event.key !== 'Enter' ||
+                isInteractiveEventTarget(event.target, event.currentTarget)
+              ) {
+                return;
+              }
+
+              event.preventDefault();
+              (onRowClick ?? onRowDoubleClick)?.(row);
+            }}
+            tabIndex={onRowClick || onRowDoubleClick ? 0 : undefined}
           >
             {columns.map((column) => (
               <td key={column.key}>{column.render(row)}</td>
@@ -93,4 +128,36 @@ export function DataTable<Row, SortKey extends string>({
       </tbody>
     </Table.Root>
   );
+}
+
+function isInteractiveEventTarget(
+  target: EventTarget | null,
+  rowElement: HTMLElement,
+) {
+  if (!(target instanceof Element) || target === rowElement) {
+    return false;
+  }
+
+  const interactiveElement = target.closest(
+    [
+      'a',
+      'button',
+      'input',
+      'select',
+      'textarea',
+      'summary',
+      '[contenteditable="true"]',
+      '[role="button"]',
+      '[role="checkbox"]',
+      '[role="combobox"]',
+      '[role="link"]',
+      '[role="menuitem"]',
+      '[role="option"]',
+      '[role="radio"]',
+      '[role="switch"]',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(','),
+  );
+
+  return Boolean(interactiveElement && interactiveElement !== rowElement);
 }

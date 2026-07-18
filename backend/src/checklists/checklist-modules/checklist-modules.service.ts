@@ -1,68 +1,47 @@
 import { Injectable } from '@nestjs/common';
-import { AuditAction, Prisma } from '@prisma/client';
+import { AuditAction } from '@prisma/client';
 import { writeChecklistAudit } from '../checklist-common/checklists.audit';
-import {
-  throwChecklistConflict,
-  throwChecklistNotFound,
-  throwChecklistPrismaError,
-} from '../checklist-common/checklists.errors';
+import { throwChecklistPrismaError } from '../checklist-common/checklists.errors';
+import { assertModuleExists } from './checklist-modules.assertions';
+import { ChecklistModulesReorderService } from './checklist-modules-reorder.service';
+import { ChecklistModulesRepository } from './checklist-modules.repository';
+import { ChecklistModulesStatusService } from './checklist-modules-status.service';
 import type {
-  parseChecklistModulePayload,
-  parseChecklistModuleUpdatePayload,
-  parseChecklistModulesQuery,
-} from './checklist-modules.validation';
-import { PrismaService } from '../../prisma/prisma.service';
-
-type ModuleInput = ReturnType<typeof parseChecklistModulePayload>;
-type ModuleUpdateInput = ReturnType<typeof parseChecklistModuleUpdatePayload>;
-type ModuleQuery = ReturnType<typeof parseChecklistModulesQuery>;
+  ChecklistModuleView,
+  ModuleInput,
+  ModuleQuery,
+  ModuleReorderInput,
+  ModuleUpdateInput,
+} from './checklist-modules.types';
 
 @Injectable()
 export class ChecklistModulesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly modulesRepository: ChecklistModulesRepository,
+    private readonly modulesReorderService: ChecklistModulesReorderService,
+    private readonly modulesStatusService: ChecklistModulesStatusService,
+  ) {}
 
-  async list(query: ModuleQuery) {
-    const where: Prisma.ChecklistModuleWhereInput = {
-      isActive: query.isActive,
-      OR: query.search
-        ? [
-            { name: { contains: query.search, mode: 'insensitive' } },
-            { description: { contains: query.search, mode: 'insensitive' } },
-          ]
-        : undefined,
-    };
-
-    const [items, total] = await Promise.all([
-      this.prisma.checklistModule.findMany({
-        orderBy: [{ [query.sortBy]: query.sortDirection }, { id: 'asc' }],
-        select: checklistModuleSelect,
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-        where,
-      }),
-      this.prisma.checklistModule.count({ where }),
-    ]);
-
-    return { items, limit: query.limit, page: query.page, total };
+  list(query: ModuleQuery) {
+    return this.modulesRepository.list(query);
   }
 
   async get(id: number) {
-    return { module: await this.loadModule(id) };
+    const module = await this.modulesRepository.findById(id);
+    assertModuleExists(module);
+
+    return { module };
   }
 
   async create(input: ModuleInput, userId: string) {
     try {
-      const module = await this.prisma.$transaction(async (tx) => {
-        const created = await tx.checklistModule.create({
-          data: {
-            createdBy: userId,
-            description: input.description,
-            isActive: true,
-            name: input.name,
-            updatedBy: userId,
-          },
-          select: checklistModuleSelect,
-        });
+      const module = await this.modulesRepository.transaction(async (tx) => {
+        const created = await this.modulesRepository.create(
+          input,
+          userId,
+          await this.modulesRepository.getNextActiveSortOrder(tx),
+          tx,
+        );
 
         await writeChecklistAudit(tx, {
           action: AuditAction.CREATE,
@@ -84,24 +63,20 @@ export class ChecklistModulesService {
 
   async update(id: number, input: ModuleUpdateInput, userId: string) {
     try {
-      const module = await this.prisma.$transaction(async (tx) => {
-        const current = await this.loadModule(id, tx);
+      const module = await this.modulesRepository.transaction(async (tx) => {
+        const current = await this.modulesRepository.findById(id, tx);
+        assertModuleExists(current);
 
-        if (!this.hasModuleChanges(current, input)) {
+        if (!hasModuleChanges(current, input)) {
           return current;
         }
 
-        const updated = await tx.checklistModule.update({
-          data: {
-            ...('description' in input
-              ? { description: input.description }
-              : {}),
-            ...('name' in input ? { name: input.name } : {}),
-            updatedBy: userId,
-          },
-          select: checklistModuleSelect,
-          where: { id },
-        });
+        const updated = await this.modulesRepository.update(
+          id,
+          input,
+          userId,
+          tx,
+        );
 
         await writeChecklistAudit(tx, {
           action: AuditAction.UPDATE,
@@ -123,107 +98,24 @@ export class ChecklistModulesService {
   }
 
   activate(id: number, userId: string) {
-    return this.setActive(id, true, userId);
+    return this.modulesStatusService.activate(id, userId);
   }
 
   deactivate(id: number, userId: string) {
-    return this.setActive(id, false, userId);
+    return this.modulesStatusService.deactivate(id, userId);
   }
 
-  private async setActive(id: number, isActive: boolean, userId: string) {
-    try {
-      const module = await this.prisma.$transaction(async (tx) => {
-        const current = await this.loadModule(id, tx);
-
-        const updateResult = await tx.checklistModule.updateMany({
-          data: { isActive, updatedBy: userId },
-          where: {
-            id,
-            isActive: {
-              not: isActive,
-            },
-          },
-        });
-
-        if (updateResult.count !== 1) {
-          throwChecklistConflict(
-            isActive
-              ? 'CHECKLIST_MODULE_ALREADY_ACTIVE'
-              : 'CHECKLIST_MODULE_ALREADY_INACTIVE',
-            isActive ? 'Модуль уже активен.' : 'Модуль уже отключён.',
-          );
-        }
-
-        const updated = await tx.checklistModule.findUnique({
-          select: checklistModuleSelect,
-          where: { id },
-        });
-
-        if (!updated) {
-          throwChecklistNotFound(
-            'CHECKLIST_MODULE_NOT_FOUND',
-            'Модуль чек-листа не найден.',
-          );
-        }
-
-        await writeChecklistAudit(tx, {
-          action: AuditAction.STATUS_CHANGE,
-          entityId: id,
-          entityType: 'checklist_module',
-          fieldName: isActive
-            ? 'CHECKLIST_MODULE_ACTIVATED'
-            : 'CHECKLIST_MODULE_DEACTIVATED',
-          newValue: updated,
-          oldValue: current,
-          userId,
-        });
-
-        return updated;
-      });
-
-      return { module };
-    } catch (error) {
-      throwChecklistPrismaError(error);
-    }
-  }
-
-  private hasModuleChanges(
-    current: Prisma.ChecklistModuleGetPayload<{
-      select: typeof checklistModuleSelect;
-    }>,
-    input: ModuleUpdateInput,
-  ) {
-    return (
-      ('description' in input && current.description !== input.description) ||
-      ('name' in input && current.name !== input.name)
-    );
-  }
-
-  private async loadModule(
-    id: number,
-    tx: Prisma.TransactionClient = this.prisma,
-  ) {
-    const module = await tx.checklistModule.findUnique({
-      select: checklistModuleSelect,
-      where: { id },
-    });
-
-    if (!module) {
-      throwChecklistNotFound(
-        'CHECKLIST_MODULE_NOT_FOUND',
-        'Модуль чек-листа не найден.',
-      );
-    }
-
-    return module;
+  reorder(input: ModuleReorderInput, userId: string) {
+    return this.modulesReorderService.reorder(input, userId);
   }
 }
 
-export const checklistModuleSelect = {
-  createdAt: true,
-  description: true,
-  id: true,
-  isActive: true,
-  name: true,
-  updatedAt: true,
-} as const;
+function hasModuleChanges(
+  current: ChecklistModuleView,
+  input: ModuleUpdateInput,
+) {
+  return (
+    ('description' in input && current.description !== input.description) ||
+    ('name' in input && current.name !== input.name)
+  );
+}

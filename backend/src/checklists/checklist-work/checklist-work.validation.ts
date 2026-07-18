@@ -1,6 +1,12 @@
 import { ChecklistStatus } from '@prisma/client';
 import { throwChecklistBadRequest } from '../checklist-common/checklists.errors';
 import {
+  ensurePayload,
+  parseDateString,
+  parseOptionalPositiveInt,
+  parsePositiveInt,
+} from '../checklist-common/checklists.validation';
+import {
   type ChecklistAnswerInput,
   type ChecklistAnswersDto,
   type ChecklistAnswersInput,
@@ -115,23 +121,16 @@ function parseAnswerInput(value: unknown): ChecklistAnswerInput {
   };
 }
 
-function ensurePayload<T extends Record<string, unknown>>(
-  dto: T | undefined,
-  message: string,
-): T {
-  if (!dto || typeof dto !== 'object' || Array.isArray(dto)) {
-    throwChecklistBadRequest('REQUEST_BODY_REQUIRED', message);
-  }
-
-  return dto;
-}
-
 function parseStatuses(value: unknown) {
   if (value === undefined || value === null || value === '') {
     return undefined;
   }
 
-  const values = Array.isArray(value) ? value : String(value).split(',');
+  const values = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(',')
+      : [value];
 
   return values.map((item) => {
     if (
@@ -167,32 +166,7 @@ function parseOffset(value: unknown) {
   const parsedValue = parseInteger(value);
 
   if (parsedValue === undefined || parsedValue < 0) {
-    throwChecklistBadRequest(
-      'OFFSET_INVALID',
-      'Некорректное смещение списка.',
-    );
-  }
-
-  return parsedValue;
-}
-
-function parseOptionalPositiveInt(
-  value: unknown,
-  code: string,
-  message: string,
-) {
-  if (value === undefined || value === null || value === '') {
-    return undefined;
-  }
-
-  return parsePositiveInt(value, code, message);
-}
-
-function parsePositiveInt(value: unknown, code: string, message: string) {
-  const parsedValue = parseInteger(value);
-
-  if (parsedValue === undefined || parsedValue <= 0) {
-    throwChecklistBadRequest(code, message);
+    throwChecklistBadRequest('OFFSET_INVALID', 'Некорректное смещение списка.');
   }
 
   return parsedValue;
@@ -217,18 +191,5 @@ function parseOptionalDate(value: unknown, code: string) {
     return undefined;
   }
 
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    throwChecklistBadRequest(code, 'Дата должна быть в формате ГГГГ-ММ-ДД.');
-  }
-
-  const date = new Date(`${value}T00:00:00.000Z`);
-
-  if (
-    Number.isNaN(date.getTime()) ||
-    date.toISOString().slice(0, 10) !== value
-  ) {
-    throwChecklistBadRequest(code, 'Дата должна быть в формате ГГГГ-ММ-ДД.');
-  }
-
-  return date;
+  return new Date(`${parseDateString(value, code)}T00:00:00.000Z`);
 }

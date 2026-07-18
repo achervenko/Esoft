@@ -53,117 +53,73 @@ POST /api/checklist-questions/:id/deactivate
 GET    /api/checklist-templates
 GET    /api/checklist-templates/:id
 POST   /api/checklist-templates
-PATCH  /api/checklist-templates/:id
-DELETE /api/checklist-templates/:id
-
-POST   /api/checklist-templates/:templateId/modules
-DELETE /api/checklist-templates/:templateId/modules/:templateModuleId
-PUT    /api/checklist-templates/:templateId/modules/order
-
-POST   /api/checklist-templates/:templateId/modules/:templateModuleId/questions
-PATCH  /api/checklist-templates/:templateId/questions/:templateQuestionId
-DELETE /api/checklist-templates/:templateId/questions/:templateQuestionId
-PUT    /api/checklist-templates/:templateId/modules/:templateModuleId/questions/order
-
-POST   /api/checklist-templates/:id/publish
 POST   /api/checklist-templates/:id/archive
-POST   /api/checklist-templates/:id/copy
 ```
 
 ## Бизнес-правила
 
 - Модули и вопросы не удаляются физически, только активируются и деактивируются.
 - Деактивированные модули и вопросы нельзя добавлять в новые шаблоны.
-- Черновик шаблона можно редактировать полностью.
-- После публикации структуру шаблона менять нельзя.
-- Опубликованный шаблон нельзя вернуть в черновик или удалить.
+- Новый шаблон собирается на frontend локально и создаётся одним запросом.
+- Созданный шаблон сразу становится действующим.
+- Действующий шаблон нельзя редактировать по шагам.
 - Архивирование шаблона удаляет его связи с настройками обслуживания, но не
   изменяет уже созданные события и экземпляры чек-листов.
-- Копирование создаёт новый черновик с новой структурой и новыми идентификаторами.
-- Операции изменения структуры выполняются транзакционно.
+- Копирование выполняется на frontend как локальная подготовка нового шаблона.
+- Создание готового шаблона выполняется транзакционно.
 
 ## Статусы шаблонов
 
 В ответах API состояние шаблона возвращается в поле `state`:
 
 ```text
-DRAFT -> ACTIVE -> ARCHIVED
+ACTIVE -> ARCHIVED
 ```
 
-`ACTIVE` означает опубликованный шаблон.
-
-- `DRAFT` — черновик. Можно менять карточку шаблона, добавлять и удалять
-  модули и вопросы, менять обязательность вопросов, порядок модулей и порядок
-  вопросов. Черновик можно удалить или опубликовать.
-- `ACTIVE` — опубликованный шаблон. Структуру и основные поля менять нельзя.
+- `ACTIVE` — действующий шаблон. Структуру и основные поля менять нельзя.
   Шаблон можно использовать в настройках обслуживания и при создании событий.
-  Опубликованный шаблон можно архивировать или скопировать в новый черновик.
+  Действующий шаблон можно архивировать или скопировать в новый локальный
+  шаблон.
 - `ARCHIVED` — архивный шаблон. Он не должен использоваться в новых настройках
   обслуживания. Архивирование удаляет связи с настройками обслуживания, но
   сохраняет сам шаблон, уже созданные события и экземпляры чек-листов.
 
-Публикация выполняется только для черновика и проверяет:
+Создание шаблона проверяет:
 
-- модель оборудования существует и активна;
-- вид обслуживания существует и активен;
 - структура шаблона валидна;
 - шаблон содержит хотя бы один модуль;
 - каждый модуль содержит хотя бы один вопрос;
 - модули и вопросы имеют непустые снимки названий/текстов;
 - порядок модулей и вопросов непрерывный и корректный.
 
-## Optimistic locking шаблонов
+## Создание и архивирование шаблонов
 
-Для операций изменения шаблона используется обязательное optimistic locking
-через поле `version`. Клиент должен передать ожидаемую версию в body запроса.
-Если `version` не передана или некорректна, API возвращает
-`CHECKLIST_TEMPLATE_VERSION_INVALID`. Если версия не совпадает с текущей,
-возвращается `409 Conflict` с кодом `CHECKLIST_TEMPLATE_VERSION_CONFLICT`.
+`POST /api/checklist-templates` создаёт готовый действующий шаблон одним
+запросом и не требует `version`.
 
-После успешного изменения `version` шаблона увеличивается. Проверка версии и
-само изменение выполняются в одной транзакции.
-
-`version` обязателен в body для endpoints:
-
-```text
-PATCH  /api/checklist-templates/:id
-DELETE /api/checklist-templates/:id
-
-POST   /api/checklist-templates/:templateId/modules
-DELETE /api/checklist-templates/:templateId/modules/:templateModuleId
-PUT    /api/checklist-templates/:templateId/modules/order
-
-POST   /api/checklist-templates/:templateId/modules/:templateModuleId/questions
-PATCH  /api/checklist-templates/:templateId/questions/:templateQuestionId
-DELETE /api/checklist-templates/:templateId/questions/:templateQuestionId
-PUT    /api/checklist-templates/:templateId/modules/:templateModuleId/questions/order
-
-POST   /api/checklist-templates/:id/publish
-POST   /api/checklist-templates/:id/archive
-```
-
-Примеры body:
+Пример body:
 
 ```json
 {
-  "name": "ТО-1 обновлённый",
-  "version": 3
+  "name": "Диагностика",
+  "description": null,
+  "modules": [
+    {
+      "checklistModuleId": 1,
+      "sortOrder": 1,
+      "questions": [
+        {
+          "checklistQuestionId": 10,
+          "isRequired": true,
+          "sortOrder": 1
+        }
+      ]
+    }
+  ]
 }
 ```
 
-```json
-{
-  "checklistModuleId": 12,
-  "version": 3
-}
-```
-
-```json
-{
-  "moduleIds": [41, 42, 43],
-  "version": 3
-}
-```
+Архивирование использует optimistic locking через поле `version`.
 
 ```json
 {
@@ -171,10 +127,6 @@ POST   /api/checklist-templates/:id/archive
   "version": 3
 }
 ```
-
-`POST /api/checklist-templates` создаёт новый черновик и не требует `version`.
-`POST /api/checklist-templates/:id/copy` создаёт новый черновик-копию и тоже
-не требует `version`.
 
 ## Рабочие чек-листы
 

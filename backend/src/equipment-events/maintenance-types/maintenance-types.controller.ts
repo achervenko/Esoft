@@ -23,7 +23,9 @@ import {
 
 @Controller('api/maintenance-types')
 export class MaintenanceTypesController {
-  constructor(private readonly maintenanceTypesService: MaintenanceTypesService) {}
+  constructor(
+    private readonly maintenanceTypesService: MaintenanceTypesService,
+  ) {}
 
   @Get()
   getTypes(

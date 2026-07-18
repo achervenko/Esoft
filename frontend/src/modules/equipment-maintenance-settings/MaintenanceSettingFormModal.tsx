@@ -1,4 +1,5 @@
 import type { MaintenanceExecutionType } from "../../shared/api/maintenance/maintenance.types";
+import { AdminFormActions } from "../../shared/ui/AdminFormControls";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import { SelectDropdown } from "../../shared/ui/SelectDropdown";
 import { MaintenanceChecklistTemplatesField } from "./MaintenanceChecklistTemplatesField";
@@ -17,6 +18,7 @@ const executionTypeOptions = [
 
 export function MaintenanceSettingFormModal({
   availableMaintenanceTypes,
+  checklistTemplates,
   isSaving,
   mode,
   onClose,
@@ -26,6 +28,7 @@ export function MaintenanceSettingFormModal({
 }: MaintenanceSettingFormModalProps) {
   const form = useMaintenanceSettingForm({
     availableMaintenanceTypes,
+    checklistTemplates,
     isSaving,
     mode,
     onSubmit,
@@ -36,7 +39,7 @@ export function MaintenanceSettingFormModal({
     mode === "edit" ? "Редактирование настройки" : "Назначить вид обслуживания";
 
   return (
-    <AdminModal onClose={onClose} title={title}>
+    <AdminModal isCloseDisabled={isSaving} onClose={onClose} title={title}>
       <form
         className="admin-form maintenance-settings-form"
         onSubmit={form.handleSubmit}
@@ -71,6 +74,7 @@ export function MaintenanceSettingFormModal({
           onMove={form.moveChecklistTemplate}
           onRemove={form.removeChecklistTemplate}
           onUpdate={form.updateChecklistTemplate}
+          options={form.checklistTemplateOptions}
         />
 
         <PeriodicityFields
@@ -84,22 +88,7 @@ export function MaintenanceSettingFormModal({
 
         {form.error ? <p className="admin-form-error">{form.error}</p> : null}
 
-        <div className="admin-form-actions">
-          <button
-            className="admin-secondary-button"
-            onClick={onClose}
-            type="button"
-          >
-            Отмена
-          </button>
-          <button
-            className="admin-primary-button"
-            disabled={isSaving}
-            type="submit"
-          >
-            {isSaving ? "Сохранение..." : "Сохранить"}
-          </button>
-        </div>
+        <AdminFormActions isSaving={isSaving} onClose={onClose} />
       </form>
     </AdminModal>
   );

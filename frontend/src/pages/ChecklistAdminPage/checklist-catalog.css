@@ -1,0 +1,96 @@
+.checklist-catalog-panel {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.65fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 16px;
+}
+
+.checklist-catalog-column {
+  align-content: stretch;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.checklist-catalog-search-input,
+.checklist-catalog-question-search {
+  height: 46px;
+}
+
+.checklist-catalog-panel .checklist-order-list {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.checklist-catalog-module-content,
+.checklist-catalog-question-content {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.checklist-catalog-drag-spacer {
+  width: 24px;
+}
+
+.checklist-order-item .checklist-catalog-module-content strong,
+.checklist-order-item .checklist-catalog-question-content strong {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.checklist-catalog-unassigned {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  min-height: 72px;
+  border: 1px solid #dfe4ec;
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: #ffffff;
+  color: #111827;
+  cursor: pointer;
+  text-align: left;
+}
+
+.checklist-catalog-unassigned::before {
+  content: "";
+  width: 24px;
+}
+
+.checklist-catalog-unassigned > strong,
+.checklist-catalog-unassigned > small {
+  grid-column: 2;
+}
+
+.checklist-catalog-unassigned:hover,
+.checklist-catalog-unassigned.selected {
+  border-color: #c8d1dc;
+  background: #fbfcfd;
+}
+
+.checklist-catalog-unassigned:focus-visible {
+  outline: 2px solid #111111;
+  outline-offset: 2px;
+}
+
+.checklist-catalog-unassigned strong {
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.checklist-catalog-unassigned small {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+@media (max-width: 980px) {
+  .checklist-catalog-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .checklist-catalog-column {
+    grid-template-rows: auto auto auto;
+  }
+}

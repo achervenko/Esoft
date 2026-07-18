@@ -1,3 +1,4 @@
+import type { ChecklistTemplateListItem } from "../../shared/api/checklists";
 import type { MaintenanceType } from "../../shared/api/maintenance/maintenance.types";
 import { ConfirmDialog } from "../../shared/ui/ConfirmDialog";
 import { MaintenanceSettingFormModal } from "./MaintenanceSettingFormModal";
@@ -6,6 +7,7 @@ import type { MaintenanceSettingsPanelModalState } from "./maintenance-settings-
 
 type MaintenanceSettingsPanelModalsProps = {
   availableMaintenanceTypes: MaintenanceType[];
+  checklistTemplates: ChecklistTemplateListItem[];
   deleteError: string | null;
   formErrorCode: string | null;
   isDeleting: boolean;
@@ -19,6 +21,7 @@ type MaintenanceSettingsPanelModalsProps = {
 
 export function MaintenanceSettingsPanelModals({
   availableMaintenanceTypes,
+  checklistTemplates,
   deleteError,
   formErrorCode,
   isDeleting,
@@ -34,6 +37,7 @@ export function MaintenanceSettingsPanelModals({
       {modalState.activeForm ? (
         <MaintenanceSettingFormModal
           availableMaintenanceTypes={availableMaintenanceTypes}
+          checklistTemplates={checklistTemplates}
           isSaving={isSaving}
           mode={modalState.activeForm.mode}
           onClose={onCloseForm}

@@ -1,0 +1,128 @@
+.checklist-template-view-page {
+  display: grid;
+  gap: 18px;
+}
+
+.checklist-template-view-header {
+  display: grid;
+  gap: 10px;
+}
+
+.checklist-template-view-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.checklist-template-view-title-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.checklist-template-view-title-main h1 {
+  margin: 0;
+  color: #15171c;
+  font-size: 30px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
+.checklist-template-view-description {
+  max-width: 780px;
+  margin: 8px 0 0;
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.checklist-template-view-document {
+  display: grid;
+  gap: 18px;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 20px;
+  background: #ffffff;
+}
+
+.checklist-template-view-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.checklist-template-view-summary span {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #f5f7fa;
+}
+
+.checklist-template-view-modules {
+  display: grid;
+  gap: 18px;
+}
+
+.checklist-template-view-module {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid #eef0f3;
+  padding-top: 16px;
+}
+
+.checklist-template-view-module:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.checklist-template-view-module h2 {
+  margin: 0;
+  color: #15171c;
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.checklist-template-view-module ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.checklist-template-view-module li {
+  display: grid;
+  gap: 3px;
+  color: #15171c;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.checklist-template-view-question-title {
+  display: flex;
+  gap: 6px;
+}
+
+.checklist-template-view-question-text b {
+  margin-left: 4px;
+  color: #b42318;
+}
+
+.checklist-template-view-module li small {
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .checklist-template-view-title-row {
+    display: grid;
+  }
+}

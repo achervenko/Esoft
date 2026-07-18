@@ -33,7 +33,10 @@ export class ChecklistWorkQueryService {
     return presentChecklistList(result);
   }
 
-  async get(id: number, params: { role?: string | null; userId?: string | null }) {
+  async get(
+    id: number,
+    params: { role?: string | null; userId?: string | null },
+  ) {
     const userId = this.assertions.requireUserId(params.userId);
     const checklist = await this.queryRepository.loadDetailForAccess(id);
 
