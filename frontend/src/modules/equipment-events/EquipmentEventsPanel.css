@@ -174,10 +174,9 @@
 }
 
 .equipment-event-checklist-assignment {
-  min-height: 34px;
   display: grid;
-  grid-template-columns: minmax(180px, 220px) minmax(220px, 320px);
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 248px;
+  gap: 14px;
   align-items: center;
 }
 
@@ -192,12 +191,25 @@
 }
 
 .equipment-event-checklist-assignment__select {
-  width: 100%;
+  width: 248px;
   min-width: 0;
+  justify-self: end;
 }
 
 .equipment-event-checklist-assignment__select .select-dropdown-field {
   margin: 0;
+}
+
+.equipment-event-checklist-assignment__select .select-dropdown-trigger {
+  min-height: 36px;
+  gap: 10px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.equipment-event-checklist-assignment__select .select-dropdown-trigger svg {
+  width: 16px;
+  height: 16px;
 }
 
 .equipment-event-responsibles label {
@@ -265,6 +277,10 @@
 
   .equipment-event-checklist-assignment {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .equipment-event-checklist-assignment__select {
+    width: 100%;
   }
 
   .equipment-event-detail dl {
