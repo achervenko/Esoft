@@ -25,7 +25,6 @@ export type EquipmentEventChecklist = {
   assignedUserId: string;
   checklistTemplateId: number;
   id: number;
-  isRequired: boolean;
   sortOrder: number;
   status: EquipmentEventChecklistStatus;
 };
@@ -46,7 +45,7 @@ export type EquipmentEventItem = {
   id: number;
   maintenanceSettingId: number | null;
   maintenanceType: {
-    code?: string;
+    code: string;
     id: number;
     name: string;
   };
@@ -61,13 +60,25 @@ export type EquipmentEventItem = {
 export type EquipmentEventDetail = EquipmentEventItem & {
   createdAt: string;
   createdBy: EquipmentEventCreator;
+  equipment: EquipmentEventItem["equipment"] & {
+    model: EquipmentEventItem["equipment"]["model"] & {
+      manufacturer: {
+        id: number;
+        name: string;
+      };
+    };
+  };
   originalPlannedDate: string | null;
 };
 
 export type EquipmentEventsQuery = {
+  dateFrom?: string;
+  dateTo?: string;
+  equipmentVisibleId?: number;
   limit?: number;
   maintenanceTypeId?: number;
   offset?: number;
+  responsibleUserId?: string;
   status?: EquipmentEventStatus;
 };
 
@@ -86,6 +97,7 @@ export type EquipmentEventChecklistAssignment = {
 };
 
 export type UpdateCreatedEquipmentEventPayload = {
+  checklistAssignments?: EquipmentEventChecklistAssignment[];
   equipmentVisibleId?: number;
   maintenanceTypeId?: number;
   note?: string | null;

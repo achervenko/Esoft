@@ -124,7 +124,6 @@ function toChecklistResponse(checklist: EquipmentEventChecklistRecord) {
     id: checklist.id,
     checklistTemplateId: checklist.checklistTemplateId,
     assignedUserId: checklist.assignedUserId,
-    isRequired: checklist.isRequired,
     status: checklist.status,
     sortOrder: checklist.sortOrder,
   };

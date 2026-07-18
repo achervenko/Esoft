@@ -1,3 +1,4 @@
+import type { ChecklistTemplateListItem } from "../../shared/api/checklists";
 import type { EquipmentEventDetail } from "../../shared/api/equipment-events/equipment-events.types";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import {
@@ -10,11 +11,13 @@ import {
 } from "./equipment-events-utils";
 
 type EquipmentEventDetailModalProps = {
+  checklistTemplates: ChecklistTemplateListItem[];
   event: EquipmentEventDetail;
   onClose: () => void;
 };
 
 export function EquipmentEventDetailModal({
+  checklistTemplates,
   event,
   onClose,
 }: EquipmentEventDetailModalProps) {
@@ -23,6 +26,9 @@ export function EquipmentEventDetailModal({
       responsible.id,
       responsible.fullName,
     ]),
+  );
+  const checklistTemplateNameById = new Map(
+    checklistTemplates.map((template) => [template.id, template.name]),
   );
 
   return (
@@ -33,7 +39,8 @@ export function EquipmentEventDetailModal({
             <dt>Оборудование</dt>
             <dd>
               ID {event.equipment.visibleId} - {event.equipment.name},{" "}
-              {event.equipment.model.name}
+              {event.equipment.model.name},{" "}
+              {event.equipment.model.manufacturer.name}
             </dd>
           </div>
           <div>
@@ -74,14 +81,16 @@ export function EquipmentEventDetailModal({
                         const assignedUserName =
                           responsibleNameById.get(checklist.assignedUserId) ??
                           `ID ${checklist.assignedUserId}`;
+                        const checklistTemplateName =
+                          checklistTemplateNameById.get(
+                            checklist.checklistTemplateId,
+                          ) ??
+                          `Шаблон #${checklist.checklistTemplateId}`;
 
                         return [
-                          `#${checklist.checklistTemplateId}`,
+                          checklistTemplateName,
                           equipmentEventChecklistStatusLabels[checklist.status],
                           assignedUserName,
-                          checklist.isRequired
-                            ? "обязательный"
-                            : "необязательный",
                         ].join(", ");
                       },
                     )

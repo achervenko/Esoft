@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type FormEvent,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type {
   MaintenanceExecutionType,
   MaintenancePeriodicity,
@@ -13,7 +6,7 @@ import type {
 } from "../../shared/api/maintenance/maintenance.types";
 import {
   buildMaintenanceSettingUpdatePayload,
-  parseChecklistTemplateFormItems,
+  parseDefaultChecklistTemplateId,
   parsePeriodicityForm,
   toPeriodicityForm,
   type PeriodicityForm,
@@ -22,7 +15,6 @@ import type {
   MaintenanceSettingFormModalProps,
   MaintenanceSettingFormPayload,
 } from "./maintenance-setting-form.types";
-import { useMaintenanceChecklistTemplates } from "./useMaintenanceChecklistTemplates";
 
 type UseMaintenanceSettingFormParams = Pick<
   MaintenanceSettingFormModalProps,
@@ -35,7 +27,7 @@ type UseMaintenanceSettingFormParams = Pick<
 >;
 
 type InitialFormValues = {
-  checklistTemplates: MaintenanceSetting["checklistTemplates"];
+  defaultChecklistTemplateId: string;
   executionType: MaintenanceExecutionType;
   periodicity: MaintenancePeriodicity | null;
   resetKey: string;
@@ -62,10 +54,10 @@ export function useMaintenanceSettingForm({
     );
   }
 
-  const initialChecklistTemplates =
-    initialFormValuesRef.current.checklistTemplates;
-
   const [maintenanceTypeId, setMaintenanceTypeId] = useState("");
+  const [defaultChecklistTemplateId, setDefaultChecklistTemplateId] = useState(
+    initialFormValuesRef.current.defaultChecklistTemplateId,
+  );
   const [executionType, setExecutionType] = useState<MaintenanceExecutionType>(
     initialFormValuesRef.current.executionType,
   );
@@ -77,31 +69,20 @@ export function useMaintenanceSettingForm({
   );
   const [error, setError] = useState<string | null>(null);
 
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
-
-  const {
-    addChecklistTemplate,
-    checklistTemplates,
-    moveChecklistTemplate,
-    removeChecklistTemplate,
-    updateChecklistTemplate,
-  } = useMaintenanceChecklistTemplates({
-    initialTemplates: initialFormValuesRef.current.checklistTemplates,
-    onChange: clearError,
-    resetKey: formResetKey,
-  });
-
   useEffect(() => {
     const initialValues = initialFormValuesRef.current;
 
     setMaintenanceTypeId("");
+    setDefaultChecklistTemplateId(initialValues.defaultChecklistTemplateId);
     setExecutionType(initialValues.executionType);
     setHasPeriodicity(Boolean(initialValues.periodicity));
     setPeriodicity(toPeriodicityForm(initialValues.periodicity));
     setError(null);
   }, [formResetKey]);
+
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
 
   const maintenanceTypeOptions = useMemo(
     () =>
@@ -117,40 +98,44 @@ export function useMaintenanceSettingForm({
       label: template.name,
       value: String(template.id),
     }));
-    const optionIds = new Set(options.map((option) => option.value));
+    const currentDefault = setting?.defaultChecklistTemplate;
+    const shouldShowArchivedCurrentDefault =
+      currentDefault?.state === "ARCHIVED" &&
+      defaultChecklistTemplateId ===
+        String(currentDefault.checklistTemplateId);
 
-    initialChecklistTemplates.forEach((template) => {
-      const value = String(template.checklistTemplateId);
-
-      if (!optionIds.has(value)) {
-        options.push({
-          label: template.name,
-          value,
-        });
-        optionIds.add(value);
-      }
-    });
+    if (
+      shouldShowArchivedCurrentDefault &&
+      !options.some(
+        (option) =>
+          option.value === String(currentDefault.checklistTemplateId),
+      )
+    ) {
+      options.push({
+        label: `${currentDefault.name} (архивный)`,
+        value: String(currentDefault.checklistTemplateId),
+      });
+    }
 
     return options.sort((left, right) =>
       left.label.localeCompare(right.label, "ru"),
     );
-  }, [initialChecklistTemplates, publishedChecklistTemplates]);
+  }, [defaultChecklistTemplateId, publishedChecklistTemplates, setting]);
 
-  const updateMaintenanceTypeId = useCallback(
-    (value: string) => {
-      setMaintenanceTypeId(value);
-      clearError();
-    },
-    [clearError],
-  );
+  const updateMaintenanceTypeId = useCallback((value: string) => {
+    setMaintenanceTypeId(value);
+    clearError();
+  }, [clearError]);
 
-  const updateExecutionType = useCallback(
-    (value: MaintenanceExecutionType) => {
-      setExecutionType(value);
-      clearError();
-    },
-    [clearError],
-  );
+  const updateDefaultChecklistTemplateId = useCallback((value: string) => {
+    setDefaultChecklistTemplateId(value);
+    clearError();
+  }, [clearError]);
+
+  const updateExecutionType = useCallback((value: MaintenanceExecutionType) => {
+    setExecutionType(value);
+    clearError();
+  }, [clearError]);
 
   const updatePeriodicity = (key: keyof PeriodicityForm, value: string) => {
     setPeriodicity((currentValue) => ({
@@ -188,15 +173,12 @@ export function useMaintenanceSettingForm({
   };
 
   const buildSubmitPayload = (): MaintenanceSettingFormPayload | null => {
-    const parsedChecklistTemplatesResult =
-      parseChecklistTemplateFormItems(checklistTemplates);
+    const parsedDefaultChecklistTemplateId = parseDefaultChecklistTemplateId(
+      defaultChecklistTemplateId,
+    );
 
-    if (!parsedChecklistTemplatesResult.ok) {
-      setError(
-        parsedChecklistTemplatesResult.reason === "duplicate"
-          ? "Шаблоны чек-листов не должны повторяться."
-          : "Укажите корректные ID шаблонов чек-листов.",
-      );
+    if (!parsedDefaultChecklistTemplateId.ok) {
+      setError("Укажите корректный шаблон чек-листа.");
       return null;
     }
 
@@ -226,7 +208,7 @@ export function useMaintenanceSettingForm({
       }
 
       return {
-        checklistTemplates: parsedChecklistTemplatesResult.value,
+        defaultChecklistTemplateId: parsedDefaultChecklistTemplateId.value,
         maintenanceTypeId: parsedMaintenanceTypeId,
         executionType,
         periodicity: parsedPeriodicityResult.value,
@@ -237,7 +219,7 @@ export function useMaintenanceSettingForm({
       const updatePayload = buildMaintenanceSettingUpdatePayload(
         initialFormValuesRef.current.setting,
         {
-          checklistTemplates: parsedChecklistTemplatesResult.value,
+          defaultChecklistTemplateId: parsedDefaultChecklistTemplateId.value,
           executionType,
           periodicity: parsedPeriodicityResult.value,
         },
@@ -249,7 +231,7 @@ export function useMaintenanceSettingForm({
       }
 
       return {
-        checklistTemplates: parsedChecklistTemplatesResult.value,
+        defaultChecklistTemplateId: parsedDefaultChecklistTemplateId.value,
         executionType,
         periodicity: parsedPeriodicityResult.value,
         updatePayload,
@@ -261,21 +243,18 @@ export function useMaintenanceSettingForm({
   };
 
   return {
-    addChecklistTemplate,
     applyPeriodicityPreset,
-    checklistTemplates,
+    checklistTemplateOptions,
+    defaultChecklistTemplateId,
     error,
     executionType,
     handleSubmit,
     hasPeriodicity,
     maintenanceTypeId,
     maintenanceTypeOptions,
-    checklistTemplateOptions,
-    moveChecklistTemplate,
     periodicity,
-    removeChecklistTemplate,
     togglePeriodicity,
-    updateChecklistTemplate,
+    updateDefaultChecklistTemplateId,
     updateExecutionType,
     updateMaintenanceTypeId,
     updatePeriodicity,
@@ -287,7 +266,9 @@ function createInitialFormValues(
   setting: MaintenanceSetting | null,
 ): InitialFormValues {
   return {
-    checklistTemplates: setting?.checklistTemplates ?? [],
+    defaultChecklistTemplateId: setting?.defaultChecklistTemplate
+      ? String(setting.defaultChecklistTemplate.checklistTemplateId)
+      : "",
     executionType: setting?.executionType ?? "INTERNAL",
     periodicity: setting?.periodicity ?? null,
     resetKey,

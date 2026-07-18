@@ -55,7 +55,7 @@ export async function writeMaintenanceSettingCreatedAudit(
       auditLine(
         params,
         AuditAction.CREATE,
-        'Шаблоны чек-листов',
+        'Шаблон чек-листа по умолчанию',
         null,
         checklistLabel(params.setting),
       ),
@@ -96,7 +96,7 @@ export async function writeMaintenanceSettingUpdatedAudit(
     ),
     comparisonLine(
       params,
-      'Шаблоны чек-листов',
+      'Шаблон чек-листа по умолчанию',
       checklistLabel(params.oldSetting),
       checklistLabel(params.newSetting),
     ),
@@ -139,7 +139,7 @@ export async function writeMaintenanceSettingDeletedAudit(
       auditLine(
         params,
         AuditAction.DELETE,
-        'Шаблоны чек-листов',
+        'Шаблон чек-листа по умолчанию',
         checklistLabel(params.setting),
         null,
       ),
@@ -265,24 +265,18 @@ function pluralizeRu(
 }
 
 function checklistLabel(setting: MaintenanceSettingRecord) {
-  if (setting.checklistTemplateLinks.length === 0) {
+  if (!setting.defaultChecklistTemplateId || !setting.defaultChecklistTemplate) {
     return null;
   }
 
-  return [...setting.checklistTemplateLinks]
-    .sort(
-      (left, right) =>
-        left.sortOrder - right.sortOrder ||
-        left.checklistTemplateId - right.checklistTemplateId,
-    )
-    .map((link) =>
-      [
-        `Шаблон #${link.checklistTemplateId}`,
-        link.isRequired ? 'обязательный' : 'необязательный',
-        `порядок ${link.sortOrder}`,
-      ].join(', '),
-    )
-    .join('; ');
+  return [
+    `Шаблон #${setting.defaultChecklistTemplate.id}`,
+    setting.defaultChecklistTemplate.name,
+    setting.defaultChecklistTemplate.isActive &&
+    setting.defaultChecklistTemplate.isPublished
+      ? 'ACTIVE'
+      : 'ARCHIVED',
+  ].join(', ');
 }
 
 function formatOperationValue(value: unknown) {

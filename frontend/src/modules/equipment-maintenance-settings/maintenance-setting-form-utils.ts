@@ -2,8 +2,6 @@ import type {
   MaintenanceExecutionType,
   MaintenancePeriodicity,
   MaintenanceSetting,
-  MaintenanceSettingChecklistTemplate,
-  MaintenanceSettingChecklistTemplatePayload,
   MaintenanceSettingUpdatePayload,
 } from "../../shared/api/maintenance/maintenance.types";
 
@@ -15,20 +13,14 @@ export type PeriodicityForm = {
 };
 
 export type MaintenanceSettingUpdateSource = {
-  checklistTemplates: MaintenanceSettingChecklistTemplatePayload[];
+  defaultChecklistTemplateId?: number | null;
   executionType: MaintenanceExecutionType;
   periodicity: MaintenancePeriodicity | null;
 };
 
-export type ChecklistTemplateFormItem = {
-  clientId: string;
-  checklistTemplateId: string;
-  isRequired: boolean;
-};
-
-export type ParseChecklistTemplatesResult =
-  | { ok: true; value: MaintenanceSettingChecklistTemplatePayload[] }
-  | { ok: false; reason: "duplicate" | "invalid-id" };
+export type ParseDefaultChecklistTemplateIdResult =
+  | { ok: true; value: number | null }
+  | { ok: false };
 
 export type ParsePeriodicityResult =
   | { ok: true; value: MaintenancePeriodicity | null }
@@ -52,74 +44,24 @@ export function toPeriodicityForm(
   };
 }
 
-function parsePositiveInteger(value: string) {
+export function parseDefaultChecklistTemplateId(
+  value: string,
+): ParseDefaultChecklistTemplateIdResult {
   const trimmedValue = value.trim();
 
   if (!trimmedValue) {
-    return undefined;
+    return { ok: true, value: null };
   }
 
   if (!/^[1-9]\d*$/.test(trimmedValue)) {
-    return undefined;
+    return { ok: false };
   }
 
   const parsedValue = Number(trimmedValue);
 
-  return Number.isSafeInteger(parsedValue) ? parsedValue : undefined;
-}
-
-export function toChecklistTemplateFormItems(
-  checklistTemplates: MaintenanceSettingChecklistTemplate[] = [],
-): ChecklistTemplateFormItem[] {
-  return [...checklistTemplates]
-    .sort(
-      (left, right) =>
-        left.sortOrder - right.sortOrder ||
-        left.checklistTemplateId - right.checklistTemplateId,
-    )
-    .map((template) => ({
-      checklistTemplateId: String(template.checklistTemplateId),
-      clientId: String(template.checklistTemplateId),
-      isRequired: template.isRequired,
-    }));
-}
-
-export function createEmptyChecklistTemplateFormItem(
-  index: number,
-): ChecklistTemplateFormItem {
-  return {
-    checklistTemplateId: "",
-    clientId: `new-${Date.now()}-${index}`,
-    isRequired: true,
-  };
-}
-
-export function parseChecklistTemplateFormItems(
-  items: ChecklistTemplateFormItem[],
-): ParseChecklistTemplatesResult {
-  const checklistTemplateIds = new Set<number>();
-  const checklistTemplates: MaintenanceSettingChecklistTemplatePayload[] = [];
-
-  for (const [index, item] of items.entries()) {
-    const checklistTemplateId = parsePositiveInteger(item.checklistTemplateId);
-
-    if (checklistTemplateId === undefined) {
-      return { ok: false, reason: "invalid-id" };
-    }
-
-    if (checklistTemplateIds.has(checklistTemplateId)) {
-      return { ok: false, reason: "duplicate" };
-    }
-
-    checklistTemplateIds.add(checklistTemplateId);
-    checklistTemplates.push({
-      checklistTemplateId,
-      isRequired: item.isRequired,
-      sortOrder: index + 1,
-    });
-  }
-
-  return { ok: true, value: checklistTemplates };
+  return Number.isSafeInteger(parsedValue)
+    ? { ok: true, value: parsedValue }
+    : { ok: false };
 }
 
 export function parsePeriodicityForm(
@@ -163,12 +105,11 @@ export function buildMaintenanceSettingUpdatePayload(
   const updatePayload: MaintenanceSettingUpdatePayload = {};
 
   if (
-    !areChecklistTemplatePayloadsEqual(
-      setting.checklistTemplates,
-      payload.checklistTemplates,
-    )
+    payload.defaultChecklistTemplateId !== undefined &&
+    setting.defaultChecklistTemplate?.checklistTemplateId !==
+      payload.defaultChecklistTemplateId
   ) {
-    updatePayload.checklistTemplates = payload.checklistTemplates;
+    updatePayload.defaultChecklistTemplateId = payload.defaultChecklistTemplateId;
   }
 
   if (setting.executionType !== payload.executionType) {
@@ -212,34 +153,4 @@ function parseNonNegativeInteger(value: string) {
   const parsedValue = Number(trimmedValue);
 
   return Number.isSafeInteger(parsedValue) ? parsedValue : undefined;
-}
-
-function areChecklistTemplatePayloadsEqual(
-  left: MaintenanceSettingChecklistTemplate[],
-  right: MaintenanceSettingChecklistTemplatePayload[],
-) {
-  if (left.length !== right.length) {
-    return false;
-  }
-
-  const sortedLeft = [...left].sort(
-    (first, second) =>
-      first.sortOrder - second.sortOrder ||
-      first.checklistTemplateId - second.checklistTemplateId,
-  );
-  const sortedRight = [...right].sort(
-    (first, second) =>
-      first.sortOrder - second.sortOrder ||
-      first.checklistTemplateId - second.checklistTemplateId,
-  );
-
-  return sortedLeft.every((leftItem, index) => {
-    const rightItem = sortedRight[index];
-
-    return (
-      leftItem.checklistTemplateId === rightItem.checklistTemplateId &&
-      leftItem.isRequired === rightItem.isRequired &&
-      leftItem.sortOrder === rightItem.sortOrder
-    );
-  });
 }

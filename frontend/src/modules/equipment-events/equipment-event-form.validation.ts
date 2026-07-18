@@ -39,14 +39,27 @@ export function validateChecklistAssignments(
   checklistAssignments: EquipmentEventChecklistAssignment[],
   responsibleUserIds: Set<string>,
 ) {
-  if (
-    checklistAssignments.some(
-      (assignment) =>
-        !assignment.assignedUserId ||
-        !responsibleUserIds.has(assignment.assignedUserId),
-    )
-  ) {
-    return "Назначьте исполнителя для каждого чек-листа.";
+  if (checklistAssignments.length !== responsibleUserIds.size) {
+    return "Назначьте шаблон чек-листа для каждого ответственного.";
+  }
+
+  const assignedUserIds = new Set<string>();
+
+  for (const assignment of checklistAssignments) {
+    if (
+      !assignment.assignedUserId ||
+      !responsibleUserIds.has(assignment.assignedUserId) ||
+      !Number.isSafeInteger(assignment.checklistTemplateId) ||
+      assignment.checklistTemplateId <= 0
+    ) {
+      return "Назначьте шаблон чек-листа для каждого ответственного.";
+    }
+
+    if (assignedUserIds.has(assignment.assignedUserId)) {
+      return "Одному ответственному можно назначить только один чек-лист.";
+    }
+
+    assignedUserIds.add(assignment.assignedUserId);
   }
 
   return null;

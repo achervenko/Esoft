@@ -4,26 +4,39 @@ import { throwEquipmentEventConflict } from './equipment-events.errors';
 
 @Injectable()
 export class EquipmentEventChecklistAssertions {
-  async assertRequiredChecklistsCompleted(
+  async assertAllChecklistsCompleted(
     tx: Prisma.TransactionClient,
     eventId: number,
   ) {
     const [checklistState] = await tx.$queryRaw<
-      Array<{ hasIncompleteRequiredChecklists: boolean }>
+      Array<{
+        checklistCount: bigint;
+        hasIncompleteChecklists: boolean;
+      }>
     >`
-      SELECT EXISTS (
-        SELECT 1
-        FROM checklists checklist
-        WHERE checklist.equipment_event_id = ${eventId}
-          AND checklist.is_required IS TRUE
-          AND checklist.status <> 'COMPLETED'
-      ) AS "hasIncompleteRequiredChecklists"
+      SELECT
+        COUNT(*)::bigint AS "checklistCount",
+        EXISTS (
+          SELECT 1
+          FROM checklists checklist
+          WHERE checklist.equipment_event_id = ${eventId}
+            AND checklist.status <> 'COMPLETED'
+        ) AS "hasIncompleteChecklists"
+      FROM checklists
+      WHERE equipment_event_id = ${eventId}
     `;
 
-    if (checklistState?.hasIncompleteRequiredChecklists) {
+    if (!checklistState || checklistState.checklistCount === 0n) {
       throwEquipmentEventConflict(
-        'REQUIRED_CHECKLISTS_NOT_COMPLETED',
-        'Завершите обязательные чек-листы перед завершением события.',
+        'CHECKLISTS_REQUIRED',
+        'У события должен быть хотя бы один чек-лист.',
+      );
+    }
+
+    if (checklistState?.hasIncompleteChecklists) {
+      throwEquipmentEventConflict(
+        'CHECKLISTS_NOT_COMPLETED',
+        'Завершите все чек-листы перед завершением события.',
       );
     }
   }

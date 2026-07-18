@@ -1,18 +1,18 @@
 export type CreateMaintenanceSettingDto = {
-  checklistTemplates?: unknown;
+  defaultChecklistTemplateId?: unknown;
   executionType?: unknown;
   maintenanceTypeId?: unknown;
   periodicity?: unknown;
 };
 
 export type UpdateMaintenanceSettingDto = {
-  checklistTemplates?: unknown;
+  defaultChecklistTemplateId?: unknown;
   executionType?: unknown;
   periodicity?: unknown;
 };
 
 export type MaintenanceSettingBaseDto = {
-  checklistTemplates?: unknown;
+  defaultChecklistTemplateId?: unknown;
   executionType?: unknown;
   periodicity?: unknown;
 };

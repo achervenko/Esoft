@@ -1,6 +1,6 @@
 type MaintenanceSettingFieldErrors = Partial<
   Record<
-    | "checklistTemplates"
+    | "defaultChecklistTemplateId"
     | "maintenanceTypeId"
     | "executionType"
     | "periodicity",
@@ -12,15 +12,13 @@ export function getFieldErrorsByCode(
   code: string | null,
 ): MaintenanceSettingFieldErrors {
   switch (code) {
-    case "CHECKLIST_TEMPLATES_INVALID":
+    case "DEFAULT_CHECKLIST_TEMPLATE_REQUIRED":
+    case "CHECKLIST_TEMPLATE_NOT_FOUND":
+    case "CHECKLIST_TEMPLATE_INACTIVE":
     case "CHECKLIST_TEMPLATE_INVALID":
-    case "CHECKLIST_TEMPLATE_ID_INVALID":
-    case "CHECKLIST_TEMPLATE_REQUIRED_INVALID":
-    case "CHECKLIST_TEMPLATE_SORT_ORDER_INVALID":
-    case "CHECKLIST_TEMPLATE_DUPLICATE":
-    case "CHECKLIST_TEMPLATE_SORT_ORDER_DUPLICATE":
-    case "CHECKLIST_TEMPLATE_SORT_ORDER_SEQUENCE_INVALID":
-      return { checklistTemplates: "Некорректный шаблон чек-листа." };
+      return {
+        defaultChecklistTemplateId: "Некорректный шаблон чек-листа.",
+      };
     case "MAINTENANCE_TYPE_REQUIRED":
     case "MAINTENANCE_TYPE_NOT_FOUND":
     case "MAINTENANCE_TYPE_INACTIVE":

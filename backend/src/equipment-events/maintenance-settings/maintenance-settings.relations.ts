@@ -14,20 +14,15 @@ export const maintenanceSettingsMaintenanceTypeSelect = {
 } satisfies Prisma.EquipmentEventTypeSelect;
 
 export const maintenanceSettingSelect = {
-  checklistTemplateLinks: {
-    orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+  defaultChecklistTemplate: {
     select: {
-      checklistTemplate: {
-        select: {
-          name: true,
-        },
-      },
-      checklistTemplateId: true,
       id: true,
-      isRequired: true,
-      sortOrder: true,
+      isActive: true,
+      isPublished: true,
+      name: true,
     },
   },
+  defaultChecklistTemplateId: true,
   executionType: true,
   id: true,
   maintenanceType: {

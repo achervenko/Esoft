@@ -32,7 +32,7 @@ export function presentAvailableMaintenanceTypes(
 
 function presentMaintenanceSetting(setting: MaintenanceSettingRecord) {
   return {
-    checklistTemplates: presentChecklistTemplates(setting),
+    defaultChecklistTemplate: presentDefaultChecklistTemplate(setting),
     executionType: setting.executionType,
     id: setting.id,
     maintenanceType: {
@@ -44,19 +44,20 @@ function presentMaintenanceSetting(setting: MaintenanceSettingRecord) {
   };
 }
 
-function presentChecklistTemplates(setting: MaintenanceSettingRecord) {
-  return [...setting.checklistTemplateLinks]
-    .sort(
-      (left, right) =>
-        left.sortOrder - right.sortOrder ||
-        left.checklistTemplateId - right.checklistTemplateId,
-    )
-    .map((link) => ({
-      checklistTemplateId: link.checklistTemplateId,
-      name: link.checklistTemplate.name,
-      isRequired: link.isRequired,
-      sortOrder: link.sortOrder,
-    }));
+function presentDefaultChecklistTemplate(setting: MaintenanceSettingRecord) {
+  if (!setting.defaultChecklistTemplateId || !setting.defaultChecklistTemplate) {
+    return null;
+  }
+
+  return {
+    checklistTemplateId: setting.defaultChecklistTemplate.id,
+    name: setting.defaultChecklistTemplate.name,
+    state:
+      setting.defaultChecklistTemplate.isActive &&
+      setting.defaultChecklistTemplate.isPublished
+        ? 'ACTIVE'
+        : 'ARCHIVED',
+  };
 }
 
 function presentPeriodicity(setting: MaintenanceSettingRecord) {

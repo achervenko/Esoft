@@ -10,6 +10,7 @@ import type {
 import {
   buildChecklistAssignments,
   buildUpdatePayload,
+  getChecklistTemplateIdsByResponsible,
 } from "./equipment-event-form.utils";
 import {
   validateChecklistAssignments,
@@ -20,6 +21,7 @@ import {
 
 type UseEquipmentEventFormParams = {
   event?: EquipmentEventItem | null;
+  equipmentVisibleId?: number;
   isSaving: boolean;
   maintenanceSettings: MaintenanceSetting[];
   mode: EquipmentEventFormMode;
@@ -29,6 +31,7 @@ type UseEquipmentEventFormParams = {
 
 export function useEquipmentEventForm({
   event = null,
+  equipmentVisibleId,
   isSaving,
   maintenanceSettings,
   mode,
@@ -46,9 +49,10 @@ export function useEquipmentEventForm({
   const [responsibleUserIds, setResponsibleUserIds] = useState(
     event?.responsibles.map((user) => user.id) ?? [],
   );
-  const [checklistAssignees, setChecklistAssignees] = useState<
-    Record<number, string>
-  >({});
+  const [checklistTemplateIdsByResponsible, setChecklistTemplateIdsByResponsible] =
+    useState<Record<string, string>>(
+      event ? getChecklistTemplateIdsByResponsible(event.checklists) : {},
+    );
   const [error, setError] = useState<string | null>(null);
 
   const selectedMaintenanceSetting = useMemo(
@@ -59,10 +63,10 @@ export function useEquipmentEventForm({
     [maintenanceSettings, maintenanceTypeId],
   );
 
-  const selectedChecklistTemplates =
-    mode === "create"
-      ? (selectedMaintenanceSetting?.checklistTemplates ?? [])
-      : [];
+  const defaultChecklistTemplateId =
+    selectedMaintenanceSetting?.defaultChecklistTemplate?.state === "ACTIVE"
+      ? String(selectedMaintenanceSetting.defaultChecklistTemplate.checklistTemplateId)
+      : "";
 
   const maintenanceTypeOptions = useMemo(() => {
     const options = maintenanceSettings.map((setting) => ({
@@ -118,8 +122,28 @@ export function useEquipmentEventForm({
   );
 
   const updateMaintenanceTypeId = (nextMaintenanceTypeId: string) => {
+    const nextMaintenanceSetting =
+      maintenanceSettings.find(
+        (setting) =>
+          String(setting.maintenanceType.id) === nextMaintenanceTypeId,
+      ) ?? null;
+    const nextDefaultChecklistTemplateId =
+      nextMaintenanceSetting?.defaultChecklistTemplate?.state === "ACTIVE"
+        ? String(
+            nextMaintenanceSetting.defaultChecklistTemplate
+              .checklistTemplateId,
+          )
+        : "";
+
     setMaintenanceTypeId(nextMaintenanceTypeId);
-    setChecklistAssignees({});
+    setChecklistTemplateIdsByResponsible((current) =>
+      Object.fromEntries(
+        responsibleUserIds.map((responsibleUserId) => [
+          responsibleUserId,
+          nextDefaultChecklistTemplateId || current[responsibleUserId] || "",
+        ]),
+      ),
+    );
   };
 
   const toggleResponsible = (responsibleUserId: string) => {
@@ -130,25 +154,31 @@ export function useEquipmentEventForm({
       : [...responsibleUserIds, responsibleUserId];
 
     setResponsibleUserIds(nextResponsibleUserIds);
-
-    if (isRemovingResponsible) {
-      setChecklistAssignees((currentAssignees) =>
-        Object.fromEntries(
-          Object.entries(currentAssignees).filter(
-            ([, assigneeId]) => assigneeId !== responsibleUserId,
+    setChecklistTemplateIdsByResponsible((currentValue) => {
+      if (isRemovingResponsible) {
+        return Object.fromEntries(
+          Object.entries(currentValue).filter(
+            ([currentResponsibleUserId]) =>
+              currentResponsibleUserId !== responsibleUserId,
           ),
-        ),
-      );
-    }
+        );
+      }
+
+      return {
+        ...currentValue,
+        [responsibleUserId]:
+          currentValue[responsibleUserId] ?? defaultChecklistTemplateId,
+      };
+    });
   };
 
-  const assignChecklist = (
-    checklistTemplateId: number,
+  const assignChecklistTemplate = (
     responsibleUserId: string,
+    checklistTemplateId: string,
   ) => {
-    setChecklistAssignees((currentAssignees) => ({
-      ...currentAssignees,
-      [checklistTemplateId]: responsibleUserId,
+    setChecklistTemplateIdsByResponsible((currentValue) => ({
+      ...currentValue,
+      [responsibleUserId]: checklistTemplateId,
     }));
   };
 
@@ -187,14 +217,13 @@ export function useEquipmentEventForm({
       return;
     }
 
-    const responsibleUserIdSet = new Set(uniqueResponsibleUserIds);
     const checklistAssignments = buildChecklistAssignments(
-      selectedChecklistTemplates,
-      checklistAssignees,
+      uniqueResponsibleUserIds,
+      checklistTemplateIdsByResponsible,
     );
     const checklistAssignmentsError = validateChecklistAssignments(
       checklistAssignments,
-      responsibleUserIdSet,
+      new Set(uniqueResponsibleUserIds),
     );
 
     if (checklistAssignmentsError) {
@@ -206,6 +235,8 @@ export function useEquipmentEventForm({
 
     if (mode === "edit" && event) {
       const updatePayload = buildUpdatePayload({
+        checklistAssignments,
+        equipmentVisibleId: equipmentVisibleId ?? event.equipment.visibleId,
         event,
         maintenanceTypeId: parsedMaintenanceTypeId,
         note: normalizedNote,
@@ -220,8 +251,8 @@ export function useEquipmentEventForm({
 
       setError(null);
       onSubmit({
-        maintenanceTypeId: parsedMaintenanceTypeId,
         checklistAssignments,
+        maintenanceTypeId: parsedMaintenanceTypeId,
         note: normalizedNote,
         plannedDate,
         responsibleUserIds: uniqueResponsibleUserIds,
@@ -232,8 +263,8 @@ export function useEquipmentEventForm({
 
     setError(null);
     onSubmit({
-      maintenanceTypeId: parsedMaintenanceTypeId,
       checklistAssignments,
+      maintenanceTypeId: parsedMaintenanceTypeId,
       note: normalizedNote,
       plannedDate,
       responsibleUserIds: uniqueResponsibleUserIds,
@@ -241,8 +272,9 @@ export function useEquipmentEventForm({
   };
 
   return {
-    assignChecklist,
-    checklistAssignees,
+    assignChecklistTemplate,
+    checklistTemplateIdsByResponsible,
+    defaultChecklistTemplateId,
     error,
     handleSubmit,
     maintenanceTypeId,
@@ -251,7 +283,7 @@ export function useEquipmentEventForm({
     plannedDate,
     responsibleOptions,
     responsibleUserIds,
-    selectedChecklistTemplates,
+    selectedMaintenanceSetting,
     setMaintenanceTypeId: updateMaintenanceTypeId,
     setNote,
     setPlannedDate,

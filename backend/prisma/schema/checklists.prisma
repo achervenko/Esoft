@@ -93,7 +93,7 @@ model ChecklistTemplate {
   basedOnTemplate         ChecklistTemplate?                             @relation("ChecklistTemplateCopy", fields: [basedOnTemplateId], references: [id], onDelete: SetNull)
   copiedTemplates         ChecklistTemplate[]                            @relation("ChecklistTemplateCopy")
   modules                 ChecklistTemplateModule[]
-  maintenanceSettingLinks EquipmentMaintenanceSettingChecklistTemplate[]
+  defaultForMaintenanceSettings EquipmentMaintenanceSetting[]            @relation("ChecklistTemplateDefaultForMaintenanceSettings")
   checklists              Checklist[]
 
   @@index([isActive], map: "idx_checklist_templates_is_active")
@@ -134,31 +134,12 @@ model ChecklistTemplateQuestion {
   @@map("checklist_template_questions")
 }
 
-model EquipmentMaintenanceSettingChecklistTemplate {
-  id                   Int                         @id @default(autoincrement())
-  maintenanceSettingId Int                         @map("maintenance_setting_id")
-  checklistTemplateId  Int                         @map("checklist_template_id")
-  isRequired           Boolean                     @default(true) @map("is_required")
-  sortOrder            Int                         @map("sort_order")
-  createdAt            DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
-  createdBy            String                      @map("created_by")
-  createdByUser        User                        @relation("MaintenanceSettingChecklistTemplateCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
-  maintenanceSetting   EquipmentMaintenanceSetting @relation(fields: [maintenanceSettingId], references: [id], onDelete: Cascade)
-  checklistTemplate    ChecklistTemplate           @relation(fields: [checklistTemplateId], references: [id], onDelete: Restrict)
-
-  @@unique([maintenanceSettingId, checklistTemplateId], map: "uq_setting_checklist_templates_template")
-  @@unique([maintenanceSettingId, sortOrder], map: "uq_setting_checklist_templates_sort")
-  @@index([checklistTemplateId], map: "idx_setting_checklist_templates_template_id")
-  @@map("equipment_maintenance_setting_checklist_templates")
-}
-
 model Checklist {
   id                   Int             @id @default(autoincrement())
   equipmentEventId     Int             @map("equipment_event_id")
   equipmentId          Int             @map("equipment_id")
   checklistTemplateId  Int             @map("checklist_template_id")
   assignedUserId       String          @map("assigned_user_id")
-  isRequired           Boolean         @default(true) @map("is_required")
   sortOrder            Int             @map("sort_order")
   status               ChecklistStatus @default(CREATED)
   result               ChecklistResult?
@@ -188,7 +169,7 @@ model Checklist {
   invalidatedByUser    User?            @relation("ChecklistInvalidatedBy", fields: [invalidatedBy], references: [id], onDelete: Restrict)
   details              ChecklistDetail[]
 
-  @@unique([equipmentEventId, checklistTemplateId], map: "uq_checklists_event_template")
+  @@unique([equipmentEventId, assignedUserId], map: "uq_checklists_event_assigned_user")
   @@unique([equipmentEventId, sortOrder], map: "uq_checklists_event_sort")
   @@index([equipmentEventId], map: "idx_checklists_event_id")
   @@index([equipmentId], map: "idx_checklists_equipment_id")

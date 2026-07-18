@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { EquipmentEventStatus, Prisma } from '@prisma/client';
+import { ChecklistStatus, EquipmentEventStatus, Prisma } from '@prisma/client';
 import { EquipmentEventAccessAssertions } from './equipment-event-access.assertions';
 import { EquipmentEventChecklistAssertions } from './equipment-event-checklist.assertions';
 import {
@@ -20,6 +20,8 @@ export class EquipmentEventStateAssertions {
     eventId: number,
     userId?: string | null,
   ) {
+    await this.lockEventForUpdate(tx, eventId);
+
     const event = await tx.equipmentEvent.findUnique({
       where: { id: eventId },
       select: {
@@ -56,7 +58,7 @@ export class EquipmentEventStateAssertions {
     }
 
     this.accessAssertions.assertAssignedResponsible(event.responsibles, userId);
-    await this.checklistAssertions.assertRequiredChecklistsCompleted(
+    await this.checklistAssertions.assertAllChecklistsCompleted(
       tx,
       eventId,
     );
@@ -68,6 +70,8 @@ export class EquipmentEventStateAssertions {
     tx: Prisma.TransactionClient,
     eventId: number,
   ) {
+    await this.lockEventForUpdate(tx, eventId);
+
     const event = await tx.equipmentEvent.findUnique({
       where: { id: eventId },
       select: { id: true, status: true },
@@ -98,9 +102,17 @@ export class EquipmentEventStateAssertions {
     eventId: number,
     userId?: string | null,
   ) {
+    await this.lockEventForUpdate(tx, eventId);
+
     const event = await tx.equipmentEvent.findUnique({
       where: { id: eventId },
       select: {
+        checklists: {
+          select: {
+            assignedUserId: true,
+            status: true,
+          },
+        },
         id: true,
         responsibles: {
           select: {
@@ -125,8 +137,79 @@ export class EquipmentEventStateAssertions {
       );
     }
 
+    this.assertChecklistsMatchResponsibles(event);
+    this.assertChecklistsAreCreated(event.checklists);
     this.accessAssertions.assertAssignedResponsible(event.responsibles, userId);
 
     return event;
+  }
+
+  private assertChecklistsMatchResponsibles(event: {
+    checklists: Array<{ assignedUserId: string; status: ChecklistStatus }>;
+    responsibles: Array<{ userId: string }>;
+  }) {
+    if (event.responsibles.length === 0) {
+      throwEquipmentEventBadRequest(
+        'RESPONSIBLES_REQUIRED',
+        'У события должен быть хотя бы один ответственный.',
+      );
+    }
+
+    const responsibleUserIdSet = new Set(
+      event.responsibles.map((responsible) => responsible.userId),
+    );
+    const checklistAssignedUserIds = event.checklists.map(
+      (checklist) => checklist.assignedUserId,
+    );
+    const checklistAssignedUserIdSet = new Set(checklistAssignedUserIds);
+
+    if (
+      checklistAssignedUserIds.length !== responsibleUserIdSet.size ||
+      checklistAssignedUserIdSet.size !== responsibleUserIdSet.size
+    ) {
+      throwEquipmentEventConflict(
+        'CHECKLIST_ASSIGNMENTS_REQUIRED',
+        'У каждого ответственного должен быть ровно один чек-лист.',
+      );
+    }
+
+    for (const responsibleUserId of responsibleUserIdSet) {
+      if (!checklistAssignedUserIdSet.has(responsibleUserId)) {
+        throwEquipmentEventConflict(
+          'CHECKLIST_ASSIGNMENTS_REQUIRED',
+          'Назначения чек-листов должны полностью соответствовать ответственным события.',
+        );
+      }
+    }
+  }
+
+  private assertChecklistsAreCreated(
+    checklists: Array<{ status: ChecklistStatus }>,
+  ) {
+    if (checklists.some((checklist) => checklist.status !== 'CREATED')) {
+      throwEquipmentEventConflict(
+        'CHECKLIST_STATUS_CONFLICT',
+        'Перед стартом все чек-листы события должны быть в статусе CREATED.',
+      );
+    }
+  }
+
+  private async lockEventForUpdate(
+    tx: Prisma.TransactionClient,
+    eventId: number,
+  ) {
+    const lockedEvents = await tx.$queryRaw<Array<{ id: number }>>`
+      SELECT id
+      FROM equipment_events
+      WHERE id = ${eventId}
+      FOR UPDATE
+    `;
+
+    if (lockedEvents.length === 0) {
+      throwEquipmentEventNotFound(
+        'EVENT_NOT_FOUND',
+        'Событие оборудования не найдено.',
+      );
+    }
   }
 }

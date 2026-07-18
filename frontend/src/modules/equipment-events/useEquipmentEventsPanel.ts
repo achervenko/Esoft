@@ -30,6 +30,7 @@ export function useEquipmentEventsPanel({
   const {
     error: formDataError,
     isLoading: isFormDataLoading,
+    checklistTemplates,
     maintenanceSettings,
     reload: reloadFormData,
     responsibleUsers,
@@ -205,6 +206,7 @@ export function useEquipmentEventsPanel({
     isLoading,
     listError: error,
     maintenanceSettings,
+    checklistTemplates,
     message,
     modalState: {
       ...modalState,

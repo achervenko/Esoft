@@ -26,7 +26,6 @@ model User {
   updatedChecklistTemplates                       ChecklistTemplate[]                            @relation("ChecklistTemplateUpdatedBy")
   publishedChecklistTemplates                     ChecklistTemplate[]                            @relation("ChecklistTemplatePublishedBy")
   archivedChecklistTemplates                      ChecklistTemplate[]                            @relation("ChecklistTemplateArchivedBy")
-  createdMaintenanceSettingChecklistTemplateLinks EquipmentMaintenanceSettingChecklistTemplate[] @relation("MaintenanceSettingChecklistTemplateCreatedBy")
   assignedChecklists                              Checklist[]                                    @relation("ChecklistAssignedUser")
   createdChecklists                               Checklist[]                                    @relation("ChecklistCreatedBy")
   startedChecklists                               Checklist[]                                    @relation("ChecklistStartedBy")

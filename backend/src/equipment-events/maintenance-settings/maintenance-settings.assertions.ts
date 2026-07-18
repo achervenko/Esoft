@@ -6,6 +6,7 @@ import {
 } from './maintenance-settings.relations';
 import {
   throwMaintenanceSettingConflict,
+  throwMaintenanceSettingBadRequest,
   throwMaintenanceSettingNotFound,
 } from './maintenance-settings.errors';
 
@@ -47,7 +48,7 @@ export class MaintenanceSettingsAssertions {
     }
 
     if (!maintenanceType.isActive) {
-      throwMaintenanceSettingNotFound(
+      throwMaintenanceSettingBadRequest(
         'MAINTENANCE_TYPE_INACTIVE',
         'Вид обслуживания отключён.',
       );
@@ -98,5 +99,36 @@ export class MaintenanceSettingsAssertions {
     }
 
     return setting;
+  }
+
+  async assertActiveChecklistTemplate(
+    tx: Prisma.TransactionClient,
+    checklistTemplateId: number,
+  ) {
+    const [checklistTemplate] = await tx.$queryRaw<
+      Array<{ id: number; isActive: boolean; isPublished: boolean }>
+    >`
+      SELECT
+        id,
+        is_active AS "isActive",
+        is_published AS "isPublished"
+      FROM checklist_templates
+      WHERE id = ${checklistTemplateId}
+      FOR UPDATE
+    `;
+
+    if (!checklistTemplate) {
+      throwMaintenanceSettingNotFound(
+        'CHECKLIST_TEMPLATE_NOT_FOUND',
+        'Шаблон чек-листа не найден.',
+      );
+    }
+
+    if (!checklistTemplate.isActive || !checklistTemplate.isPublished) {
+      throwMaintenanceSettingBadRequest(
+        'CHECKLIST_TEMPLATE_INACTIVE',
+        'Можно выбрать только активный шаблон чек-листа.',
+      );
+    }
   }
 }

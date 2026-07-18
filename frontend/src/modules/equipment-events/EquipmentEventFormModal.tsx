@@ -1,4 +1,5 @@
 import type { EquipmentEventItem } from "../../shared/api/equipment-events/equipment-events.types";
+import type { ChecklistTemplateListItem } from "../../shared/api/checklists";
 import type { MaintenanceSetting } from "../../shared/api/maintenance/maintenance.types";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import { SelectDropdown } from "../../shared/ui/SelectDropdown";
@@ -15,6 +16,7 @@ export type { EquipmentEventFormPayload } from "./equipment-event-form.types";
 
 type EquipmentEventFormModalProps = {
   error?: string | null;
+  checklistTemplates: ChecklistTemplateListItem[];
   users: ResponsibleUserOption[];
   event?: EquipmentEventItem | null;
   isSaving: boolean;
@@ -26,6 +28,7 @@ type EquipmentEventFormModalProps = {
 
 export function EquipmentEventFormModal({
   error: serverError = null,
+  checklistTemplates,
   users,
   event = null,
   isSaving,
@@ -36,6 +39,7 @@ export function EquipmentEventFormModal({
 }: EquipmentEventFormModalProps) {
   const form = useEquipmentEventForm({
     event,
+    equipmentVisibleId: event?.equipment.visibleId,
     isSaving,
     maintenanceSettings,
     mode,
@@ -80,15 +84,13 @@ export function EquipmentEventFormModal({
           users={form.responsibleOptions}
         />
 
-        {mode === "create" ? (
-          <EquipmentEventChecklistAssignments
-            checklistAssignees={form.checklistAssignees}
-            checklistTemplates={form.selectedChecklistTemplates}
-            onAssign={form.assignChecklist}
-            responsibleUserIds={form.responsibleUserIds}
-            users={form.responsibleOptions}
-          />
-        ) : null}
+        <EquipmentEventChecklistAssignments
+          checklistTemplateIdByResponsible={form.checklistTemplateIdsByResponsible}
+          checklistTemplateOptions={checklistTemplates}
+          onAssign={form.assignChecklistTemplate}
+          responsibleUserIds={form.responsibleUserIds}
+          users={form.responsibleOptions}
+        />
 
         <label className="form-field">
           <span>Комментарий</span>

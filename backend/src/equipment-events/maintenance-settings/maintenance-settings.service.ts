@@ -8,7 +8,6 @@ import {
   writeMaintenanceSettingUpdatedAudit,
 } from './maintenance-settings.audit';
 import {
-  throwMaintenanceSettingBadRequest,
   throwMaintenanceSettingPrismaError,
 } from './maintenance-settings.errors';
 import {
@@ -95,6 +94,12 @@ export class MaintenanceSettingsService {
           tx,
           input.maintenanceTypeId,
         );
+        if (input.defaultChecklistTemplateId !== null) {
+          await this.assertions.assertActiveChecklistTemplate(
+            tx,
+            input.defaultChecklistTemplateId,
+          );
+        }
         await this.assertions.assertSettingDoesNotExist(
           tx,
           equipment.modelId,
@@ -105,13 +110,7 @@ export class MaintenanceSettingsService {
           data: buildSettingCreateData({
             equipmentModelId: equipment.modelId,
             maintenanceTypeId: input.maintenanceTypeId,
-            input: {
-              ...input,
-              ...this.buildChecklistLinkCreationAuditInput(
-                input.checklistTemplates,
-                userId,
-              ),
-            },
+            input,
           }),
           select: { id: true },
         });
@@ -158,18 +157,20 @@ export class MaintenanceSettingsService {
           settingId,
         );
 
+        if (
+          input.defaultChecklistTemplateId !== undefined &&
+          input.defaultChecklistTemplateId !== null
+        ) {
+          await this.assertions.assertActiveChecklistTemplate(
+            tx,
+            input.defaultChecklistTemplateId,
+          );
+        }
+
         await tx.equipmentMaintenanceSetting.update({
           data: buildSettingUpdateData(input),
           where: { id: settingId },
         });
-
-        if (input.checklistTemplates !== undefined) {
-          await this.replaceChecklistTemplateLinks(tx, {
-            checklistTemplates: input.checklistTemplates,
-            settingId,
-            userId,
-          });
-        }
 
         const newSetting = await this.assertions.assertSettingExists(
           tx,
@@ -259,54 +260,5 @@ export class MaintenanceSettingsService {
     equipmentModelId: number,
   ) {
     return tx.equipment.count({ where: { modelId: equipmentModelId } });
-  }
-
-  private async replaceChecklistTemplateLinks(
-    tx: Prisma.TransactionClient,
-    params: {
-      checklistTemplates: MaintenanceSettingInput['checklistTemplates'];
-      settingId: number;
-      userId?: string | null;
-    },
-  ) {
-    await tx.equipmentMaintenanceSettingChecklistTemplate.deleteMany({
-      where: { maintenanceSettingId: params.settingId },
-    });
-
-    if (params.checklistTemplates.length === 0) {
-      return;
-    }
-
-    const createdBy = this.requireUserIdForChecklistLinks(params.userId);
-
-    await tx.equipmentMaintenanceSettingChecklistTemplate.createMany({
-      data: params.checklistTemplates.map((item) => ({
-        checklistTemplateId: item.checklistTemplateId,
-        createdBy,
-        isRequired: item.isRequired,
-        maintenanceSettingId: params.settingId,
-        sortOrder: item.sortOrder,
-      })),
-    });
-  }
-
-  private requireUserIdForChecklistLinks(userId?: string | null): string {
-    if (!userId) {
-      throwMaintenanceSettingBadRequest(
-        'SESSION_REQUIRED',
-        'Сессия пользователя не найдена.',
-      );
-    }
-
-    return userId;
-  }
-
-  private buildChecklistLinkCreationAuditInput(
-    checklistTemplates: MaintenanceSettingInput['checklistTemplates'],
-    userId?: string | null,
-  ) {
-    return checklistTemplates.length === 0
-      ? {}
-      : { createdBy: this.requireUserIdForChecklistLinks(userId) };
   }
 }

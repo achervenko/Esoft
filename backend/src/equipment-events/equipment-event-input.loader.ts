@@ -66,6 +66,15 @@ export class EquipmentEventInputLoader {
     const event = await tx.equipmentEvent.findUnique({
       where: { id: params.eventId },
       select: {
+        checklists: {
+          orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+          select: {
+            assignedUserId: true,
+            checklistTemplateId: true,
+            id: true,
+            sortOrder: true,
+          },
+        },
         equipment: {
           select: {
             id: true,
@@ -127,21 +136,9 @@ export class EquipmentEventInputLoader {
     const nextEventTypeId =
       maintenanceTypeId === event.eventTypeId ? undefined : maintenanceTypeId;
 
-    if (nextEquipmentId !== undefined || nextEventTypeId !== undefined) {
-      await this.assertEventHasNoChecklistsBeforeSettingChange(
-        tx,
-        params.eventId,
-      );
-    }
-
-    if (params.responsibleUserIds) {
-      await this.assertChecklistAssigneesStayResponsible(tx, {
-        eventId: params.eventId,
-        nextResponsibleUserIds: params.responsibleUserIds,
-      });
-    }
-
     return {
+      currentChecklists: event.checklists,
+      currentEquipmentId: event.equipment.id,
       currentNote: event.note,
       currentPlannedDate: event.plannedDate,
       currentResponsibleUserIds: event.responsibles.map((item) => item.userId),
@@ -241,55 +238,6 @@ export class EquipmentEventInputLoader {
       throwEquipmentEventNotFound(
         'EVENT_NOT_FOUND',
         'Событие оборудования не найдено.',
-      );
-    }
-  }
-
-  private async assertEventHasNoChecklistsBeforeSettingChange(
-    tx: Prisma.TransactionClient,
-    eventId: number,
-  ) {
-    const checklist = await tx.$queryRaw<Array<{ id: number }>>`
-      SELECT id
-      FROM checklists
-      WHERE equipment_event_id = ${eventId}
-      LIMIT 1
-    `;
-
-    if (checklist.length > 0) {
-      throwEquipmentEventConflict(
-        'EVENT_CHECKLISTS_ALREADY_CREATED',
-        'Нельзя изменить оборудование или вид обслуживания после создания чек-листов события.',
-      );
-    }
-  }
-
-  private async assertChecklistAssigneesStayResponsible(
-    tx: Prisma.TransactionClient,
-    params: {
-      eventId: number;
-      nextResponsibleUserIds: string[];
-    },
-  ) {
-    const nextResponsibleUserIds = [...new Set(params.nextResponsibleUserIds)];
-
-    const checklistAssignees = await tx.$queryRaw<
-      Array<{ assignedUserId: string }>
-    >`
-      SELECT DISTINCT assigned_user_id AS "assignedUserId"
-      FROM checklists
-      WHERE equipment_event_id = ${params.eventId}
-    `;
-
-    const nextResponsibleUserIdSet = new Set(nextResponsibleUserIds);
-    const hasRemovedChecklistAssignee = checklistAssignees.some(
-      (assignee) => !nextResponsibleUserIdSet.has(assignee.assignedUserId),
-    );
-
-    if (hasRemovedChecklistAssignee) {
-      throwEquipmentEventConflict(
-        'CHECKLIST_ASSIGNEE_NOT_RESPONSIBLE',
-        'Нельзя удалить ответственного, которому назначен чек-лист события.',
       );
     }
   }

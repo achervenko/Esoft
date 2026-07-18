@@ -176,7 +176,6 @@ export type EquipmentEventChecklistRecord = {
   assignedUserId: string;
   checklistTemplateId: number;
   id: number;
-  isRequired: boolean;
   sortOrder: number;
   status: ChecklistStatus;
 };

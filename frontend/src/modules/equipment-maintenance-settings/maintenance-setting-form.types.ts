@@ -4,14 +4,13 @@ import type {
   MaintenanceExecutionType,
   MaintenancePeriodicity,
   MaintenanceSetting,
-  MaintenanceSettingChecklistTemplatePayload,
   MaintenanceSettingUpdatePayload,
 } from "../../shared/api/maintenance/maintenance.types";
 
 export type MaintenanceSettingFormMode = "create" | "edit";
 
 export type MaintenanceSettingFormPayload = {
-  checklistTemplates: MaintenanceSettingChecklistTemplatePayload[];
+  defaultChecklistTemplateId?: number | null;
   maintenanceTypeId?: number;
   executionType: MaintenanceExecutionType;
   periodicity: MaintenancePeriodicity | null;

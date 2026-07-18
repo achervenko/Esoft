@@ -1,5 +1,6 @@
 import { throwEquipmentEventBadRequest } from './equipment-events.errors';
 import {
+  parseChecklistAssignments,
   parseOptionalNullableText,
   parseOptionalPositiveInteger,
   parsePositiveInteger,
@@ -15,8 +16,23 @@ export function parseUpdateCreatedEventDto(
   dto: UpdateCreatedEquipmentEventDto | undefined,
 ): UpdateCreatedEquipmentEventData {
   const body = dto ?? {};
+  const responsibleUserIds =
+    body.responsibleUserIds === undefined
+      ? undefined
+      : parseResponsibleUserIds(body.responsibleUserIds);
 
   const data: UpdateCreatedEquipmentEventData = {
+    checklistAssignments:
+      body.checklistAssignments === undefined
+        ? undefined
+        : parseChecklistAssignments(
+            body.checklistAssignments,
+            responsibleUserIds ?? [],
+            {
+              validateResponsibleAssignments:
+                responsibleUserIds !== undefined,
+            },
+          ),
     equipmentVisibleId: parseOptionalPositiveInteger(
       body.equipmentVisibleId,
       'EQUIPMENT_INVALID',
@@ -41,10 +57,7 @@ export function parseUpdateCreatedEventDto(
       body.note === undefined
         ? undefined
         : parseOptionalNullableText(body.note, 'NOTE_INVALID'),
-    responsibleUserIds:
-      body.responsibleUserIds === undefined
-        ? undefined
-        : parseResponsibleUserIds(body.responsibleUserIds),
+    responsibleUserIds,
     version: parsePositiveInteger(
       body.version,
       'VERSION_REQUIRED',
@@ -55,6 +68,7 @@ export function parseUpdateCreatedEventDto(
   if (
     data.equipmentVisibleId === undefined &&
     data.maintenanceTypeId === undefined &&
+    data.checklistAssignments === undefined &&
     data.note === undefined &&
     data.plannedDate === undefined &&
     data.responsibleUserIds === undefined

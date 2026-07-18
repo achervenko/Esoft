@@ -107,7 +107,7 @@ export function useMaintenanceSettingsPanel({
         clearFeedback();
 
         const result = await createSetting({
-          checklistTemplates: payload.checklistTemplates,
+          defaultChecklistTemplateId: payload.defaultChecklistTemplateId!,
           maintenanceTypeId: payload.maintenanceTypeId,
           executionType: payload.executionType,
           periodicity: payload.periodicity,

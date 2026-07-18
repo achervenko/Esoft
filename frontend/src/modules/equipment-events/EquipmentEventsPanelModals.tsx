@@ -1,3 +1,4 @@
+import type { ChecklistTemplateListItem } from "../../shared/api/checklists";
 import type { MaintenanceSetting } from "../../shared/api/maintenance/maintenance.types";
 import { ConfirmDialog } from "../../shared/ui/ConfirmDialog";
 import { CompleteEquipmentEventModal } from "./CompleteEquipmentEventModal";
@@ -13,6 +14,7 @@ import type { EquipmentEventsPanelModalState } from "./equipment-events-panel.ty
 type EquipmentEventsPanelModalsProps = {
   actionError: string | null;
   activeAction: EquipmentEventAction;
+  checklistTemplates: ChecklistTemplateListItem[];
   maintenanceSettings: MaintenanceSetting[];
   modalState: EquipmentEventsPanelModalState;
   onCancel: () => Promise<void>;
@@ -28,6 +30,7 @@ type EquipmentEventsPanelModalsProps = {
 export function EquipmentEventsPanelModals({
   actionError,
   activeAction,
+  checklistTemplates,
   maintenanceSettings,
   modalState,
   onCancel,
@@ -43,6 +46,7 @@ export function EquipmentEventsPanelModals({
     <>
       {modalState.activeForm ? (
         <EquipmentEventFormModal
+          checklistTemplates={checklistTemplates}
           error={actionError}
           users={responsibleUsers}
           event={modalState.activeForm.event ?? null}
@@ -81,6 +85,7 @@ export function EquipmentEventsPanelModals({
 
       {modalState.detailEvent ? (
         <EquipmentEventDetailModal
+          checklistTemplates={checklistTemplates}
           event={modalState.detailEvent}
           onClose={onCloseDetail}
         />

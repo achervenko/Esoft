@@ -61,6 +61,7 @@ export function EquipmentEventsPanel({
       <EquipmentEventsPanelModals
         actionError={panel.actionError}
         activeAction={panel.activeAction}
+        checklistTemplates={panel.checklistTemplates}
         maintenanceSettings={panel.maintenanceSettings}
         modalState={panel.modalState}
         onCancel={panel.handleCancel}

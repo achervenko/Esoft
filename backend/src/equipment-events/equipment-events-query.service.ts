@@ -163,7 +163,6 @@ export class EquipmentEventsQueryService {
         equipment_event_id AS "equipmentEventId",
         checklist_template_id AS "checklistTemplateId",
         assigned_user_id AS "assignedUserId",
-        is_required AS "isRequired",
         status,
         sort_order AS "sortOrder"
       FROM checklists
@@ -179,7 +178,6 @@ export class EquipmentEventsQueryService {
         assignedUserId: checklist.assignedUserId,
         checklistTemplateId: checklist.checklistTemplateId,
         id: checklist.id,
-        isRequired: checklist.isRequired,
         sortOrder: checklist.sortOrder,
         status: checklist.status,
       });

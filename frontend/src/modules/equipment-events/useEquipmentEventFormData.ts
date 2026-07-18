@@ -1,4 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  getChecklistTemplates,
+  type ChecklistTemplateListItem,
+} from "../../shared/api/checklists";
 import {
   getEquipmentEventResponsibleUsers,
 } from "../../shared/api/equipment-events/equipment-events.api";
@@ -14,30 +18,45 @@ export function useEquipmentEventFormData(
   const [maintenanceSettings, setMaintenanceSettings] = useState<
     MaintenanceSetting[]
   >([]);
+  const [checklistTemplates, setChecklistTemplates] = useState<
+    ChecklistTemplateListItem[]
+  >([]);
   const [responsibleUsers, setResponsibleUsers] = useState<
     ResponsibleUserOption[]
   >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const latestReloadIdRef = useRef(0);
 
   const reload = useCallback(
     async (options?: { shouldApply?: () => boolean }) => {
+      const reloadId = latestReloadIdRef.current + 1;
+      latestReloadIdRef.current = reloadId;
+
       setIsLoading(true);
       setError(null);
-      setMaintenanceSettings([]);
-      setResponsibleUsers([]);
 
       try {
-        const [settingsResponse, responsibleUsersResponse] =
-          await Promise.all([
-            getMaintenanceSettings(visibleId),
-            getEquipmentEventResponsibleUsers(),
-          ]);
+        const [
+          settingsResponse,
+          checklistTemplatesResponse,
+          responsibleUsersResponse,
+        ] = await Promise.all([
+          enabled ? getMaintenanceSettings(visibleId) : Promise.resolve(null),
+          getChecklistTemplates({ limit: 200, state: "ACTIVE" }),
+          enabled
+            ? getEquipmentEventResponsibleUsers()
+            : Promise.resolve(null),
+        ]);
 
-        if (options?.shouldApply?.() !== false) {
-          setMaintenanceSettings(settingsResponse.settings);
+        if (
+          options?.shouldApply?.() !== false &&
+          latestReloadIdRef.current === reloadId
+        ) {
+          setMaintenanceSettings(settingsResponse?.settings ?? []);
+          setChecklistTemplates(checklistTemplatesResponse.items);
           setResponsibleUsers(
-            responsibleUsersResponse.users.map((user) => ({
+            (responsibleUsersResponse?.users ?? []).map((user) => ({
               id: user.userId,
               name: user.fullName,
               position: user.position,
@@ -45,30 +64,28 @@ export function useEquipmentEventFormData(
           );
         }
       } catch (requestError) {
-        if (options?.shouldApply?.() !== false) {
+        if (
+          options?.shouldApply?.() !== false &&
+          latestReloadIdRef.current === reloadId
+        ) {
           setError(getApiErrorMessage(requestError));
         }
       } finally {
-        if (options?.shouldApply?.() !== false) {
+        if (
+          options?.shouldApply?.() !== false &&
+          latestReloadIdRef.current === reloadId
+        ) {
           setIsLoading(false);
         }
       }
     },
-    [visibleId],
+    [enabled, visibleId],
   );
 
   useEffect(() => {
     let isMounted = true;
 
-    setMaintenanceSettings([]);
-    setResponsibleUsers([]);
-    setError(null);
-
-    if (enabled) {
-      void reload({ shouldApply: () => isMounted });
-    } else {
-      setIsLoading(false);
-    }
+    void reload({ shouldApply: () => isMounted });
 
     return () => {
       isMounted = false;
@@ -77,6 +94,7 @@ export function useEquipmentEventFormData(
 
   return {
     error,
+    checklistTemplates,
     isLoading,
     maintenanceSettings,
     reload,

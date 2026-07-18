@@ -1,7 +1,7 @@
 import { EquipmentMaintenanceExecutionType } from '@prisma/client';
 import {
-  hasChecklistTemplatesPayload,
-  parseChecklistTemplates,
+  hasDefaultChecklistTemplatePayload,
+  parseNullableChecklistTemplateId,
   parseRequiredPositiveInteger,
 } from './maintenance-setting-checklists.validation';
 import {
@@ -26,7 +26,6 @@ export type {
 } from './maintenance-settings.dto';
 export type {
   MaintenanceBaseSettingInput,
-  MaintenanceSettingChecklistTemplateInput,
   MaintenanceSettingInput,
   MaintenanceSettingUpdateInput,
   PeriodicityInput,
@@ -55,8 +54,9 @@ export function parseUpdateMaintenanceSettingDto(
 
   assertMaintenanceTypeNotMutable(payload);
 
-  if (hasChecklistTemplatesPayload(payload)) {
-    result.checklistTemplates = parseChecklistTemplates(payload);
+  if (hasDefaultChecklistTemplatePayload(payload)) {
+    result.defaultChecklistTemplateId =
+      parseNullableChecklistTemplateId(payload);
   }
 
   if ('executionType' in payload) {
@@ -89,7 +89,9 @@ function parseBaseSettingInput(
   payload: MaintenanceSettingBaseDto,
 ): MaintenanceBaseSettingInput {
   return {
-    checklistTemplates: parseChecklistTemplates(payload),
+    defaultChecklistTemplateId: hasDefaultChecklistTemplatePayload(payload)
+      ? parseNullableChecklistTemplateId(payload)
+      : null,
     executionType: parseRequiredExecutionType(payload.executionType),
     periodicity: parseOptionalPeriodicity(payload),
   };

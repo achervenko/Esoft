@@ -2,32 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { AuditAction, ChecklistStatus, Prisma } from '@prisma/client';
 import { writeChecklistAudit } from '../checklist-common/checklists.audit';
 
-const EVENT_COMPLETED_CANCELLATION_REASON = 'Событие завершено';
 const EVENT_CANCELLED_CANCELLATION_REASON = 'Событие оборудования отменено.';
 const EVENT_CHECKLIST_ENTITY_TYPE = 'equipment_event_checklist';
 
 export type LockedEventChecklistForCompletion = {
   id: number;
-  isRequired: boolean;
   status: ChecklistStatus;
 };
 
 @Injectable()
 export class ChecklistEventCompletionService {
-  // Precondition: the equipment event row has already been locked by the caller.
-  async cancelOptionalActiveChecklistsForCompletedEvent(
-    tx: Prisma.TransactionClient,
-    checklists: LockedEventChecklistForCompletion[],
-    userId: string,
-  ) {
-    return this.cancelChecklists(
-      tx,
-      checklists.filter((checklist) => !checklist.isRequired),
-      userId,
-      EVENT_COMPLETED_CANCELLATION_REASON,
-    );
-  }
-
   // Precondition: the equipment event row has already been locked by the caller.
   async cancelActiveChecklistsForCancelledEvent(
     tx: Prisma.TransactionClient,

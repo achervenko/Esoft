@@ -13,6 +13,7 @@ export type CompleteEquipmentEventDto = {
 };
 
 export type UpdateCreatedEquipmentEventDto = {
+  checklistAssignments?: unknown;
   equipmentVisibleId?: unknown;
   maintenanceTypeId?: unknown;
   note?: unknown;
@@ -51,6 +52,7 @@ export type CompleteEquipmentEventData = {
 };
 
 export type UpdateCreatedEquipmentEventData = {
+  checklistAssignments?: EquipmentEventChecklistAssignment[];
   equipmentVisibleId?: number;
   maintenanceTypeId?: number;
   note?: string | null;

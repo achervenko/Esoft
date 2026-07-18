@@ -41,10 +41,9 @@ export class ChecklistTemplateLifecycleService {
           );
         }
 
-        const deletedLinks =
-          await tx.equipmentMaintenanceSettingChecklistTemplate.deleteMany({
-            where: { checklistTemplateId: id },
-          });
+        const linkedSettingsCount = await tx.equipmentMaintenanceSetting.count({
+          where: { defaultChecklistTemplateId: id },
+        });
         await this.repository.updateTemplateByExpectedVersion(tx, {
           data: {
             archivedAt: new Date(),
@@ -63,13 +62,13 @@ export class ChecklistTemplateLifecycleService {
           fieldName: 'CHECKLIST_TEMPLATE_ARCHIVED',
           newValue: {
             reason: input.reason,
-            removedMaintenanceSettingLinks: deletedLinks.count,
+            linkedMaintenanceSettings: linkedSettingsCount,
           },
           userId,
         });
 
         return {
-          removedMaintenanceSettingLinks: deletedLinks.count,
+          removedMaintenanceSettingLinks: 0,
           template: presentTemplateDetail(
             await this.repository.loadTemplateDetail(id, tx),
           ),

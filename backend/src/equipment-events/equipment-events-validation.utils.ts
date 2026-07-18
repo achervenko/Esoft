@@ -36,8 +36,11 @@ export function parseResponsibleUserIds(value: unknown) {
 export function parseChecklistAssignments(
   value: unknown,
   responsibleUserIds: string[],
+  options?: {
+    validateResponsibleAssignments?: boolean;
+  },
 ): EquipmentEventChecklistAssignment[] {
-  if (value === undefined || value === null) {
+  if (value === undefined) {
     return [];
   }
 
@@ -48,10 +51,19 @@ export function parseChecklistAssignments(
     );
   }
 
+  const shouldValidateResponsibleAssignments =
+    options?.validateResponsibleAssignments ?? true;
   const responsibleUserIdSet = new Set(responsibleUserIds);
-  const templateIds = new Set<number>();
+  const assignedUserIds = new Set<string>();
 
-  return value.map((item) => {
+  if (value.length === 0) {
+    throwEquipmentEventBadRequest(
+      'CHECKLIST_ASSIGNMENTS_REQUIRED',
+      'Укажите назначения чек-листов для всех ответственных.',
+    );
+  }
+
+  const assignments = value.map((item) => {
     if (!item || typeof item !== 'object') {
       throwEquipmentEventBadRequest(
         'CHECKLIST_ASSIGNMENT_INVALID',
@@ -71,27 +83,55 @@ export function parseChecklistAssignments(
       'Некорректный исполнитель чек-листа.',
     );
 
-    if (templateIds.has(checklistTemplateId)) {
+    if (assignedUserIds.has(assignedUserId)) {
       throwEquipmentEventBadRequest(
-        'CHECKLIST_ASSIGNMENT_DUPLICATE',
-        'Шаблон чек-листа назначен несколько раз.',
+        'CHECKLIST_ASSIGNEE_DUPLICATE',
+        'Ответственному можно назначить только один чек-лист.',
       );
     }
 
-    if (!responsibleUserIdSet.has(assignedUserId)) {
+    if (
+      shouldValidateResponsibleAssignments &&
+      responsibleUserIdSet.size > 0 &&
+      !responsibleUserIdSet.has(assignedUserId)
+    ) {
       throwEquipmentEventBadRequest(
         'CHECKLIST_ASSIGNED_USER_NOT_RESPONSIBLE',
         'Исполнитель чек-листа должен быть ответственным за событие.',
       );
     }
 
-    templateIds.add(checklistTemplateId);
+    assignedUserIds.add(assignedUserId);
 
     return {
       assignedUserId,
       checklistTemplateId,
     };
   });
+
+  if (
+    shouldValidateResponsibleAssignments &&
+    responsibleUserIdSet.size > 0 &&
+    assignments.length !== responsibleUserIdSet.size
+  ) {
+    throwEquipmentEventBadRequest(
+      'CHECKLIST_ASSIGNMENTS_REQUIRED',
+      'Назначения чек-листов должны полностью покрывать всех ответственных.',
+    );
+  }
+
+  if (shouldValidateResponsibleAssignments && responsibleUserIdSet.size > 0) {
+    for (const responsibleUserId of responsibleUserIdSet) {
+      if (!assignedUserIds.has(responsibleUserId)) {
+        throwEquipmentEventBadRequest(
+          'CHECKLIST_ASSIGNMENTS_REQUIRED',
+          'Назначения чек-листов должны полностью покрывать всех ответственных.',
+        );
+      }
+    }
+  }
+
+  return assignments;
 }
 
 export function parseOptionalNonEmptyString(

@@ -13,18 +13,16 @@ type MaintenanceSettingsTableProps = {
   settings: MaintenanceSetting[];
 };
 
-function getSortedChecklistTemplates(setting: MaintenanceSetting) {
-  return [...setting.checklistTemplates].sort(
-    (left, right) =>
-      left.sortOrder - right.sortOrder ||
-      left.checklistTemplateId - right.checklistTemplateId,
-  );
-}
+function formatChecklistTemplate(setting: MaintenanceSetting) {
+  if (!setting.defaultChecklistTemplate) {
+    return "Шаблон не назначен";
+  }
 
-function formatChecklistTemplatesSortValue(setting: MaintenanceSetting) {
-  return getSortedChecklistTemplates(setting)
-    .map((template) => `${template.name} #${template.checklistTemplateId}`)
-    .join(", ");
+  if (setting.defaultChecklistTemplate.state === "ARCHIVED") {
+    return `${setting.defaultChecklistTemplate.name} #${setting.defaultChecklistTemplate.checklistTemplateId} (Шаблон удалён)`;
+  }
+
+  return `${setting.defaultChecklistTemplate.name} #${setting.defaultChecklistTemplate.checklistTemplateId}`;
 }
 
 const columns = (
@@ -57,21 +55,9 @@ const columns = (
   },
   {
     key: "checklistTemplate",
-    label: "Шаблоны",
-    render: (setting) =>
-      setting.checklistTemplates.length > 0 ? (
-        <div className="maintenance-settings-checklist-list">
-          {getSortedChecklistTemplates(setting).map((template) => (
-            <span key={template.checklistTemplateId}>
-              {template.name} #{template.checklistTemplateId} (
-              {template.isRequired ? "обязательный" : "необязательный"})
-            </span>
-          ))}
-        </div>
-      ) : (
-        "Не назначены"
-      ),
-    sortValue: formatChecklistTemplatesSortValue,
+    label: "Шаблон по умолчанию",
+    render: (setting) => formatChecklistTemplate(setting),
+    sortValue: formatChecklistTemplate,
   },
   ...(canManage
     ? [

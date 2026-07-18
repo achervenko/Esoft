@@ -1,7 +1,7 @@
 import { EquipmentMaintenanceExecutionType } from '@prisma/client';
 
 export type MaintenanceBaseSettingInput = {
-  checklistTemplates: MaintenanceSettingChecklistTemplateInput[];
+  defaultChecklistTemplateId: number | null;
   executionType: EquipmentMaintenanceExecutionType;
   periodicity: PeriodicityInput | null;
 };
@@ -11,15 +11,9 @@ export type MaintenanceSettingInput = MaintenanceBaseSettingInput & {
 };
 
 export type MaintenanceSettingUpdateInput = {
-  checklistTemplates?: MaintenanceSettingChecklistTemplateInput[];
+  defaultChecklistTemplateId?: number | null;
   executionType?: EquipmentMaintenanceExecutionType;
   periodicity?: PeriodicityInput | null;
-};
-
-export type MaintenanceSettingChecklistTemplateInput = {
-  checklistTemplateId: number;
-  isRequired: boolean;
-  sortOrder: number;
 };
 
 export type PeriodicityInput = {

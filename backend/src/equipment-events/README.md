@@ -1,26 +1,27 @@
 # Equipment Events API
 
-API событий оборудования, настроек обслуживания моделей оборудования и
-справочника видов обслуживания.
+API модуля событий оборудования включает три связанные части:
+
+- события оборудования;
+- настройки обслуживания моделей оборудования;
+- справочник видов обслуживания.
 
 ## Доступ
 
 - Просмотр событий и настроек: любой авторизованный пользователь.
-- Создание, изменение назначенного события и отмена события: `admin`,
-  `chief_engineer`.
-- Взятие события в работу и завершение: только назначенный ответственный
-  пользователь.
+- Создание, изменение и отмена событий: `admin`, `chief_engineer`.
+- Запуск и завершение события: только назначенный ответственный пользователь этого события.
 - Изменение настроек обслуживания: `admin`, `chief_engineer`.
 - Управление справочником видов обслуживания: `admin`.
 
 ## Статусы событий
 
-- `CREATED` — событие назначено и ожидает начала работ.
-- `IN_PROGRESS` — ответственный начал выполнение.
-- `COMPLETED` — работы завершены.
+- `CREATED` — событие создано и ожидает начала работ.
+- `IN_PROGRESS` — событие взято в работу.
+- `COMPLETED` — событие завершено.
 - `CANCELLED` — событие отменено.
 
-Разрешённые переходы:
+Переходы:
 
 ```text
 CREATED     -> IN_PROGRESS
@@ -29,7 +30,29 @@ IN_PROGRESS -> COMPLETED
 IN_PROGRESS -> CANCELLED
 ```
 
-`COMPLETED` и `CANCELLED` — терминальные статусы.
+`COMPLETED` и `CANCELLED` терминальные.
+
+## Модель чек-листов события
+
+Текущая модель фиксирована:
+
+- у события должен быть хотя бы один ответственный;
+- при создании события frontend обязан передать полный массив `checklistAssignments`;
+- каждый элемент `checklistAssignments` означает назначение одного шаблона одному ответственному;
+- внутри одного события у ответственного может быть только один чек-лист;
+- один и тот же шаблон можно назначить нескольким ответственным;
+- экземпляры `Checklist` и `ChecklistDetail` создаются сразу при создании события;
+- `Checklist.isRequired` удалён из модели и больше не участвует в API;
+- шаблон по умолчанию из maintenance setting используется только для предзаполнения формы и не ограничивает create/update события на backend.
+
+Формат назначения:
+
+```json
+{
+  "assignedUserId": "user-id-1",
+  "checklistTemplateId": 12
+}
+```
 
 ## GET /api/equipment-events
 
@@ -48,7 +71,7 @@ limit?: number = 20, max 100
 offset?: number = 0
 ```
 
-`dateFrom/dateTo` фильтруют `factDate`.
+`dateFrom` и `dateTo` фильтруют `factDate`.
 
 Сортировка:
 
@@ -99,7 +122,6 @@ id DESC
       "id": 501,
       "checklistTemplateId": 12,
       "assignedUserId": "user-id-1",
-      "isRequired": true,
       "status": "CREATED",
       "sortOrder": 1
     }
@@ -109,25 +131,30 @@ id DESC
 
 ## GET /api/equipment-events/:id
 
-Возвращает карточку события. Ответ содержит те же основные поля, что список,
-а также `originalPlannedDate`, `createdAt`, `createdBy` и расширенную модель
-оборудования с производителем.
+Возвращает карточку события.
 
-`checklists[]` возвращается в карточке события в том же формате:
+Дополнительно к полям списка ответ содержит:
+
+```text
+originalPlannedDate
+createdAt
+createdBy
+equipment.model.manufacturer
+```
+
+`checklists[]` в detail-ответе содержит:
 
 ```text
 id
 checklistTemplateId
 assignedUserId
-isRequired
 status
 sortOrder
 ```
 
 ## GET /api/equipment-events/responsible-users
 
-Возвращает активных пользователей, связанных с сотрудниками. Используется для
-выбора ответственных в формах создания и редактирования события.
+Возвращает активных пользователей, связанных с сотрудниками.
 
 Доступ: `admin`, `chief_engineer`.
 
@@ -160,12 +187,12 @@ Body:
   "responsibleUserIds": ["user-id-1", "user-id-2"],
   "checklistAssignments": [
     {
-      "checklistTemplateId": 12,
-      "assignedUserId": "user-id-1"
+      "assignedUserId": "user-id-1",
+      "checklistTemplateId": 12
     },
     {
-      "checklistTemplateId": 18,
-      "assignedUserId": "user-id-2"
+      "assignedUserId": "user-id-2",
+      "checklistTemplateId": 12
     }
   ]
 }
@@ -173,56 +200,25 @@ Body:
 
 Правила:
 
-- `plannedDate` обязательна и может быть будущей датой;
+- `plannedDate` обязательна;
 - `factDate` при создании не передаётся и сохраняется как `null`;
-- минимум один ответственный обязателен после дедупликации;
-- вид обслуживания должен быть активен;
-- для модели оборудования должна существовать настройка этого вида
-  обслуживания;
-- `maintenanceSettingId` сохраняется как ссылка на настройку обслуживания и
-  станет `null`, если настройку удалить;
-- `executionType` сохраняется в событие снимком на момент создания;
-- выбранный вид обслуживания хранится как связь `eventTypeId` со справочником,
-  поэтому название вида обслуживания может измениться при редактировании
-  справочника; технический код остаётся неизменным;
-- `checklistAssignments` должен точно соответствовать шаблонам чек-листов
-  настройки обслуживания;
-- `checklistTemplateId` в `checklistAssignments` не должен повторяться;
-- `assignedUserId` каждого чек-листа должен входить в `responsibleUserIds`;
-- каждый чек-лист получает ровно одного исполнителя;
-- событие, ответственные, экземпляры чек-листов и детали чек-листов создаются
-  одной транзакцией.
+- после дедупликации `responsibleUserIds` должен остаться хотя бы один ответственный;
+- ответственные должны существовать, быть привязаны к сотрудникам и не быть отключёнными;
+- вид обслуживания должен существовать и быть активным;
+- для модели оборудования должна существовать настройка этого вида обслуживания;
+- `maintenanceSettingId` сохраняется как ссылка на настройку, а `executionType` копируется снимком в событие;
+- `checklistAssignments` обязателен и трактуется как полное итоговое состояние назначений;
+- назначение должно быть ровно одно на каждого ответственного;
+- каждый `assignedUserId` должен входить в итоговый набор ответственных;
+- один и тот же `checklistTemplateId` можно использовать в нескольких назначениях;
+- все выбранные шаблоны должны существовать, быть активными и опубликованными в момент создания;
+- событие, ответственные, чек-листы и `ChecklistDetail` создаются одной транзакцией.
 
-Если в настройке обслуживания нет шаблонов чек-листов, `checklistAssignments`
-можно не передавать или передать пустым массивом.
-
-При создании события backend сразу создаёт экземпляры чек-листов на основании
-связей настройки обслуживания. В экземпляр фиксируются:
-
-```text
-checklistTemplateId
-assignedUserId
-isRequired
-sortOrder
-```
-
-Детали чек-листа создаются снимком из опубликованной структуры шаблона.
-
-Результат:
-
-```text
-source = MANUAL
-status = CREATED
-plannedDate = выбранная дата
-factDate = null
-originalPlannedDate = выбранная дата
-version = 1
-```
+При создании backend сразу создаёт по одному экземпляру `Checklist` на каждого ответственного и копирует структуру шаблона в `checklist_details`.
 
 ## PATCH /api/equipment-events/:id
 
-Изменяет только назначенное событие в статусе `CREATED`, пока работы ещё не
-начались.
+Изменяет событие только в статусе `CREATED`.
 
 Body:
 
@@ -231,7 +227,17 @@ Body:
   "version": 1,
   "plannedDate": "2026-07-23",
   "note": "Комментарий уточнён",
-  "responsibleUserIds": ["user-id-2", "user-id-3"]
+  "responsibleUserIds": ["user-id-1", "user-id-2"],
+  "checklistAssignments": [
+    {
+      "assignedUserId": "user-id-1",
+      "checklistTemplateId": 18
+    },
+    {
+      "assignedUserId": "user-id-2",
+      "checklistTemplateId": 12
+    }
+  ]
 }
 ```
 
@@ -243,399 +249,141 @@ maintenanceTypeId?: number
 plannedDate?: YYYY-MM-DD
 note?: string | null
 responsibleUserIds?: string[]
+checklistAssignments?: { assignedUserId, checklistTemplateId }[]
 version: number
 ```
 
-`version` обязательна для optimistic locking. Если клиент отправил старую
-версию, API возвращает `409 Conflict`.
+Правила:
 
-Фактические ограничения:
-
-- `checklistAssignments` в PATCH не изменяются;
-- изменение `equipmentVisibleId` или `maintenanceTypeId` запрещается после
-  создания чек-листов события и возвращает
-  `EVENT_CHECKLISTS_ALREADY_CREATED`;
-- так как чек-листы создаются вместе с событием, для событий с шаблонами
-  настройки смена оборудования или вида обслуживания практически недоступна;
-- при изменении `responsibleUserIds` нельзя удалить пользователя, которому уже
-  назначен чек-лист события, иначе API вернёт
-  `CHECKLIST_ASSIGNEE_NOT_RESPONSIBLE`.
-
-Если PATCH не меняет бизнес-данные, событие возвращается без увеличения
-`version` и без audit-записи.
+- `version` обязателен для optimistic locking;
+- если передан `responsibleUserIds`, backend нормализует его через `Set`;
+- если `responsibleUserIds` не передан, для проверки `checklistAssignments` используется текущий набор ответственных события;
+- если меняется состав множества `responsibleUserIds`, `checklistAssignments` обязателен и должен описывать полный итоговый набор;
+- если меняется `equipmentVisibleId` или `maintenanceTypeId`, `checklistAssignments` тоже обязателен;
+- если передан `checklistAssignments`, все указанные шаблоны проверяются на активность, даже если часть назначений визуально не изменилась;
+- PATCH может менять только шаблон у существующего ответственного без изменения состава ответственных;
+- событие без фактических изменений не обновляется;
+- при смене оборудования весь набор экземпляров чек-листов пересоздаётся;
+- при неизменённом оборудовании синхронизация идёт дифференциально по `assignedUserId`;
+- неизменённые назначения сохраняют существующие `Checklist.id`;
+- порядок `sortOrder` определяется порядком входного массива `checklistAssignments`.
 
 ## POST /api/equipment-events/:id/start
 
-Переводит назначенное событие в работу.
+Переводит событие из `CREATED` в `IN_PROGRESS`.
 
-Доступ: назначенный ответственный пользователь.
+Доступ: только назначенный ответственный.
 
-```text
-CREATED -> IN_PROGRESS
-```
+Проверки перед стартом:
+
+- событие существует;
+- событие находится в статусе `CREATED`;
+- у события есть хотя бы один ответственный;
+- у события есть хотя бы один чек-лист;
+- множество `assignedUserId` в чек-листах точно совпадает с множеством ответственных;
+- у каждого ответственного ровно один чек-лист;
+- все чек-листы события находятся в статусе `CREATED`.
 
 ## POST /api/equipment-events/:id/complete
 
-Завершает событие.
+Завершает событие из статуса `IN_PROGRESS`.
 
-Доступ: назначенный ответственный пользователь.
+Доступ: только назначенный ответственный.
 
-Body опционален:
+Body:
 
 ```json
 {
-  "factDate": "2026-07-15"
+  "factDate": "2026-07-22"
 }
 ```
 
-Если `factDate` не передана, используется уже сохранённая дата события. Если
-даты нет ни в запросе, ни в событии, API возвращает `FACT_DATE_REQUIRED`.
-Фактическая дата не может быть позже текущей даты в бизнес-таймзоне
-`Europe/Moscow`.
+`factDate` можно не передавать только если она уже сохранена в событии. Если даты нет ни в payload, ни в событии, backend вернёт ошибку.
 
-Событие нельзя завершить, пока не завершены все обязательные чек-листы
-(`isRequired = true`). В этом случае API возвращает
-`REQUIRED_CHECKLISTS_NOT_COMPLETED`.
+Проверки:
 
-Необязательные незавершённые чек-листы (`isRequired = false`) не блокируют
-завершение события. При успешном завершении события все необязательные
-чек-листы этого события в статусах `CREATED` и `IN_PROGRESS` автоматически
-переводятся в `CANCELLED` в той же транзакции:
+- событие существует;
+- событие находится в статусе `IN_PROGRESS`;
+- у события есть хотя бы один ответственный;
+- завершает один из назначенных ответственных;
+- у события есть хотя бы один чек-лист;
+- все чек-листы события имеют статус `COMPLETED`.
 
-```text
-cancelledAt = now
-cancelledBy = пользователь, завершивший событие
-cancellationReason = "Событие завершено"
-version += 1
-```
-
-Для завершения события используется единый порядок блокировок: сначала
-`equipment_events ... FOR UPDATE`, затем активные чек-листы события
-`ORDER BY id FOR UPDATE`.
+Backend не отменяет никакие чек-листы автоматически: для завершения события должны быть завершены все.
 
 ## POST /api/equipment-events/:id/cancel
 
-Отменяет событие.
+Отменяет событие из статусов `CREATED` или `IN_PROGRESS`.
 
 Доступ: `admin`, `chief_engineer`.
 
-Повторная отмена или отмена завершённого события возвращает `409 Conflict`.
-При отмене события активные чек-листы события в статусах `CREATED` и
-`IN_PROGRESS` переводятся в `CANCELLED`. Событие блокируется первым, затем
-активные чек-листы блокируются в порядке `ORDER BY id`; для каждого
-отменённого чек-листа увеличивается `version` и пишется отдельный
-`STATUS_CHANGE` audit.
+При отмене:
 
-## Audit событий
-
-В `audit_log` пишутся:
-
-- создание события — `CREATE`;
-- изменение назначенного события — `UPDATE`, отдельными строками по
-  изменённым полям;
-- изменение статуса — `STATUS_CHANGE`, включая `CREATED -> IN_PROGRESS`,
-  `IN_PROGRESS -> COMPLETED` и отмену;
-- при завершении дополнительно пишется `UPDATE` по полю «Фактическая дата»,
-  если дата изменилась.
-
-Для события используется:
-
-```text
-module = EQUIPMENT
-entityType = equipment_event
-entityId = event.id
-```
-
-## Ошибки событий
-
-Ответы ошибок имеют форму:
-
-```json
-{
-  "code": "EVENT_STATUS_CONFLICT",
-  "message": "Событие в текущем статусе нельзя изменить."
-}
-```
-
-Частые коды:
-
-```text
-CHECKLIST_ASSIGNED_USER_INVALID
-CHECKLIST_ASSIGNED_USER_NOT_RESPONSIBLE
-CHECKLIST_ASSIGNEE_NOT_RESPONSIBLE
-CHECKLIST_ASSIGNMENT_DUPLICATE
-CHECKLIST_ASSIGNMENT_INVALID
-CHECKLIST_ASSIGNMENT_TEMPLATE_INVALID
-CHECKLIST_ASSIGNMENTS_INCOMPLETE
-CHECKLIST_ASSIGNMENTS_INVALID
-CHECKLIST_TEMPLATE_INVALID
-DATE_FROM_INVALID
-DATE_RANGE_INVALID
-DATE_TO_INVALID
-EQUIPMENT_INVALID
-EQUIPMENT_NOT_FOUND
-EVENT_CHECKLISTS_ALREADY_CREATED
-EVENT_NOT_FOUND
-EVENT_RESPONSIBLE_REQUIRED
-EVENT_STATUS_CONFLICT
-EVENT_VERSION_CONFLICT
-FACT_DATE_IN_FUTURE
-FACT_DATE_INVALID
-FACT_DATE_REQUIRED
-LIMIT_INVALID
-MAINTENANCE_SETTING_NOT_FOUND
-MAINTENANCE_TYPE_INACTIVE
-MAINTENANCE_TYPE_INVALID
-MAINTENANCE_TYPE_NOT_FOUND
-MAINTENANCE_TYPE_REQUIRED
-NOTE_INVALID
-OFFSET_INVALID
-PLANNED_DATE_INVALID
-PLANNED_DATE_REQUIRED
-REQUIRED_CHECKLISTS_NOT_COMPLETED
-RESPONSIBLE_INVALID
-RESPONSIBLE_NOT_FOUND
-RESPONSIBLE_USER_INACTIVE
-RESPONSIBLES_REQUIRED
-SESSION_REQUIRED
-STATUS_INVALID
-UPDATE_EMPTY
-USER_EMPLOYEE_NOT_FOUND
-VERSION_REQUIRED
-```
+- событие блокируется в транзакции;
+- активные чек-листы события блокируются и переводятся через сервис завершения чек-листов;
+- статус события меняется на `CANCELLED`.
 
 ## Maintenance settings
 
-Настройки обслуживания моделей задаются таблицей
-`equipment_maintenance_settings`: модель оборудования → вид обслуживания.
-Фронтенд всегда работает через `equipment.visibleId`; `modelId` наружу не
-передаётся.
+Настройки обслуживания существуют на уровне модели оборудования.
 
-Доступ:
+Текущая модель:
 
-- просмотр — любой авторизованный пользователь;
-- изменение — `admin`, `chief_engineer`.
+- одна настройка соответствует одной паре `equipmentModel + maintenanceType`;
+- настройка содержит один необязательный `defaultChecklistTemplateId`;
+- default-шаблон нужен только для UX-предзаполнения форм событий;
+- настройка может существовать без default-шаблона;
+- архивный шаблон может оставаться привязанным к уже существующей настройке;
+- при create и при явной смене `defaultChecklistTemplateId` backend разрешает только активный и опубликованный шаблон;
+- update только `periodicity` или `executionType` не должен падать из-за уже архивированного default.
 
 ### GET /api/equipment/:visibleId/maintenance-settings
 
-Возвращает настройки обслуживания для модели выбранного оборудования:
+Возвращает настройки для модели выбранного оборудования.
+
+Ответ:
 
 ```json
 {
+  "affectedEquipmentCount": 4,
   "equipment": {
     "visibleId": 125,
     "name": "Компрессор №2"
   },
-  "affectedEquipmentCount": 8,
   "settings": [
     {
       "id": 10,
-      "checklistTemplates": [
-        {
-          "checklistTemplateId": 12,
-          "name": "ТО-1",
-          "isRequired": true,
-          "sortOrder": 1
-        },
-        {
-          "checklistTemplateId": 18,
-          "name": "Проверка электрики",
-          "isRequired": false,
-          "sortOrder": 2
-        }
-      ],
+      "executionType": "INTERNAL",
       "maintenanceType": {
         "id": 2,
         "name": "Техническое обслуживание",
         "isActive": true
       },
-      "executionType": "INTERNAL",
+      "defaultChecklistTemplate": {
+        "checklistTemplateId": 12,
+        "name": "Ежемесячный осмотр",
+        "state": "ACTIVE"
+      },
       "periodicity": {
-        "years": 1,
-        "months": 2,
+        "years": 0,
+        "months": 1,
         "weeks": 0,
-        "days": 5
+        "days": 0
       }
     }
   ]
 }
 ```
 
-`affectedEquipmentCount` показывает, сколько карточек оборудования той же
-модели затронет изменение настроек.
+Поле `defaultChecklistTemplate` интерпретируется так:
+
+- `null` — шаблон по умолчанию не назначен;
+- объект с `state: "ACTIVE"` — назначен активный шаблон;
+- объект с `state: "ARCHIVED"` — ссылка сохранена, но шаблон архивирован.
 
 ### GET /api/equipment/:visibleId/maintenance-settings/available-types
 
-Возвращает активные виды обслуживания, которые ещё не настроены для модели
-оборудования:
-
-```json
-{
-  "maintenanceTypes": [
-    {
-      "id": 3,
-      "name": "Диагностика"
-    }
-  ]
-}
-```
-
-### POST /api/equipment/:visibleId/maintenance-settings
-
-Добавляет настройку существующего вида обслуживания для модели оборудования.
-
-Body:
-
-```json
-{
-  "maintenanceTypeId": 2,
-  "checklistTemplates": [
-    {
-      "checklistTemplateId": 12,
-      "isRequired": true,
-      "sortOrder": 1
-    },
-    {
-      "checklistTemplateId": 18,
-      "isRequired": false,
-      "sortOrder": 2
-    }
-  ],
-  "executionType": "INTERNAL",
-  "periodicity": null
-}
-```
-
-Для периодического обслуживания передаётся:
-
-```json
-{
-  "maintenanceTypeId": 2,
-  "checklistTemplates": [],
-  "executionType": "INTERNAL",
-  "periodicity": {
-    "years": 0,
-    "months": 3,
-    "weeks": 0,
-    "days": 0
-  }
-}
-```
-
-Правила `checklistTemplates`:
-
-- поле отсутствует, `null` или пустой массив означают отсутствие связей с
-  шаблонами;
-- `checklistTemplateId` — положительное целое число;
-- `isRequired` — boolean; если поле не передано, backend нормализует его в
-  `true`;
-- `sortOrder` — положительное целое число;
-- `checklistTemplateId` не должен повторяться;
-- `sortOrder` не должен повторяться;
-- порядок должен быть непрерывным от `1` до количества шаблонов.
-
-`periodicity` передаётся только объектом или `null`. Компоненты `years`,
-`months`, `weeks`, `days` должны быть целыми неотрицательными числами. Если
-компонент не передан, backend нормализует его в `0`. Если объект передан, хотя
-бы один компонент должен быть больше `0`. Старые плоские поля
-`periodicityValue` и `periodicityUnit` не используются.
-
-### PATCH /api/equipment/:visibleId/maintenance-settings/:settingId
-
-Изменяет настройку. Можно передать одно или несколько полей:
-
-```json
-{
-  "checklistTemplates": [
-    {
-      "checklistTemplateId": 12,
-      "isRequired": true,
-      "sortOrder": 1
-    }
-  ],
-  "executionType": "EXTERNAL",
-  "periodicity": {
-    "years": 0,
-    "months": 6,
-    "weeks": 0,
-    "days": 0
-  }
-}
-```
-
-Пустой массив очищает связи настройки с шаблонами чек-листов:
-
-```json
-{
-  "checklistTemplates": []
-}
-```
-
-Периодичность очищается основным форматом:
-
-```json
-{
-  "periodicity": null
-}
-```
-
-`executionType` обязателен на уровне БД и не может быть очищен.
-`maintenanceTypeId` в PATCH не изменяется.
-
-### DELETE /api/equipment/:visibleId/maintenance-settings/:settingId
-
-Удаляет настройку вида обслуживания для всей модели оборудования. Уже
-созданные события не удаляются и не изменяются.
-
-### Ошибки Maintenance settings
-
-Основные коды:
-
-```text
-CHECKLIST_TEMPLATE_DUPLICATE
-CHECKLIST_TEMPLATE_ID_INVALID
-CHECKLIST_TEMPLATE_INVALID
-CHECKLIST_TEMPLATE_REQUIRED_INVALID
-CHECKLIST_TEMPLATE_SORT_ORDER_DUPLICATE
-CHECKLIST_TEMPLATE_SORT_ORDER_INVALID
-CHECKLIST_TEMPLATE_SORT_ORDER_SEQUENCE_INVALID
-CHECKLIST_TEMPLATES_INVALID
-EQUIPMENT_NOT_FOUND
-EXECUTION_TYPE_INVALID
-MAINTENANCE_SETTING_ALREADY_EXISTS
-MAINTENANCE_SETTING_NOT_FOUND
-MAINTENANCE_SETTING_UPDATE_EMPTY
-MAINTENANCE_TYPE_INACTIVE
-MAINTENANCE_TYPE_INVALID
-MAINTENANCE_TYPE_NOT_FOUND
-MAINTENANCE_TYPE_REQUIRED
-PERIODICITY_FORMAT_CONFLICT
-PERIODICITY_INVALID
-PERIODICITY_VALUE_INVALID
-REQUEST_BODY_REQUIRED
-SESSION_REQUIRED
-```
-
-## Maintenance types
-
-Справочник видов обслуживания управляется отдельным API.
-
-Доступ:
-
-- `GET /api/maintenance-types` без `includeInactive` — любой авторизованный
-  пользователь;
-- создание, изменение, включение, отключение и просмотр неактивных записей —
-  только `admin`.
-
-### GET /api/maintenance-types
-
-Возвращает активные виды обслуживания. Query:
-
-```text
-includeInactive?: boolean
-```
-
-`includeInactive=true` доступен только `admin`.
+Возвращает активные виды обслуживания, которые ещё не настроены для модели оборудования.
 
 Ответ:
 
@@ -643,9 +391,104 @@ includeInactive?: boolean
 {
   "maintenanceTypes": [
     {
-      "id": 1,
-      "name": "ТО-1",
-      "code": "TO_1",
+      "id": 2,
+      "name": "Техническое обслуживание"
+    }
+  ]
+}
+```
+
+### POST /api/equipment/:visibleId/maintenance-settings
+
+Создаёт настройку обслуживания.
+
+Body:
+
+```json
+{
+  "maintenanceTypeId": 2,
+  "executionType": "INTERNAL",
+  "defaultChecklistTemplateId": 12,
+  "periodicity": {
+    "years": 0,
+    "months": 1,
+    "weeks": 0,
+    "days": 0
+  }
+}
+```
+
+`defaultChecklistTemplateId` можно опустить или передать как `null`.
+
+Правила:
+
+- `maintenanceTypeId` обязателен;
+- вид обслуживания должен существовать и быть активным;
+- настройка для пары `equipmentModel + maintenanceType` должна отсутствовать;
+- если `defaultChecklistTemplateId` передан и не равен `null`, шаблон должен существовать, быть активным и опубликованным;
+- `periodicity` может быть `null`.
+
+### PATCH /api/equipment/:visibleId/maintenance-settings/:settingId
+
+Обновляет существующую настройку.
+
+Body:
+
+```json
+{
+  "defaultChecklistTemplateId": null,
+  "executionType": "EXTERNAL"
+}
+```
+
+Разрешено изменять:
+
+```text
+defaultChecklistTemplateId?: number | null
+executionType?: INTERNAL | EXTERNAL
+periodicity?: { years, months, weeks, days } | null
+```
+
+Правила:
+
+- `maintenanceTypeId` через PATCH менять нельзя;
+- update без полей запрещён;
+- если передан новый `defaultChecklistTemplateId`, он должен указывать на активный и опубликованный шаблон;
+- `defaultChecklistTemplateId: null` очищает default-шаблон;
+- если default-шаблон уже архивирован, update только `executionType` или `periodicity` остаётся допустимым.
+
+### DELETE /api/equipment/:visibleId/maintenance-settings/:settingId
+
+Удаляет настройку обслуживания.
+
+## Maintenance types
+
+Справочник видов обслуживания живёт отдельно от событий и настроек.
+
+### GET /api/maintenance-types
+
+Возвращает список видов обслуживания.
+
+Query:
+
+```text
+includeInactive?: boolean
+```
+
+Правила:
+
+- без `includeInactive` возвращаются только активные виды;
+- `includeInactive=true` доступен только `admin`.
+
+Ответ:
+
+```json
+{
+  "maintenanceTypes": [
+    {
+      "id": 2,
+      "name": "Техническое обслуживание",
+      "code": "TO",
       "isActive": true
     }
   ]
@@ -654,51 +497,105 @@ includeInactive?: boolean
 
 ### POST /api/maintenance-types
 
-Создаёт вид обслуживания. Доступен только `admin`.
+Создаёт вид обслуживания.
+
+Body:
 
 ```json
 {
-  "name": "ТО-1",
-  "code": "TO_1"
+  "name": "Техническое обслуживание",
+  "code": "TO"
 }
 ```
 
-`code` — технический код: латинские заглавные буквы, цифры и `_`, первый символ
-обязательно буква.
+Правила:
+
+- `name` обязателен, максимум 64 символа;
+- `code` обязателен, максимум 32 символа;
+- `code` нормализуется в uppercase;
+- `code` должен начинаться с латинской буквы и содержать только `A-Z`, `0-9`, `_`.
 
 ### PATCH /api/maintenance-types/:id
 
-Переименовывает вид обслуживания. Доступен только `admin`.
-
-```json
-{
-  "name": "ТО-1"
-}
-```
+Изменяет только `name`.
 
 ### POST /api/maintenance-types/:id/activate
 
-Включает вид обслуживания. Доступен только `admin`.
+Активирует вид обслуживания.
 
 ### POST /api/maintenance-types/:id/deactivate
 
-Отключает вид обслуживания. Доступен только `admin`.
+Деактивирует вид обслуживания.
 
-### Ошибки Maintenance types
+## Основные коды ошибок
 
-Основные коды:
+### События оборудования
 
-```text
-INCLUDE_INACTIVE_INVALID
-MAINTENANCE_TYPE_ALREADY_ACTIVE
-MAINTENANCE_TYPE_ALREADY_INACTIVE
-MAINTENANCE_TYPE_CODE_ALREADY_EXISTS
-MAINTENANCE_TYPE_CODE_INVALID
-MAINTENANCE_TYPE_CODE_REQUIRED
-MAINTENANCE_TYPE_CODE_TOO_LONG
-MAINTENANCE_TYPE_NAME_ALREADY_EXISTS
-MAINTENANCE_TYPE_NAME_REQUIRED
-MAINTENANCE_TYPE_NAME_TOO_LONG
-MAINTENANCE_TYPE_NOT_FOUND
-REQUEST_BODY_REQUIRED
-```
+- `CHECKLISTS_NOT_COMPLETED` — не все чек-листы события завершены.
+- `CHECKLISTS_REQUIRED` — у события нет ни одного чек-листа.
+- `CHECKLIST_ASSIGNED_USER_INVALID` — некорректный `assignedUserId` в назначении.
+- `CHECKLIST_ASSIGNED_USER_NOT_RESPONSIBLE` — исполнитель чек-листа не входит в итоговый набор ответственных.
+- `CHECKLIST_ASSIGNEE_DUPLICATE` — одному ответственному назначено больше одного чек-листа.
+- `CHECKLIST_ASSIGNMENTS_INVALID` — `checklistAssignments` не является массивом.
+- `CHECKLIST_ASSIGNMENTS_REQUIRED` — назначения не покрывают всех ответственных или обязательный полный массив не передан.
+- `CHECKLIST_ASSIGNMENT_INVALID` — элемент `checklistAssignments` имеет некорректную структуру.
+- `CHECKLIST_ASSIGNMENT_TEMPLATE_INVALID` — backend не смог синхронизировать итоговый набор чек-листов.
+- `CHECKLIST_SORT_ORDER_DUPLICATE` — временные `sortOrder` при пересоздании чек-листов повторяются.
+- `CHECKLIST_SORT_ORDER_INVALID` — временные `sortOrder` не заданы полностью или имеют некорректный формат.
+- `CHECKLIST_STATUS_CONFLICT` — перед стартом не все чек-листы находятся в статусе `CREATED`.
+- `CHECKLIST_TEMPLATE_INACTIVE` — выбранный шаблон чек-листа неактивен или не опубликован.
+- `CHECKLIST_TEMPLATE_INVALID` — некорректный `checklistTemplateId`.
+- `DATE_FROM_INVALID`, `DATE_TO_INVALID`, `DATE_RANGE_INVALID` — ошибки фильтрации списка по датам.
+- `EQUIPMENT_INVALID`, `EQUIPMENT_NOT_FOUND` — некорректное или отсутствующее оборудование.
+- `EVENT_NOT_FOUND` — событие не найдено.
+- `EVENT_RESPONSIBLE_REQUIRED` — действие пытается выполнить пользователь, который не назначен ответственным.
+- `EVENT_STATUS_CONFLICT` — переход статуса или изменение недопустимы в текущем состоянии.
+- `EVENT_VERSION_CONFLICT` — optimistic lock не совпал.
+- `FACT_DATE_IN_FUTURE`, `FACT_DATE_INVALID`, `FACT_DATE_REQUIRED` — ошибки фактической даты.
+- `LIMIT_INVALID`, `OFFSET_INVALID`, `STATUS_INVALID` — ошибки query-параметров списка.
+- `MAINTENANCE_SETTING_NOT_FOUND` — для выбранного оборудования и вида обслуживания нет настройки.
+- `MAINTENANCE_TYPE_INACTIVE`, `MAINTENANCE_TYPE_INVALID`, `MAINTENANCE_TYPE_NOT_FOUND`, `MAINTENANCE_TYPE_REQUIRED` — ошибки вида обслуживания.
+- `NOTE_INVALID` — некорректный комментарий.
+- `PLANNED_DATE_INVALID`, `PLANNED_DATE_REQUIRED` — ошибки плановой даты.
+- `RESPONSIBLES_REQUIRED` — итоговый набор ответственных пуст.
+- `RESPONSIBLE_INVALID` — некорректный идентификатор ответственного.
+- `RESPONSIBLE_NOT_FOUND` — один или несколько ответственных не найдены.
+- `RESPONSIBLE_USER_INACTIVE` — один или несколько ответственных отключены.
+- `SESSION_REQUIRED` — отсутствует пользовательская сессия для действия.
+- `UPDATE_EMPTY` — PATCH не содержит изменяемых полей.
+- `USER_EMPLOYEE_NOT_FOUND` — к учётной записи не привязан сотрудник.
+- `VERSION_REQUIRED` — не передана версия события для PATCH.
+
+### Настройки обслуживания
+
+- `CHECKLIST_TEMPLATE_INACTIVE` — для default выбран неактивный или неопубликованный шаблон.
+- `CHECKLIST_TEMPLATE_NOT_FOUND` — шаблон чек-листа не найден.
+- `DEFAULT_CHECKLIST_TEMPLATE_REQUIRED` — `defaultChecklistTemplateId` передан в некорректном формате.
+- `EQUIPMENT_NOT_FOUND` — оборудование не найдено.
+- `EXECUTION_TYPE_INVALID` — некорректный способ выполнения.
+- `MAINTENANCE_SETTING_ALREADY_EXISTS` — настройка для модели и вида обслуживания уже существует.
+- `MAINTENANCE_SETTING_NOT_FOUND` — настройка не найдена.
+- `MAINTENANCE_SETTING_UPDATE_EMPTY` — PATCH не содержит изменяемых полей.
+- `MAINTENANCE_TYPE_INACTIVE` — выбранный вид обслуживания отключён.
+- `MAINTENANCE_TYPE_INVALID` — попытка передать недопустимый `maintenanceTypeId`, в том числе в PATCH.
+- `MAINTENANCE_TYPE_NOT_FOUND` — вид обслуживания не найден.
+- `MAINTENANCE_TYPE_REQUIRED` — при создании не передан вид обслуживания.
+- `PERIODICITY_FORMAT_CONFLICT` — прислан устаревший flat-формат periodicity.
+- `PERIODICITY_INVALID` — объект periodicity отсутствует или содержит неизвестные поля.
+- `PERIODICITY_VALUE_INVALID` — periodicity содержит нечисловые, отрицательные или полностью нулевые значения.
+- `REQUEST_BODY_REQUIRED` — не передано тело запроса.
+
+### Справочник видов обслуживания
+
+- `INCLUDE_INACTIVE_INVALID` — некорректный query-параметр `includeInactive`.
+- `MAINTENANCE_TYPE_ALREADY_ACTIVE` — вид уже активен.
+- `MAINTENANCE_TYPE_ALREADY_INACTIVE` — вид уже отключён.
+- `MAINTENANCE_TYPE_CODE_ALREADY_EXISTS` — код уже используется.
+- `MAINTENANCE_TYPE_CODE_INVALID` — код не соответствует формату.
+- `MAINTENANCE_TYPE_CODE_REQUIRED` — код не передан.
+- `MAINTENANCE_TYPE_CODE_TOO_LONG` — код слишком длинный.
+- `MAINTENANCE_TYPE_NAME_ALREADY_EXISTS` — название уже используется.
+- `MAINTENANCE_TYPE_NAME_REQUIRED` — название не передано.
+- `MAINTENANCE_TYPE_NAME_TOO_LONG` — название слишком длинное.
+- `MAINTENANCE_TYPE_NOT_FOUND` — вид обслуживания не найден.
+- `REQUEST_BODY_REQUIRED` — не передано тело запроса.

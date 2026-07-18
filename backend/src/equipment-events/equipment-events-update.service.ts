@@ -1,18 +1,34 @@
 import { Injectable } from '@nestjs/common';
-import { EquipmentEventStatus, Prisma } from '@prisma/client';
+import { EquipmentEventStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   getEquipmentEventAuditSnapshot,
   writeEquipmentEventUpdatedAudit,
 } from './equipment-events.audit';
+import { EquipmentEventChecklistCreator } from './equipment-event-checklist.creator';
 import { EquipmentEventInputLoader } from './equipment-event-input.loader';
-import { throwEquipmentEventConflict } from './equipment-events.errors';
+import {
+  throwEquipmentEventBadRequest,
+  throwEquipmentEventConflict,
+} from './equipment-events.errors';
 import { EquipmentEventsQueryService } from './equipment-events-query.service';
-import { type UpdateCreatedEquipmentEventData } from './equipment-events.validation';
+import {
+  assertChecklistAssignmentsMatchResponsibles,
+  assertVersionMatches,
+  hasChecklistAssignmentsChange,
+  hasCreatedEventChanges,
+  hasResponsibleUsersChange,
+} from './equipment-events-update.assertions';
+import { syncEventChecklists } from './equipment-events-update-checklists';
+import { requireUserId, normalizeStringIds } from './equipment-events-update.utils';
+import {
+  type UpdateCreatedEquipmentEventData,
+} from './equipment-events.validation';
 
 @Injectable()
 export class EquipmentEventsUpdateService {
   constructor(
+    private readonly checklistCreator: EquipmentEventChecklistCreator,
     private readonly inputLoader: EquipmentEventInputLoader,
     private readonly prisma: PrismaService,
     private readonly queryService: EquipmentEventsQueryService,
@@ -34,8 +50,59 @@ export class EquipmentEventsUpdateService {
         },
       );
       const oldAuditSnapshot = await getEquipmentEventAuditSnapshot(tx, id);
-      this.assertVersionMatches(updateInput.version, data.version);
-      const hasChanges = this.hasCreatedEventChanges(updateInput, data);
+
+      assertVersionMatches(updateInput.version, data.version);
+
+      const finalResponsibleUserIds =
+        data.responsibleUserIds ?? updateInput.currentResponsibleUserIds;
+      const currentChecklistAssignments = updateInput.currentChecklists.map(
+        (checklist) => ({
+          assignedUserId: checklist.assignedUserId,
+          checklistTemplateId: checklist.checklistTemplateId,
+        }),
+      );
+      const checklistAssignments =
+        data.checklistAssignments ?? currentChecklistAssignments;
+      const hasResponsibleSetChange = hasResponsibleUsersChange(
+        updateInput.currentResponsibleUserIds,
+        data.responsibleUserIds,
+      );
+      const requiresChecklistAssignments =
+        hasResponsibleSetChange ||
+        updateInput.equipmentId !== undefined ||
+        updateInput.eventTypeId !== undefined;
+
+      if (
+        requiresChecklistAssignments &&
+        data.checklistAssignments === undefined
+      ) {
+        throwEquipmentEventBadRequest(
+          'CHECKLIST_ASSIGNMENTS_REQUIRED',
+          'Передайте полный итоговый массив назначений чек-листов.',
+        );
+      }
+
+      assertChecklistAssignmentsMatchResponsibles(
+        checklistAssignments,
+        finalResponsibleUserIds,
+      );
+
+      if (data.checklistAssignments !== undefined) {
+        await this.checklistCreator.assertActiveTemplates(
+          tx,
+          data.checklistAssignments,
+        );
+      }
+
+      const hasChecklistAssignmentChanges = hasChecklistAssignmentsChange(
+        currentChecklistAssignments,
+        data.checklistAssignments,
+      );
+      const hasChanges = hasCreatedEventChanges(
+        updateInput,
+        data,
+        hasChecklistAssignmentChanges,
+      );
 
       if (!hasChanges) {
         return id;
@@ -75,7 +142,7 @@ export class EquipmentEventsUpdateService {
         );
       }
 
-      if (data.responsibleUserIds) {
+      if (hasResponsibleSetChange && data.responsibleUserIds) {
         const responsibleUserIds = normalizeStringIds(data.responsibleUserIds);
 
         await tx.equipmentEventResponsible.deleteMany({
@@ -86,6 +153,19 @@ export class EquipmentEventsUpdateService {
             equipmentEventId: id,
             userId: responsibleUserId,
           })),
+        });
+      }
+
+      if (
+        hasChecklistAssignmentChanges ||
+        updateInput.equipmentId !== undefined
+      ) {
+        await syncEventChecklists(tx, this.checklistCreator, {
+          assignments: checklistAssignments,
+          currentChecklists: updateInput.currentChecklists,
+          equipmentChanged: updateInput.equipmentId !== undefined,
+          eventId: id,
+          userId: requireUserId(userId),
         });
       }
 
@@ -101,76 +181,4 @@ export class EquipmentEventsUpdateService {
 
     return this.queryService.findOne(updatedEventId);
   }
-
-  private assertVersionMatches(
-    currentVersion: number,
-    expectedVersion: number,
-  ) {
-    if (currentVersion !== expectedVersion) {
-      throwEquipmentEventConflict(
-        'EVENT_VERSION_CONFLICT',
-        'Событие уже изменено другим запросом. Обновите данные и повторите действие.',
-      );
-    }
-  }
-
-  private hasCreatedEventChanges(
-    updateInput: {
-      currentNote: string | null;
-      currentPlannedDate: Date | null;
-      currentResponsibleUserIds: string[];
-      equipmentId?: number;
-      eventTypeId?: number;
-      maintenanceSetting?: {
-        executionType: Prisma.EquipmentEventUpdateInput['executionType'];
-        id: number;
-      };
-      version: number;
-    },
-    data: UpdateCreatedEquipmentEventData,
-  ) {
-    return (
-      updateInput.equipmentId !== undefined ||
-      updateInput.eventTypeId !== undefined ||
-      this.hasNoteChange(updateInput.currentNote, data.note) ||
-      this.hasPlannedDateChange(
-        updateInput.currentPlannedDate,
-        data.plannedDate,
-      ) ||
-      this.hasResponsibleUsersChange(
-        updateInput.currentResponsibleUserIds,
-        data.responsibleUserIds,
-      )
-    );
-  }
-
-  private hasPlannedDateChange(currentValue: Date | null, nextValue?: Date) {
-    if (!nextValue) {
-      return false;
-    }
-
-    return currentValue?.getTime() !== nextValue.getTime();
-  }
-
-  private hasResponsibleUsersChange(currentIds: string[], nextIds?: string[]) {
-    if (!nextIds) {
-      return false;
-    }
-
-    return (
-      normalizeStringIds(currentIds).join(',') !==
-      normalizeStringIds(nextIds).join(',')
-    );
-  }
-
-  private hasNoteChange(
-    currentValue: string | null,
-    nextValue?: string | null,
-  ) {
-    return nextValue !== undefined && currentValue !== nextValue;
-  }
-}
-
-function normalizeStringIds(ids: string[]) {
-  return [...new Set(ids)].sort((left, right) => left.localeCompare(right));
 }

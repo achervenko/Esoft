@@ -2,7 +2,6 @@ import type { MaintenanceExecutionType } from "../../shared/api/maintenance/main
 import { AdminFormActions } from "../../shared/ui/AdminFormControls";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import { SelectDropdown } from "../../shared/ui/SelectDropdown";
-import { MaintenanceChecklistTemplatesField } from "./MaintenanceChecklistTemplatesField";
 import { PeriodicityFields } from "./PeriodicityFields";
 import { getFieldErrorsByCode } from "./maintenance-setting-form-errors";
 import type { MaintenanceSettingFormModalProps } from "./maintenance-setting-form.types";
@@ -57,6 +56,15 @@ export function MaintenanceSettingFormModal({
         ) : null}
 
         <SelectDropdown
+          error={fieldErrors.defaultChecklistTemplateId}
+          label="Шаблон чек-листа по умолчанию"
+          onChange={form.updateDefaultChecklistTemplateId}
+          options={form.checklistTemplateOptions}
+          placeholder="Выберите шаблон"
+          value={form.defaultChecklistTemplateId}
+        />
+
+        <SelectDropdown
           error={fieldErrors.executionType}
           label="Способ выполнения"
           onChange={(value) =>
@@ -65,16 +73,6 @@ export function MaintenanceSettingFormModal({
           options={executionTypeOptions}
           required
           value={form.executionType}
-        />
-
-        <MaintenanceChecklistTemplatesField
-          error={fieldErrors.checklistTemplates}
-          items={form.checklistTemplates}
-          onAdd={form.addChecklistTemplate}
-          onMove={form.moveChecklistTemplate}
-          onRemove={form.removeChecklistTemplate}
-          onUpdate={form.updateChecklistTemplate}
-          options={form.checklistTemplateOptions}
         />
 
         <PeriodicityFields
