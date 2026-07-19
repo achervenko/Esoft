@@ -2,17 +2,11 @@ import { checklistStatusLabels } from "../my-checklists.config";
 import { formatDate, formatProgress } from "../my-checklists.utils";
 import type { MyChecklistCardProps } from "../my-checklists.types";
 
-export function MyChecklistCard({
-  currentUserId,
-  item,
-  onOpen,
-  onStart,
-}: MyChecklistCardProps) {
-  const isAssignedToCurrentUser = item.assignedUser.id === currentUserId;
+export function MyChecklistCard({ href, item }: MyChecklistCardProps) {
   const primaryActionLabel =
-    item.status === "CREATED" && isAssignedToCurrentUser
+    item.status === "CREATED"
       ? "Начать"
-      : item.status === "IN_PROGRESS" && isAssignedToCurrentUser
+      : item.status === "IN_PROGRESS"
         ? "Продолжить"
         : "Просмотреть";
 
@@ -55,17 +49,9 @@ export function MyChecklistCard({
       </dl>
 
       <div className="my-checklists-item-actions">
-        <button
-          className="admin-secondary-button"
-          onClick={() =>
-            item.status === "CREATED" && isAssignedToCurrentUser
-              ? onStart(item)
-              : onOpen(item.id)
-          }
-          type="button"
-        >
+        <a className="admin-secondary-button" href={href}>
           {primaryActionLabel}
-        </button>
+        </a>
       </div>
     </article>
   );

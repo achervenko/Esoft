@@ -6,16 +6,13 @@ import {
 import { mapChecklistActionError } from "../my-checklists.errors";
 
 type UseChecklistDetailParams = {
-  onSelectChecklistId: (checklistId: number | null) => void;
-  selectedChecklistId: number | null;
+  checklistId: number;
 };
 
 export function useChecklistDetail({
-  onSelectChecklistId,
-  selectedChecklistId,
+  checklistId,
 }: UseChecklistDetailParams) {
-  const [selectedChecklist, setSelectedChecklist] =
-    useState<ChecklistWorkDetail | null>(null);
+  const [checklist, setChecklist] = useState<ChecklistWorkDetail | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [versionConflict, setVersionConflict] = useState<string | null>(null);
@@ -28,83 +25,54 @@ export function useChecklistDetail({
     setVersionConflict(result.versionConflict);
   }, []);
 
-  const loadChecklistDetail = useCallback(
-    async (checklistId: number) => {
-      const requestId = detailRequestIdRef.current + 1;
-      detailRequestIdRef.current = requestId;
+  const loadChecklist = useCallback(async () => {
+    const requestId = detailRequestIdRef.current + 1;
+    detailRequestIdRef.current = requestId;
 
-      setIsDetailLoading(true);
-      setDetailError(null);
-      setVersionConflict(null);
-
-      try {
-        const detail = await getChecklistWorkDetail(checklistId);
-
-        if (detailRequestIdRef.current !== requestId) {
-          return null;
-        }
-
-        onSelectChecklistId(detail.id);
-        setSelectedChecklist(detail);
-        return detail;
-      } catch (requestError) {
-        if (detailRequestIdRef.current === requestId) {
-          applyDetailError(requestError);
-        }
-
-        return null;
-      } finally {
-        if (detailRequestIdRef.current === requestId) {
-          setIsDetailLoading(false);
-        }
-      }
-    },
-    [applyDetailError, onSelectChecklistId],
-  );
-
-  const clearSelectedChecklist = useCallback(() => {
-    onSelectChecklistId(null);
-    setSelectedChecklist(null);
+    setIsDetailLoading(true);
     setDetailError(null);
     setVersionConflict(null);
-    detailRequestIdRef.current += 1;
-  }, [onSelectChecklistId]);
 
-  const openChecklist = useCallback(
-    async (checklistId: number) => {
-      await loadChecklistDetail(checklistId);
-    },
-    [loadChecklistDetail],
-  );
+    try {
+      const detail = await getChecklistWorkDetail(checklistId);
 
-  const reloadSelectedChecklist = useCallback(async () => {
-    if (selectedChecklistId === null) {
-      return;
+      if (detailRequestIdRef.current !== requestId) {
+        return null;
+      }
+
+      setChecklist(detail);
+      return detail;
+    } catch (requestError) {
+      if (detailRequestIdRef.current === requestId) {
+        applyDetailError(requestError);
+      }
+
+      return null;
+    } finally {
+      if (detailRequestIdRef.current === requestId) {
+        setIsDetailLoading(false);
+      }
     }
+  }, [applyDetailError, checklistId]);
 
-    await loadChecklistDetail(selectedChecklistId);
-  }, [loadChecklistDetail, selectedChecklistId]);
+  const reloadChecklist = useCallback(async () => {
+    return loadChecklist();
+  }, [loadChecklist]);
+
+  const replaceChecklist = useCallback((nextChecklist: ChecklistWorkDetail) => {
+    setChecklist(nextChecklist);
+  }, []);
 
   useEffect(() => {
-    if (selectedChecklistId === null) {
-      setSelectedChecklist(null);
-      setDetailError(null);
-      setVersionConflict(null);
-      detailRequestIdRef.current += 1;
-    }
-  }, [selectedChecklistId]);
+    void loadChecklist();
+  }, [loadChecklist]);
 
   return {
-    clearSelectedChecklist,
+    checklist,
     detailError,
     isDetailLoading,
-    loadChecklistDetail,
-    openChecklist,
-    reloadSelectedChecklist,
-    selectedChecklist,
-    setDetailError,
-    setSelectedChecklist,
-    setVersionConflict,
+    reloadChecklist,
+    replaceChecklist,
     versionConflict,
   };
 }

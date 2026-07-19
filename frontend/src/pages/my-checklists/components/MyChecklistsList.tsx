@@ -1,13 +1,7 @@
 import { MyChecklistCard } from "./MyChecklistCard";
 import type { MyChecklistsListProps } from "../my-checklists.types";
 
-export function MyChecklistsList({
-  currentUserId,
-  isLoading,
-  items,
-  onOpen,
-  onStart,
-}: MyChecklistsListProps) {
+export function MyChecklistsList({ getChecklistHref, isLoading, items }: MyChecklistsListProps) {
   return (
     <section className="my-checklists-list" aria-busy={isLoading}>
       {isLoading ? (
@@ -15,14 +9,12 @@ export function MyChecklistsList({
       ) : items.length === 0 ? (
         <p className="my-checklists-empty">В этой вкладке чек-листов пока нет.</p>
       ) : (
-        <div className="my-checklists-items">
+        <div className="my-checklists-cards">
           {items.map((item) => (
             <MyChecklistCard
-              currentUserId={currentUserId}
+              href={getChecklistHref(item.id, item.status)}
               item={item}
               key={item.id}
-              onOpen={onOpen}
-              onStart={onStart}
             />
           ))}
         </div>

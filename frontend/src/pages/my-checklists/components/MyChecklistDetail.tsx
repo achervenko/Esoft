@@ -5,10 +5,21 @@ import { ChecklistModules } from "./ChecklistModules";
 import { ChecklistSummary } from "./ChecklistSummary";
 import type { MyChecklistDetailProps } from "../my-checklists.types";
 
+function formatChecklistMeta(checklist: NonNullable<MyChecklistDetailProps["checklist"]>) {
+  return (
+    <>
+      <span>{checklist.assignedUser.fullName}</span>
+      <span aria-hidden="true">•</span>
+      <span>{checklist.event.maintenanceType.name}</span>
+    </>
+  );
+}
+
 export function MyChecklistDetail({
   canMutateSelected,
   checklist,
   draftAnswers,
+  emptyMessage = "Чек-лист не найден или недоступен.",
   formError,
   isActionLoading,
   isDetailLoading,
@@ -17,14 +28,13 @@ export function MyChecklistDetail({
   onReload,
   onSave,
   onStart,
+  showRequiredErrors,
   versionConflict,
 }: MyChecklistDetailProps) {
   if (!checklist) {
     return (
       <section className="admin-card my-checklists-detail">
-        <div className="my-checklists-detail-empty">
-          Выберите чек-лист из списка, чтобы открыть карточку и работу по вопросам.
-        </div>
+        <div className="my-checklists-detail-empty">{emptyMessage}</div>
       </section>
     );
   }
@@ -36,9 +46,7 @@ export function MyChecklistDetail({
       <header className="my-checklists-detail-title">
         <div>
           <h2>{checklist.template.name}</h2>
-          <p className="my-checklists-detail-meta">
-            {checklist.assignedUser.fullName} • {checklist.event.maintenanceType.name}
-          </p>
+          <p className="my-checklists-detail-meta">{formatChecklistMeta(checklist)}</p>
         </div>
         <span className={`my-checklists-status ${checklist.status.toLowerCase()}`}>
           {checklistStatusLabels[checklist.status]}
@@ -55,6 +63,7 @@ export function MyChecklistDetail({
         draftAnswers={draftAnswers}
         modules={checklist.modules}
         onAnswerChange={onAnswerChange}
+        showRequiredErrors={showRequiredErrors}
       />
 
       <div className="my-checklists-detail-actions">

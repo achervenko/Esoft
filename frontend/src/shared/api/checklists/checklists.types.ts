@@ -187,6 +187,7 @@ export type ChecklistWorkDetail = ChecklistWorkListItem & {
 export type ChecklistWorkListResponse = {
   items: ChecklistWorkListItem[];
   total: number;
+  totalsByStatus: Partial<Record<ChecklistWorkStatus, number>>;
 };
 
 export type ChecklistWorkQuery = {

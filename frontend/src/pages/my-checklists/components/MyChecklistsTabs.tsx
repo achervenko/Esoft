@@ -1,12 +1,14 @@
 import { buildHashRoute } from "../../../shared/lib/hash-navigation";
-import { tabConfig } from "../my-checklists.config";
-import type { ChecklistTabKey } from "../my-checklists.config";
+import { checklistTabOrder, tabConfig } from "../my-checklists.config";
 import type { MyChecklistsTabsProps } from "../my-checklists.types";
 
-export function MyChecklistsTabs({ activeTab }: MyChecklistsTabsProps) {
+export function MyChecklistsTabs({
+  activeTab,
+  tabCounts,
+}: MyChecklistsTabsProps) {
   return (
     <div className="my-checklists-tablist" role="tablist">
-      {(Object.keys(tabConfig) as ChecklistTabKey[]).map((tabKey) => (
+      {checklistTabOrder.map((tabKey) => (
         <a
           aria-selected={activeTab === tabKey}
           className={activeTab === tabKey ? "active" : undefined}
@@ -16,7 +18,10 @@ export function MyChecklistsTabs({ activeTab }: MyChecklistsTabsProps) {
           key={tabKey}
           role="tab"
         >
-          {tabConfig[tabKey].label}
+          <span>{tabConfig[tabKey].label}</span>
+          {tabCounts[tabKey] ? (
+            <span className="my-checklists-tab-badge">{tabCounts[tabKey]}</span>
+          ) : null}
         </a>
       ))}
     </div>

@@ -1,3 +1,4 @@
+import type { ChecklistWorkStatus } from "../../shared/api/checklists";
 import { getHashRouteParam } from "../../shared/lib/hash-navigation";
 import type { ChecklistProgressLike } from "./my-checklists.types";
 import type { ChecklistTabKey } from "./my-checklists.config";
@@ -41,4 +42,18 @@ export function formatDateTime(value: string | null) {
 
 export function formatProgress(progress: ChecklistProgressLike) {
   return `${progress.answered} из ${progress.total}`;
+}
+
+export function getChecklistTabForStatus(
+  status: ChecklistWorkStatus,
+): ChecklistTabKey {
+  if (status === "IN_PROGRESS") {
+    return "in-progress";
+  }
+
+  if (status === "COMPLETED") {
+    return "completed";
+  }
+
+  return "new";
 }

@@ -17,7 +17,7 @@ export class ChecklistWorkQueryRepository {
     query: ChecklistWorkQuery;
     userId: string;
   }) {
-    const [rows, totalRows] = await Promise.all([
+    const [rows, totalRows, totalsByStatusRows] = await Promise.all([
       this.prisma.$queryRaw<ChecklistListRow[]>`
         WITH checklist_progress AS (
           ${checklistProgressGroupedByChecklistSql()}
@@ -109,11 +109,46 @@ export class ChecklistWorkQueryRepository {
           AND (${params.query.dateFrom ?? null}::date IS NULL OR event.planned_date >= ${params.query.dateFrom ?? null})
           AND (${params.query.dateTo ?? null}::date IS NULL OR event.planned_date <= ${params.query.dateTo ?? null})
       `,
+      this.prisma.$queryRaw<
+        Array<{
+          completed: bigint;
+          created: bigint;
+          inProgress: bigint;
+        }>
+      >`
+        SELECT
+          COUNT(*) FILTER (
+            WHERE checklist.status = ${ChecklistStatus.CREATED}
+          )::bigint AS created,
+          COUNT(*) FILTER (
+            WHERE checklist.status = ${ChecklistStatus.IN_PROGRESS}
+          )::bigint AS "inProgress",
+          COUNT(*) FILTER (
+            WHERE checklist.status = ${ChecklistStatus.COMPLETED}
+          )::bigint AS completed
+        FROM checklists checklist
+        JOIN equipment_events event
+          ON event.id = checklist.equipment_event_id
+        JOIN equipment
+          ON equipment.id = event.equipment_id
+        WHERE checklist.assigned_user_id = ${params.userId}
+          AND (${params.query.equipmentVisibleId ?? null}::int IS NULL OR equipment.visible_id = ${params.query.equipmentVisibleId ?? null})
+          AND (${params.query.eventId ?? null}::int IS NULL OR event.id = ${params.query.eventId ?? null})
+          AND (${params.query.dateFrom ?? null}::date IS NULL OR event.planned_date >= ${params.query.dateFrom ?? null})
+          AND (${params.query.dateTo ?? null}::date IS NULL OR event.planned_date <= ${params.query.dateTo ?? null})
+      `,
     ]);
+
+    const totalsByStatusRow = totalsByStatusRows[0];
 
     return {
       rows,
       total: Number(totalRows[0]?.total ?? 0),
+      totalsByStatus: {
+        COMPLETED: Number(totalsByStatusRow?.completed ?? 0),
+        CREATED: Number(totalsByStatusRow?.created ?? 0),
+        IN_PROGRESS: Number(totalsByStatusRow?.inProgress ?? 0),
+      },
     };
   }
 

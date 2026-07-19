@@ -1,53 +1,42 @@
-import { useCallback, useMemo, useState } from "react";
 import { buildHashRoute } from "../../shared/lib/hash-navigation";
+import type { ChecklistWorkStatus } from "../../shared/api/checklists";
 import "../../shared/ui/AdminPage.css";
 import { Notice } from "../../shared/ui/Notice";
-import { MyChecklistDetail } from "./components/MyChecklistDetail";
 import { MyChecklistsList } from "./components/MyChecklistsList";
 import { MyChecklistsTabs } from "./components/MyChecklistsTabs";
-import { useChecklistWork } from "./hooks/use-checklist-work";
 import { useMyChecklistsList } from "./hooks/use-my-checklists-list";
+import type { ChecklistTabCountMap } from "./my-checklists.types";
 import { getActiveTab } from "./my-checklists.utils";
 import "./MyChecklistsPage.css";
 
 export type MyChecklistsPageProps = {
-  currentUserId?: string | null;
   route: string;
 };
 
-export function MyChecklistsPage({
-  currentUserId = null,
-  route,
-}: MyChecklistsPageProps) {
-  const activeTab = useMemo(() => getActiveTab(route), [route]);
-  const [selectedChecklistId, setSelectedChecklistId] = useState<number | null>(
-    null,
-  );
-  const handleSelectedChecklistMissing = useCallback(() => {
-    setSelectedChecklistId(null);
-  }, []);
-
-  const handleChecklistStarted = useCallback(() => {
-    const nextRoute = buildHashRoute("#/my-checklists", { tab: "in-progress" });
-
-    if (window.location.hash !== nextRoute) {
-      window.location.hash = nextRoute;
-    }
-  }, []);
+export function MyChecklistsPage({ route }: MyChecklistsPageProps) {
+  const activeTab = getActiveTab(route);
 
   const checklistList = useMyChecklistsList({
     activeTab,
-    onSelectedChecklistMissing: handleSelectedChecklistMissing,
-    selectedChecklistId,
   });
 
-  const checklistWork = useChecklistWork({
-    currentUserId,
-    onChecklistStarted: handleChecklistStarted,
-    onSelectChecklistId: setSelectedChecklistId,
-    reloadItems: checklistList.reload,
-    selectedChecklistId,
-  });
+  const tabCounts: ChecklistTabCountMap = {
+    new: checklistList.totalsByStatus.CREATED ?? 0,
+    "in-progress": checklistList.totalsByStatus.IN_PROGRESS ?? 0,
+  };
+
+  const getChecklistHref = (
+    checklistId: number,
+    checklistStatus: ChecklistWorkStatus,
+  ) =>
+    buildHashRoute(`#/my-checklists/${checklistId}`, {
+      tab:
+        checklistStatus === "CREATED"
+          ? null
+          : checklistStatus === "IN_PROGRESS"
+            ? "in-progress"
+            : "completed",
+    });
 
   return (
     <div className="admin-page my-checklists-page">
@@ -57,41 +46,18 @@ export function MyChecklistsPage({
         </div>
       </header>
 
-      {checklistList.error ? <Notice tone="error">{checklistList.error}</Notice> : null}
-      {checklistWork.message ? <Notice tone="success">{checklistWork.message}</Notice> : null}
-      {checklistWork.detailError ? <Notice tone="error">{checklistWork.detailError}</Notice> : null}
-      {checklistWork.refreshError ? <Notice tone="info">{checklistWork.refreshError}</Notice> : null}
-      {checklistWork.versionConflict ? (
-        <Notice tone="error">{checklistWork.versionConflict}</Notice>
+      {checklistList.error ? (
+        <Notice tone="error">{checklistList.error}</Notice>
       ) : null}
 
       <section className="admin-card my-checklists-list">
-        <MyChecklistsTabs activeTab={activeTab} />
+        <MyChecklistsTabs activeTab={activeTab} tabCounts={tabCounts} />
 
-        <div className="my-checklists-layout">
-          <MyChecklistsList
-            currentUserId={currentUserId}
-            isLoading={checklistList.isLoading}
-            items={checklistList.items}
-            onOpen={(checklistId) => void checklistWork.openChecklist(checklistId)}
-            onStart={(item) => void checklistWork.startFromListItem(item)}
-          />
-
-          <MyChecklistDetail
-            canMutateSelected={checklistWork.canMutateSelected}
-            checklist={checklistWork.selectedChecklist}
-            draftAnswers={checklistWork.draftAnswers}
-            formError={checklistWork.formError}
-            isActionLoading={checklistWork.isActionLoading}
-            isDetailLoading={checklistWork.isDetailLoading}
-            onAnswerChange={checklistWork.setAnswerValue}
-            onComplete={() => void checklistWork.completeChecklist()}
-            onReload={() => void checklistWork.reloadSelectedChecklist()}
-            onSave={() => void checklistWork.saveChecklist()}
-            onStart={() => void checklistWork.startSelectedChecklist()}
-            versionConflict={checklistWork.versionConflict}
-          />
-        </div>
+        <MyChecklistsList
+          getChecklistHref={getChecklistHref}
+          isLoading={checklistList.isLoading}
+          items={checklistList.items}
+        />
       </section>
     </div>
   );

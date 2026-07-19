@@ -15,10 +15,12 @@ type ProgressLike = {
 export function presentChecklistList(result: {
   rows: ChecklistListRow[];
   total: number;
+  totalsByStatus: Partial<Record<string, number>>;
 }) {
   return {
     items: result.rows.map(presentChecklistListItem),
     total: result.total,
+    totalsByStatus: result.totalsByStatus,
   };
 }
 

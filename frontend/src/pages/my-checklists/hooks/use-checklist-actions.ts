@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { getApiErrorMessage } from "../../../shared/api/api-error";
 import {
   completeChecklistWork,
@@ -7,166 +7,234 @@ import {
   startChecklistWork,
   type ChecklistWorkAnswerPayload,
   type ChecklistWorkDetail,
-  type ChecklistWorkListItem,
 } from "../../../shared/api/checklists";
+import { useChecklistUiState } from "./use-checklist-mutation-state";
+import { useChecklistValidation } from "./use-checklist-validation";
+import type { SaveChecklistResult } from "./checklist-actions.types";
 import { mapChecklistActionError } from "../my-checklists.errors";
+import type { DraftAnswers } from "../my-checklists.types";
 
 type UseChecklistActionsParams = {
   changedAnswers: ChecklistWorkAnswerPayload[];
-  hasUnsavedChanges: boolean;
-  onChecklistStarted?: (checklist: ChecklistWorkDetail) => void;
-  onSelectChecklistId: (checklistId: number | null) => void;
-  reloadItems: () => Promise<ChecklistWorkListItem[] | null>;
-  selectedChecklist: ChecklistWorkDetail | null;
-  setDetailError: (error: string | null) => void;
-  setSelectedChecklist: (checklist: ChecklistWorkDetail | null) => void;
-  setVersionConflict: (error: string | null) => void;
-  validateRequiredDraftAnswers: () => string | null;
+  draftAnswers: DraftAnswers;
+  checklist: ChecklistWorkDetail | null;
+  onChecklistChange: (checklist: ChecklistWorkDetail) => void;
 };
 
 export function useChecklistActions({
   changedAnswers,
-  hasUnsavedChanges,
-  onChecklistStarted,
-  onSelectChecklistId,
-  reloadItems,
-  selectedChecklist,
-  setDetailError,
-  setSelectedChecklist,
-  setVersionConflict,
-  validateRequiredDraftAnswers,
+  draftAnswers,
+  checklist,
+  onChecklistChange,
 }: UseChecklistActionsParams) {
-  const [isActionLoading, setIsActionLoading] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const hasChanges = changedAnswers.length > 0;
+  const state = useChecklistUiState();
+  const {
+    getRequiredDraftError,
+    validateDraftBeforeMutation,
+  } = useChecklistValidation({
+    checklist,
+    draftAnswers,
+  });
+  const {
+    applyMutationError: applyMutationErrorState,
+    formError,
+    hideRequiredValidationErrors,
+    isActionLoading,
+    message,
+    mutationDetailError,
+    mutationVersionConflict,
+    prepareMutation,
+    refreshError,
+    setIsActionLoading,
+    showFormError,
+    showMessage,
+    showRefreshError,
+    showRequiredErrors,
+    showRequiredValidationErrors,
+  } = state;
 
   const applyMutationError = useCallback(
     (error: unknown, target: "detail" | "form") => {
       const result = mapChecklistActionError(error, target);
 
-      setDetailError(result.detailError);
-      setFormError(result.formError);
-      setVersionConflict(result.versionConflict);
+      applyMutationErrorState({
+        detailError: result.detailError,
+        formError: result.formError,
+        versionConflict: result.versionConflict,
+      });
     },
-    [setDetailError, setVersionConflict],
+    [applyMutationErrorState],
   );
 
-  const clearActionState = useCallback(() => {
-    setDetailError(null);
-    setFormError(null);
-    setVersionConflict(null);
-    setMessage(null);
-    setRefreshError(null);
-  }, [setDetailError, setVersionConflict]);
-
-  const handleRefreshError = useCallback((error: unknown, fallbackMessage: string) => {
-    setRefreshError(getApiErrorMessage(error) || fallbackMessage);
-  }, []);
-
-  const startFromListItem = useCallback(
-    async (item: ChecklistWorkListItem) => {
-      setIsActionLoading(true);
-      clearActionState();
-
-      try {
-        const detail = await startChecklistWork(item.id, { version: item.version });
-        onSelectChecklistId(detail.id);
-        setSelectedChecklist(detail);
-        onChecklistStarted?.(detail);
-        setMessage("Чек-лист переведён в работу.");
-      } catch (requestError) {
-        applyMutationError(requestError, "detail");
-      } finally {
-        setIsActionLoading(false);
-      }
+  const handleRefreshError = useCallback(
+    (error: unknown, fallbackMessage: string) => {
+      showRefreshError(getApiErrorMessage(error) || fallbackMessage);
     },
-    [
-      applyMutationError,
-      clearActionState,
-      onChecklistStarted,
-      onSelectChecklistId,
-      setSelectedChecklist,
-    ],
+    [showRefreshError],
   );
 
-  const startSelectedChecklist = useCallback(async () => {
-    if (!selectedChecklist) {
+  const validateBeforeAction = useCallback(() => {
+    const requiredDraftError = getRequiredDraftError();
+
+    if (requiredDraftError) {
+      showFormError(requiredDraftError);
+      showRequiredValidationErrors();
+      return requiredDraftError;
+    }
+
+    const draftError = validateDraftBeforeMutation();
+
+    if (draftError) {
+      showFormError(draftError);
+      hideRequiredValidationErrors();
+      return draftError;
+    }
+
+    hideRequiredValidationErrors();
+    return null;
+  }, [
+    getRequiredDraftError,
+    hideRequiredValidationErrors,
+    showFormError,
+    showRequiredValidationErrors,
+    validateDraftBeforeMutation,
+  ]);
+
+  const startChecklist = useCallback(async () => {
+    if (!checklist) {
       return;
     }
 
-    await startFromListItem(selectedChecklist);
-  }, [selectedChecklist, startFromListItem]);
-
-  const saveChecklist = useCallback(async () => {
-    if (!selectedChecklist) {
-      return null;
-    }
-
-    if (changedAnswers.length === 0) {
-      setMessage("Изменений для сохранения нет.");
-      return selectedChecklist;
-    }
-
+    prepareMutation();
     setIsActionLoading(true);
-    setFormError(null);
-    setVersionConflict(null);
-    setMessage(null);
-    setRefreshError(null);
 
     try {
-      await saveChecklistWorkAnswers(selectedChecklist.id, {
-        answers: changedAnswers,
-        version: selectedChecklist.version,
+      const detail = await startChecklistWork(checklist.id, {
+        version: checklist.version,
       });
-      setMessage("Ответы сохранены.");
-
-      try {
-        const nextDetail = await getChecklistWorkDetail(selectedChecklist.id);
-        setSelectedChecklist(nextDetail);
-
-        try {
-          await reloadItems();
-        } catch (requestError) {
-          handleRefreshError(
-            requestError,
-            "Ответы сохранены, но список чек-листов не удалось обновить.",
-          );
-        }
-
-        return nextDetail;
-      } catch (requestError) {
-        handleRefreshError(
-          requestError,
-          "Ответы сохранены, но данные чек-листа не удалось обновить.",
-        );
-        return null;
-      }
+      onChecklistChange(detail);
+      showMessage("Чек-лист переведён в работу.");
     } catch (requestError) {
-      applyMutationError(requestError, "form");
-      return null;
+      applyMutationError(requestError, "detail");
     } finally {
       setIsActionLoading(false);
     }
   }, [
     applyMutationError,
-    changedAnswers,
-    handleRefreshError,
-    reloadItems,
-    selectedChecklist,
-    setSelectedChecklist,
-    setVersionConflict,
+    checklist,
+    onChecklistChange,
+    prepareMutation,
+    setIsActionLoading,
+    showMessage,
   ]);
 
+  const persistChecklistAnswers = useCallback(
+    async ({
+      manageLoading = true,
+      prepareUi = true,
+    }: {
+      manageLoading?: boolean;
+      prepareUi?: boolean;
+    } = {}): Promise<SaveChecklistResult> => {
+      if (!checklist) {
+        return {
+          reason: "missing_checklist",
+          success: false,
+        };
+      }
+
+      if (prepareUi) {
+        prepareMutation();
+      }
+
+      if (!hasChanges) {
+        showMessage("Изменений для сохранения нет.");
+        return {
+          changed: false,
+          checklist,
+          success: true,
+        };
+      }
+
+      if (manageLoading) {
+        setIsActionLoading(true);
+      }
+
+      try {
+        await saveChecklistWorkAnswers(checklist.id, {
+          answers: changedAnswers,
+          version: checklist.version,
+        });
+
+        try {
+          const nextDetail = await getChecklistWorkDetail(checklist.id);
+          onChecklistChange(nextDetail);
+          showMessage("Ответы сохранены.");
+          return {
+            changed: true,
+            checklist: nextDetail,
+            success: true,
+          };
+        } catch (requestError) {
+          handleRefreshError(
+            requestError,
+            "Ответы сохранены, но данные чек-листа не удалось обновить.",
+          );
+          return {
+            reason: "reload_failed",
+            success: false,
+          };
+        }
+      } catch (requestError) {
+        applyMutationError(requestError, "form");
+        return {
+          reason: "request",
+          success: false,
+        };
+      } finally {
+        if (manageLoading) {
+          setIsActionLoading(false);
+        }
+      }
+    },
+    [
+      applyMutationError,
+      changedAnswers,
+      hasChanges,
+      checklist,
+      handleRefreshError,
+      onChecklistChange,
+      prepareMutation,
+      setIsActionLoading,
+      showMessage,
+    ],
+  );
+
+  const saveChecklist = useCallback(async (): Promise<SaveChecklistResult> => {
+    if (!checklist) {
+      return {
+        reason: "missing_checklist",
+        success: false,
+      };
+    }
+
+    if (validateBeforeAction()) {
+      return {
+        reason: "validation",
+        success: false,
+      };
+    }
+
+    return persistChecklistAnswers();
+  }, [checklist, persistChecklistAnswers, validateBeforeAction]);
+
   const completeChecklist = useCallback(async () => {
-    if (!selectedChecklist) {
+    if (!checklist) {
       return;
     }
 
-    const requiredError = validateRequiredDraftAnswers();
-
-    if (requiredError) {
-      setFormError(requiredError);
+    if (validateBeforeAction()) {
       return;
     }
 
@@ -178,43 +246,34 @@ export function useChecklistActions({
       return;
     }
 
-    let checklistForCompletion = selectedChecklist;
+    let checklistForCompletion = checklist;
 
-    if (hasUnsavedChanges) {
-      const savedChecklist = await saveChecklist();
-
-      if (!savedChecklist) {
-        return;
-      }
-
-      checklistForCompletion = savedChecklist;
-    }
-
+    prepareMutation();
     setIsActionLoading(true);
-    setFormError(null);
-    setVersionConflict(null);
-    setMessage(null);
-    setRefreshError(null);
 
     try {
+      if (hasChanges) {
+        const saveResult = await persistChecklistAnswers({
+          manageLoading: false,
+          prepareUi: false,
+        });
+
+        if (!saveResult.success) {
+          return;
+        }
+
+        checklistForCompletion = saveResult.checklist;
+      }
+
       const detail = await completeChecklistWork(checklistForCompletion.id, {
         version: checklistForCompletion.version,
       });
-      setSelectedChecklist(detail);
-      setMessage(
+      onChecklistChange(detail);
+      showMessage(
         detail.event.status === "COMPLETED"
           ? "Чек-лист завершён. Событие завершено автоматически."
           : "Чек-лист завершён.",
       );
-
-      try {
-        await reloadItems();
-      } catch (requestError) {
-        handleRefreshError(
-          requestError,
-          "Чек-лист завершён, но список не удалось обновить.",
-        );
-      }
     } catch (requestError) {
       applyMutationError(requestError, "form");
     } finally {
@@ -222,26 +281,26 @@ export function useChecklistActions({
     }
   }, [
     applyMutationError,
-    handleRefreshError,
-    hasUnsavedChanges,
-    reloadItems,
-    saveChecklist,
-    selectedChecklist,
-    setSelectedChecklist,
-    setVersionConflict,
-    validateRequiredDraftAnswers,
+    hasChanges,
+    checklist,
+    onChecklistChange,
+    prepareMutation,
+    persistChecklistAnswers,
+    setIsActionLoading,
+    showMessage,
+    validateBeforeAction,
   ]);
 
   return {
-    clearActionState,
     completeChecklist,
     formError,
     isActionLoading,
     message,
+    mutationDetailError,
+    mutationVersionConflict,
     refreshError,
     saveChecklist,
-    setMessage,
-    startFromListItem,
-    startSelectedChecklist,
+    showRequiredErrors,
+    startChecklist,
   };
 }

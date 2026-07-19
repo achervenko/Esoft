@@ -1,63 +1,78 @@
-import { useMemo } from "react";
 import { useChecklistActions } from "./use-checklist-actions";
 import { useChecklistDetail } from "./use-checklist-detail";
 import { useChecklistDraft } from "./use-checklist-draft";
 import type { UseChecklistWorkParams } from "../my-checklists.types";
+import type { ChecklistWorkDetail } from "../../../shared/api/checklists";
+
+function canMutateChecklist(
+  checklist: ChecklistWorkDetail | null,
+  currentUserId: string | null,
+) {
+  return checklist !== null && checklist.assignedUser.id === currentUserId;
+}
 
 export function useChecklistWork({
+  checklistId,
   currentUserId,
-  onSelectChecklistId,
-  reloadItems,
-  selectedChecklistId,
-  onChecklistStarted,
 }: UseChecklistWorkParams) {
-  const detail = useChecklistDetail({
-    onSelectChecklistId,
-    selectedChecklistId,
+  const {
+    checklist,
+    detailError: loadedDetailError,
+    isDetailLoading,
+    reloadChecklist,
+    replaceChecklist,
+    versionConflict: loadedVersionConflict,
+  } = useChecklistDetail({
+    checklistId,
   });
-  const draft = useChecklistDraft({
-    selectedChecklist: detail.selectedChecklist,
+  const {
+    changedAnswers,
+    draftAnswers,
+    hasUnsavedChanges,
+    setAnswerValue,
+  } = useChecklistDraft({
+    checklist,
   });
-  const actions = useChecklistActions({
-    changedAnswers: draft.changedAnswers,
-    hasUnsavedChanges: draft.hasUnsavedChanges,
-    onChecklistStarted,
-    onSelectChecklistId,
-    reloadItems,
-    selectedChecklist: detail.selectedChecklist,
-    setDetailError: detail.setDetailError,
-    setSelectedChecklist: detail.setSelectedChecklist,
-    setVersionConflict: detail.setVersionConflict,
-    validateRequiredDraftAnswers: draft.validateRequiredDraftAnswers,
+  const {
+    completeChecklist,
+    formError,
+    isActionLoading,
+    message,
+    mutationDetailError,
+    mutationVersionConflict,
+    refreshError,
+    saveChecklist,
+    showRequiredErrors,
+    startChecklist,
+  } = useChecklistActions({
+    changedAnswers,
+    checklist,
+    draftAnswers,
+    onChecklistChange: replaceChecklist,
   });
 
-  const canMutateSelected = useMemo(
-    () =>
-      detail.selectedChecklist !== null &&
-      detail.selectedChecklist.assignedUser.id === currentUserId,
-    [currentUserId, detail.selectedChecklist],
-  );
+  const canMutateSelected = canMutateChecklist(checklist, currentUserId);
+
+  const detailError = mutationDetailError ?? loadedDetailError;
+  const versionConflict = mutationVersionConflict ?? loadedVersionConflict;
 
   return {
     canMutateSelected,
-    clearSelectedChecklist: detail.clearSelectedChecklist,
-    completeChecklist: actions.completeChecklist,
-    detailError: detail.detailError,
-    draftAnswers: draft.draftAnswers,
-    formError: actions.formError,
-    hasUnsavedChanges: draft.hasUnsavedChanges,
-    isActionLoading: actions.isActionLoading,
-    isDetailLoading: detail.isDetailLoading,
-    message: actions.message,
-    openChecklist: detail.openChecklist,
-    refreshError: actions.refreshError,
-    reloadSelectedChecklist: detail.reloadSelectedChecklist,
-    saveChecklist: actions.saveChecklist,
-    selectedChecklist: detail.selectedChecklist,
-    setAnswerValue: draft.setAnswerValue,
-    setMessage: actions.setMessage,
-    startFromListItem: actions.startFromListItem,
-    startSelectedChecklist: actions.startSelectedChecklist,
-    versionConflict: detail.versionConflict,
+    checklist,
+    completeChecklist,
+    detailError,
+    draftAnswers,
+    formError,
+    hasUnsavedChanges,
+    isActionLoading,
+    isDetailLoading,
+    message,
+    refreshError,
+    reloadChecklist,
+    saveChecklist,
+    setAnswerValue,
+    showRequiredErrors,
+    startChecklist,
+    versionConflict,
   };
 }

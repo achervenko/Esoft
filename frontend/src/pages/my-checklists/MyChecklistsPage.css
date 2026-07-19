@@ -8,14 +8,7 @@
   margin-bottom: 0;
 }
 
-.my-checklists-layout {
-  display: grid;
-  gap: 18px;
-  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
-}
-
-.my-checklists-list,
-.my-checklists-detail {
+.my-checklists-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -28,11 +21,32 @@
 }
 
 .my-checklists-tablist a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
   border: 1px solid var(--chakra-colors-gray-200);
   border-radius: 999px;
   color: inherit;
   padding: 8px 14px;
   text-decoration: none;
+}
+
+.my-checklists-tab-badge {
+  width: 22px;
+  height: 22px;
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  pointer-events: none;
 }
 
 .my-checklists-tablist a.active {
@@ -41,10 +55,10 @@
   color: #fff;
 }
 
-.my-checklists-items {
-  display: flex;
-  flex-direction: column;
+.my-checklists-cards {
+  display: grid;
   gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .my-checklists-item {
@@ -60,33 +74,28 @@
   margin-bottom: 12px;
 }
 
-.my-checklists-item dl,
-.my-checklists-detail-summary dl {
+.my-checklists-item dl {
   display: grid;
   gap: 10px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin: 0;
 }
 
-.my-checklists-item dl div,
-.my-checklists-detail-summary dl div {
+.my-checklists-item dl div {
   min-width: 0;
 }
 
-.my-checklists-item dt,
-.my-checklists-detail-summary dt {
+.my-checklists-item dt {
   color: #6b7280;
   font-size: 13px;
   margin-bottom: 2px;
 }
 
-.my-checklists-item dd,
-.my-checklists-detail-summary dd {
+.my-checklists-item dd {
   margin: 0;
 }
 
-.my-checklists-item-actions,
-.my-checklists-detail-actions {
+.my-checklists-item-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -127,122 +136,18 @@
   color: #6b7280;
 }
 
-.my-checklists-detail-empty {
-  display: flex;
-  align-items: center;
-  color: #6b7280;
-  justify-content: center;
-  min-height: 260px;
-}
-
-.my-checklists-detail-title {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.my-checklists-detail-title h2 {
-  margin: 0;
-}
-
-.my-checklists-detail-meta {
-  color: #6b7280;
-  margin: 6px 0 0;
-}
-
-.my-checklists-modules {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.my-checklists-module {
-  border-top: 1px solid var(--chakra-colors-gray-200);
-  padding-top: 14px;
-}
-
-.my-checklists-module:first-child {
-  border-top: 0;
-  padding-top: 0;
-}
-
-.my-checklists-module h3 {
-  margin: 0 0 10px;
-}
-
-.my-checklists-question {
-  border: 1px solid var(--chakra-colors-gray-200);
-  border-radius: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-}
-
-.my-checklists-question-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  justify-content: space-between;
-}
-
-.my-checklists-question-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-}
-
-.my-checklists-required {
-  color: #b91c1c;
-}
-
-.my-checklists-answered-at {
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.my-checklists-question textarea,
-.my-checklists-question input,
-.my-checklists-question select {
-  border: 1px solid var(--chakra-colors-gray-200);
-  border-radius: 12px;
-  font: inherit;
-  padding: 10px 12px;
-  width: 100%;
-}
-
-.my-checklists-question textarea {
-  min-height: 100px;
-  resize: vertical;
-}
-
-.my-checklists-question input:disabled,
-.my-checklists-question select:disabled,
-.my-checklists-question textarea:disabled {
-  background: #f9fafb;
-  color: #6b7280;
-}
-
-.my-checklists-boolean-field {
-  max-width: 220px;
-}
-
 @media (max-width: 1080px) {
-  .my-checklists-layout {
-    grid-template-columns: 1fr;
+  .my-checklists-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 720px) {
-  .my-checklists-item dl,
-  .my-checklists-detail-summary dl {
+  .my-checklists-cards {
     grid-template-columns: 1fr;
   }
 
-  .my-checklists-detail-title {
-    align-items: flex-start;
-    flex-direction: column;
+  .my-checklists-item dl {
+    grid-template-columns: 1fr;
   }
 }

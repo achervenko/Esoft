@@ -2,21 +2,27 @@ import type { ChecklistWorkStatus } from "../../shared/api/checklists";
 
 export type ChecklistTabKey = "new" | "in-progress" | "completed";
 
+export const checklistTabOrder: ChecklistTabKey[] = [
+  "new",
+  "in-progress",
+  "completed",
+];
+
 export const tabConfig: Record<
   ChecklistTabKey,
   { label: string; statuses: ChecklistWorkStatus[] }
 > = {
-  completed: {
-    label: "Завершённые",
-    statuses: ["COMPLETED"],
+  new: {
+    label: "Новые",
+    statuses: ["CREATED"],
   },
   "in-progress": {
     label: "В работе",
     statuses: ["IN_PROGRESS"],
   },
-  new: {
-    label: "Новые",
-    statuses: ["CREATED"],
+  completed: {
+    label: "Завершённые",
+    statuses: ["COMPLETED"],
   },
 };
 

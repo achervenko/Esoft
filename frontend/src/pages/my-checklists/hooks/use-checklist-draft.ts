@@ -3,22 +3,21 @@ import type { ChecklistWorkDetail } from "../../../shared/api/checklists";
 import {
   buildDraftAnswers,
   getChangedAnswers,
-  validateRequiredAnswers,
 } from "../my-checklists.answers";
 import type { DraftAnswers } from "../my-checklists.types";
 
 type UseChecklistDraftParams = {
-  selectedChecklist: ChecklistWorkDetail | null;
+  checklist: ChecklistWorkDetail | null;
 };
 
 export function useChecklistDraft({
-  selectedChecklist,
+  checklist,
 }: UseChecklistDraftParams) {
   const [draftAnswers, setDraftAnswers] = useState<DraftAnswers>({});
 
   useEffect(() => {
-    setDraftAnswers(selectedChecklist ? buildDraftAnswers(selectedChecklist) : {});
-  }, [selectedChecklist]);
+    setDraftAnswers(checklist ? buildDraftAnswers(checklist) : {});
+  }, [checklist]);
 
   const setAnswerValue = useCallback(
     (checklistDetailId: number, value: string) => {
@@ -32,25 +31,15 @@ export function useChecklistDraft({
 
   const changedAnswers = useMemo(
     () =>
-      selectedChecklist === null
-        ? []
-        : getChangedAnswers(selectedChecklist, draftAnswers),
-    [draftAnswers, selectedChecklist],
+      checklist === null ? [] : getChangedAnswers(checklist, draftAnswers),
+    [draftAnswers, checklist],
   );
 
   const hasUnsavedChanges = changedAnswers.length > 0;
 
-  const validateRequiredDraftAnswers = useCallback(() => {
-    if (!selectedChecklist) {
-      return null;
-    }
-
-    return validateRequiredAnswers(selectedChecklist, draftAnswers);
-  }, [draftAnswers, selectedChecklist]);
-
   const resetDraftAnswers = useCallback(() => {
-    setDraftAnswers(selectedChecklist ? buildDraftAnswers(selectedChecklist) : {});
-  }, [selectedChecklist]);
+    setDraftAnswers(checklist ? buildDraftAnswers(checklist) : {});
+  }, [checklist]);
 
   return {
     changedAnswers,
@@ -58,6 +47,5 @@ export function useChecklistDraft({
     hasUnsavedChanges,
     resetDraftAnswers,
     setAnswerValue,
-    validateRequiredDraftAnswers,
   };
 }

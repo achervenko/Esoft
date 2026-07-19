@@ -5,20 +5,25 @@ import {
   type ChecklistWorkListItem,
 } from "../../../shared/api/checklists";
 import { tabConfig } from "../my-checklists.config";
-import type { UseMyChecklistsListParams } from "../my-checklists.types";
+import type {
+  MyChecklistsListState,
+  UseMyChecklistsListParams,
+} from "../my-checklists.types";
 
 export function useMyChecklistsList({
   activeTab,
-  onSelectedChecklistMissing,
-  selectedChecklistId,
-}: UseMyChecklistsListParams) {
+}: UseMyChecklistsListParams): MyChecklistsListState {
   const [items, setItems] = useState<ChecklistWorkListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
+  const [totalsByStatus, setTotalsByStatus] = useState<
+    MyChecklistsListState["totalsByStatus"]
+  >({});
   const requestIdRef = useRef(0);
   const isMountedRef = useRef(true);
 
-  const reload = useCallback(async () => {
+  const load = useCallback(async () => {
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
 
@@ -32,6 +37,8 @@ export function useMyChecklistsList({
     }
 
     setItems(response.items);
+    setTotal(response.total);
+    setTotalsByStatus(response.totalsByStatus);
 
     return response.items;
   }, [activeTab]);
@@ -49,7 +56,7 @@ export function useMyChecklistsList({
     setIsLoading(true);
     setError(null);
 
-    reload()
+    load()
       .catch((requestError) => {
         if (!isMountedRef.current) {
           return;
@@ -57,28 +64,21 @@ export function useMyChecklistsList({
 
         setError(getApiErrorMessage(requestError));
         setItems([]);
-        onSelectedChecklistMissing();
+        setTotal(0);
+        setTotalsByStatus({});
       })
       .finally(() => {
         if (isMountedRef.current) {
           setIsLoading(false);
         }
       });
-  }, [onSelectedChecklistMissing, reload]);
-
-  useEffect(() => {
-    if (
-      selectedChecklistId !== null &&
-      !items.some((item) => item.id === selectedChecklistId)
-    ) {
-      onSelectedChecklistMissing();
-    }
-  }, [items, onSelectedChecklistMissing, selectedChecklistId]);
+  }, [load]);
 
   return {
     error,
     isLoading,
     items,
-    reload,
+    total,
+    totalsByStatus,
   };
 }
