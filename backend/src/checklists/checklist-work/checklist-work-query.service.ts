@@ -20,12 +20,10 @@ export class ChecklistWorkQueryService {
 
   async list(params: {
     query: ChecklistWorkQuery;
-    role?: string | null;
     userId?: string | null;
   }) {
     const userId = this.assertions.requireUserId(params.userId);
     const result = await this.queryRepository.list({
-      canViewAll: canViewAllChecklists(params.role),
       query: params.query,
       userId,
     });
@@ -35,7 +33,7 @@ export class ChecklistWorkQueryService {
 
   async get(
     id: number,
-    params: { role?: string | null; userId?: string | null },
+    params: { userId?: string | null },
   ) {
     const userId = this.assertions.requireUserId(params.userId);
     const checklist = await this.queryRepository.loadDetailForAccess(id);
@@ -44,11 +42,7 @@ export class ChecklistWorkQueryService {
       throwChecklistNotFound('CHECKLIST_NOT_FOUND', 'Чек-лист не найден.');
     }
 
-    if (
-      !canViewAllChecklists(params.role) &&
-      checklist.assignedUserId !== userId &&
-      !checklist.responsibleUserIds.includes(userId)
-    ) {
+    if (checklist.assignedUserId !== userId) {
       throwChecklistForbidden(
         'CHECKLIST_ACCESS_DENIED',
         'Недостаточно прав для просмотра чек-листа.',
@@ -60,8 +54,4 @@ export class ChecklistWorkQueryService {
       await this.queryRepository.loadDetailQuestions(id),
     );
   }
-}
-
-export function canViewAllChecklists(role?: string | null) {
-  return role === 'admin' || role === 'chief_engineer';
 }

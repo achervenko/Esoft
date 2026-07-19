@@ -16,7 +16,6 @@ export class ChecklistWorkQueryRepository {
   async list(params: {
     query: ChecklistWorkQuery;
     userId: string;
-    canViewAll: boolean;
   }) {
     const [rows, totalRows] = await Promise.all([
       this.prisma.$queryRaw<ChecklistListRow[]>`
@@ -73,7 +72,7 @@ export class ChecklistWorkQueryRepository {
             ON assigned_employee.id = assigned_employee_user.employee_id
           LEFT JOIN checklist_progress progress
             ON progress.checklist_id = checklist.id
-          WHERE (${params.canViewAll} OR checklist.assigned_user_id = ${params.userId})
+          WHERE checklist.assigned_user_id = ${params.userId}
             AND checklist.status = ANY(ARRAY[${Prisma.join(
               params.query.statuses ?? [
                 ChecklistStatus.CREATED,
@@ -98,7 +97,7 @@ export class ChecklistWorkQueryRepository {
           ON event.id = checklist.equipment_event_id
         JOIN equipment
           ON equipment.id = event.equipment_id
-        WHERE (${params.canViewAll} OR checklist.assigned_user_id = ${params.userId})
+        WHERE checklist.assigned_user_id = ${params.userId}
           AND checklist.status = ANY(ARRAY[${Prisma.join(
             params.query.statuses ?? [
               ChecklistStatus.CREATED,

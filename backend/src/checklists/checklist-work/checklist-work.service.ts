@@ -18,13 +18,12 @@ export class ChecklistWorkService {
 
   list(params: {
     query: ChecklistWorkQuery;
-    role?: string | null;
     userId?: string | null;
   }) {
     return this.queryService.list(params);
   }
 
-  get(id: number, params: { role?: string | null; userId?: string | null }) {
+  get(id: number, params: { userId?: string | null }) {
     return this.queryService.get(id, params);
   }
 

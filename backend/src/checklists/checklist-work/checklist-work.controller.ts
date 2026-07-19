@@ -33,7 +33,6 @@ export class ChecklistWorkController {
   ) {
     return this.checklistWorkService.list({
       query: parseChecklistWorkQuery(query),
-      role: session.user.role,
       userId: session.user.id,
     });
   }
@@ -44,7 +43,6 @@ export class ChecklistWorkController {
     @Session() session: UserSession<Auth>,
   ) {
     return this.checklistWorkService.get(id, {
-      role: session.user.role,
       userId: session.user.id,
     });
   }
