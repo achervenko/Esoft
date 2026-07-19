@@ -164,12 +164,6 @@ export function validateDraftAnswers(
   detail: ChecklistWorkDetail,
   draftAnswers: DraftAnswers,
 ) {
-  const requiredError = validateRequiredAnswers(detail, draftAnswers);
-
-  if (requiredError) {
-    return requiredError;
-  }
-
   for (const module of detail.modules) {
     for (const question of module.questions) {
       if (question.answerType !== "DATE") {

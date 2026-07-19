@@ -91,7 +91,7 @@ export class ChecklistWorkMutationRepository {
       SELECT user_id AS "userId"
       FROM equipment_event_responsibles
       WHERE equipment_event_id = ${eventId}
-      ORDER BY id
+      ORDER BY user_id
     `;
 
     return rows.map((row) => row.userId);

@@ -43,7 +43,6 @@ export function useChecklistWork({
     refreshError,
     saveChecklist,
     showRequiredErrors,
-    startChecklist,
   } = useChecklistActions({
     changedAnswers,
     checklist,
@@ -72,7 +71,6 @@ export function useChecklistWork({
     saveChecklist,
     setAnswerValue,
     showRequiredErrors,
-    startChecklist,
     versionConflict,
   };
 }

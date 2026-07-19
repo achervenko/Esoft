@@ -28,14 +28,8 @@ export function useChecklistValidation({
       return null;
     }
 
-    const requiredError = getRequiredDraftError();
-
-    if (requiredError) {
-      return requiredError;
-    }
-
     return validateDraftAnswers(checklist, draftAnswers);
-  }, [checklist, draftAnswers, getRequiredDraftError]);
+  }, [checklist, draftAnswers]);
 
   return {
     getRequiredDraftError,

@@ -101,7 +101,7 @@ export class SearchQueryService {
         ON workshops.id = sections.workshop_id
       LEFT JOIN employees
         ON employees.id = equipment.responsible_employee_id
-      WHERE is_active = true
+      WHERE search_index.is_active = true
         ${entityFilter}
         AND (
           ${titleExpression} = ${query}

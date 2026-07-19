@@ -1,5 +1,11 @@
+import { useCallback, useState } from "react";
+import { getApiErrorMessage } from "../../shared/api/api-error";
 import { buildHashRoute } from "../../shared/lib/hash-navigation";
-import type { ChecklistWorkStatus } from "../../shared/api/checklists";
+import {
+  startChecklistWork,
+  type ChecklistWorkListItem,
+  type ChecklistWorkStatus,
+} from "../../shared/api/checklists";
 import "../../shared/ui/AdminPage.css";
 import { Notice } from "../../shared/ui/Notice";
 import { MyChecklistsList } from "./components/MyChecklistsList";
@@ -15,6 +21,10 @@ export type MyChecklistsPageProps = {
 
 export function MyChecklistsPage({ route }: MyChecklistsPageProps) {
   const activeTab = getActiveTab(route);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [startingChecklistId, setStartingChecklistId] = useState<number | null>(
+    null,
+  );
 
   const checklistList = useMyChecklistsList({
     activeTab,
@@ -38,6 +48,25 @@ export function MyChecklistsPage({ route }: MyChecklistsPageProps) {
             : "completed",
     });
 
+  const startChecklist = useCallback(
+    async (item: ChecklistWorkListItem) => {
+      setStartError(null);
+      setStartingChecklistId(item.id);
+
+      try {
+        await startChecklistWork(item.id, {
+          version: item.version,
+        });
+        window.location.hash = getChecklistHref(item.id, "IN_PROGRESS");
+      } catch (error) {
+        setStartError(getApiErrorMessage(error, "Не удалось начать чек-лист."));
+      } finally {
+        setStartingChecklistId(null);
+      }
+    },
+    [],
+  );
+
   return (
     <div className="admin-page my-checklists-page">
       <header className="admin-page-header">
@@ -50,6 +79,8 @@ export function MyChecklistsPage({ route }: MyChecklistsPageProps) {
         <Notice tone="error">{checklistList.error}</Notice>
       ) : null}
 
+      {startError ? <Notice tone="error">{startError}</Notice> : null}
+
       <section className="admin-card my-checklists-list">
         <MyChecklistsTabs activeTab={activeTab} tabCounts={tabCounts} />
 
@@ -57,6 +88,8 @@ export function MyChecklistsPage({ route }: MyChecklistsPageProps) {
           getChecklistHref={getChecklistHref}
           isLoading={checklistList.isLoading}
           items={checklistList.items}
+          onStartChecklist={startChecklist}
+          startingChecklistId={startingChecklistId}
         />
       </section>
     </div>

@@ -1,4 +1,5 @@
 import { ChevronLeft } from "lucide-react";
+import { useEffect } from "react";
 import { buildHashRoute } from "../../shared/lib/hash-navigation";
 import "../../shared/ui/AdminPage.css";
 import { Notice } from "../../shared/ui/Notice";
@@ -31,6 +32,12 @@ export function MyChecklistViewPage({
   const backHref = buildHashRoute("#/my-checklists", {
     tab: backTab === "new" ? null : backTab,
   });
+
+  useEffect(() => {
+    if (checklistWork.checklist?.status === "CREATED") {
+      window.history.replaceState(null, "", "#/my-checklists");
+    }
+  }, [checklistWork.checklist?.status]);
 
   const handleReload = () => {
     if (
@@ -79,7 +86,6 @@ export function MyChecklistViewPage({
         onComplete={() => void checklistWork.completeChecklist()}
         onReload={handleReload}
         onSave={() => void checklistWork.saveChecklist()}
-        onStart={() => void checklistWork.startChecklist()}
         showRequiredErrors={checklistWork.showRequiredErrors}
         versionConflict={checklistWork.versionConflict}
       />

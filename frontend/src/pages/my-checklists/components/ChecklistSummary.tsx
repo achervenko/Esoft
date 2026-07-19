@@ -27,10 +27,6 @@ export function ChecklistSummary({ checklist }: ChecklistSummaryProps) {
           <dt>Начат</dt>
           <dd>{formatDateTime(checklist.startedAt)}</dd>
         </div>
-        <div>
-          <dt>Завершён</dt>
-          <dd>{formatDateTime(checklist.completedAt)}</dd>
-        </div>
       </dl>
     </section>
   );

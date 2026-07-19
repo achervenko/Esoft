@@ -1,29 +1,27 @@
-import { checklistStatusLabels } from "../my-checklists.config";
 import { formatDate, formatProgress } from "../my-checklists.utils";
 import type { MyChecklistCardProps } from "../my-checklists.types";
 
-export function MyChecklistCard({ href, item }: MyChecklistCardProps) {
+export function MyChecklistCard({
+  href,
+  isStarting,
+  item,
+  onStart,
+}: MyChecklistCardProps) {
   const primaryActionLabel =
     item.status === "CREATED"
       ? "Начать"
       : item.status === "IN_PROGRESS"
         ? "Продолжить"
         : "Просмотреть";
+  const isStartAction = item.status === "CREATED";
 
   return (
     <article className="my-checklists-item">
       <header>
         <strong>{item.template.name}</strong>
-        <span className={`my-checklists-status ${item.status.toLowerCase()}`}>
-          {checklistStatusLabels[item.status]}
-        </span>
       </header>
 
       <dl>
-        <div>
-          <dt>Исполнитель</dt>
-          <dd>{item.assignedUser.fullName}</dd>
-        </div>
         <div>
           <dt>Оборудование</dt>
           <dd>
@@ -49,9 +47,20 @@ export function MyChecklistCard({ href, item }: MyChecklistCardProps) {
       </dl>
 
       <div className="my-checklists-item-actions">
-        <a className="admin-secondary-button" href={href}>
-          {primaryActionLabel}
-        </a>
+        {isStartAction ? (
+          <button
+            className="admin-secondary-button"
+            disabled={isStarting}
+            onClick={() => onStart(item)}
+            type="button"
+          >
+            {primaryActionLabel}
+          </button>
+        ) : (
+          <a className="admin-secondary-button" href={href}>
+            {primaryActionLabel}
+          </a>
+        )}
       </div>
     </article>
   );

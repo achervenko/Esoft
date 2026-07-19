@@ -4,7 +4,6 @@ import {
   completeChecklistWork,
   getChecklistWorkDetail,
   saveChecklistWorkAnswers,
-  startChecklistWork,
   type ChecklistWorkAnswerPayload,
   type ChecklistWorkDetail,
 } from "../../../shared/api/checklists";
@@ -101,34 +100,6 @@ export function useChecklistActions({
     validateDraftBeforeMutation,
   ]);
 
-  const startChecklist = useCallback(async () => {
-    if (!checklist) {
-      return;
-    }
-
-    prepareMutation();
-    setIsActionLoading(true);
-
-    try {
-      const detail = await startChecklistWork(checklist.id, {
-        version: checklist.version,
-      });
-      onChecklistChange(detail);
-      showMessage("Чек-лист переведён в работу.");
-    } catch (requestError) {
-      applyMutationError(requestError, "detail");
-    } finally {
-      setIsActionLoading(false);
-    }
-  }, [
-    applyMutationError,
-    checklist,
-    onChecklistChange,
-    prepareMutation,
-    setIsActionLoading,
-    showMessage,
-  ]);
-
   const persistChecklistAnswers = useCallback(
     async ({
       manageLoading = true,
@@ -219,15 +190,29 @@ export function useChecklistActions({
       };
     }
 
-    if (validateBeforeAction()) {
+    prepareMutation();
+
+    const draftError = validateDraftBeforeMutation();
+
+    if (draftError) {
+      showFormError(draftError);
+      hideRequiredValidationErrors();
       return {
         reason: "validation",
         success: false,
       };
     }
 
+    hideRequiredValidationErrors();
     return persistChecklistAnswers();
-  }, [checklist, persistChecklistAnswers, validateBeforeAction]);
+  }, [
+    checklist,
+    hideRequiredValidationErrors,
+    persistChecklistAnswers,
+    prepareMutation,
+    showFormError,
+    validateDraftBeforeMutation,
+  ]);
 
   const completeChecklist = useCallback(async () => {
     if (!checklist) {
@@ -235,14 +220,6 @@ export function useChecklistActions({
     }
 
     if (validateBeforeAction()) {
-      return;
-    }
-
-    if (
-      !window.confirm(
-        "Завершить чек-лист? После завершения ответы нельзя будет изменить.",
-      )
-    ) {
       return;
     }
 
@@ -269,11 +246,10 @@ export function useChecklistActions({
         version: checklistForCompletion.version,
       });
       onChecklistChange(detail);
-      showMessage(
-        detail.event.status === "COMPLETED"
-          ? "Чек-лист завершён. Событие завершено автоматически."
-          : "Чек-лист завершён.",
-      );
+      showMessage("Чеклист завершен");
+      window.setTimeout(() => {
+        window.location.hash = "#/my-checklists?tab=completed";
+      }, 600);
     } catch (requestError) {
       applyMutationError(requestError, "form");
     } finally {
@@ -301,6 +277,5 @@ export function useChecklistActions({
     refreshError,
     saveChecklist,
     showRequiredErrors,
-    startChecklist,
   };
 }

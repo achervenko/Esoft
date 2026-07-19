@@ -30,11 +30,15 @@ export type MyChecklistsListProps = {
   ) => string;
   isLoading: boolean;
   items: ChecklistWorkListItem[];
+  onStartChecklist: (item: ChecklistWorkListItem) => void;
+  startingChecklistId: number | null;
 };
 
 export type MyChecklistCardProps = {
   href: string;
+  isStarting: boolean;
   item: ChecklistWorkListItem;
+  onStart: (item: ChecklistWorkListItem) => void;
 };
 
 export type MyChecklistDetailProps = {
@@ -49,7 +53,6 @@ export type MyChecklistDetailProps = {
   onComplete: () => void;
   onReload: () => void;
   onSave: () => void;
-  onStart: () => void;
   showRequiredErrors: boolean;
   versionConflict: string | null;
 };

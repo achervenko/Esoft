@@ -250,7 +250,7 @@ export class ChecklistWorkQueryRepository {
       LEFT JOIN (
         SELECT
           equipment_event_id,
-          array_agg(user_id) AS user_ids
+          array_agg(user_id ORDER BY user_id) AS user_ids
         FROM equipment_event_responsibles
         GROUP BY equipment_event_id
       ) responsibles

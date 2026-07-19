@@ -33,9 +33,29 @@
   margin: 0;
 }
 
+.my-checklists-detail-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.my-checklists-detail-heading span {
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+}
+
 .my-checklists-detail-meta {
   color: #6b7280;
   margin: 6px 0 0;
+}
+
+.my-checklists-detail-summary {
+  background: #f7f8fa;
+  border: 1px solid var(--chakra-colors-gray-200);
+  border-radius: 12px;
+  padding: 14px 16px;
 }
 
 .my-checklists-detail-summary dl {
@@ -113,11 +133,6 @@
 
 .my-checklists-required {
   color: #b91c1c;
-}
-
-.my-checklists-answered-at {
-  color: #6b7280;
-  font-size: 12px;
 }
 
 .my-checklists-question textarea,

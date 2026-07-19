@@ -1,4 +1,6 @@
+import { useState } from "react";
 import "../../../shared/ui/AdminPage.css";
+import { ConfirmDialog } from "../../../shared/ui/ConfirmDialog";
 import { Notice } from "../../../shared/ui/Notice";
 import { checklistStatusLabels } from "../my-checklists.config";
 import { ChecklistModules } from "./ChecklistModules";
@@ -9,8 +11,6 @@ function formatChecklistMeta(checklist: NonNullable<MyChecklistDetailProps["chec
   return (
     <>
       <span>{checklist.assignedUser.fullName}</span>
-      <span aria-hidden="true">•</span>
-      <span>{checklist.event.maintenanceType.name}</span>
     </>
   );
 }
@@ -27,10 +27,11 @@ export function MyChecklistDetail({
   onComplete,
   onReload,
   onSave,
-  onStart,
   showRequiredErrors,
   versionConflict,
 }: MyChecklistDetailProps) {
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
+
   if (!checklist) {
     return (
       <section className="admin-card my-checklists-detail">
@@ -40,12 +41,17 @@ export function MyChecklistDetail({
   }
 
   const canEditAnswers = canMutateSelected && checklist.status === "IN_PROGRESS";
+  const canShowWorkActions = checklist.status === "IN_PROGRESS" && canMutateSelected;
+  const hasDetailActions = canShowWorkActions || Boolean(versionConflict);
 
   return (
     <section className="admin-card my-checklists-detail">
       <header className="my-checklists-detail-title">
         <div>
-          <h2>{checklist.template.name}</h2>
+          <div className="my-checklists-detail-heading">
+            <h2>{checklist.template.name}</h2>
+            <span>{checklist.event.maintenanceType.name}</span>
+          </div>
           <p className="my-checklists-detail-meta">{formatChecklistMeta(checklist)}</p>
         </div>
         <span className={`my-checklists-status ${checklist.status.toLowerCase()}`}>
@@ -66,18 +72,9 @@ export function MyChecklistDetail({
         showRequiredErrors={showRequiredErrors}
       />
 
-      <div className="my-checklists-detail-actions">
-        {checklist.status === "CREATED" && canMutateSelected ? (
-          <button
-            className="admin-primary-button"
-            disabled={isActionLoading}
-            onClick={onStart}
-            type="button"
-          >
-            Начать
-          </button>
-        ) : null}
-        {checklist.status === "IN_PROGRESS" && canMutateSelected ? (
+      {hasDetailActions ? (
+        <div className="my-checklists-detail-actions">
+          {canShowWorkActions ? (
           <>
             <button
               className="admin-secondary-button"
@@ -90,24 +87,41 @@ export function MyChecklistDetail({
             <button
               className="admin-primary-button"
               disabled={isActionLoading}
-              onClick={onComplete}
+              onClick={() => setIsCompleteDialogOpen(true)}
               type="button"
             >
               Завершить чек-лист
             </button>
           </>
-        ) : null}
-        {versionConflict ? (
-          <button
-            className="admin-secondary-button"
-            disabled={isActionLoading || isDetailLoading}
-            onClick={onReload}
-            type="button"
-          >
-            Перезагрузить чек-лист
-          </button>
-        ) : null}
-      </div>
+          ) : null}
+          {versionConflict ? (
+            <button
+              className="admin-secondary-button"
+              disabled={isActionLoading || isDetailLoading}
+              onClick={onReload}
+              type="button"
+            >
+              Перезагрузить чек-лист
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {isCompleteDialogOpen ? (
+        <ConfirmDialog
+          cancelLabel="Отмена"
+          confirmLabel="Завершить"
+          description="После завершения ответы нельзя будет изменить."
+          isLoading={isActionLoading}
+          loadingLabel="Завершение..."
+          onCancel={() => setIsCompleteDialogOpen(false)}
+          onConfirm={() => {
+            setIsCompleteDialogOpen(false);
+            onComplete();
+          }}
+          title="Завершить чек-лист?"
+        />
+      ) : null}
     </section>
   );
 }
