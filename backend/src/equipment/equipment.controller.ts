@@ -42,6 +42,8 @@ export class EquipmentController {
     @Body() dto: CreateEquipmentDto,
     @Session() session: UserSession<Auth>,
   ) {
+    assertCanEditEquipment(session.user.role);
+
     return this.equipmentService.create(dto, session.user.id);
   }
 

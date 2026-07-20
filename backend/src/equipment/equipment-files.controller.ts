@@ -15,10 +15,9 @@ import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { Auth } from '../auth/auth.config';
 import { assertCanManageFiles } from '../auth/role-permissions';
 import { StorageFileService } from '../storage/storage-file.service';
+import { MAX_FILE_SIZE_BYTES } from '../storage/storage-file.validation';
 import type { UploadedFileInput } from '../storage/storage.types';
 import { EquipmentService } from './equipment.service';
-
-const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
 @Controller('api/equipment/:visibleId/files')
 export class EquipmentFilesController {
@@ -72,8 +71,7 @@ export class EquipmentFilesController {
       if (error instanceof NotFoundException) {
         throw new NotFoundException({
           code: 'EQUIPMENT_NOT_FOUND',
-          message:
-            '\u041e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u0435 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e.',
+          message: 'Оборудование не найдено.',
         });
       }
 

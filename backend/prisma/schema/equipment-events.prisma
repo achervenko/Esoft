@@ -43,7 +43,6 @@ model EquipmentEvent {
   @@index([status], map: "idx_equipment_events_status")
   @@index([plannedDate], map: "idx_equipment_events_planned_date")
   @@index([factDate], map: "idx_equipment_events_fact_date")
-  @@index([id, version], map: "idx_equipment_events_id_version")
   @@index([maintenanceSettingId], map: "idx_equipment_events_maintenance_setting_id")
   @@map("equipment_events")
 }

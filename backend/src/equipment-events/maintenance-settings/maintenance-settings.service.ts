@@ -7,13 +7,12 @@ import {
   writeMaintenanceSettingDeletedAudit,
   writeMaintenanceSettingUpdatedAudit,
 } from './maintenance-settings.audit';
-import {
-  throwMaintenanceSettingPrismaError,
-} from './maintenance-settings.errors';
+import { throwMaintenanceSettingPrismaError } from './maintenance-settings.errors';
 import {
   maintenanceSettingSelect,
   maintenanceSettingsMaintenanceTypeSelect,
   type MaintenanceSettingsEquipmentRecord,
+  type MaintenanceSettingRecord,
 } from './maintenance-settings.relations';
 import {
   buildSettingCreateData,
@@ -36,46 +35,52 @@ export class MaintenanceSettingsService {
   ) {}
 
   getSettings(visibleId: number) {
-    return this.prisma.$transaction(async (tx) => {
-      const equipment = await this.assertions.loadEquipmentByVisibleId(
-        tx,
-        visibleId,
-      );
+    return this.prisma.$transaction(
+      async (tx) => {
+        const equipment = await this.assertions.loadEquipmentByVisibleId(
+          tx,
+          visibleId,
+        );
 
-      return this.buildSettingsResponse(tx, equipment);
-    });
+        return this.buildSettingsResponse(tx, equipment);
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
   }
 
   getAvailableMaintenanceTypes(visibleId: number) {
-    return this.prisma.$transaction(async (tx) => {
-      const equipment = await this.assertions.loadEquipmentByVisibleId(
-        tx,
-        visibleId,
-      );
+    return this.prisma.$transaction(
+      async (tx) => {
+        const equipment = await this.assertions.loadEquipmentByVisibleId(
+          tx,
+          visibleId,
+        );
 
-      const assignedSettings = await tx.equipmentMaintenanceSetting.findMany({
-        select: { maintenanceTypeId: true },
-        where: { equipmentModelId: equipment.modelId },
-      });
+        const assignedSettings = await tx.equipmentMaintenanceSetting.findMany({
+          select: { maintenanceTypeId: true },
+          where: { equipmentModelId: equipment.modelId },
+        });
 
-      const assignedMaintenanceTypeIds = assignedSettings.map(
-        (setting) => setting.maintenanceTypeId,
-      );
+        const assignedMaintenanceTypeIds = assignedSettings.map(
+          (setting) => setting.maintenanceTypeId,
+        );
 
-      const maintenanceTypes = await tx.equipmentEventType.findMany({
-        orderBy: [{ name: 'asc' }, { id: 'asc' }],
-        select: maintenanceSettingsMaintenanceTypeSelect,
-        where: {
-          id:
-            assignedMaintenanceTypeIds.length > 0
-              ? { notIn: assignedMaintenanceTypeIds }
-              : undefined,
-          isActive: true,
-        },
-      });
+        const maintenanceTypes = await tx.equipmentEventType.findMany({
+          orderBy: [{ name: 'asc' }, { id: 'asc' }],
+          select: maintenanceSettingsMaintenanceTypeSelect,
+          where: {
+            id:
+              assignedMaintenanceTypeIds.length > 0
+                ? { notIn: assignedMaintenanceTypeIds }
+                : undefined,
+            isActive: true,
+          },
+        });
 
-      return presentAvailableMaintenanceTypes(maintenanceTypes);
-    });
+        return presentAvailableMaintenanceTypes(maintenanceTypes);
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
   }
 
   async createSetting(
@@ -151,20 +156,25 @@ export class MaintenanceSettingsService {
           visibleId,
         );
 
-        const oldSetting = await this.assertions.assertSettingExists(
+        const oldSetting = await this.assertions.loadSettingForMutation(
           tx,
           equipment.modelId,
           settingId,
         );
+        const nextChecklistTemplateId = input.defaultChecklistTemplateId;
+        const isChecklistTemplateChanged =
+          nextChecklistTemplateId !== undefined &&
+          nextChecklistTemplateId !== oldSetting.defaultChecklistTemplateId;
 
-        if (
-          input.defaultChecklistTemplateId !== undefined &&
-          input.defaultChecklistTemplateId !== null
-        ) {
+        if (isChecklistTemplateChanged && nextChecklistTemplateId !== null) {
           await this.assertions.assertActiveChecklistTemplate(
             tx,
-            input.defaultChecklistTemplateId,
+            nextChecklistTemplateId,
           );
+        }
+
+        if (!hasSettingChanges(oldSetting, input)) {
+          return this.buildSettingsResponse(tx, equipment);
         }
 
         await tx.equipmentMaintenanceSetting.update({
@@ -204,7 +214,7 @@ export class MaintenanceSettingsService {
           visibleId,
         );
 
-        const setting = await this.assertions.assertSettingExists(
+        const setting = await this.assertions.loadSettingForMutation(
           tx,
           equipment.modelId,
           settingId,
@@ -261,4 +271,36 @@ export class MaintenanceSettingsService {
   ) {
     return tx.equipment.count({ where: { modelId: equipmentModelId } });
   }
+}
+
+function hasSettingChanges(
+  current: MaintenanceSettingRecord,
+  input: MaintenanceSettingUpdateInput,
+) {
+  if (
+    input.defaultChecklistTemplateId !== undefined &&
+    current.defaultChecklistTemplateId !== input.defaultChecklistTemplateId
+  ) {
+    return true;
+  }
+
+  if (
+    input.executionType !== undefined &&
+    current.executionType !== input.executionType
+  ) {
+    return true;
+  }
+
+  if (input.periodicity !== undefined) {
+    const nextPeriodicity = input.periodicity;
+
+    return (
+      current.periodicityYears !== (nextPeriodicity?.years ?? null) ||
+      current.periodicityMonths !== (nextPeriodicity?.months ?? null) ||
+      current.periodicityWeeks !== (nextPeriodicity?.weeks ?? null) ||
+      current.periodicityDays !== (nextPeriodicity?.days ?? null)
+    );
+  }
+
+  return false;
 }

@@ -2,14 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { AuditAction, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { writeChecklistAudit } from '../checklist-common/checklists.audit';
-import { throwChecklistPrismaError } from '../checklist-common/checklists.errors';
+import {
+  throwChecklistConflict,
+  throwChecklistPrismaError,
+} from '../checklist-common/checklists.errors';
 import { ChecklistQuestionsAssertions } from './checklist-questions.assertions';
+import { ChecklistQuestionsOrderLockService } from './checklist-questions-order-lock.service';
 import { ChecklistQuestionsOrderService } from './checklist-questions-order.service';
 import { presentQuestion } from './checklist-questions.presenter';
 import { ChecklistQuestionsReorderService } from './checklist-questions-reorder.service';
 import { checklistQuestionInclude } from './checklist-questions.select';
 import { ChecklistQuestionsStatusService } from './checklist-questions-status.service';
 import type {
+  ChecklistQuestionRecord,
   QuestionInput,
   QuestionQuery,
   QuestionReorderInput,
@@ -20,6 +25,7 @@ import type {
 export class ChecklistQuestionsService {
   constructor(
     private readonly assertions: ChecklistQuestionsAssertions,
+    private readonly orderLock: ChecklistQuestionsOrderLockService,
     private readonly orderService: ChecklistQuestionsOrderService,
     private readonly prisma: PrismaService,
     private readonly reorderService: ChecklistQuestionsReorderService,
@@ -75,6 +81,7 @@ export class ChecklistQuestionsService {
     try {
       const question = await this.prisma.$transaction(async (tx) => {
         if (input.checklistModuleId !== null) {
+          await this.orderLock.lock(tx, input.checklistModuleId);
           await this.assertions.assertActiveModule(tx, input.checklistModuleId);
         }
 
@@ -118,8 +125,34 @@ export class ChecklistQuestionsService {
   async update(id: number, input: QuestionUpdateInput, userId: string) {
     try {
       const question = await this.prisma.$transaction(async (tx) => {
-        const current = await this.assertions.loadQuestion(id, tx);
         const checklistModuleId = input.checklistModuleId;
+        const orderContext =
+          checklistModuleId === undefined
+            ? null
+            : await this.assertions.loadQuestionOrderContext(id, tx);
+
+        if (checklistModuleId !== undefined) {
+          await this.orderLock.lockMany(tx, [
+            orderContext?.checklistModuleId,
+            checklistModuleId,
+          ]);
+        }
+
+        const current = await this.assertions.loadQuestionForMutation(id, tx);
+
+        if (
+          orderContext &&
+          current.checklistModuleId !== orderContext.checklistModuleId
+        ) {
+          throwChecklistConflict(
+            'CHECKLIST_QUESTION_VERSION_CONFLICT',
+            'Вопрос был изменён другим пользователем.',
+          );
+        }
+
+        if (!hasQuestionChanges(current, input)) {
+          return current;
+        }
 
         if (checklistModuleId !== undefined && checklistModuleId !== null) {
           await this.assertions.assertActiveModule(tx, checklistModuleId);
@@ -138,6 +171,7 @@ export class ChecklistQuestionsService {
                     ? await this.getModuleChangeSortOrderData(
                         tx,
                         checklistModuleId,
+                        current.isActive,
                       )
                     : {}),
                 }
@@ -193,8 +227,9 @@ export class ChecklistQuestionsService {
   private async getModuleChangeSortOrderData(
     tx: Prisma.TransactionClient,
     checklistModuleId: number | null,
+    isActive: boolean,
   ): Promise<Pick<Prisma.ChecklistQuestionUncheckedUpdateInput, 'sortOrder'>> {
-    return checklistModuleId === null
+    return checklistModuleId === null || !isActive
       ? { sortOrder: null }
       : {
           sortOrder: await this.orderService.getNextActiveQuestionSortOrder(
@@ -203,4 +238,16 @@ export class ChecklistQuestionsService {
           ),
         };
   }
+}
+
+function hasQuestionChanges(
+  current: ChecklistQuestionRecord,
+  input: QuestionUpdateInput,
+) {
+  return (
+    ('answerType' in input && current.answerType !== input.answerType) ||
+    ('checklistModuleId' in input &&
+      current.checklistModuleId !== input.checklistModuleId) ||
+    ('questionText' in input && current.questionText !== input.questionText)
+  );
 }

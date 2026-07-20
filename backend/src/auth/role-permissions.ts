@@ -6,6 +6,12 @@ const rolesAllowedToManageFiles = new Set([
   'engineer',
 ]);
 
+const rolesAllowedToEditEquipment = new Set([
+  'admin',
+  'chief_engineer',
+  'engineer',
+]);
+
 const rolesAllowedToManageEquipmentEvents = new Set([
   'admin',
   'chief_engineer',
@@ -22,6 +28,24 @@ export function assertCanManageFiles(role: unknown) {
   }
 }
 
+export function assertCanViewUserProfile(params: {
+  currentUserId: string;
+  requestedUserId: string;
+  role: unknown;
+}) {
+  if (
+    params.currentUserId === params.requestedUserId ||
+    params.role === 'admin'
+  ) {
+    return;
+  }
+
+  throw new ForbiddenException({
+    code: 'FORBIDDEN',
+    message: 'Недостаточно прав для просмотра профиля пользователя.',
+  });
+}
+
 export function assertAdmin(role: unknown) {
   if (role !== 'admin') {
     throw new ForbiddenException({
@@ -32,7 +56,7 @@ export function assertAdmin(role: unknown) {
 }
 
 export function assertCanEditEquipment(role: unknown) {
-  if (!isKnownRole(role, rolesAllowedToManageFiles)) {
+  if (!isKnownRole(role, rolesAllowedToEditEquipment)) {
     throw new ForbiddenException({
       code: 'FORBIDDEN',
       message: 'Недостаточно прав для редактирования оборудования.',

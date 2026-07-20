@@ -39,30 +39,32 @@ export function parseChecklistAssignments(
     validateResponsibleAssignments?: boolean;
   },
 ): EquipmentEventChecklistAssignment[] {
-  if (value === undefined) {
-    return [];
-  }
+  const shouldValidateResponsibleAssignments =
+    options?.validateResponsibleAssignments ?? true;
+  const assignmentsValue = value ?? [];
 
-  if (!Array.isArray(value)) {
+  if (!Array.isArray(assignmentsValue)) {
     throwEquipmentEventBadRequest(
       'CHECKLIST_ASSIGNMENTS_INVALID',
       'Некорректные назначения чек-листов.',
     );
   }
 
-  const shouldValidateResponsibleAssignments =
-    options?.validateResponsibleAssignments ?? true;
   const responsibleUserIdSet = new Set(responsibleUserIds);
   const assignedUserIds = new Set<string>();
 
-  if (value.length === 0) {
+  if (
+    shouldValidateResponsibleAssignments &&
+    responsibleUserIdSet.size > 0 &&
+    assignmentsValue.length === 0
+  ) {
     throwEquipmentEventBadRequest(
       'CHECKLIST_ASSIGNMENTS_REQUIRED',
       'Укажите назначения чек-листов для всех ответственных.',
     );
   }
 
-  const assignments = value.map((item) => {
+  const assignments = assignmentsValue.map((item) => {
     if (!item || typeof item !== 'object') {
       throwEquipmentEventBadRequest(
         'CHECKLIST_ASSIGNMENT_INVALID',

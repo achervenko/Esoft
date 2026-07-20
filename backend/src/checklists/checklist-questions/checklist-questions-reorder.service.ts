@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { writeChecklistAudit } from '../checklist-common/checklists.audit';
 import { throwChecklistPrismaError } from '../checklist-common/checklists.errors';
 import { ChecklistQuestionsAssertions } from './checklist-questions.assertions';
+import { ChecklistQuestionsOrderLockService } from './checklist-questions-order-lock.service';
 import { ChecklistQuestionsOrderService } from './checklist-questions-order.service';
 import { presentQuestion } from './checklist-questions.presenter';
 import { checklistQuestionInclude } from './checklist-questions.select';
@@ -13,6 +14,7 @@ import type { QuestionReorderInput } from './checklist-questions.types';
 export class ChecklistQuestionsReorderService {
   constructor(
     private readonly assertions: ChecklistQuestionsAssertions,
+    private readonly orderLock: ChecklistQuestionsOrderLockService,
     private readonly orderService: ChecklistQuestionsOrderService,
     private readonly prisma: PrismaService,
   ) {}
@@ -20,13 +22,20 @@ export class ChecklistQuestionsReorderService {
   async reorder(moduleId: number, input: QuestionReorderInput, userId: string) {
     try {
       const questions = await this.prisma.$transaction(async (tx) => {
-        await this.assertions.assertModuleExists(tx, moduleId);
+        await this.orderLock.lock(tx, moduleId);
+
+        await this.assertions.assertActiveModule(tx, moduleId);
 
         const current = await this.findActiveQuestionsByModule(tx, moduleId);
         this.assertions.assertFullActiveQuestionOrder(current, input.items);
 
+        if (!hasQuestionOrderChanges(current, input)) {
+          return current;
+        }
+
         await this.orderService.applyTemporarySortOrder(
           tx,
+          moduleId,
           input.items.map((item) => item.id),
           userId,
         );
@@ -71,4 +80,17 @@ export class ChecklistQuestionsReorderService {
       where: { checklistModuleId: moduleId, isActive: true },
     });
   }
+}
+
+function hasQuestionOrderChanges(
+  current: Array<{ id: number; sortOrder: number | null }>,
+  input: QuestionReorderInput,
+) {
+  const requestedOrder = new Map(
+    input.items.map((item) => [item.id, item.sortOrder]),
+  );
+
+  return current.some(
+    (question) => requestedOrder.get(question.id) !== question.sortOrder,
+  );
 }

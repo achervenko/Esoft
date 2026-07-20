@@ -11,6 +11,7 @@ export type CurrentChecklistState = {
 export type CurrentChecklistAssignment = EquipmentEventChecklistAssignment;
 
 export type UpdateCreatedEventChangeInput = {
+  currentMaintenanceSettingId: number | null;
   currentNote: string | null;
   currentPlannedDate: Date | null;
   currentResponsibleUserIds: string[];

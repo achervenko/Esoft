@@ -13,12 +13,12 @@ import type { ChecklistWorkQuery } from './checklist-work.types';
 export class ChecklistWorkQueryRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(params: {
-    query: ChecklistWorkQuery;
-    userId: string;
-  }) {
-    const [rows, totalRows, totalsByStatusRows] = await Promise.all([
-      this.prisma.$queryRaw<ChecklistListRow[]>`
+  async list(params: { query: ChecklistWorkQuery; userId: string }) {
+    const [rows, totalRows, totalsByStatusRows] =
+      await this.prisma.$transaction(
+        async (tx) =>
+          Promise.all([
+            tx.$queryRaw<ChecklistListRow[]>`
         WITH checklist_progress AS (
           ${checklistProgressGroupedByChecklistSql()}
         ),
@@ -90,7 +90,7 @@ export class ChecklistWorkQueryRepository {
         LIMIT ${params.query.limit}
         OFFSET ${params.query.offset}
       `,
-      this.prisma.$queryRaw<Array<{ total: bigint }>>`
+            tx.$queryRaw<Array<{ total: bigint }>>`
         SELECT COUNT(*)::bigint AS total
         FROM checklists checklist
         JOIN equipment_events event
@@ -109,13 +109,13 @@ export class ChecklistWorkQueryRepository {
           AND (${params.query.dateFrom ?? null}::date IS NULL OR event.planned_date >= ${params.query.dateFrom ?? null})
           AND (${params.query.dateTo ?? null}::date IS NULL OR event.planned_date <= ${params.query.dateTo ?? null})
       `,
-      this.prisma.$queryRaw<
-        Array<{
-          completed: bigint;
-          created: bigint;
-          inProgress: bigint;
-        }>
-      >`
+            tx.$queryRaw<
+              Array<{
+                completed: bigint;
+                created: bigint;
+                inProgress: bigint;
+              }>
+            >`
         SELECT
           COUNT(*) FILTER (
             WHERE checklist.status = ${ChecklistStatus.CREATED}
@@ -137,7 +137,11 @@ export class ChecklistWorkQueryRepository {
           AND (${params.query.dateFrom ?? null}::date IS NULL OR event.planned_date >= ${params.query.dateFrom ?? null})
           AND (${params.query.dateTo ?? null}::date IS NULL OR event.planned_date <= ${params.query.dateTo ?? null})
       `,
-    ]);
+          ]),
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+        },
+      );
 
     const totalsByStatusRow = totalsByStatusRows[0];
 

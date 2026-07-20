@@ -4,6 +4,7 @@ import {
   completeChecklistWork,
   getChecklistWorkDetail,
   saveChecklistWorkAnswers,
+  type ChecklistResult,
   type ChecklistWorkAnswerPayload,
   type ChecklistWorkDetail,
 } from "../../../shared/api/checklists";
@@ -30,13 +31,11 @@ export function useChecklistActions({
 }: UseChecklistActionsParams) {
   const hasChanges = changedAnswers.length > 0;
   const state = useChecklistUiState();
-  const {
-    getRequiredDraftError,
-    validateDraftBeforeMutation,
-  } = useChecklistValidation({
-    checklist,
-    draftAnswers,
-  });
+  const { getRequiredDraftError, validateDraftBeforeMutation } =
+    useChecklistValidation({
+      checklist,
+      draftAnswers,
+    });
   const {
     applyMutationError: applyMutationErrorState,
     formError,
@@ -206,7 +205,7 @@ export function useChecklistActions({
     }
 
     hideRequiredValidationErrors();
-    return persistChecklistAnswers();
+    return persistChecklistAnswers({ prepareUi: false });
   }, [
     checklist,
     hideRequiredValidationErrors,
@@ -216,55 +215,59 @@ export function useChecklistActions({
     validateDraftBeforeMutation,
   ]);
 
-  const completeChecklist = useCallback(async () => {
-    if (!checklist) {
-      return;
-    }
-
-    if (validateBeforeAction()) {
-      return;
-    }
-
-    let checklistForCompletion = checklist;
-
-    prepareMutation();
-    setIsActionLoading(true);
-
-    try {
-      if (hasChanges) {
-        const saveResult = await persistChecklistAnswers({
-          manageLoading: false,
-          prepareUi: false,
-        });
-
-        if (!saveResult.success) {
-          return;
-        }
-
-        checklistForCompletion = saveResult.checklist;
+  const completeChecklist = useCallback(
+    async (result: ChecklistResult) => {
+      if (!checklist) {
+        return;
       }
 
-      const detail = await completeChecklistWork(checklistForCompletion.id, {
-        version: checklistForCompletion.version,
-      });
-      onChecklistChange(detail);
-      window.sessionStorage.setItem(COMPLETION_FLASH_KEY, "Чеклист завершен");
-      window.location.hash = "#/my-checklists?tab=completed";
-    } catch (requestError) {
-      applyMutationError(requestError, "form");
-    } finally {
-      setIsActionLoading(false);
-    }
-  }, [
-    applyMutationError,
-    hasChanges,
-    checklist,
-    onChecklistChange,
-    prepareMutation,
-    persistChecklistAnswers,
-    setIsActionLoading,
-    validateBeforeAction,
-  ]);
+      if (validateBeforeAction()) {
+        return;
+      }
+
+      let checklistForCompletion = checklist;
+
+      prepareMutation();
+      setIsActionLoading(true);
+
+      try {
+        if (hasChanges) {
+          const saveResult = await persistChecklistAnswers({
+            manageLoading: false,
+            prepareUi: false,
+          });
+
+          if (!saveResult.success) {
+            return;
+          }
+
+          checklistForCompletion = saveResult.checklist;
+        }
+
+        const detail = await completeChecklistWork(checklistForCompletion.id, {
+          result,
+          version: checklistForCompletion.version,
+        });
+        onChecklistChange(detail);
+        window.sessionStorage.setItem(COMPLETION_FLASH_KEY, "Чеклист завершен");
+        window.location.hash = "#/my-checklists?tab=completed";
+      } catch (requestError) {
+        applyMutationError(requestError, "form");
+      } finally {
+        setIsActionLoading(false);
+      }
+    },
+    [
+      applyMutationError,
+      hasChanges,
+      checklist,
+      onChecklistChange,
+      prepareMutation,
+      persistChecklistAnswers,
+      setIsActionLoading,
+      validateBeforeAction,
+    ],
+  );
 
   return {
     completeChecklist,

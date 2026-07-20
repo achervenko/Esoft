@@ -12,6 +12,7 @@ type ConfirmDialogProps = {
   confirmLabel: string;
   description: ReactNode;
   error?: string | null;
+  isConfirmDisabled?: boolean;
   isLoading?: boolean;
   loadingLabel?: string;
   onCancel: () => void;
@@ -26,6 +27,7 @@ export function ConfirmDialog({
   confirmLabel,
   description,
   error = null,
+  isConfirmDisabled = false,
   isLoading = false,
   loadingLabel,
   onCancel,
@@ -135,7 +137,7 @@ export function ConfirmDialog({
           </button>
           <button
             className="confirm-dialog-primary"
-            disabled={isLoading}
+            disabled={isLoading || isConfirmDisabled}
             onClick={onConfirm}
             type="button"
           >

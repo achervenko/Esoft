@@ -1,4 +1,4 @@
-import { ChecklistStatus } from '@prisma/client';
+import { ChecklistResult, ChecklistStatus } from '@prisma/client';
 import { throwChecklistBadRequest } from '../checklist-common/checklists.errors';
 import {
   ensurePayload,
@@ -10,6 +10,8 @@ import {
   type ChecklistAnswerInput,
   type ChecklistAnswersDto,
   type ChecklistAnswersInput,
+  type ChecklistCompleteDto,
+  type ChecklistCompleteInput,
   type ChecklistVersionDto,
   type ChecklistVersionInput,
   type ChecklistWorkQuery,
@@ -65,6 +67,21 @@ export function parseChecklistVersionDto(
   };
 }
 
+export function parseChecklistCompleteDto(
+  dto: ChecklistCompleteDto | undefined,
+): ChecklistCompleteInput {
+  const payload = ensurePayload(dto, 'Передайте результат чек-листа.');
+
+  return {
+    result: parseChecklistResult(payload.result),
+    version: parsePositiveInt(
+      payload.version,
+      'CHECKLIST_VERSION_INVALID',
+      'Некорректная версия чек-листа.',
+    ),
+  };
+}
+
 export function parseChecklistAnswersDto(
   dto: ChecklistAnswersDto | undefined,
 ): ChecklistAnswersInput {
@@ -92,6 +109,20 @@ export function parseChecklistAnswersDto(
       'Некорректная версия чек-листа.',
     ),
   };
+}
+
+function parseChecklistResult(value: unknown) {
+  if (
+    typeof value !== 'string' ||
+    !Object.values(ChecklistResult).includes(value as ChecklistResult)
+  ) {
+    throwChecklistBadRequest(
+      'CHECKLIST_RESULT_INVALID',
+      'Выберите допустимый результат чек-листа.',
+    );
+  }
+
+  return value as ChecklistResult;
 }
 
 function parseAnswerInput(value: unknown): ChecklistAnswerInput {

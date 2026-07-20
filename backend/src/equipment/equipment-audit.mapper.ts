@@ -21,12 +21,7 @@ export function toAuditUserName(
       .join(' ');
   }
 
-  return (
-    user.displayUsername ||
-    user.username ||
-    user.name ||
-    'Пользователь'
-  );
+  return user.displayUsername || user.username || user.name || 'Пользователь';
 }
 
 export function getEquipmentAuditChanges(

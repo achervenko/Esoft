@@ -1,3 +1,4 @@
+import { ChecklistTemplateArchiveDialog } from "../../modules/checklists/ChecklistTemplateArchiveDialog";
 import { ChecklistAdminConfirmDialog } from "./ChecklistAdminConfirmDialog";
 import { ModuleFormModal } from "./ModuleFormModal";
 import { QuestionFormModal } from "./QuestionFormModal";
@@ -51,7 +52,19 @@ export function ChecklistAdminModals({
         />
       ) : null}
 
-      {confirm ? (
+      {confirm?.kind === "archive-template" ? (
+        <ChecklistTemplateArchiveDialog
+          onCancel={() => setConfirm(null)}
+          onSuccess={(response) =>
+            void actions.handleTemplateArchived(response, () =>
+              setConfirm(null),
+            )
+          }
+          template={confirm.template}
+        />
+      ) : null}
+
+      {confirm && confirm.kind !== "archive-template" ? (
         <ChecklistAdminConfirmDialog
           confirm={confirm}
           isSaving={actions.isSaving}

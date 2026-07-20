@@ -1,5 +1,8 @@
 import { useCallback, useState } from "react";
-import { getAdminEmployees, type AdminEmployee } from "../../shared/api/users-admin-api";
+import {
+  getAdminEmployees,
+  type AdminEmployee,
+} from "../../shared/api/users-admin-api";
 import {
   getDictionaryCountries,
   getDictionaryEquipmentModels,
@@ -26,39 +29,39 @@ export function useDictionariesAdminData() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
-    Promise.all([
-      getAdminEmployees(),
-      getDictionaryManufacturers(),
-      getDictionaryEquipmentModels(),
-      getDictionaryCountries(),
-      getDictionaryObjects(),
-      getDictionaryLocations(),
-    ])
-      .then(
-        ([
-          employeeItems,
-          manufacturerItems,
-          modelItems,
-          countryItems,
-          objectItems,
-          locationItems,
-        ]) => {
-          setEmployees(employeeItems);
-          setManufacturers(manufacturerItems);
-          setModels(modelItems);
-          setCountries(countryItems);
-          setObjects(objectItems);
-          setLocations(locationItems);
-        },
-      )
-      .catch((requestError) =>
-        setError(getDictionariesAdminErrorMessage(requestError)),
-      )
-      .finally(() => setIsLoading(false));
+    try {
+      const [
+        employeeItems,
+        manufacturerItems,
+        modelItems,
+        countryItems,
+        objectItems,
+        locationItems,
+      ] = await Promise.all([
+        getAdminEmployees(),
+        getDictionaryManufacturers(),
+        getDictionaryEquipmentModels(),
+        getDictionaryCountries(),
+        getDictionaryObjects(),
+        getDictionaryLocations(),
+      ]);
+
+      setEmployees(employeeItems);
+      setManufacturers(manufacturerItems);
+      setModels(modelItems);
+      setCountries(countryItems);
+      setObjects(objectItems);
+      setLocations(locationItems);
+    } catch (requestError) {
+      setError(getDictionariesAdminErrorMessage(requestError));
+      throw requestError;
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   return {

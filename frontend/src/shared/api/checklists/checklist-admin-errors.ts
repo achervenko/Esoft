@@ -15,12 +15,18 @@ const checklistAdminErrorMessages: Record<string, string> = {
   CHECKLIST_QUESTION_TEXT_REQUIRED: "Укажите текст вопроса.",
   CHECKLIST_QUESTION_TEXT_TOO_LONG: "Текст вопроса слишком длинный.",
   CHECKLIST_TEMPLATE_EMPTY: "Заполните шаблон перед сохранением.",
-  CHECKLIST_TEMPLATE_MODULE_EMPTY: "В каждом модуле должен быть хотя бы один вопрос.",
+  CHECKLIST_TEMPLATE_ALREADY_ARCHIVED: "Шаблон уже удалён.",
+  CHECKLIST_TEMPLATE_ARCHIVE_REASON_REQUIRED: "Укажите причину удаления.",
+  CHECKLIST_TEMPLATE_ARCHIVE_REASON_TOO_LONG:
+    "Причина удаления слишком длинная.",
+  CHECKLIST_TEMPLATE_MODULE_EMPTY:
+    "В каждом модуле должен быть хотя бы один вопрос.",
   CHECKLIST_TEMPLATE_NAME_REQUIRED: "Укажите название шаблона.",
   CHECKLIST_TEMPLATE_NAME_TOO_LONG: "Название шаблона слишком длинное.",
   CHECKLIST_TEMPLATE_NOT_FOUND: "Шаблон чек-листа не найден.",
   CHECKLIST_TEMPLATE_ORDER_INVALID: "Порядок шаблона нарушен.",
-  CHECKLIST_TEMPLATE_VERSION_CONFLICT: "Шаблон был изменён другим пользователем. Перезагрузите страницу.",
+  CHECKLIST_TEMPLATE_VERSION_CONFLICT:
+    "Шаблон был изменён другим пользователем. Перезагрузите страницу.",
 };
 
 export function getChecklistAdminErrorMessage(error: unknown) {

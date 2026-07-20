@@ -73,17 +73,19 @@ export class UsersAdminController {
     );
   }
 
-  @Delete('employees/:employeeId')
-  deleteEmployee(
+  @Patch('employees/:employeeId/status')
+  setEmployeeStatus(
     @Param('employeeId', ParseIntPipe) employeeId: number,
+    @Body('isActive') isActive: unknown,
     @Session() session: UserSession<Auth>,
   ) {
     assertAdmin(session.user.role);
 
-    return this.employeeAdminService.deleteEmployee(
+    return this.employeeAdminService.setEmployeeStatus({
+      actorUserId: session.user.id,
       employeeId,
-      session.user.id,
-    );
+      isActive,
+    });
   }
 
   @Get('accounts')

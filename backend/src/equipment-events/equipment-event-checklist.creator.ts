@@ -15,6 +15,7 @@ export class EquipmentEventChecklistCreator {
       createdBy: string;
       eventId: number;
       temporarySortOrders?: number[];
+      validateFullResponsibleCoverage?: boolean;
     },
   ) {
     this.assertUniqueChecklistAssignees(params.assignments);
@@ -24,7 +25,7 @@ export class EquipmentEventChecklistCreator {
     );
 
     const event = await tx.equipmentEvent.findUnique({
-      select: { equipmentId: true, id: true },
+      select: { equipmentId: true, id: true, maintenanceSettingId: true },
       where: { id: params.eventId },
     });
 
@@ -38,8 +39,20 @@ export class EquipmentEventChecklistCreator {
     await this.assertAssignmentsMatchResponsibles(tx, {
       assignments: params.assignments,
       eventId: params.eventId,
+      validateFullResponsibleCoverage:
+        params.validateFullResponsibleCoverage ?? true,
     });
-    await this.assertActiveTemplates(tx, params.assignments);
+
+    if (!event.maintenanceSettingId) {
+      throwEquipmentEventBadRequest(
+        'CHECKLIST_TEMPLATE_NOT_APPLICABLE',
+        'Для события не задана настройка обслуживания.',
+      );
+    }
+
+    await this.assertActiveTemplates(tx, params.assignments, {
+      maintenanceSettingId: event.maintenanceSettingId,
+    });
 
     const createdChecklistIds: Array<{ assignedUserId: string; id: number }> =
       [];
@@ -118,6 +131,7 @@ export class EquipmentEventChecklistCreator {
     params: {
       assignments: EquipmentEventChecklistAssignment[];
       eventId: number;
+      validateFullResponsibleCoverage: boolean;
     },
   ) {
     const responsibles = await tx.equipmentEventResponsible.findMany({
@@ -128,7 +142,10 @@ export class EquipmentEventChecklistCreator {
       responsibles.map((responsible) => responsible.userId),
     );
 
-    if (responsibleUserIds.size !== params.assignments.length) {
+    if (
+      params.validateFullResponsibleCoverage &&
+      responsibleUserIds.size !== params.assignments.length
+    ) {
       throwEquipmentEventBadRequest(
         'CHECKLIST_ASSIGNMENTS_REQUIRED',
         'Назначения чек-листов должны полностью покрывать всех ответственных.',
@@ -148,12 +165,25 @@ export class EquipmentEventChecklistCreator {
   async assertActiveTemplates(
     tx: Prisma.TransactionClient,
     assignments: EquipmentEventChecklistAssignment[],
+    options: {
+      maintenanceSettingId: number;
+    },
   ) {
     const checklistTemplateIds = [
       ...new Set(
         assignments.map((assignment) => assignment.checklistTemplateId),
       ),
     ];
+
+    if (checklistTemplateIds.length === 0) {
+      return;
+    }
+
+    await this.assertTemplatesMatchMaintenanceSetting(tx, {
+      checklistTemplateIds,
+      maintenanceSettingId: options.maintenanceSettingId,
+    });
+
     const activeChecklistTemplates = await tx.$queryRaw<Array<{ id: number }>>`
       SELECT id
       FROM checklist_templates
@@ -167,6 +197,43 @@ export class EquipmentEventChecklistCreator {
       throwEquipmentEventBadRequest(
         'CHECKLIST_TEMPLATE_INACTIVE',
         'Можно использовать только активные шаблоны чек-листов.',
+      );
+    }
+  }
+
+  private async assertTemplatesMatchMaintenanceSetting(
+    tx: Prisma.TransactionClient,
+    params: {
+      checklistTemplateIds: number[];
+      maintenanceSettingId: number;
+    },
+  ) {
+    const settings = await tx.$queryRaw<
+      Array<{
+        default_checklist_template_id: number | null;
+      }>
+    >`
+      SELECT default_checklist_template_id
+      FROM equipment_maintenance_settings
+      WHERE id = ${params.maintenanceSettingId}
+      FOR SHARE
+    `;
+    const setting = settings[0];
+
+    if (!setting?.default_checklist_template_id) {
+      throwEquipmentEventBadRequest(
+        'CHECKLIST_TEMPLATE_NOT_APPLICABLE',
+        'Для настройки обслуживания не задан шаблон чек-листа.',
+      );
+    }
+
+    if (
+      params.checklistTemplateIds.length !== 1 ||
+      params.checklistTemplateIds[0] !== setting.default_checklist_template_id
+    ) {
+      throwEquipmentEventBadRequest(
+        'CHECKLIST_TEMPLATE_NOT_APPLICABLE',
+        'Шаблон чек-листа не подходит для выбранного вида обслуживания.',
       );
     }
   }

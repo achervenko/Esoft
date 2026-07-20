@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { AuditAction, AuditModule } from '@prisma/client';
+import { AuditAction, AuditModule, Prisma } from '@prisma/client';
 import { AuditLogService } from '../audit/audit-log.service';
 import { getRoleLabel } from './users-admin.mapper';
 
 type EmployeeAuditData = {
   firstName: string;
   id: number;
+  isActive?: boolean | null;
   lastName: string;
   middleName: string | null;
   position: string;
@@ -24,13 +25,18 @@ type UserAuditData = {
 export class UsersAdminAuditService {
   constructor(private readonly auditLog: AuditLogService) {}
 
-  logEmployeeCreated(employee: EmployeeAuditData, actorUserId?: string | null) {
+  logEmployeeCreated(
+    employee: EmployeeAuditData,
+    actorUserId?: string | null,
+    tx?: Prisma.TransactionClient,
+  ) {
     return this.auditLog.writeFieldChanges({
       action: AuditAction.CREATE,
       entityId: employee.id,
       entityType: 'employee',
       fields: this.employeeFields(employee, null),
       module: AuditModule.USERS,
+      tx,
       userId: actorUserId,
     });
   }
@@ -39,6 +45,7 @@ export class UsersAdminAuditService {
     actorUserId?: string | null;
     newEmployee: EmployeeAuditData;
     oldEmployee: EmployeeAuditData;
+    tx?: Prisma.TransactionClient;
   }) {
     return this.auditLog.writeFieldChanges({
       action: AuditAction.UPDATE,
@@ -46,27 +53,45 @@ export class UsersAdminAuditService {
       entityType: 'employee',
       fields: this.employeeFields(params.newEmployee, params.oldEmployee),
       module: AuditModule.USERS,
+      tx: params.tx,
       userId: params.actorUserId,
     });
   }
 
-  logEmployeeDeleted(employee: EmployeeAuditData, actorUserId?: string | null) {
+  logEmployeeStatusChanged(params: {
+    actorUserId?: string | null;
+    newEmployee: EmployeeAuditData;
+    oldEmployee: EmployeeAuditData;
+    tx?: Prisma.TransactionClient;
+  }) {
     return this.auditLog.writeFieldChanges({
-      action: AuditAction.DELETE,
-      entityId: employee.id,
+      action: AuditAction.STATUS_CHANGE,
+      entityId: params.newEmployee.id,
       entityType: 'employee',
-      fields: this.employeeFields(null, employee),
+      fields: [
+        {
+          fieldName: 'Статус сотрудника',
+          newValue: this.getEmployeeStatusLabel(params.newEmployee.isActive),
+          oldValue: this.getEmployeeStatusLabel(params.oldEmployee.isActive),
+        },
+      ],
       module: AuditModule.USERS,
-      userId: actorUserId,
+      tx: params.tx,
+      userId: params.actorUserId,
     });
   }
 
-  logUserCreated(user: UserAuditData, actorUserId?: string | null) {
+  logUserCreated(
+    user: UserAuditData,
+    actorUserId?: string | null,
+    tx?: Prisma.TransactionClient,
+  ) {
     return this.auditLog.writeFieldChanges({
       action: AuditAction.CREATE,
       entityType: this.userEntityType(user.id),
       fields: this.userFields(user, null),
       module: AuditModule.USERS,
+      tx,
       userId: actorUserId,
     });
   }
@@ -75,17 +100,23 @@ export class UsersAdminAuditService {
     actorUserId?: string | null;
     newUser: UserAuditData;
     oldUser: UserAuditData;
+    tx?: Prisma.TransactionClient;
   }) {
     return this.auditLog.writeFieldChanges({
       action: AuditAction.UPDATE,
       entityType: this.userEntityType(params.newUser.id),
       fields: this.userFields(params.newUser, params.oldUser),
       module: AuditModule.USERS,
+      tx: params.tx,
       userId: params.actorUserId,
     });
   }
 
-  logUserPasswordChanged(user: UserAuditData, actorUserId?: string | null) {
+  logUserPasswordChanged(
+    user: UserAuditData,
+    actorUserId?: string | null,
+    tx?: Prisma.TransactionClient,
+  ) {
     return this.auditLog.writeFieldChanges({
       action: AuditAction.UPDATE,
       entityType: this.userEntityType(user.id),
@@ -97,6 +128,7 @@ export class UsersAdminAuditService {
         },
       ],
       module: AuditModule.USERS,
+      tx,
       userId: actorUserId,
     });
   }
@@ -105,6 +137,7 @@ export class UsersAdminAuditService {
     actorUserId?: string | null;
     newUser: UserAuditData;
     oldUser: UserAuditData;
+    tx?: Prisma.TransactionClient;
   }) {
     return this.auditLog.writeFieldChanges({
       action: AuditAction.STATUS_CHANGE,
@@ -117,6 +150,7 @@ export class UsersAdminAuditService {
         },
       ],
       module: AuditModule.USERS,
+      tx: params.tx,
       userId: params.actorUserId,
     });
   }
@@ -124,6 +158,7 @@ export class UsersAdminAuditService {
   logUserPhotoUploaded(params: {
     actorUserId?: string | null;
     hadPreviousPhoto: boolean;
+    tx?: Prisma.TransactionClient;
     user: UserAuditData;
   }) {
     return this.auditLog.writeFieldChanges({
@@ -137,11 +172,16 @@ export class UsersAdminAuditService {
         },
       ],
       module: AuditModule.USERS,
+      tx: params.tx,
       userId: params.actorUserId,
     });
   }
 
-  logUserPhotoDeleted(user: UserAuditData, actorUserId?: string | null) {
+  logUserPhotoDeleted(
+    user: UserAuditData,
+    actorUserId?: string | null,
+    tx?: Prisma.TransactionClient,
+  ) {
     return this.auditLog.writeFieldChanges({
       action: AuditAction.USER_PHOTO_DELETE,
       entityType: this.userEntityType(user.id),
@@ -153,6 +193,7 @@ export class UsersAdminAuditService {
         },
       ],
       module: AuditModule.USERS,
+      tx,
       userId: actorUserId,
     });
   }
@@ -199,6 +240,10 @@ export class UsersAdminAuditService {
 
   private getUserStatusLabel(banned: boolean | null | undefined) {
     return banned ? 'отключена' : 'включена';
+  }
+
+  private getEmployeeStatusLabel(isActive: boolean | null | undefined) {
+    return isActive ? 'включён' : 'отключён';
   }
 
   private userEntityType(userId: string) {

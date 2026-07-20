@@ -33,10 +33,7 @@ export function throwChecklistPrismaError(error: unknown): never {
   ) {
     const target = getPrismaErrorTarget(error);
 
-    if (
-      hasConstraint(target, 'uq_checklist_modules_name') ||
-      hasExactColumns(target, ['name'])
-    ) {
+    if (hasConstraint(target, 'uq_checklist_modules_name')) {
       throwChecklistConflict(
         'CHECKLIST_MODULE_NAME_ALREADY_EXISTS',
         'Модуль чек-листа с таким названием уже существует.',

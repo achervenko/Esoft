@@ -83,10 +83,7 @@ export class ChecklistWorkMutationRepository {
     `;
   }
 
-  async loadResponsibleUserIds(
-    tx: Prisma.TransactionClient,
-    eventId: number,
-  ) {
+  async loadResponsibleUserIds(tx: Prisma.TransactionClient, eventId: number) {
     const rows = await tx.$queryRaw<Array<{ userId: string }>>`
       SELECT user_id AS "userId"
       FROM equipment_event_responsibles

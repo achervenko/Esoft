@@ -45,7 +45,10 @@ function presentMaintenanceSetting(setting: MaintenanceSettingRecord) {
 }
 
 function presentDefaultChecklistTemplate(setting: MaintenanceSettingRecord) {
-  if (!setting.defaultChecklistTemplateId || !setting.defaultChecklistTemplate) {
+  if (
+    !setting.defaultChecklistTemplateId ||
+    !setting.defaultChecklistTemplate
+  ) {
     return null;
   }
 

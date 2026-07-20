@@ -220,7 +220,7 @@ function periodicityLabel(setting: MaintenanceSettingRecord) {
     return null;
   }
 
-  return [
+  const value = [
     durationPart(setting.periodicityYears ?? 0, ['год', 'года', 'лет']),
     durationPart(setting.periodicityMonths ?? 0, [
       'месяц',
@@ -232,6 +232,8 @@ function periodicityLabel(setting: MaintenanceSettingRecord) {
   ]
     .filter(Boolean)
     .join(' ');
+
+  return value || null;
 }
 
 function durationPart(value: number, forms: [string, string, string]) {
@@ -265,7 +267,10 @@ function pluralizeRu(
 }
 
 function checklistLabel(setting: MaintenanceSettingRecord) {
-  if (!setting.defaultChecklistTemplateId || !setting.defaultChecklistTemplate) {
+  if (
+    !setting.defaultChecklistTemplateId ||
+    !setting.defaultChecklistTemplate
+  ) {
     return null;
   }
 
@@ -284,7 +289,7 @@ function formatOperationValue(value: unknown) {
     return null;
   }
 
-  return value === null ? null : String(value);
+  return value === null ? null : stringifyAuditValue(value);
 }
 
 function formatNullableFieldValue(value: unknown) {
@@ -292,5 +297,23 @@ function formatNullableFieldValue(value: unknown) {
     return 'не указано';
   }
 
-  return String(value);
+  return stringifyAuditValue(value);
+}
+
+function stringifyAuditValue(value: unknown) {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    typeof value === 'bigint'
+  ) {
+    return value.toString();
+  }
+
+  const serialized = JSON.stringify(value);
+
+  return serialized ?? String(value);
 }

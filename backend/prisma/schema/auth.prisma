@@ -1,41 +1,41 @@
 model User {
-  id                                              String                                         @id
-  name                                            String
-  email                                           String
-  emailVerified                                   Boolean                                        @default(false)
-  image                                           String?
-  createdAt                                       DateTime                                       @default(now()) @db.Timestamptz(6)
-  updatedAt                                       DateTime                                       @updatedAt @db.Timestamptz(6)
-  username                                        String?
-  displayUsername                                 String?
-  role                                            String?
-  banned                                          Boolean?                                       @default(false)
-  banReason                                       String?
-  banExpires                                      DateTime?                                      @db.Timestamptz(6)
-  lastLoginAt                                     DateTime?                                      @map("last_login_at") @db.Timestamptz(6)
-  sessions                                        Session[]
-  accounts                                        Account[]
-  auditLogs                                       AuditLog[]
-  employeeUser                                    EmployeeUser?
-  eventResponsibilities                           EquipmentEventResponsible[]
-  createdChecklistModules                         ChecklistModule[]                              @relation("ChecklistModuleCreatedBy")
-  updatedChecklistModules                         ChecklistModule[]                              @relation("ChecklistModuleUpdatedBy")
-  createdChecklistQuestions                       ChecklistQuestion[]                            @relation("ChecklistQuestionCreatedBy")
-  updatedChecklistQuestions                       ChecklistQuestion[]                            @relation("ChecklistQuestionUpdatedBy")
-  createdChecklistTemplates                       ChecklistTemplate[]                            @relation("ChecklistTemplateCreatedBy")
-  updatedChecklistTemplates                       ChecklistTemplate[]                            @relation("ChecklistTemplateUpdatedBy")
-  publishedChecklistTemplates                     ChecklistTemplate[]                            @relation("ChecklistTemplatePublishedBy")
-  archivedChecklistTemplates                      ChecklistTemplate[]                            @relation("ChecklistTemplateArchivedBy")
-  assignedChecklists                              Checklist[]                                    @relation("ChecklistAssignedUser")
-  createdChecklists                               Checklist[]                                    @relation("ChecklistCreatedBy")
-  startedChecklists                               Checklist[]                                    @relation("ChecklistStartedBy")
-  completedChecklists                             Checklist[]                                    @relation("ChecklistCompletedBy")
-  cancelledChecklists                             Checklist[]                                    @relation("ChecklistCancelledBy")
-  invalidatedChecklists                           Checklist[]                                    @relation("ChecklistInvalidatedBy")
-  answeredChecklistDetails                        ChecklistDetail[]                              @relation("ChecklistDetailAnsweredBy")
-  photo                                           UserPhoto?
-  uploadedUserPhotos                              UserPhoto[]                                    @relation("UploadedUserPhotos")
-  uploadedStorageFiles                            StorageFile[]                                  @relation("UploadedStorageFiles")
+  id                          String                      @id
+  name                        String
+  email                       String
+  emailVerified               Boolean                     @default(false)
+  image                       String?
+  createdAt                   DateTime                    @default(now()) @db.Timestamptz(6)
+  updatedAt                   DateTime                    @updatedAt @db.Timestamptz(6)
+  username                    String?
+  displayUsername             String?
+  role                        String?
+  banned                      Boolean?                    @default(false)
+  banReason                   String?
+  banExpires                  DateTime?                   @db.Timestamptz(6)
+  lastLoginAt                 DateTime?                   @map("last_login_at") @db.Timestamptz(6)
+  sessions                    Session[]
+  accounts                    Account[]
+  auditLogs                   AuditLog[]
+  employeeUser                EmployeeUser?
+  eventResponsibilities       EquipmentEventResponsible[]
+  createdChecklistModules     ChecklistModule[]           @relation("ChecklistModuleCreatedBy")
+  updatedChecklistModules     ChecklistModule[]           @relation("ChecklistModuleUpdatedBy")
+  createdChecklistQuestions   ChecklistQuestion[]         @relation("ChecklistQuestionCreatedBy")
+  updatedChecklistQuestions   ChecklistQuestion[]         @relation("ChecklistQuestionUpdatedBy")
+  createdChecklistTemplates   ChecklistTemplate[]         @relation("ChecklistTemplateCreatedBy")
+  updatedChecklistTemplates   ChecklistTemplate[]         @relation("ChecklistTemplateUpdatedBy")
+  publishedChecklistTemplates ChecklistTemplate[]         @relation("ChecklistTemplatePublishedBy")
+  archivedChecklistTemplates  ChecklistTemplate[]         @relation("ChecklistTemplateArchivedBy")
+  assignedChecklists          Checklist[]                 @relation("ChecklistAssignedUser")
+  createdChecklists           Checklist[]                 @relation("ChecklistCreatedBy")
+  startedChecklists           Checklist[]                 @relation("ChecklistStartedBy")
+  completedChecklists         Checklist[]                 @relation("ChecklistCompletedBy")
+  cancelledChecklists         Checklist[]                 @relation("ChecklistCancelledBy")
+  invalidatedChecklists       Checklist[]                 @relation("ChecklistInvalidatedBy")
+  answeredChecklistDetails    ChecklistDetail[]           @relation("ChecklistDetailAnsweredBy")
+  photo                       UserPhoto?
+  uploadedUserPhotos          UserPhoto[]                 @relation("UploadedUserPhotos")
+  uploadedStorageFiles        StorageFile[]               @relation("UploadedStorageFiles")
 
   @@unique([email])
   @@unique([username])
@@ -75,6 +75,7 @@ model Account {
   createdAt             DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt             DateTime  @updatedAt @db.Timestamptz(6)
 
+  @@unique([providerId, accountId], map: "uq_account_provider_account")
   @@index([userId])
   @@map("account")
 }

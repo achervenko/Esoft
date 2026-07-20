@@ -7,6 +7,7 @@ import {
   throwChecklistPrismaError,
 } from '../checklist-common/checklists.errors';
 import { ChecklistQuestionsAssertions } from './checklist-questions.assertions';
+import { ChecklistQuestionsOrderLockService } from './checklist-questions-order-lock.service';
 import { ChecklistQuestionsOrderService } from './checklist-questions-order.service';
 import { presentQuestion } from './checklist-questions.presenter';
 import { checklistQuestionInclude } from './checklist-questions.select';
@@ -16,6 +17,7 @@ import type { ChecklistQuestionRecord } from './checklist-questions.types';
 export class ChecklistQuestionsStatusService {
   constructor(
     private readonly assertions: ChecklistQuestionsAssertions,
+    private readonly orderLock: ChecklistQuestionsOrderLockService,
     private readonly orderService: ChecklistQuestionsOrderService,
     private readonly prisma: PrismaService,
   ) {}
@@ -31,7 +33,21 @@ export class ChecklistQuestionsStatusService {
   private async setActive(id: number, isActive: boolean, userId: string) {
     try {
       const question = await this.prisma.$transaction(async (tx) => {
-        const current = await this.assertions.loadQuestion(id, tx);
+        const orderContext = await this.assertions.loadQuestionOrderContext(
+          id,
+          tx,
+        );
+
+        await this.orderLock.lock(tx, orderContext.checklistModuleId);
+
+        const current = await this.assertions.loadQuestionForMutation(id, tx);
+
+        if (current.checklistModuleId !== orderContext.checklistModuleId) {
+          throwChecklistConflict(
+            'CHECKLIST_QUESTION_VERSION_CONFLICT',
+            'Вопрос был изменён другим пользователем.',
+          );
+        }
 
         if (current.isActive === isActive) {
           throwChecklistConflict(
@@ -47,7 +63,7 @@ export class ChecklistQuestionsStatusService {
             isActive,
             ...(isActive
               ? await this.getQuestionActivationData(tx, current)
-              : {}),
+              : { sortOrder: null }),
             updatedBy: userId,
           },
           include: checklistQuestionInclude,

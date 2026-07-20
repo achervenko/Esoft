@@ -31,6 +31,40 @@ export class ChecklistQuestionsAssertions {
     return question;
   }
 
+  async loadQuestionForMutation(id: number, tx: Prisma.TransactionClient) {
+    const rows = await tx.$queryRaw<Array<{ id: number }>>`
+      SELECT id
+      FROM checklist_questions
+      WHERE id = ${id}
+      FOR UPDATE
+    `;
+
+    if (!rows[0]) {
+      throwChecklistNotFound(
+        'CHECKLIST_QUESTION_NOT_FOUND',
+        'Вопрос чек-листа не найден.',
+      );
+    }
+
+    return this.loadQuestion(id, tx);
+  }
+
+  async loadQuestionOrderContext(id: number, tx: Prisma.TransactionClient) {
+    const question = await tx.checklistQuestion.findUnique({
+      select: { checklistModuleId: true, id: true },
+      where: { id },
+    });
+
+    if (!question) {
+      throwChecklistNotFound(
+        'CHECKLIST_QUESTION_NOT_FOUND',
+        'Вопрос чек-листа не найден.',
+      );
+    }
+
+    return question;
+  }
+
   async assertActiveModule(tx: Prisma.TransactionClient, id: number) {
     const module = await tx.checklistModule.findUnique({
       select: { id: true, isActive: true },

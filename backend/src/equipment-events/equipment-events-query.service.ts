@@ -114,7 +114,11 @@ export class EquipmentEventsQueryService {
       },
       where: {
         employeeUser: {
-          isNot: null,
+          is: {
+            employee: {
+              isActive: true,
+            },
+          },
         },
         OR: [{ banned: false }, { banned: null }],
       },
@@ -145,7 +149,6 @@ export class EquipmentEventsQueryService {
       }),
     };
   }
-
 
   private async loadChecklistsByEventId(eventIds: number[]) {
     const checklistsByEventId = new Map<

@@ -1,15 +1,14 @@
 import type { EquipmentEventStatus } from "../equipment-events/equipment-events.types";
 
-export type ChecklistAnswerType = "BOOLEAN" | "INTEGER" | "DECIMAL" | "TEXT" | "DATE";
+export type ChecklistAnswerType =
+  "BOOLEAN" | "INTEGER" | "DECIMAL" | "TEXT" | "DATE";
 
 export type ChecklistTemplateState = "ACTIVE" | "ARCHIVED";
 
 export type ChecklistWorkStatus =
-  | "CREATED"
-  | "IN_PROGRESS"
-  | "COMPLETED"
-  | "CANCELLED"
-  | "INVALIDATED";
+  "CREATED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED" | "INVALIDATED";
+
+export type ChecklistResult = "PASSED" | "FAILED" | "WITH_REMARKS";
 
 export type ChecklistPageResponse<T> = {
   items: T[];
@@ -86,6 +85,34 @@ export type ChecklistTemplateDetail = {
   state: ChecklistTemplateState;
   updatedAt: string;
   version: number;
+};
+
+export type ChecklistTemplateMaintenanceSettingUsage = {
+  equipmentModel: {
+    id: number;
+    name: string;
+  };
+  id: number;
+  maintenanceType: {
+    code: string;
+    id: number;
+    name: string;
+  };
+};
+
+export type ChecklistTemplateUsage = {
+  maintenanceSettings: ChecklistTemplateMaintenanceSettingUsage[];
+  maintenanceSettingsCount: number;
+};
+
+export type ChecklistTemplateDetailResponse = {
+  template: ChecklistTemplateDetail;
+  usage: ChecklistTemplateUsage;
+};
+
+export type ChecklistTemplateArchiveResponse = {
+  removedMaintenanceSettingLinks: number;
+  template: ChecklistTemplateDetail;
 };
 
 export type ChecklistModulePayload = {
@@ -204,6 +231,10 @@ export type ChecklistWorkVersionPayload = {
   version: number;
 };
 
+export type ChecklistWorkCompletePayload = ChecklistWorkVersionPayload & {
+  result: ChecklistResult;
+};
+
 export type ChecklistWorkAnswerPayload = {
   checklistDetailId: number;
   value: boolean | number | string | null;
@@ -227,7 +258,10 @@ export const checklistAnswerTypeLabels: Record<ChecklistAnswerType, string> = {
   TEXT: "Текст",
 };
 
-export const checklistTemplateStateLabels: Record<ChecklistTemplateState, string> = {
+export const checklistTemplateStateLabels: Record<
+  ChecklistTemplateState,
+  string
+> = {
   ACTIVE: "Действующий",
-  ARCHIVED: "Удалённый",
+  ARCHIVED: "Удалён",
 };

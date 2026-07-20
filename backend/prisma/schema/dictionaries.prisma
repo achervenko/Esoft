@@ -41,22 +41,22 @@ enum EquipmentMaintenanceExecutionType {
 }
 
 model EquipmentMaintenanceSetting {
-  id                Int                               @id @default(autoincrement())
-  equipmentModelId  Int                               @map("equipment_model_id")
-  maintenanceTypeId Int                               @map("maintenance_type_id")
-  defaultChecklistTemplateId Int?                     @map("default_checklist_template_id")
-  executionType     EquipmentMaintenanceExecutionType @map("execution_type")
-  periodicityYears  Int?                              @map("periodicity_years")
-  periodicityMonths Int?                              @map("periodicity_months")
-  periodicityWeeks  Int?                              @map("periodicity_weeks")
-  periodicityDays   Int?                              @map("periodicity_days")
-  createdAt         DateTime                          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime                          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                         Int                               @id @default(autoincrement())
+  equipmentModelId           Int                               @map("equipment_model_id")
+  maintenanceTypeId          Int                               @map("maintenance_type_id")
+  defaultChecklistTemplateId Int?                              @map("default_checklist_template_id")
+  executionType              EquipmentMaintenanceExecutionType @map("execution_type")
+  periodicityYears           Int?                              @map("periodicity_years")
+  periodicityMonths          Int?                              @map("periodicity_months")
+  periodicityWeeks           Int?                              @map("periodicity_weeks")
+  periodicityDays            Int?                              @map("periodicity_days")
+  createdAt                  DateTime                          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                  DateTime                          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  equipmentModel         EquipmentModel                                 @relation(fields: [equipmentModelId], references: [id], onDelete: Restrict)
-  maintenanceType        EquipmentEventType                             @relation(fields: [maintenanceTypeId], references: [id], onDelete: Restrict)
-  defaultChecklistTemplate ChecklistTemplate?                          @relation("ChecklistTemplateDefaultForMaintenanceSettings", fields: [defaultChecklistTemplateId], references: [id], onDelete: Restrict, map: "fk_equipment_maintenance_settings_default_template")
-  events                 EquipmentEvent[]
+  equipmentModel           EquipmentModel     @relation(fields: [equipmentModelId], references: [id], onDelete: Restrict)
+  maintenanceType          EquipmentEventType @relation(fields: [maintenanceTypeId], references: [id], onDelete: Restrict)
+  defaultChecklistTemplate ChecklistTemplate? @relation("ChecklistTemplateDefaultForMaintenanceSettings", fields: [defaultChecklistTemplateId], references: [id], onDelete: Restrict, map: "fk_equipment_maintenance_settings_default_template")
+  events                   EquipmentEvent[]
 
   @@unique([equipmentModelId, maintenanceTypeId], map: "uq_equipment_maintenance_settings_model_type")
   @@index([maintenanceTypeId], map: "idx_equipment_maintenance_settings_type_id")

@@ -1,4 +1,4 @@
-import { ChecklistStatus } from '@prisma/client';
+import { ChecklistResult, ChecklistStatus } from '@prisma/client';
 
 export type ChecklistWorkQueryDto = {
   dateFrom?: unknown;
@@ -22,6 +22,10 @@ export type ChecklistWorkQuery = {
 
 export type ChecklistVersionDto = {
   version?: unknown;
+};
+
+export type ChecklistCompleteDto = ChecklistVersionDto & {
+  result?: unknown;
 };
 
 export type ChecklistAnswerInputDto = {
@@ -54,6 +58,10 @@ export type ParsedChecklistAnswer = {
 
 export type ChecklistVersionInput = {
   version: number;
+};
+
+export type ChecklistCompleteInput = ChecklistVersionInput & {
+  result: ChecklistResult;
 };
 
 export type ChecklistAnswersInput = ChecklistVersionInput & {

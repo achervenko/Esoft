@@ -17,7 +17,7 @@ import type {
 } from "./dictionaries-page-types";
 
 type LocationDictionaryActionsParams = {
-  loadData: () => void;
+  loadData: () => Promise<void>;
   locationForm: LocationFormState;
   objectForm: ObjectFormState;
   runSavingAction: (action: () => Promise<void>) => Promise<void>;
@@ -46,7 +46,7 @@ export function createLocationDictionaryActions({
       }
 
       setObjectForm(null);
-      loadData();
+      await loadData();
     });
   };
 
@@ -58,7 +58,7 @@ export function createLocationDictionaryActions({
     await runSavingAction(async () => {
       await deleteDictionaryObject(object.id);
       setMessage("Объект удалён.");
-      loadData();
+      await loadData();
     });
   };
 
@@ -73,7 +73,7 @@ export function createLocationDictionaryActions({
       }
 
       setLocationForm(null);
-      loadData();
+      await loadData();
     });
   };
 
@@ -85,7 +85,7 @@ export function createLocationDictionaryActions({
     await runSavingAction(async () => {
       await deleteDictionaryLocation(location.id);
       setMessage("Местонахождение удалено.");
-      loadData();
+      await loadData();
     });
   };
 

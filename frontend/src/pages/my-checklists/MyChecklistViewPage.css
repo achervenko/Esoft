@@ -86,6 +86,32 @@
   margin-top: 14px;
 }
 
+.my-checklists-complete-result {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.my-checklists-complete-result label {
+  align-items: center;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.my-checklists-complete-result input {
+  margin: 0;
+}
+
+.my-checklists-complete-result span {
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .my-checklists-modules {
   display: flex;
   flex-direction: column;
@@ -160,6 +186,7 @@
 
 .my-checklists-question textarea:focus,
 .my-checklists-question input:focus,
+.my-checklists-question select:focus,
 .my-checklists-answer-input:focus {
   border-color: #111111;
   outline: 2px solid rgba(17, 17, 17, 0.12);
@@ -230,7 +257,8 @@
   color: #7a271a;
 }
 
-.my-checklists-boolean-group.has-error .my-checklists-boolean-option.is-selected {
+.my-checklists-boolean-group.has-error
+  .my-checklists-boolean-option.is-selected {
   border-color: #b42318;
   background: #b42318;
   color: #ffffff;

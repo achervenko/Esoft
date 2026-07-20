@@ -18,10 +18,7 @@ export class ChecklistWorkQueryService {
     private readonly queryRepository: ChecklistWorkQueryRepository,
   ) {}
 
-  async list(params: {
-    query: ChecklistWorkQuery;
-    userId?: string | null;
-  }) {
+  async list(params: { query: ChecklistWorkQuery; userId?: string | null }) {
     const userId = this.assertions.requireUserId(params.userId);
     const result = await this.queryRepository.list({
       query: params.query,
@@ -31,10 +28,7 @@ export class ChecklistWorkQueryService {
     return presentChecklistList(result);
   }
 
-  async get(
-    id: number,
-    params: { userId?: string | null },
-  ) {
+  async get(id: number, params: { userId?: string | null }) {
     const userId = this.assertions.requireUserId(params.userId);
     const checklist = await this.queryRepository.loadDetailForAccess(id);
 

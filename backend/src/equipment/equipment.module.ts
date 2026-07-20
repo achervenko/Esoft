@@ -6,7 +6,10 @@ import { SearchModule } from '../search/search.module';
 import { StorageModule } from '../storage/storage.module';
 import { EquipmentFilesController } from './equipment-files.controller';
 import { EquipmentController } from './equipment.controller';
+import { EquipmentHistoryService } from './equipment-history.service';
+import { EquipmentQueryService } from './equipment-query.service';
 import { EquipmentService } from './equipment.service';
+import { EquipmentWriteService } from './equipment-write.service';
 
 @Module({
   imports: [
@@ -17,6 +20,11 @@ import { EquipmentService } from './equipment.service';
     StorageModule,
   ],
   controllers: [EquipmentController, EquipmentFilesController],
-  providers: [EquipmentService],
+  providers: [
+    EquipmentHistoryService,
+    EquipmentQueryService,
+    EquipmentService,
+    EquipmentWriteService,
+  ],
 })
 export class EquipmentModule {}

@@ -7,6 +7,15 @@ export type TemplateQuery = ReturnType<typeof parseChecklistTemplatesQuery>;
 export type TemplateInput = ReturnType<typeof parseChecklistTemplatePayload>;
 export type ArchiveInput = ReturnType<typeof parseArchiveTemplateDto>;
 
+export type TemplateMaintenanceSettingUsage = {
+  equipmentModelId: number;
+  equipmentModelName: string;
+  id: number;
+  maintenanceTypeCode: string;
+  maintenanceTypeId: number;
+  maintenanceTypeName: string;
+};
+
 export const templateDetailInclude = {
   modules: {
     include: {

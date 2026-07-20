@@ -46,6 +46,7 @@ export function useDictionariesAdminPage({
   const isAdmin = userRole === "admin";
 
   const data = useDictionariesAdminData();
+  const { loadData, setIsLoading } = data;
   const { isSaving, runSavingAction } = useDictionariesSaving({
     setError: data.setError,
     setMessage,
@@ -53,23 +54,23 @@ export function useDictionariesAdminPage({
 
   useEffect(() => {
     if (isAdmin) {
-      data.loadData();
+      void loadData().catch(() => undefined);
       return;
     }
 
-    data.setIsLoading(false);
-  }, [data.loadData, data.setIsLoading, isAdmin]);
+    setIsLoading(false);
+  }, [isAdmin, loadData, setIsLoading]);
 
   const employeeActions = createEmployeeDictionaryActions({
     employeeForm,
-    loadData: data.loadData,
+    loadData,
     runSavingAction,
     setEmployeeForm,
     setMessage,
   });
 
   const manufacturerActions = createManufacturerDictionaryActions({
-    loadData: data.loadData,
+    loadData,
     manufacturerForm,
     modelForm,
     runSavingAction,
@@ -80,14 +81,14 @@ export function useDictionariesAdminPage({
 
   const countryActions = createCountryDictionaryActions({
     countryForm,
-    loadData: data.loadData,
+    loadData,
     runSavingAction,
     setCountryForm,
     setMessage,
   });
 
   const locationActions = createLocationDictionaryActions({
-    loadData: data.loadData,
+    loadData,
     locationForm,
     objectForm,
     runSavingAction,

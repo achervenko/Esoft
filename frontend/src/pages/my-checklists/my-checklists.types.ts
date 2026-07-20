@@ -1,5 +1,6 @@
 import type {
   ChecklistAnswerType,
+  ChecklistResult,
   ChecklistWorkDetail,
   ChecklistWorkListItem,
   ChecklistWorkListResponse,
@@ -50,7 +51,7 @@ export type MyChecklistDetailProps = {
   isActionLoading: boolean;
   isDetailLoading: boolean;
   onAnswerChange: (checklistDetailId: number, value: string) => void;
-  onComplete: () => void;
+  onComplete: (result: ChecklistResult) => void;
   onReload: () => void;
   onSave: () => void;
   showRequiredErrors: boolean;
@@ -109,4 +110,6 @@ export type ChecklistProgressLike = Pick<
 
 export type ChecklistTabCountMap = Partial<Record<ChecklistTabKey, number>>;
 
-export type ChecklistStatusCountMap = Partial<Record<ChecklistWorkStatus, number>>;
+export type ChecklistStatusCountMap = Partial<
+  Record<ChecklistWorkStatus, number>
+>;

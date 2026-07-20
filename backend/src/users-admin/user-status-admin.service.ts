@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { toAdminUserDto } from './users-admin.mapper';
 import { throwNotFoundIfPrismaError } from './users-admin.errors';
 import { parseBoolean, throwBadRequest } from './users-admin.validation';
 import { UsersAdminAuditService } from './users-admin-audit.service';
+
+const SERIALIZABLE_TRANSACTION_ATTEMPTS = 2;
 
 @Injectable()
 export class UserStatusAdminService {
@@ -22,52 +25,120 @@ export class UserStatusAdminService {
     if (banned && params.currentUserId === params.userId) {
       throwBadRequest(
         'CANNOT_DISABLE_SELF',
-        '\u041d\u0435\u043b\u044c\u0437\u044f \u043e\u0442\u043a\u043b\u044e\u0447\u0438\u0442\u044c \u0441\u0432\u043e\u044e \u0443\u0447\u0451\u0442\u043d\u0443\u044e \u0437\u0430\u043f\u0438\u0441\u044c.',
+        'Нельзя отключить свою учётную запись.',
       );
     }
 
     try {
-      const currentUser = await this.prisma.user.findUniqueOrThrow({
-        include: {
-          employeeUser: {
-            include: {
-              employee: true,
+      return await this.runSerializableTransaction(async (tx) => {
+        const currentUser = await tx.user.findUniqueOrThrow({
+          include: {
+            employeeUser: {
+              include: {
+                employee: true,
+              },
             },
+            photo: true,
           },
-          photo: true,
-        },
-        where: { id: params.userId },
-      });
-      const user = await this.prisma.user.update({
-        data: {
-          banExpires: null,
-          banReason: banned
-            ? '\u041e\u0442\u043a\u043b\u044e\u0447\u0435\u043d\u043e \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u043e\u043c'
-            : null,
-          banned,
-        },
-        include: {
-          employeeUser: {
-            include: {
-              employee: true,
+          where: { id: params.userId },
+        });
+
+        if (Boolean(currentUser.banned) === banned) {
+          return toAdminUserDto(currentUser);
+        }
+
+        if (banned && currentUser.role === 'admin') {
+          await this.assertAnotherActiveAdminExists(tx, params.userId);
+        }
+
+        const user = await tx.user.update({
+          data: {
+            banExpires: null,
+            banReason: banned ? 'Отключено администратором' : null,
+            banned,
+          },
+          include: {
+            employeeUser: {
+              include: {
+                employee: true,
+              },
             },
+            photo: true,
           },
-          photo: true,
-        },
-        where: { id: params.userId },
-      });
+          where: { id: params.userId },
+        });
 
-      const userDto = toAdminUserDto(user);
-      await this.audit.logUserStatusChanged({
-        actorUserId: params.currentUserId,
-        newUser: userDto,
-        oldUser: toAdminUserDto(currentUser),
-      });
+        if (banned) {
+          await tx.session.deleteMany({
+            where: { userId: params.userId },
+          });
+        }
 
-      return userDto;
+        const userDto = toAdminUserDto(user);
+        await this.audit.logUserStatusChanged({
+          actorUserId: params.currentUserId,
+          newUser: userDto,
+          oldUser: toAdminUserDto(currentUser),
+          tx,
+        });
+
+        return userDto;
+      });
     } catch (error) {
       throwNotFoundIfPrismaError(error, 'USER_NOT_FOUND');
       throw error;
     }
+  }
+
+  private async assertAnotherActiveAdminExists(
+    tx: Prisma.TransactionClient,
+    userId: string,
+  ) {
+    const remainingActiveAdminCount = await tx.user.count({
+      where: {
+        id: { not: userId },
+        role: 'admin',
+        OR: [{ banned: false }, { banned: null }],
+      },
+    });
+
+    if (remainingActiveAdminCount === 0) {
+      throwBadRequest(
+        'LAST_ACTIVE_ADMIN_STATUS_REQUIRED',
+        'Нельзя отключить последнюю активную учётную запись администратора.',
+      );
+    }
+  }
+
+  private async runSerializableTransaction<T>(
+    operation: (tx: Prisma.TransactionClient) => Promise<T>,
+  ) {
+    for (
+      let attempt = 1;
+      attempt <= SERIALIZABLE_TRANSACTION_ATTEMPTS;
+      attempt += 1
+    ) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        if (
+          attempt === SERIALIZABLE_TRANSACTION_ATTEMPTS ||
+          !this.isTransactionConflict(error)
+        ) {
+          throw error;
+        }
+      }
+    }
+
+    throw new Error('Serializable transaction failed');
+  }
+
+  private isTransactionConflict(error: unknown) {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2034'
+    );
   }
 }

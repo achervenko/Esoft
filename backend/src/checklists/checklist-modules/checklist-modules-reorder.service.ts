@@ -3,6 +3,7 @@ import { AuditAction, Prisma } from '@prisma/client';
 import { writeChecklistAudit } from '../checklist-common/checklists.audit';
 import { throwChecklistPrismaError } from '../checklist-common/checklists.errors';
 import { assertFullActiveModuleOrder } from './checklist-modules.assertions';
+import { ChecklistModulesOrderLockService } from './checklist-modules-order-lock.service';
 import { ChecklistModulesRepository } from './checklist-modules.repository';
 import type { ModuleReorderInput } from './checklist-modules.types';
 
@@ -10,14 +11,23 @@ const TEMP_SORT_ORDER_OFFSET = 1_000_000;
 
 @Injectable()
 export class ChecklistModulesReorderService {
-  constructor(private readonly modulesRepository: ChecklistModulesRepository) {}
+  constructor(
+    private readonly modulesOrderLock: ChecklistModulesOrderLockService,
+    private readonly modulesRepository: ChecklistModulesRepository,
+  ) {}
 
   async reorder(input: ModuleReorderInput, userId: string) {
     try {
       const modules = await this.modulesRepository.transaction(async (tx) => {
+        await this.modulesOrderLock.lock(tx);
+
         const current = await this.modulesRepository.findActiveOrdered(tx);
 
         assertFullActiveModuleOrder(current, input.items);
+
+        if (!hasModuleOrderChanges(current, input)) {
+          return current;
+        }
 
         await this.applyTemporarySortOrder(
           input.items.map((item) => item.id),
@@ -61,6 +71,8 @@ export class ChecklistModulesReorderService {
     tx: Prisma.TransactionClient,
     userId: string,
   ) {
+    await this.modulesOrderLock.lock(tx);
+
     const modules = await this.modulesRepository.findActiveIdsOrdered(tx);
     const moduleIds = modules.map((module) => module.id);
 
@@ -94,4 +106,17 @@ export class ChecklistModulesReorderService {
       ),
     );
   }
+}
+
+function hasModuleOrderChanges(
+  current: Array<{ id: number; sortOrder: number }>,
+  input: ModuleReorderInput,
+) {
+  const requestedOrder = new Map(
+    input.items.map((item) => [item.id, item.sortOrder]),
+  );
+
+  return current.some(
+    (module) => requestedOrder.get(module.id) !== module.sortOrder,
+  );
 }

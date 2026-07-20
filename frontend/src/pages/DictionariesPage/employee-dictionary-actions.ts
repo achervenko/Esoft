@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import {
   createAdminEmployee,
-  deleteAdminEmployee,
+  setAdminEmployeeStatus,
   updateAdminEmployee,
   type AdminEmployee,
   type EmployeePayload,
@@ -10,7 +10,7 @@ import type { EmployeeDictionaryFormState } from "./dictionaries-page-types";
 
 type EmployeeDictionaryActionsParams = {
   employeeForm: EmployeeDictionaryFormState;
-  loadData: () => void;
+  loadData: () => Promise<void>;
   runSavingAction: (action: () => Promise<void>) => Promise<void>;
   setEmployeeForm: Dispatch<SetStateAction<EmployeeDictionaryFormState>>;
   setMessage: Dispatch<SetStateAction<string | null>>;
@@ -34,24 +34,22 @@ export function createEmployeeDictionaryActions({
       }
 
       setEmployeeForm(null);
-      loadData();
+      await loadData();
     });
   };
 
-  const removeEmployee = async (employee: AdminEmployee) => {
-    if (!window.confirm(`Удалить сотрудника «${employee.fullName}»?`)) {
-      return;
-    }
-
+  const toggleEmployeeStatus = async (employee: AdminEmployee) => {
     await runSavingAction(async () => {
-      await deleteAdminEmployee(employee.id);
-      setMessage("Сотрудник удалён.");
-      loadData();
+      await setAdminEmployeeStatus(employee.id, !employee.isActive);
+      setMessage(
+        employee.isActive ? "Сотрудник отключён." : "Сотрудник включён.",
+      );
+      await loadData();
     });
   };
 
   return {
-    removeEmployee,
     saveEmployee,
+    toggleEmployeeStatus,
   };
 }

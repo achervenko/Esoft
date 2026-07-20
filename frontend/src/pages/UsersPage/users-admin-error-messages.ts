@@ -1,11 +1,12 @@
 import { AdminApiError } from "../../shared/api/users-admin-api";
 
 const messagesByCode: Record<string, string> = {
+  CANNOT_CHANGE_OWN_ROLE: "Нельзя изменить собственную роль.",
   CANNOT_DISABLE_SELF: "Нельзя отключить свою учётную запись.",
   EMAIL_ALREADY_EXISTS: "Пользователь с таким email уже существует.",
   EMAIL_REQUIRED: "Укажите email.",
-  EMPLOYEE_IN_USE:
-    "Сотрудник используется в системе. Удаление недоступно.",
+  EMPLOYEE_INACTIVE:
+    "Нельзя привязать отключённого сотрудника к учётной записи.",
   EMPLOYEE_NOT_FOUND: "Сотрудник не найден.",
   EMPLOYEE_REQUIRED: "Выберите сотрудника.",
   FIRST_NAME_REQUIRED: "Укажите имя.",
@@ -21,6 +22,10 @@ const messagesByCode: Record<string, string> = {
   INVALID_STATUS: "Некорректный статус учётной записи.",
   INVALID_USERNAME:
     "Логин может содержать латиницу, цифры, точку, дефис и нижнее подчёркивание.",
+  LAST_ACTIVE_ADMIN_ROLE_REQUIRED:
+    "Нельзя снять роль администратора с последней активной учётной записи администратора.",
+  LAST_ACTIVE_ADMIN_STATUS_REQUIRED:
+    "Нельзя отключить последнюю активную учётную запись администратора.",
   LAST_NAME_REQUIRED: "Укажите фамилию.",
   PASSWORD_REQUIRED: "Укажите пароль.",
   PASSWORD_TOO_SHORT: "Пароль должен быть не короче 8 символов.",
@@ -54,7 +59,9 @@ export function getUsersAdminErrorMessage(error: unknown) {
       return "Сервер временно недоступен.";
     }
 
-    return error.code ? messagesByCode[error.code] ?? error.message : error.message;
+    return error.code
+      ? (messagesByCode[error.code] ?? error.message)
+      : error.message;
   }
 
   if (error instanceof Error) {

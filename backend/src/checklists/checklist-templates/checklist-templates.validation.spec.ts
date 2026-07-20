@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { parseChecklistTemplatesQuery } from './checklist-templates-query.validation';
+import { parseArchiveTemplateDto } from './checklist-template-lifecycle.validation';
 import { parseChecklistTemplatePayload } from './checklist-template.validation';
 
 describe('checklist template validation', () => {
@@ -65,6 +66,20 @@ describe('checklist template validation', () => {
         name: 'Диагностика',
       }),
     ).toBe('CHECKLIST_TEMPLATE_MODULE_DUPLICATE');
+  });
+
+  it('rejects unsafe integer ids in create payloads', () => {
+    expectBadRequestCode(() =>
+      parseChecklistTemplatePayload({
+        modules: [
+          {
+            checklistModuleId: Number.MAX_SAFE_INTEGER + 1,
+            questions: [{ checklistQuestionId: 10 }],
+          },
+        ],
+        name: 'Диагностика',
+      }),
+    ).toBe('CHECKLIST_MODULE_ID_INVALID');
   });
 
   it('rejects duplicate question ids in create payloads', () => {
@@ -174,6 +189,36 @@ describe('checklist template validation', () => {
         state: 'DRAFT',
       }),
     ).toBe('CHECKLIST_TEMPLATE_STATE_INVALID');
+  });
+
+  it('requires archive reason', () => {
+    expectBadRequestCode(() =>
+      parseArchiveTemplateDto({
+        reason: '   ',
+        version: 1,
+      }),
+    ).toBe('CHECKLIST_TEMPLATE_ARCHIVE_REASON_REQUIRED');
+  });
+
+  it('trims archive reason', () => {
+    expect(
+      parseArchiveTemplateDto({
+        reason: '  Устарел  ',
+        version: 3,
+      }),
+    ).toEqual({
+      reason: 'Устарел',
+      version: 3,
+    });
+  });
+
+  it('limits archive reason length', () => {
+    expectBadRequestCode(() =>
+      parseArchiveTemplateDto({
+        reason: 'а'.repeat(501),
+        version: 1,
+      }),
+    ).toBe('CHECKLIST_TEMPLATE_ARCHIVE_REASON_TOO_LONG');
   });
 });
 

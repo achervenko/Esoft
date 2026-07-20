@@ -88,7 +88,7 @@ export function parsePositiveInt(
         ? Number(value)
         : NaN;
 
-  if (!Number.isInteger(parsedValue) || parsedValue <= 0) {
+  if (!Number.isSafeInteger(parsedValue) || parsedValue <= 0) {
     throwChecklistBadRequest(code, message);
   }
 

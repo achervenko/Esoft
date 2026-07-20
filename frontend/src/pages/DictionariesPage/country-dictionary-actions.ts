@@ -10,7 +10,7 @@ import type { CountryFormState } from "./dictionaries-page-types";
 
 type CountryDictionaryActionsParams = {
   countryForm: CountryFormState;
-  loadData: () => void;
+  loadData: () => Promise<void>;
   runSavingAction: (action: () => Promise<void>) => Promise<void>;
   setCountryForm: Dispatch<SetStateAction<CountryFormState>>;
   setMessage: Dispatch<SetStateAction<string | null>>;
@@ -34,7 +34,7 @@ export function createCountryDictionaryActions({
       }
 
       setCountryForm(null);
-      loadData();
+      await loadData();
     });
   };
 
@@ -46,7 +46,7 @@ export function createCountryDictionaryActions({
     await runSavingAction(async () => {
       await deleteDictionaryCountry(country.id);
       setMessage("Страна удалена.");
-      loadData();
+      await loadData();
     });
   };
 

@@ -1,26 +1,22 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { StorageObjectService } from '../storage/storage-object.service';
 import type { UploadedFileInput } from '../storage/storage.types';
-import {
-  createUserPhotoObjectKey,
-  getUserPhotoObjectKeys,
-} from '../users/user-photo-object-keys';
-import type { UserPhotoSize } from '../users/user-photo-size';
+import { getUserPhotoObjectKeys } from '../users/user-photo-object-keys';
 import { throwUserAdminNotFound } from './users-admin.errors';
 import { toAdminUserDto } from './users-admin.mapper';
 import { UsersAdminAuditService } from './users-admin-audit.service';
 import { UserPhotoProcessingService } from './user-photo-processing.service';
-
-type UploadedUserPhotoObject = {
-  key: string;
-  size: UserPhotoSize;
-};
+import {
+  createUserPhotoUploadPlan,
+  getUploadedObjectKey,
+  UploadedUserPhotoObject,
+  withoutKeys,
+} from './user-photo-upload-plan';
+import {
+  UserPhotoObjectUploadError,
+  UserPhotoStorageService,
+} from './user-photo-storage.service';
 
 type AdminUserWithRelations = Prisma.UserGetPayload<{
   include: typeof adminUserInclude;
@@ -28,13 +24,11 @@ type AdminUserWithRelations = Prisma.UserGetPayload<{
 
 @Injectable()
 export class UserPhotosAdminService {
-  private readonly logger = new Logger(UserPhotosAdminService.name);
-
   constructor(
     private readonly audit: UsersAdminAuditService,
     private readonly photoProcessor: UserPhotoProcessingService,
     private readonly prisma: PrismaService,
-    private readonly storageObjects: StorageObjectService,
+    private readonly photoStorage: UserPhotoStorageService,
   ) {}
 
   async uploadPhoto(params: {
@@ -55,14 +49,9 @@ export class UserPhotosAdminService {
     let savedUser: AdminUserWithRelations;
 
     try {
-      for (const version of uploadPlan) {
-        await this.storageObjects.putObject({
-          body: version.buffer,
-          contentType: version.contentType,
-          key: version.key,
-        });
-        uploadedObjects.push({ key: version.key, size: version.size });
-      }
+      uploadedObjects.push(
+        ...(await this.photoStorage.uploadObjects(uploadPlan)),
+      );
 
       savedUser = await this.prisma.$transaction(async (tx) => {
         await this.lockUserPhoto(tx, params.userId);
@@ -74,7 +63,7 @@ export class UserPhotosAdminService {
 
         await tx.userPhoto.upsert({
           create: {
-            bucket: this.storageObjects.bucket,
+            bucket: this.photoStorage.bucket,
             largeObjectKey: getUploadedObjectKey(uploadedObjects, 'large'),
             mediumObjectKey: getUploadedObjectKey(uploadedObjects, 'medium'),
             originalName: params.file?.originalname ?? 'photo',
@@ -83,7 +72,7 @@ export class UserPhotosAdminService {
             userId: params.userId,
           },
           update: {
-            bucket: this.storageObjects.bucket,
+            bucket: this.photoStorage.bucket,
             largeObjectKey: getUploadedObjectKey(uploadedObjects, 'large'),
             mediumObjectKey: getUploadedObjectKey(uploadedObjects, 'medium'),
             originalName: params.file?.originalname ?? 'photo',
@@ -93,13 +82,27 @@ export class UserPhotosAdminService {
           where: { userId: params.userId },
         });
 
-        return tx.user.findUniqueOrThrow({
+        const user = await tx.user.findUniqueOrThrow({
           include: adminUserInclude,
           where: { id: params.userId },
         });
+
+        const userDto = toAdminUserDto(user);
+        await this.audit.logUserPhotoUploaded({
+          actorUserId: params.actorUserId,
+          hadPreviousPhoto,
+          tx,
+          user: userDto,
+        });
+
+        return user;
       });
     } catch (error) {
-      await this.deletePhotoObjectsBestEffort(
+      if (error instanceof UserPhotoObjectUploadError) {
+        uploadedObjects.push(...error.uploadedObjects);
+      }
+
+      await this.photoStorage.deleteObjectsBestEffort(
         withoutKeys(
           uploadedObjects.map((object) => object.key),
           replacedPhotoObjectKeys,
@@ -124,20 +127,14 @@ export class UserPhotosAdminService {
       throw error;
     }
 
-    await this.deletePhotoObjectsBestEffort(
+    await this.photoStorage.deleteObjectsBestEffort(
       withoutKeys(
         replacedPhotoObjectKeys,
         uploadedObjects.map((object) => object.key),
       ),
     );
-    const userDto = toAdminUserDto(savedUser);
-    await this.logUserPhotoUploadedBestEffort({
-      actorUserId: params.actorUserId,
-      hadPreviousPhoto,
-      user: userDto,
-    });
 
-    return userDto;
+    return toAdminUserDto(savedUser);
   }
 
   async deletePhoto(params: { actorUserId?: string | null; userId: string }) {
@@ -161,6 +158,14 @@ export class UserPhotosAdminService {
           where: { id: params.userId },
         });
 
+        if (nextDeletedPhoto) {
+          await this.audit.logUserPhotoDeleted(
+            toAdminUserDto(nextUser),
+            params.actorUserId,
+            tx,
+          );
+        }
+
         return {
           deletedPhoto: nextDeletedPhoto,
           user: nextUser,
@@ -169,12 +174,8 @@ export class UserPhotosAdminService {
     );
 
     if (deletedPhoto) {
-      await this.deletePhotoObjectsBestEffort(
+      await this.photoStorage.deleteObjectsBestEffort(
         getUserPhotoObjectKeys(deletedPhoto),
-      );
-      await this.logUserPhotoDeletedBestEffort(
-        toAdminUserDto(user),
-        params.actorUserId,
       );
     }
 
@@ -192,46 +193,10 @@ export class UserPhotosAdminService {
     }
   }
 
-  private async deletePhotoObjectsBestEffort(keys: string[]) {
-    await Promise.allSettled(
-      [...new Set(keys)].map((key) => this.storageObjects.deleteObject(key)),
-    );
-  }
-
   private lockUserPhoto(tx: Prisma.TransactionClient, userId: string) {
     return tx.$executeRaw`
       SELECT pg_advisory_xact_lock(hashtext(${'user_photo:' + userId}))
     `;
-  }
-
-  private async logUserPhotoUploadedBestEffort(params: {
-    actorUserId?: string | null;
-    hadPreviousPhoto: boolean;
-    user: Parameters<UsersAdminAuditService['logUserPhotoUploaded']>[0]['user'];
-  }) {
-    try {
-      await this.audit.logUserPhotoUploaded(params);
-    } catch (error) {
-      this.logAuditError(error);
-    }
-  }
-
-  private async logUserPhotoDeletedBestEffort(
-    user: Parameters<UsersAdminAuditService['logUserPhotoDeleted']>[0],
-    actorUserId?: string | null,
-  ) {
-    try {
-      await this.audit.logUserPhotoDeleted(user, actorUserId);
-    } catch (error) {
-      this.logAuditError(error);
-    }
-  }
-
-  private logAuditError(error: unknown) {
-    this.logger.error(
-      'Failed to write user photo audit log',
-      error instanceof Error ? error.stack : String(error),
-    );
   }
 }
 
@@ -248,71 +213,3 @@ const adminUserInclude = {
     take: 1,
   },
 };
-
-function getUploadedObjectKey(
-  objects: UploadedUserPhotoObject[],
-  size: UploadedUserPhotoObject['size'],
-) {
-  const key = objects.find((object) => object.size === size)?.key;
-
-  if (!key) {
-    throw new InternalServerErrorException({
-      code: 'USER_PHOTO_UPLOAD_FAILED',
-      message: 'Не удалось подготовить все размеры фото пользователя.',
-    });
-  }
-
-  return key;
-}
-
-function withoutKeys(keys: string[], keysToExclude: string[]) {
-  const excludedKeys = new Set(keysToExclude);
-
-  return keys.filter((key) => !excludedKeys.has(key));
-}
-
-function createUniqueUserPhotoObjectKey(params: {
-  existingKeys: string[];
-  size: UserPhotoSize;
-  userId: string;
-}) {
-  const existingKeys = new Set(params.existingKeys);
-
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const key = createUserPhotoObjectKey(params.userId, params.size);
-
-    if (!existingKeys.has(key)) {
-      return key;
-    }
-  }
-
-  throw new InternalServerErrorException({
-    code: 'USER_PHOTO_UPLOAD_FAILED',
-    message: 'Не удалось подготовить уникальный ключ фото пользователя.',
-  });
-}
-
-function createUserPhotoUploadPlan(params: {
-  userId: string;
-  versions: Array<{
-    buffer: Buffer;
-    contentType: string;
-    size: UserPhotoSize;
-  }>;
-}) {
-  const usedKeys: string[] = [];
-
-  return params.versions.map((version) => {
-    const key = createUniqueUserPhotoObjectKey({
-      existingKeys: usedKeys,
-      size: version.size,
-      userId: params.userId,
-    });
-    usedKeys.push(key);
-
-    return {
-      ...version,
-      key,
-    };
-  });
-}

@@ -35,7 +35,7 @@ export function MyChecklistViewPage({
 
   useEffect(() => {
     if (checklistWork.checklist?.status === "CREATED") {
-      window.history.replaceState(null, "", "#/my-checklists");
+      window.location.replace("#/my-checklists");
     }
   }, [checklistWork.checklist?.status]);
 
@@ -83,7 +83,7 @@ export function MyChecklistViewPage({
         isActionLoading={checklistWork.isActionLoading}
         isDetailLoading={checklistWork.isDetailLoading}
         onAnswerChange={checklistWork.setAnswerValue}
-        onComplete={() => void checklistWork.completeChecklist()}
+        onComplete={(result) => void checklistWork.completeChecklist(result)}
         onReload={handleReload}
         onSave={() => void checklistWork.saveChecklist()}
         showRequiredErrors={checklistWork.showRequiredErrors}

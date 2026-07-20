@@ -1,0 +1,201 @@
+# Users
+
+Контур пользователей разделён на две части:
+
+- `src/users` — чтение профиля и фото пользователя.
+- `src/users-admin` — административное управление сотрудниками и учётными записями.
+
+## Пользовательский users-модуль
+
+Файлы:
+
+- `users.controller.ts` — endpoints профиля и фото.
+- `users.service.ts` — чтение профиля пользователя.
+- `user-photo.service.ts` — чтение объектов фото из хранилища.
+- `user-photo-object-keys.ts` — формирование ключей фото.
+- `user-photo-size.ts` — допустимые размеры фото.
+- `user-photo.dto.ts` — DTO фото пользователя.
+
+Endpoints:
+
+- `GET /api/users/:id/profile`
+- `GET /api/users/:id/photo/:size`
+
+Оба endpoint требуют активную пользовательскую сессию.
+
+Доступ к профилю и фото проверяется через `assertCanViewUserProfile()`:
+
+- пользователь может смотреть свой профиль;
+- `admin` может смотреть чужие профили;
+- остальные роли не могут смотреть чужие профили.
+
+Фото отдаётся с:
+
+```http
+Cache-Control: private, max-age=3600
+```
+
+Поддерживаемые размеры фото задаются в `user-photo-size.ts`.
+
+## Административный users-admin-модуль
+
+Файлы:
+
+- `users-admin.controller.ts` — admin endpoints.
+- `employees-admin.service.ts` — создание, изменение и отключение сотрудников.
+- `user-accounts-admin.service.ts` — создание и изменение учётных записей.
+- `user-credentials-admin.service.ts` — установка и изменение пароля.
+- `user-status-admin.service.ts` — блокировка и разблокировка учётных записей.
+- `user-photos-admin.service.ts` — сценарии загрузки и удаления фото.
+- `user-photo-processing.service.ts` — подготовка размеров фото.
+- `user-photo-storage.service.ts` — загрузка объектов в storage и cleanup.
+- `user-photo-upload-plan.ts` — генерация ключей и upload plan.
+- `users-admin-assertions.service.ts` — общие проверки существования и активности.
+- `users-admin-audit.service.ts` — аудит операций users-модуля.
+- `users-admin.validation.ts` — validation payload-ов.
+- `users-admin.errors.ts` — доменные ошибки.
+- `users-admin.mapper.ts` — DTO mapping.
+
+Все admin endpoints требуют роль `admin` через `assertAdmin()`.
+
+## Admin endpoints
+
+Сотрудники:
+
+- `GET /api/users/admin/employees`
+- `POST /api/users/admin/employees`
+- `PUT /api/users/admin/employees/:employeeId`
+- `PATCH /api/users/admin/employees/:employeeId/status`
+
+Учётные записи:
+
+- `GET /api/users/admin/roles`
+- `GET /api/users/admin/accounts`
+- `POST /api/users/admin/accounts`
+- `PUT /api/users/admin/accounts/:userId`
+- `PATCH /api/users/admin/accounts/:userId/password`
+- `PATCH /api/users/admin/accounts/:userId/status`
+- `POST /api/users/admin/accounts/:userId/photo`
+- `DELETE /api/users/admin/accounts/:userId/photo`
+
+Физического удаления пользователей и сотрудников в admin API быть не должно.
+
+## Сотрудники
+
+Сотрудник не удаляется физически. Для отключения используется `isActive`.
+
+Отключённый сотрудник:
+
+- остаётся в базе;
+- сохраняет связи и аудит;
+- не может быть привязан к новой или изменяемой учётной записи.
+
+`assertEmployeeExists()` проверяет:
+
+- сотрудник существует;
+- `isActive === true`.
+
+Для найденного, но отключённого сотрудника возвращается `EMPLOYEE_INACTIVE`.
+
+## Учётные записи
+
+Создание пользователя:
+
+- normalizes `email` и `username` к нижнему регистру;
+- создаёт пользователя;
+- создаёт credential account;
+- привязывает активного сотрудника;
+- пишет аудит в той же транзакции.
+
+Изменение пользователя:
+
+- запрещает менять собственную роль;
+- запрещает снять роль `admin` с последней активной учётной записи администратора;
+- использует `Serializable` transaction с retry при Prisma `P2034`;
+- пишет аудит в той же транзакции.
+
+Активный администратор — пользователь с:
+
+```ts
+role: 'admin'
+banned: false или null
+```
+
+## Статус учётной записи
+
+Для отключения используется Better Auth поле `banned`.
+
+Запрещено:
+
+- отключить свою учётную запись;
+- отключить последнюю активную учётную запись администратора.
+
+При отключении пользователя в той же транзакции удаляются его активные сессии:
+
+```ts
+await tx.session.deleteMany({
+  where: { userId },
+});
+```
+
+При повторном включении сессии не восстанавливаются. Пользователь входит заново.
+
+## Пароль
+
+Пароль не trim-ится. Значение `" password "` остаётся значением с пробелами.
+
+После установки или изменения пароля в той же транзакции удаляются активные сессии пользователя. Это закрывает доступ для уже вошедших клиентов со старым паролем.
+
+## Фото пользователя
+
+Загрузка фото разделена на этапы:
+
+1. `UserPhotoProcessingService` готовит версии фото.
+2. `user-photo-upload-plan.ts` генерирует ключи.
+3. `UserPhotoStorageService` загружает объекты в storage.
+4. `UserPhotosAdminService` обновляет Prisma metadata и аудит.
+5. Старые объекты удаляются best effort.
+
+Если upload падает частично, уже загруженные объекты передаются наружу через `UserPhotoObjectUploadError`, после чего выполняется cleanup.
+
+Удаление объектов из storage остаётся best effort: пользовательская операция не откатывается из-за ошибки cleanup, но неудачное удаление логируется через Nest `Logger`.
+
+Будущий желательный механизм: отдельная очистка orphan-файлов или журнал неудачных cleanup-операций.
+
+## Аудит
+
+Изменения сотрудников, учётных записей, паролей, статусов и фото пишутся через `UsersAdminAuditService`.
+
+Для операций, где меняется Prisma-состояние, аудит должен выполняться в той же транзакции:
+
+- либо сохраняется изменение и аудит;
+- либо не сохраняется ничего.
+
+Не возвращать best-effort аудит для операций изменения данных пользователей.
+
+## Проверки при изменениях
+
+Базово:
+
+```bash
+npm run build
+npm run lint
+npm test
+```
+
+Targeted-проверки для users-контура:
+
+```bash
+npx eslint src/users src/users-admin
+npm run build
+```
+
+Отдельно вручную проверить критические сценарии:
+
+- нельзя привязать отключённого сотрудника к аккаунту;
+- нельзя изменить собственную роль;
+- нельзя снять или отключить последнего активного admin;
+- после отключения пользователя его сессии удалены;
+- после смены пароля сессии пользователя удалены;
+- пользователь не может смотреть чужой профиль без роли `admin`;
+- фото загружается, заменяется и удаляется с аудитом.

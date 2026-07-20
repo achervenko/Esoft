@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { AuditAction, AuditModule, EquipmentStatus } from '@prisma/client';
+import {
+  AuditAction,
+  AuditModule,
+  EquipmentStatus,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 type AuditFieldLine = {
@@ -25,6 +30,7 @@ type WriteAuditParams = {
   entityType: string;
   fields: AuditFieldChange[];
   module: AuditModule;
+  tx?: Prisma.TransactionClient;
   userId?: string | null;
 };
 
@@ -32,8 +38,12 @@ type WriteAuditParams = {
 export class AuditLogService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async logEquipmentCreated(equipmentId: number, userId?: string | null) {
-    const equipment = await this.prisma.equipment.findUnique({
+  async logEquipmentCreated(
+    equipmentId: number,
+    userId: string | null | undefined,
+    tx: Prisma.TransactionClient,
+  ) {
+    const equipment = await tx.equipment.findUnique({
       where: { id: equipmentId },
       include: {
         country: true,
@@ -49,7 +59,9 @@ export class AuditLogService {
     });
 
     if (!equipment) {
-      return;
+      throw new Error(
+        `Cannot write equipment creation audit: equipment ${equipmentId} not found`,
+      );
     }
 
     const lines: AuditFieldLine[] = [
@@ -95,6 +107,7 @@ export class AuditLogService {
         newValue: line.value,
       })),
       module: AuditModule.EQUIPMENT,
+      tx,
       userId,
     });
   }
@@ -102,6 +115,7 @@ export class AuditLogService {
   async logEquipmentUpdated(params: {
     equipmentId: number;
     lines: EquipmentUpdateAuditLine[];
+    tx: Prisma.TransactionClient;
     userId?: string | null;
   }) {
     await this.writeFieldChanges({
@@ -114,6 +128,7 @@ export class AuditLogService {
         oldValue: line.oldValue,
       })),
       module: AuditModule.EQUIPMENT,
+      tx: params.tx,
       userId: params.userId,
     });
   }
@@ -123,7 +138,9 @@ export class AuditLogService {
       return;
     }
 
-    await this.prisma.auditLog.createMany({
+    const prisma = params.tx ?? this.prisma;
+
+    await prisma.auditLog.createMany({
       data: params.fields.map((field) => ({
         action: params.action,
         entityId: params.entityId ?? null,
@@ -165,7 +182,9 @@ export class AuditLogService {
       return String(value);
     }
 
-    return JSON.stringify(value);
+    const serialized = JSON.stringify(value);
+
+    return serialized ?? Object.prototype.toString.call(value);
   }
 
   private getStatusLabel(status: EquipmentStatus) {

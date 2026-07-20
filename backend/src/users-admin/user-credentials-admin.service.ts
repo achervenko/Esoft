@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,14 +11,8 @@ import { UsersAdminAssertionsService } from './users-admin-assertions.service';
 import { UsersAdminAuditService } from './users-admin-audit.service';
 import { toAdminUserDto } from './users-admin.mapper';
 
-type AdminUserWithRelations = Prisma.UserGetPayload<{
-  include: typeof adminUserInclude;
-}>;
-
 @Injectable()
 export class UserCredentialsAdminService {
-  private readonly logger = new Logger(UserCredentialsAdminService.name);
-
   constructor(
     private readonly assertions: UsersAdminAssertionsService,
     private readonly audit: UsersAdminAuditService,
@@ -35,7 +29,7 @@ export class UserCredentialsAdminService {
     const passwordHash = await hashUserPassword(
       parsePassword(payload.password),
     );
-    const user = await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
       await this.lockUserCredentials(tx, userId);
       const account = await this.findCredentialAccount(tx, userId);
 
@@ -56,12 +50,21 @@ export class UserCredentialsAdminService {
         });
       }
 
-      return tx.user.findUniqueOrThrow({
+      await tx.session.deleteMany({
+        where: { userId },
+      });
+
+      const user = await tx.user.findUniqueOrThrow({
         include: adminUserInclude,
         where: { id: userId },
       });
+
+      await this.audit.logUserPasswordChanged(
+        toAdminUserDto(user),
+        actorUserId,
+        tx,
+      );
     });
-    await this.logPasswordChangedBestEffort(user, actorUserId);
 
     return { ok: true };
   }
@@ -81,23 +84,6 @@ export class UserCredentialsAdminService {
     return tx.$executeRaw`
       SELECT pg_advisory_xact_lock(hashtext(${'user_credentials:' + userId}))
     `;
-  }
-
-  private async logPasswordChangedBestEffort(
-    user: AdminUserWithRelations,
-    actorUserId?: string | null,
-  ) {
-    try {
-      await this.audit.logUserPasswordChanged(
-        toAdminUserDto(user),
-        actorUserId,
-      );
-    } catch (error) {
-      this.logger.error(
-        'Failed to write user password change audit log',
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
   }
 }
 

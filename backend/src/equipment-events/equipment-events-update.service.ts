@@ -20,10 +20,11 @@ import {
   hasResponsibleUsersChange,
 } from './equipment-events-update.assertions';
 import { syncEventChecklists } from './equipment-events-update-checklists';
-import { requireUserId, normalizeStringIds } from './equipment-events-update.utils';
 import {
-  type UpdateCreatedEquipmentEventData,
-} from './equipment-events.validation';
+  requireUserId,
+  normalizeStringIds,
+} from './equipment-events-update.utils';
+import { type UpdateCreatedEquipmentEventData } from './equipment-events.validation';
 
 @Injectable()
 export class EquipmentEventsUpdateService {
@@ -88,9 +89,23 @@ export class EquipmentEventsUpdateService {
       );
 
       if (data.checklistAssignments !== undefined) {
+        const finalMaintenanceSettingId =
+          updateInput.maintenanceSetting?.id ??
+          updateInput.currentMaintenanceSettingId;
+
+        if (!finalMaintenanceSettingId) {
+          throwEquipmentEventBadRequest(
+            'CHECKLIST_TEMPLATE_NOT_APPLICABLE',
+            'Для события не задана настройка обслуживания.',
+          );
+        }
+
         await this.checklistCreator.assertActiveTemplates(
           tx,
           data.checklistAssignments,
+          {
+            maintenanceSettingId: finalMaintenanceSettingId,
+          },
         );
       }
 

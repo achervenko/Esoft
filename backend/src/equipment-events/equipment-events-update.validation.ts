@@ -29,8 +29,7 @@ export function parseUpdateCreatedEventDto(
             body.checklistAssignments,
             responsibleUserIds ?? [],
             {
-              validateResponsibleAssignments:
-                responsibleUserIds !== undefined,
+              validateResponsibleAssignments: responsibleUserIds !== undefined,
             },
           ),
     equipmentVisibleId: parseOptionalPositiveInteger(

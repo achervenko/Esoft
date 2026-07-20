@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import {
-  archiveChecklistTemplate,
   getChecklistAdminErrorMessage,
+  type ChecklistTemplateArchiveResponse,
   type ChecklistModule,
   type ChecklistModulePayload,
   type ChecklistQuestion,
@@ -76,9 +76,12 @@ export function useChecklistAdminActions({
 
   const activateModule = useCallback(
     (module: ChecklistModule) =>
-      runAction(async () => {
-        await catalogState.setModuleStatus(module, true);
-      }, { shouldRefresh: false }),
+      runAction(
+        async () => {
+          await catalogState.setModuleStatus(module, true);
+        },
+        { shouldRefresh: false },
+      ),
     [catalogState, runAction],
   );
 
@@ -88,10 +91,13 @@ export function useChecklistAdminActions({
       payload: ChecklistModulePayload,
       onDone: () => void,
     ) =>
-      runAction(async () => {
-        await catalogState.saveModule(item, payload);
-        onDone();
-      }, { shouldRefresh: false }),
+      runAction(
+        async () => {
+          await catalogState.saveModule(item, payload);
+          onDone();
+        },
+        { shouldRefresh: false },
+      ),
     [catalogState, runAction],
   );
 
@@ -101,26 +107,29 @@ export function useChecklistAdminActions({
       payload: ChecklistQuestionPayload,
       onDone: () => void,
     ) =>
-      runAction(async () => {
-        await catalogState.saveQuestion(item, payload);
-        onDone();
-      }, { shouldRefresh: false }),
+      runAction(
+        async () => {
+          await catalogState.saveQuestion(item, payload);
+          onDone();
+        },
+        { shouldRefresh: false },
+      ),
     [catalogState, runAction],
   );
 
   const activateQuestion = useCallback(
     (question: ChecklistQuestion) =>
-      runAction(async () => {
-        await catalogState.setQuestionStatus(question, true);
-      }, { shouldRefresh: false }),
+      runAction(
+        async () => {
+          await catalogState.setQuestionStatus(question, true);
+        },
+        { shouldRefresh: false },
+      ),
     [catalogState, runAction],
   );
 
   const runConfirmAction = useCallback(
-    (
-      state: NonNullable<ChecklistAdminConfirmState>,
-      onDone: () => void,
-    ) =>
+    (state: NonNullable<ChecklistAdminConfirmState>, onDone: () => void) =>
       runAction(async () => {
         if (state.kind === "module-status") {
           if (state.module.isActive) {
@@ -138,17 +147,30 @@ export function useChecklistAdminActions({
           }
         }
 
-        if (state.kind === "archive-template") {
-          await archiveChecklistTemplate(
-            state.template.id,
-            state.template.version,
-          );
-          setMessage("Шаблон удалён.");
-        }
-
         onDone();
-      }, { shouldRefresh: state.kind === "archive-template" }),
+      }),
     [catalogState, runAction],
+  );
+
+  const handleTemplateArchived = useCallback(
+    async (response: ChecklistTemplateArchiveResponse, onDone: () => void) => {
+      setActionError(null);
+      setMessage(
+        response.removedMaintenanceSettingLinks > 0
+          ? `Шаблон удалён. Отвязано настроек обслуживания: ${response.removedMaintenanceSettingLinks}.`
+          : "Шаблон удалён.",
+      );
+      onDone();
+
+      try {
+        await reloadTemplates();
+      } catch (refreshError) {
+        setActionError(
+          `Шаблон удалён, но не удалось обновить список: ${getChecklistAdminErrorMessage(refreshError)}`,
+        );
+      }
+    },
+    [reloadTemplates],
   );
 
   return {
@@ -158,6 +180,7 @@ export function useChecklistAdminActions({
     activateModule,
     activateQuestion,
     clearFeedback,
+    handleTemplateArchived,
     runConfirmAction,
     saveModule,
     saveQuestion,

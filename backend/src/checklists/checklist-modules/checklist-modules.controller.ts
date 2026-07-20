@@ -3,7 +3,6 @@ import {
   Controller,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -17,6 +16,7 @@ import {
   type ChecklistQuestionReorderPayloadDto,
   parseChecklistQuestionReorderPayload,
 } from '../checklist-questions/checklist-questions.validation';
+import { ParseChecklistPositiveIntPipe } from '../checklist-common/checklists-positive-int.pipe';
 import {
   type ChecklistModulePayloadDto,
   type ChecklistReorderPayloadDto,
@@ -46,7 +46,7 @@ export class ChecklistModulesController {
 
   @Get(':id')
   get(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseChecklistPositiveIntPipe) id: number,
     @Session() session: UserSession<Auth>,
   ) {
     assertCanManageChecklists(session.user.role);
@@ -82,7 +82,7 @@ export class ChecklistModulesController {
 
   @Patch(':moduleId/questions/reorder')
   reorderQuestions(
-    @Param('moduleId', ParseIntPipe) moduleId: number,
+    @Param('moduleId', ParseChecklistPositiveIntPipe) moduleId: number,
     @Body() dto: ChecklistQuestionReorderPayloadDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
@@ -97,7 +97,7 @@ export class ChecklistModulesController {
 
   @Patch(':id')
   update(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseChecklistPositiveIntPipe) id: number,
     @Body() dto: ChecklistModulePayloadDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
@@ -112,7 +112,7 @@ export class ChecklistModulesController {
 
   @Post(':id/activate')
   activate(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseChecklistPositiveIntPipe) id: number,
     @Session() session: UserSession<Auth>,
   ) {
     assertCanManageChecklists(session.user.role);
@@ -122,7 +122,7 @@ export class ChecklistModulesController {
 
   @Post(':id/deactivate')
   deactivate(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParseChecklistPositiveIntPipe) id: number,
     @Session() session: UserSession<Auth>,
   ) {
     assertCanManageChecklists(session.user.role);

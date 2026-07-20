@@ -101,6 +101,29 @@ export class MaintenanceSettingsAssertions {
     return setting;
   }
 
+  async loadSettingForMutation(
+    tx: Prisma.TransactionClient,
+    equipmentModelId: number,
+    settingId: number,
+  ) {
+    const [lockedSetting] = await tx.$queryRaw<Array<{ id: number }>>`
+      SELECT id
+      FROM equipment_maintenance_settings
+      WHERE id = ${settingId}
+        AND equipment_model_id = ${equipmentModelId}
+      FOR UPDATE
+    `;
+
+    if (!lockedSetting) {
+      throwMaintenanceSettingNotFound(
+        'MAINTENANCE_SETTING_NOT_FOUND',
+        'Настройка обслуживания не найдена.',
+      );
+    }
+
+    return this.assertSettingExists(tx, equipmentModelId, settingId);
+  }
+
   async assertActiveChecklistTemplate(
     tx: Prisma.TransactionClient,
     checklistTemplateId: number,

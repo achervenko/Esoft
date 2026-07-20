@@ -107,6 +107,18 @@
   padding: 0;
 }
 
+.admin-status-toggle.active {
+  border-color: #bfead0;
+  background: #edfdf3;
+  color: #087443;
+}
+
+.admin-status-toggle.inactive {
+  border-color: #ffd0d0;
+  background: #fff5f5;
+  color: #b42318;
+}
+
 .admin-primary-button {
   border: 1px solid #111111;
   background: #111111;

@@ -7,6 +7,7 @@ export function toEmployeeDto(employee: {
   };
   firstName: string;
   id: number;
+  isActive: boolean;
   lastName: string;
   middleName: string | null;
   position: string;
@@ -17,6 +18,7 @@ export function toEmployeeDto(employee: {
     firstName: employee.firstName,
     fullName: getEmployeeFullName(employee),
     id: employee.id,
+    isActive: employee.isActive,
     lastName: employee.lastName,
     middleName: employee.middleName,
     position: employee.position,
@@ -79,17 +81,14 @@ export function toAdminUserDto(user: AdminUserForDto) {
 
 export function getRoleLabel(role: string | null | undefined) {
   const labels: Record<string, string> = {
-    admin: '\u0410\u0434\u043c\u0438\u043d',
-    chief_engineer:
-      '\u0413\u043b\u0430\u0432\u043d\u044b\u0439 \u0438\u043d\u0436\u0435\u043d\u0435\u0440',
-    engineer: '\u0418\u043d\u0436\u0435\u043d\u0435\u0440',
-    operator: '\u041e\u043f\u0435\u0440\u0430\u0442\u043e\u0440',
-    auditor: '\u0410\u0443\u0434\u0438\u0442\u043e\u0440',
+    admin: 'Администратор',
+    chief_engineer: 'Главный инженер',
+    engineer: 'Инженер',
+    operator: 'Оператор',
+    auditor: 'Аудитор',
   };
 
-  return role
-    ? (labels[role] ?? role)
-    : '\u041d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d\u0430';
+  return role ? (labels[role] ?? role) : 'Не указана';
 }
 
 function getEmployeeFullName(employee: {

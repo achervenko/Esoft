@@ -191,33 +191,12 @@ export class EquipmentEventsCreator {
     tx: Prisma.TransactionClient,
     actor: Extract<CreateEquipmentEventActor, { kind: 'system' }>,
   ) {
-    const user = await tx.user.findUnique({
-      where: { id: actor.userId },
-      select: {
-        banned: true,
-        employeeUser: {
-          select: {
-            employeeId: true,
-          },
-        },
-      },
-    });
+    const employeeId = await this.accessAssertions.getCurrentEmployeeId(
+      tx,
+      actor.userId,
+    );
 
-    if (!user) {
-      throwEquipmentEventBadRequest(
-        'SYSTEM_ACTOR_USER_NOT_FOUND',
-        'Технический пользователь для создания события не найден.',
-      );
-    }
-
-    if (user.banned) {
-      throwEquipmentEventForbidden(
-        'SYSTEM_ACTOR_USER_INACTIVE',
-        'Технический пользователь для создания события отключён.',
-      );
-    }
-
-    if (user.employeeUser?.employeeId !== actor.employeeId) {
+    if (employeeId !== actor.employeeId) {
       throwEquipmentEventBadRequest(
         'SYSTEM_ACTOR_EMPLOYEE_MISMATCH',
         'Технический пользователь не связан с указанным сотрудником.',

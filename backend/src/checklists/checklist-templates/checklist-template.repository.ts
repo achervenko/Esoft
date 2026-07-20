@@ -5,7 +5,10 @@ import {
   throwChecklistConflict,
   throwChecklistNotFound,
 } from '../checklist-common/checklists.errors';
-import { templateDetailInclude } from './checklist-templates.types';
+import {
+  type TemplateMaintenanceSettingUsage,
+  templateDetailInclude,
+} from './checklist-templates.types';
 
 @Injectable()
 export class ChecklistTemplateRepository {
@@ -35,9 +38,24 @@ export class ChecklistTemplateRepository {
     id: number,
     expectedVersion?: number,
   ) {
-    const template = await tx.checklistTemplate.findUnique({
-      where: { id },
-    });
+    const rows = await tx.$queryRaw<
+      Array<{
+        id: number;
+        isActive: boolean;
+        isPublished: boolean;
+        version: number;
+      }>
+    >`
+      SELECT
+        id,
+        is_active AS "isActive",
+        is_published AS "isPublished",
+        version
+      FROM checklist_templates
+      WHERE id = ${id}
+      FOR UPDATE
+    `;
+    const template = rows[0];
 
     if (!template) {
       throwChecklistNotFound(
@@ -51,6 +69,27 @@ export class ChecklistTemplateRepository {
     }
 
     return template;
+  }
+
+  async loadTemplateMaintenanceSettingsUsage(
+    templateId: number,
+    tx: Prisma.TransactionClient = this.prisma,
+  ) {
+    return tx.$queryRaw<TemplateMaintenanceSettingUsage[]>`
+      SELECT
+        setting.id,
+        model.id AS "equipmentModelId",
+        model.name AS "equipmentModelName",
+        maintenance_type.id AS "maintenanceTypeId",
+        maintenance_type.code AS "maintenanceTypeCode",
+        maintenance_type.name AS "maintenanceTypeName"
+      FROM equipment_maintenance_settings setting
+      JOIN equipment_models model ON model.id = setting.equipment_model_id
+      JOIN equipment_event_types maintenance_type
+        ON maintenance_type.id = setting.maintenance_type_id
+      WHERE setting.default_checklist_template_id = ${templateId}
+      ORDER BY model.name, maintenance_type.name, setting.id
+    `;
   }
 
   async touchTemplate(

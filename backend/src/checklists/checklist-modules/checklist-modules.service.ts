@@ -3,6 +3,7 @@ import { AuditAction } from '@prisma/client';
 import { writeChecklistAudit } from '../checklist-common/checklists.audit';
 import { throwChecklistPrismaError } from '../checklist-common/checklists.errors';
 import { assertModuleExists } from './checklist-modules.assertions';
+import { ChecklistModulesOrderLockService } from './checklist-modules-order-lock.service';
 import { ChecklistModulesReorderService } from './checklist-modules-reorder.service';
 import { ChecklistModulesRepository } from './checklist-modules.repository';
 import { ChecklistModulesStatusService } from './checklist-modules-status.service';
@@ -17,6 +18,7 @@ import type {
 @Injectable()
 export class ChecklistModulesService {
   constructor(
+    private readonly modulesOrderLock: ChecklistModulesOrderLockService,
     private readonly modulesRepository: ChecklistModulesRepository,
     private readonly modulesReorderService: ChecklistModulesReorderService,
     private readonly modulesStatusService: ChecklistModulesStatusService,
@@ -36,6 +38,8 @@ export class ChecklistModulesService {
   async create(input: ModuleInput, userId: string) {
     try {
       const module = await this.modulesRepository.transaction(async (tx) => {
+        await this.modulesOrderLock.lock(tx);
+
         const created = await this.modulesRepository.create(
           input,
           userId,
@@ -64,7 +68,7 @@ export class ChecklistModulesService {
   async update(id: number, input: ModuleUpdateInput, userId: string) {
     try {
       const module = await this.modulesRepository.transaction(async (tx) => {
-        const current = await this.modulesRepository.findById(id, tx);
+        const current = await this.modulesRepository.loadForMutation(id, tx);
         assertModuleExists(current);
 
         if (!hasModuleChanges(current, input)) {

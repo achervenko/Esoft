@@ -37,13 +37,19 @@ export class ChecklistTemplateLifecycleService {
         if (!current.isActive) {
           throwChecklistConflict(
             'CHECKLIST_TEMPLATE_ALREADY_ARCHIVED',
-            'Шаблон уже архивирован.',
+            'Шаблон уже удалён.',
           );
         }
 
-        const linkedSettingsCount = await tx.equipmentMaintenanceSetting.count({
-          where: { defaultChecklistTemplateId: id },
+        const unlinkResult = await tx.equipmentMaintenanceSetting.updateMany({
+          data: {
+            defaultChecklistTemplateId: null,
+          },
+          where: {
+            defaultChecklistTemplateId: id,
+          },
         });
+
         await this.repository.updateTemplateByExpectedVersion(tx, {
           data: {
             archivedAt: new Date(),
@@ -62,13 +68,13 @@ export class ChecklistTemplateLifecycleService {
           fieldName: 'CHECKLIST_TEMPLATE_ARCHIVED',
           newValue: {
             reason: input.reason,
-            linkedMaintenanceSettings: linkedSettingsCount,
+            removedMaintenanceSettingLinks: unlinkResult.count,
           },
           userId,
         });
 
         return {
-          removedMaintenanceSettingLinks: 0,
+          removedMaintenanceSettingLinks: unlinkResult.count,
           template: presentTemplateDetail(
             await this.repository.loadTemplateDetail(id, tx),
           ),

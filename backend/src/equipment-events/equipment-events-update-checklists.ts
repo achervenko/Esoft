@@ -1,9 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { EquipmentEventChecklistCreator } from './equipment-event-checklist.creator';
 import { throwEquipmentEventConflict } from './equipment-events.errors';
-import {
-  type EquipmentEventChecklistAssignment,
-} from './equipment-events.validation';
+import { type EquipmentEventChecklistAssignment } from './equipment-events.validation';
 import { type CurrentChecklistState } from './equipment-events-update.types';
 
 export async function syncEventChecklists(
@@ -53,7 +51,8 @@ export async function syncEventChecklists(
     }
 
     if (
-      nextAssignment.checklistTemplateId !== currentChecklist.checklistTemplateId
+      nextAssignment.checklistTemplateId !==
+      currentChecklist.checklistTemplateId
     ) {
       deleteIds.push(currentChecklist.id);
       createAssignments.push(nextAssignment);
@@ -99,6 +98,7 @@ export async function syncEventChecklists(
       createdBy: params.userId,
       eventId: params.eventId,
       temporarySortOrders,
+      validateFullResponsibleCoverage: false,
     });
   }
 

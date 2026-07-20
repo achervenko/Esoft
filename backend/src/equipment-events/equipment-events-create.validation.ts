@@ -25,7 +25,11 @@ export function parseCreateManualEventDto(
       body.checklistAssignments,
       responsibleUserIds,
     ),
-    equipmentVisibleId,
+    equipmentVisibleId: parsePositiveInteger(
+      equipmentVisibleId,
+      'EQUIPMENT_ID_INVALID',
+      'Некорректный ID оборудования.',
+    ),
     maintenanceTypeId: parsePositiveInteger(
       body.maintenanceTypeId,
       'MAINTENANCE_TYPE_REQUIRED',

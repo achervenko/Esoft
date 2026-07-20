@@ -1,30 +1,82 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { Prisma, StorageFile } from '@prisma/client';
-import { StorageDocumentType } from '@prisma/client';
+import { AuditAction, StorageDocumentType } from '@prisma/client';
+import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { toStorageFileDto } from './storage-file.mapper';
-import { StorageOwnerService } from './storage-owner.service';
+import {
+  toAuditModule,
+  toStorageFileDisplayNameInList,
+  toStorageFileDto,
+} from './storage-file.mapper';
+import { StorageOwnerLockService } from './storage-owner-lock.service';
+import type { StorageOwnerContext } from './storage.types';
 
 @Injectable()
 export class StorageFilePrimaryService {
   constructor(
-    private readonly ownerStorage: StorageOwnerService,
+    private readonly auditLog: AuditLogService,
+    private readonly ownerLock: StorageOwnerLockService,
     private readonly prisma: PrismaService,
   ) {}
 
-  async setPrimaryFileById(fileId: number) {
-    const file = await this.ownerStorage.findActiveFile(fileId);
-
-    if (file.documentType !== StorageDocumentType.equipment_photo) {
-      throw new BadRequestException({
-        code: 'UNSUPPORTED_PRIMARY_FILE',
-        message:
-          '\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u043c \u043c\u043e\u0436\u043d\u043e \u0441\u0434\u0435\u043b\u0430\u0442\u044c \u0442\u043e\u043b\u044c\u043a\u043e \u0444\u043e\u0442\u043e \u043e\u0431\u043e\u0440\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u044f.',
+  async setPrimaryFileById(params: { fileId: number; userId?: string | null }) {
+    const updatedFile = await this.prisma.$transaction(async (tx) => {
+      const initialFile = await tx.storageFile.findFirst({
+        where: {
+          deletedAt: null,
+          id: params.fileId,
+        },
       });
-    }
 
-    await this.prisma.$transaction([
-      this.prisma.storageFile.updateMany({
+      if (!initialFile) {
+        throw new NotFoundException('Файл не найден.');
+      }
+
+      const owner = this.toOwnerContext(initialFile);
+      await this.ownerLock.lock(tx, owner);
+
+      const file = await tx.storageFile.findFirst({
+        where: {
+          deletedAt: null,
+          id: params.fileId,
+          ownerEntityId: owner.entityId,
+          ownerEntityType: owner.entityType,
+          ownerModule: owner.module,
+        },
+      });
+
+      if (!file) {
+        throw new NotFoundException('Файл не найден.');
+      }
+
+      if (file.documentType !== StorageDocumentType.equipment_photo) {
+        throw new BadRequestException({
+          code: 'UNSUPPORTED_PRIMARY_FILE',
+          message: 'Основным можно сделать только фото оборудования.',
+        });
+      }
+
+      const activeFiles = await this.findActiveOwnerFiles(tx, owner);
+
+      if (file.isPrimary) {
+        return file;
+      }
+
+      const previousPrimaryFile =
+        activeFiles.find((activeFile) => activeFile.isPrimary) ?? null;
+      const previousPrimaryDisplayName = previousPrimaryFile
+        ? toStorageFileDisplayNameInList(previousPrimaryFile, activeFiles)
+        : null;
+      const nextPrimaryDisplayName = toStorageFileDisplayNameInList(
+        file,
+        activeFiles,
+      );
+
+      await tx.storageFile.updateMany({
         data: { isPrimary: false },
         where: {
           deletedAt: null,
@@ -33,15 +85,56 @@ export class StorageFilePrimaryService {
           ownerEntityType: file.ownerEntityType,
           ownerModule: file.ownerModule,
         },
-      }),
-      this.prisma.storageFile.update({
+      });
+
+      const nextUpdatedFile = await tx.storageFile.update({
         data: { isPrimary: true },
         where: { id: file.id },
-      }),
-    ]);
+      });
 
-    const updatedFile = await this.ownerStorage.findActiveFile(file.id);
+      await this.auditLog.writeFieldChanges({
+        action: AuditAction.UPDATE,
+        entityId: file.ownerEntityId,
+        entityType: file.ownerEntityType,
+        fields: [
+          {
+            fieldName: 'Основной файл',
+            newValue: nextPrimaryDisplayName,
+            oldValue: previousPrimaryDisplayName,
+          },
+        ],
+        module: toAuditModule(file.ownerModule),
+        tx,
+        userId: params.userId,
+      });
+
+      return nextUpdatedFile;
+    });
+
     return toStorageFileDto(updatedFile);
+  }
+
+  private findActiveOwnerFiles(
+    tx: Prisma.TransactionClient,
+    owner: StorageOwnerContext,
+  ) {
+    return tx.storageFile.findMany({
+      orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+      where: {
+        deletedAt: null,
+        ownerEntityId: owner.entityId,
+        ownerEntityType: owner.entityType,
+        ownerModule: owner.module,
+      },
+    });
+  }
+
+  private toOwnerContext(file: StorageFile): StorageOwnerContext {
+    return {
+      entityId: file.ownerEntityId,
+      entityType: file.ownerEntityType,
+      module: file.ownerModule,
+    };
   }
 
   async assignNextPrimaryAfterDelete(

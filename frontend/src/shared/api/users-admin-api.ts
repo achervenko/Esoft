@@ -6,11 +6,7 @@ export type AdminRoleOption = {
 };
 
 export type AdminUserRole =
-  | "admin"
-  | "chief_engineer"
-  | "engineer"
-  | "operator"
-  | "auditor";
+  "admin" | "chief_engineer" | "engineer" | "operator" | "auditor";
 
 export type AdminEmployee = {
   accountCount: number;
@@ -18,6 +14,7 @@ export type AdminEmployee = {
   firstName: string;
   fullName: string;
   id: number;
+  isActive: boolean;
   lastName: string;
   middleName: string | null;
   position: string;
@@ -93,9 +90,10 @@ export function updateAdminEmployee(id: number, payload: EmployeePayload) {
   });
 }
 
-export function deleteAdminEmployee(id: number) {
-  return request<{ ok: true }>(`/api/users/admin/employees/${id}`, {
-    method: "DELETE",
+export function setAdminEmployeeStatus(id: number, isActive: boolean) {
+  return request<AdminEmployee>(`/api/users/admin/employees/${id}/status`, {
+    body: JSON.stringify({ isActive }),
+    method: "PATCH",
   });
 }
 
@@ -153,6 +151,7 @@ export function deleteAdminUserPhoto(id: string) {
 async function request<T>(path: string, init?: RequestInit) {
   const isFormData = init?.body instanceof FormData;
   const response = await fetch(`${API_URL}${path}`, {
+    ...init,
     credentials: "include",
     headers: isFormData
       ? init?.headers
@@ -160,7 +159,6 @@ async function request<T>(path: string, init?: RequestInit) {
           "Content-Type": "application/json",
           ...init?.headers,
         },
-    ...init,
   });
 
   if (!response.ok) {

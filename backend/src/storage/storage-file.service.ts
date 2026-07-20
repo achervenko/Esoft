@@ -1,5 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import type { StorageFile } from '@prisma/client';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import type { Prisma, StorageFile } from '@prisma/client';
 import { AuditAction, StorageDocumentType } from '@prisma/client';
 import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -17,6 +21,7 @@ import { StorageFilePrimaryService } from './storage-file-primary.service';
 import { StorageFileUploadService } from './storage-file-upload.service';
 import { StorageImagePreviewService } from './storage-image-preview.service';
 import { StorageObjectService } from './storage-object.service';
+import { StorageOwnerLockService } from './storage-owner-lock.service';
 import { StorageOwnerService } from './storage-owner.service';
 import type {
   StorageAuditContext,
@@ -31,6 +36,7 @@ export class StorageFileService {
   constructor(
     private readonly auditLog: AuditLogService,
     private readonly objectStorage: StorageObjectService,
+    private readonly ownerLock: StorageOwnerLockService,
     private readonly ownerStorage: StorageOwnerService,
     private readonly primaryStorage: StorageFilePrimaryService,
     private readonly imagePreviewStorage: StorageImagePreviewService,
@@ -70,7 +76,7 @@ export class StorageFileService {
 
     if (!isPdfStorageFile(file) && !isImageStorageFile(file)) {
       throw new BadRequestException(
-        '\u041f\u0440\u0435\u0432\u044c\u044e \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e \u0442\u043e\u043b\u044c\u043a\u043e \u0434\u043b\u044f PDF \u0438 \u0438\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0439.',
+        'Превью доступно только для PDF и изображений.',
       );
     }
 
@@ -94,7 +100,7 @@ export class StorageFileService {
   }
 
   async setPrimaryFileById(params: { fileId: number; userId?: string | null }) {
-    return this.primaryStorage.setPrimaryFileById(params.fileId);
+    return this.primaryStorage.setPrimaryFileById(params);
   }
 
   async softDeleteFile(params: {
@@ -103,14 +109,34 @@ export class StorageFileService {
     owner: StorageOwnerContext;
     userId?: string | null;
   }) {
-    const file = await this.ownerStorage.findActiveFileForOwner(
-      params.fileId,
-      params.owner,
-    );
-    const activeFiles = await this.ownerStorage.findActiveFiles(params.owner);
-    const displayName = toStorageFileDisplayNameInList(file, activeFiles);
-
     const deletedFile = await this.prisma.$transaction(async (tx) => {
+      await this.ownerLock.lock(tx, params.owner);
+
+      const file = await tx.storageFile.findFirst({
+        where: {
+          deletedAt: null,
+          id: params.fileId,
+          ownerEntityId: params.owner.entityId,
+          ownerEntityType: params.owner.entityType,
+          ownerModule: params.owner.module,
+        },
+      });
+
+      if (!file) {
+        throw new NotFoundException('Файл не найден.');
+      }
+
+      const activeFiles = await tx.storageFile.findMany({
+        orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+        where: {
+          deletedAt: null,
+          ownerEntityId: params.owner.entityId,
+          ownerEntityType: params.owner.entityType,
+          ownerModule: params.owner.module,
+        },
+      });
+      const displayName = toStorageFileDisplayNameInList(file, activeFiles);
+
       const nextDeletedFile = await tx.storageFile.update({
         data: {
           deletedAt: new Date(),
@@ -122,15 +148,18 @@ export class StorageFileService {
 
       await this.primaryStorage.assignNextPrimaryAfterDelete(tx, file);
 
-      return nextDeletedFile;
-    });
+      await this.writeAudit(
+        {
+          action: AuditAction.FILE_DELETE,
+          audit: params.audit,
+          newValue: null,
+          oldValue: displayName,
+          userId: params.userId,
+        },
+        tx,
+      );
 
-    await this.writeAudit({
-      action: AuditAction.FILE_DELETE,
-      audit: params.audit,
-      newValue: null,
-      oldValue: displayName,
-      userId: params.userId,
+      return nextDeletedFile;
     });
 
     return toStorageFileDto(deletedFile);
@@ -155,25 +184,29 @@ export class StorageFileService {
     });
   }
 
-  private writeAudit(params: {
-    action: AuditAction;
-    audit: StorageAuditContext;
-    newValue: string | null;
-    oldValue: string | null;
-    userId?: string | null;
-  }) {
+  private writeAudit(
+    params: {
+      action: AuditAction;
+      audit: StorageAuditContext;
+      newValue: string | null;
+      oldValue: string | null;
+      userId?: string | null;
+    },
+    tx?: Prisma.TransactionClient,
+  ) {
     return this.auditLog.writeFieldChanges({
       action: params.action,
       entityId: params.audit.entityId,
       entityType: params.audit.entityType,
       fields: [
         {
-          fieldName: '\u0424\u0430\u0439\u043b',
+          fieldName: 'Файл',
           newValue: params.newValue,
           oldValue: params.oldValue,
         },
       ],
       module: params.audit.actionModule,
+      tx,
       userId: params.userId,
     });
   }

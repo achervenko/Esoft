@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { throwUserAdminNotFound } from './users-admin.errors';
+import { throwBadRequest } from './users-admin.validation';
 
 @Injectable()
 export class UsersAdminAssertionsService {
@@ -8,12 +9,19 @@ export class UsersAdminAssertionsService {
 
   async assertEmployeeExists(employeeId: number) {
     const employee = await this.prisma.employee.findUnique({
-      select: { id: true },
+      select: { id: true, isActive: true },
       where: { id: employeeId },
     });
 
     if (!employee) {
       throwUserAdminNotFound('EMPLOYEE_NOT_FOUND');
+    }
+
+    if (!employee.isActive) {
+      throwBadRequest(
+        'EMPLOYEE_INACTIVE',
+        'Нельзя привязать отключённого сотрудника к учётной записи.',
+      );
     }
   }
 

@@ -4,6 +4,7 @@ import { ChecklistWorkLifecycleService } from './checklist-work-lifecycle.servic
 import { ChecklistWorkQueryService } from './checklist-work-query.service';
 import type {
   ChecklistAnswersInput,
+  ChecklistCompleteInput,
   ChecklistVersionInput,
   ChecklistWorkQuery,
 } from './checklist-work.types';
@@ -16,10 +17,7 @@ export class ChecklistWorkService {
     private readonly queryService: ChecklistWorkQueryService,
   ) {}
 
-  list(params: {
-    query: ChecklistWorkQuery;
-    userId?: string | null;
-  }) {
+  list(params: { query: ChecklistWorkQuery; userId?: string | null }) {
     return this.queryService.list(params);
   }
 
@@ -39,7 +37,7 @@ export class ChecklistWorkService {
     return this.answersService.saveAnswers(id, input, userId);
   }
 
-  complete(id: number, input: ChecklistVersionInput, userId?: string | null) {
+  complete(id: number, input: ChecklistCompleteInput, userId?: string | null) {
     return this.lifecycleService.complete(id, input, userId);
   }
 }

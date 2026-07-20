@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ChecklistModulesController } from './checklist-modules/checklist-modules.controller';
+import { ChecklistModulesOrderLockService } from './checklist-modules/checklist-modules-order-lock.service';
 import { ChecklistModulesReorderService } from './checklist-modules/checklist-modules-reorder.service';
 import { ChecklistModulesRepository } from './checklist-modules/checklist-modules.repository';
 import { ChecklistModulesService } from './checklist-modules/checklist-modules.service';
 import { ChecklistModulesStatusService } from './checklist-modules/checklist-modules-status.service';
 import { ChecklistQuestionsAssertions } from './checklist-questions/checklist-questions.assertions';
 import { ChecklistQuestionsController } from './checklist-questions/checklist-questions.controller';
+import { ChecklistQuestionsOrderLockService } from './checklist-questions/checklist-questions-order-lock.service';
 import { ChecklistQuestionsOrderService } from './checklist-questions/checklist-questions-order.service';
 import { ChecklistQuestionsReorderService } from './checklist-questions/checklist-questions-reorder.service';
 import { ChecklistQuestionsService } from './checklist-questions/checklist-questions.service';
@@ -39,10 +41,12 @@ import { ChecklistTemplatesService } from './checklist-templates/checklist-templ
   ],
   providers: [
     ChecklistModulesReorderService,
+    ChecklistModulesOrderLockService,
     ChecklistModulesRepository,
     ChecklistModulesService,
     ChecklistModulesStatusService,
     ChecklistQuestionsAssertions,
+    ChecklistQuestionsOrderLockService,
     ChecklistQuestionsOrderService,
     ChecklistQuestionsReorderService,
     ChecklistQuestionsService,

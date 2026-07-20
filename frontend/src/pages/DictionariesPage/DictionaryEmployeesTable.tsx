@@ -1,22 +1,30 @@
+import { Edit2, Power } from "lucide-react";
 import type { AdminEmployee } from "../../shared/api/users-admin-api";
-import { AdminTableActions } from "../../shared/ui/AdminTableActions";
 import { DataTable, type DataTableColumn } from "../../shared/ui/DataTable";
 
 type DictionaryEmployeesTableProps = {
   employees: AdminEmployee[];
-  onDelete: (employee: AdminEmployee) => void;
   onEdit: (employee: AdminEmployee) => void;
+  onToggleStatus: (employee: AdminEmployee) => void;
 };
 
 const employeeColumns = (
   onEdit: (employee: AdminEmployee) => void,
-  onDelete: (employee: AdminEmployee) => void,
+  onToggleStatus: (employee: AdminEmployee) => void,
 ): Array<DataTableColumn<AdminEmployee, string>> => [
   {
     key: "fullName",
     label: "Сотрудник",
-    render: (employee) => <strong>{employee.fullName}</strong>,
+    render: (employee) => (
+      <strong>{employee.fullName}</strong>
+    ),
     sortValue: (employee) => employee.fullName,
+  },
+  {
+    key: "status",
+    label: "Статус",
+    render: (employee) => (employee.isActive ? "Включён" : "Отключён"),
+    sortValue: (employee) => (employee.isActive ? "1" : "0"),
   },
   {
     key: "position",
@@ -28,24 +36,44 @@ const employeeColumns = (
     key: "actions",
     label: "",
     render: (employee) => (
-      <AdminTableActions
-        deleteLabel={`Удалить сотрудника ${employee.fullName}`}
-        editLabel={`Редактировать сотрудника ${employee.fullName}`}
-        onDelete={() => onDelete(employee)}
-        onEdit={() => onEdit(employee)}
-      />
+      <div className="admin-table-actions">
+        <button
+          aria-label={`Редактировать сотрудника ${employee.fullName}`}
+          className="admin-icon-button"
+          onClick={() => onEdit(employee)}
+          title="Редактировать"
+          type="button"
+        >
+          <Edit2 size={17} />
+        </button>
+        <button
+          aria-label={
+            employee.isActive
+              ? `Отключить сотрудника ${employee.fullName}`
+              : `Включить сотрудника ${employee.fullName}`
+          }
+          className={`admin-icon-button admin-status-toggle${
+            employee.isActive ? " active" : " inactive"
+          }`}
+          onClick={() => onToggleStatus(employee)}
+          title={employee.isActive ? "Отключить" : "Включить"}
+          type="button"
+        >
+          <Power size={17} />
+        </button>
+      </div>
     ),
   },
 ];
 
 export function DictionaryEmployeesTable({
   employees,
-  onDelete,
   onEdit,
+  onToggleStatus,
 }: DictionaryEmployeesTableProps) {
   return (
     <DataTable
-      columns={employeeColumns(onEdit, onDelete)}
+      columns={employeeColumns(onEdit, onToggleStatus)}
       defaultSort={{ direction: "asc", key: "fullName" }}
       getRowKey={(employee) => employee.id}
       rows={employees}

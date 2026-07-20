@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import {
   presentTemplateDetail,
   presentTemplateListItem,
+  presentTemplateMaintenanceSettingsUsage,
 } from './checklist-templates.presenter';
 import {
   type TemplateQuery,
@@ -40,10 +41,14 @@ export class ChecklistTemplateQueryService {
   }
 
   async get(id: number) {
+    const [template, usage] = await Promise.all([
+      this.repository.loadTemplateDetail(id),
+      this.repository.loadTemplateMaintenanceSettingsUsage(id),
+    ]);
+
     return {
-      template: presentTemplateDetail(
-        await this.repository.loadTemplateDetail(id),
-      ),
+      template: presentTemplateDetail(template),
+      usage: presentTemplateMaintenanceSettingsUsage(usage),
     };
   }
 

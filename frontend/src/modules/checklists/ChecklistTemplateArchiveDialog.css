@@ -1,0 +1,118 @@
+.checklist-template-archive-body {
+  display: grid;
+  gap: 14px;
+}
+
+.checklist-template-archive-state {
+  margin: 0;
+  color: #5e6673;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.checklist-template-archive-usage {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #ffd6d3;
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.checklist-template-archive-usage ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.checklist-template-archive-usage li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, auto);
+  gap: 10px;
+  color: #15171c;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.checklist-template-archive-usage li span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.checklist-template-archive-usage li span:last-child {
+  color: #6b7280;
+  text-align: right;
+}
+
+.checklist-template-archive-more {
+  justify-self: start;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #0f62fe;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.checklist-template-archive-reason {
+  display: grid;
+  gap: 7px;
+  color: #3f4652;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.checklist-template-archive-reason textarea {
+  width: 100%;
+  min-height: 94px;
+  resize: vertical;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #15171c;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.checklist-template-archive-reason textarea:focus {
+  border-color: #111111;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.08);
+}
+
+.checklist-template-archive-reason textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.checklist-template-archive-reason-footer {
+  min-height: 18px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.checklist-template-archive-reason-footer span:first-child {
+  color: #b42318;
+}
+
+@media (max-width: 560px) {
+  .checklist-template-archive-usage li {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .checklist-template-archive-usage li span:last-child {
+    text-align: left;
+  }
+}

@@ -1,19 +1,19 @@
 import { Copy, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ChecklistTemplateArchiveDialog } from "../../modules/checklists/ChecklistTemplateArchiveDialog";
 import {
-  archiveChecklistTemplate,
   checklistAnswerTypeLabels,
   checklistTemplateStateLabels,
   getChecklistAdminErrorMessage,
   getChecklistTemplate,
   type ChecklistTemplateDetail,
+  type ChecklistTemplateUsage,
 } from "../../shared/api/checklists";
 import {
   formatModuleCount,
   formatQuestionCount,
 } from "../../shared/lib/formatters";
 import { canManageChecklists } from "../../shared/lib/roles";
-import { ConfirmDialog } from "../../shared/ui/ConfirmDialog";
 import { Notice } from "../../shared/ui/Notice";
 import "../ChecklistAdminPage/ChecklistAdminPage.css";
 import "./ChecklistTemplateViewPage.css";
@@ -28,12 +28,13 @@ export function ChecklistTemplateViewPage({
   userRole,
 }: ChecklistTemplateViewPageProps) {
   const isAdmin = canManageChecklists(userRole);
-  const [template, setTemplate] = useState<ChecklistTemplateDetail | null>(null);
+  const [template, setTemplate] = useState<ChecklistTemplateDetail | null>(
+    null,
+  );
+  const [usage, setUsage] = useState<ChecklistTemplateUsage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [message] = useState<string | null>(() =>
+  const [message, setMessage] = useState<string | null>(() =>
     window.history.state?.checklistTemplateSaved ? "Шаблон сохранён." : null,
   );
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -57,16 +58,19 @@ export function ChecklistTemplateViewPage({
     setIsLoading(true);
     setError(null);
     setTemplate(null);
+    setUsage(null);
 
     getChecklistTemplate(templateId)
       .then((response) => {
         if (!isCancelled) {
           setTemplate(response.template);
+          setUsage(response.usage);
         }
       })
       .catch((requestError) => {
         if (!isCancelled) {
           setTemplate(null);
+          setUsage(null);
           setError(getChecklistAdminErrorMessage(requestError));
         }
       })
@@ -88,28 +92,12 @@ export function ChecklistTemplateViewPage({
       0,
     ) ?? 0;
 
-  const deleteTemplate = async () => {
-    if (!template || isDeleting) {
-      return;
-    }
-
-    setIsDeleting(true);
-    setDeleteError(null);
-
-    try {
-      await archiveChecklistTemplate(template.id, template.version);
-      window.location.hash = "#/checklist-admin";
-    } catch (requestError) {
-      setDeleteError(getChecklistAdminErrorMessage(requestError));
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   if (!isAdmin) {
     return (
       <section className="checklist-template-view-page">
-        <Notice tone="error">Недостаточно прав для управления чек-листами.</Notice>
+        <Notice tone="error">
+          Недостаточно прав для управления чек-листами.
+        </Notice>
       </section>
     );
   }
@@ -150,7 +138,9 @@ export function ChecklistTemplateViewPage({
           <div>
             <div className="checklist-template-view-title-main">
               <h1>{template.name}</h1>
-              <span className={`checklist-admin-status ${template.state.toLowerCase()}`}>
+              <span
+                className={`checklist-admin-status ${template.state.toLowerCase()}`}
+              >
                 {checklistTemplateStateLabels[template.state]}
               </span>
             </div>
@@ -175,7 +165,7 @@ export function ChecklistTemplateViewPage({
               <button
                 className="admin-secondary-button"
                 onClick={() => {
-                  setDeleteError(null);
+                  setError(null);
                   setDeleteOpen(true);
                 }}
                 type="button"
@@ -220,7 +210,8 @@ export function ChecklistTemplateViewPage({
                       </span>
                     </div>
                     <small>
-                      Тип ответа: {checklistAnswerTypeLabels[question.answerType]}
+                      Тип ответа:{" "}
+                      {checklistAnswerTypeLabels[question.answerType]}
                     </small>
                   </li>
                 ))}
@@ -231,17 +222,27 @@ export function ChecklistTemplateViewPage({
       </main>
 
       {deleteOpen ? (
-        <ConfirmDialog
-          cancelLabel="Отмена"
-          confirmLabel="Удалить"
-          description="Шаблон больше нельзя будет использовать для новых событий. Уже созданные события и чек-листы не изменятся."
-          error={deleteError}
-          isLoading={isDeleting}
-          loadingLabel="Удаление..."
+        <ChecklistTemplateArchiveDialog
+          initialUsage={usage}
           onCancel={() => setDeleteOpen(false)}
-          onConfirm={() => void deleteTemplate()}
-          title="Удалить шаблон?"
-          variant="danger"
+          onSuccess={(response) => {
+            setTemplate(response.template);
+            setUsage({
+              maintenanceSettings: [],
+              maintenanceSettingsCount: 0,
+            });
+            setDeleteOpen(false);
+            setMessage(
+              response.removedMaintenanceSettingLinks > 0
+                ? `Шаблон удалён. Отвязано настроек обслуживания: ${response.removedMaintenanceSettingLinks}.`
+                : "Шаблон удалён.",
+            );
+          }}
+          onTemplateReload={(response) => {
+            setTemplate(response.template);
+            setUsage(response.usage);
+          }}
+          template={template}
         />
       ) : null}
     </section>

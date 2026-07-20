@@ -7,9 +7,12 @@ import type {
   ChecklistQuestionPayload,
   ChecklistReorderItem,
   ChecklistTemplateDetail,
+  ChecklistTemplateArchiveResponse,
+  ChecklistTemplateDetailResponse,
   ChecklistTemplateListItem,
   ChecklistTemplatePayload,
   ChecklistWorkAnswersPayload,
+  ChecklistWorkCompletePayload,
   ChecklistWorkDetail,
   ChecklistWorkListResponse,
   ChecklistWorkQuery,
@@ -45,7 +48,10 @@ export function createChecklistModule(payload: ChecklistModulePayload) {
   });
 }
 
-export function updateChecklistModule(id: number, payload: ChecklistModulePayload) {
+export function updateChecklistModule(
+  id: number,
+  payload: ChecklistModulePayload,
+) {
   return request<{ module: ChecklistModule }>(`/api/checklist-modules/${id}`, {
     body: JSON.stringify(payload),
     method: "PATCH",
@@ -53,22 +59,31 @@ export function updateChecklistModule(id: number, payload: ChecklistModulePayloa
 }
 
 export function activateChecklistModule(id: number) {
-  return request<{ module: ChecklistModule }>(`/api/checklist-modules/${id}/activate`, {
-    method: "POST",
-  });
+  return request<{ module: ChecklistModule }>(
+    `/api/checklist-modules/${id}/activate`,
+    {
+      method: "POST",
+    },
+  );
 }
 
 export function deactivateChecklistModule(id: number) {
-  return request<{ module: ChecklistModule }>(`/api/checklist-modules/${id}/deactivate`, {
-    method: "POST",
-  });
+  return request<{ module: ChecklistModule }>(
+    `/api/checklist-modules/${id}/deactivate`,
+    {
+      method: "POST",
+    },
+  );
 }
 
 export function reorderChecklistModules(items: ChecklistReorderItem[]) {
-  return request<{ modules: ChecklistModule[] }>("/api/checklist-modules/reorder", {
-    body: JSON.stringify({ items }),
-    method: "PATCH",
-  });
+  return request<{ modules: ChecklistModule[] }>(
+    "/api/checklist-modules/reorder",
+    {
+      body: JSON.stringify({ items }),
+      method: "PATCH",
+    },
+  );
 }
 
 export function getChecklistQuestions(params: Record<string, QueryValue> = {}) {
@@ -84,23 +99,35 @@ export function createChecklistQuestion(payload: ChecklistQuestionPayload) {
   });
 }
 
-export function updateChecklistQuestion(id: number, payload: ChecklistQuestionPayload) {
-  return request<{ question: ChecklistQuestion }>(`/api/checklist-questions/${id}`, {
-    body: JSON.stringify(payload),
-    method: "PATCH",
-  });
+export function updateChecklistQuestion(
+  id: number,
+  payload: ChecklistQuestionPayload,
+) {
+  return request<{ question: ChecklistQuestion }>(
+    `/api/checklist-questions/${id}`,
+    {
+      body: JSON.stringify(payload),
+      method: "PATCH",
+    },
+  );
 }
 
 export function activateChecklistQuestion(id: number) {
-  return request<{ question: ChecklistQuestion }>(`/api/checklist-questions/${id}/activate`, {
-    method: "POST",
-  });
+  return request<{ question: ChecklistQuestion }>(
+    `/api/checklist-questions/${id}/activate`,
+    {
+      method: "POST",
+    },
+  );
 }
 
 export function deactivateChecklistQuestion(id: number) {
-  return request<{ question: ChecklistQuestion }>(`/api/checklist-questions/${id}/deactivate`, {
-    method: "POST",
-  });
+  return request<{ question: ChecklistQuestion }>(
+    `/api/checklist-questions/${id}/deactivate`,
+    {
+      method: "POST",
+    },
+  );
 }
 
 export function reorderChecklistQuestions(
@@ -123,21 +150,27 @@ export function getChecklistTemplates(params: Record<string, QueryValue> = {}) {
 }
 
 export function getChecklistTemplate(id: number) {
-  return request<{ template: ChecklistTemplateDetail }>(`/api/checklist-templates/${id}`);
+  return request<ChecklistTemplateDetailResponse>(
+    `/api/checklist-templates/${id}`,
+  );
 }
 
 export function createChecklistTemplate(payload: ChecklistTemplatePayload) {
-  return request<{ template: ChecklistTemplateDetail }>("/api/checklist-templates", {
-    body: JSON.stringify(payload),
-    method: "POST",
-  });
+  return request<{ template: ChecklistTemplateDetail }>(
+    "/api/checklist-templates",
+    {
+      body: JSON.stringify(payload),
+      method: "POST",
+    },
+  );
 }
 
-export function archiveChecklistTemplate(id: number, version: number, reason?: string) {
-  return request<{
-    removedMaintenanceSettingLinks: number;
-    template: ChecklistTemplateDetail;
-  }>(
+export function archiveChecklistTemplate(
+  id: number,
+  version: number,
+  reason: string,
+) {
+  return request<ChecklistTemplateArchiveResponse>(
     `/api/checklist-templates/${id}/archive`,
     {
       body: JSON.stringify({ reason, version }),
@@ -147,7 +180,9 @@ export function archiveChecklistTemplate(id: number, version: number, reason?: s
 }
 
 export function getChecklistWorkItems(query: ChecklistWorkQuery = {}) {
-  const status = Array.isArray(query.status) ? query.status.join(",") : query.status;
+  const status = Array.isArray(query.status)
+    ? query.status.join(",")
+    : query.status;
 
   return request<ChecklistWorkListResponse>(
     `/api/checklists${toQuery({
@@ -180,15 +215,18 @@ export function saveChecklistWorkAnswers(
   id: number,
   payload: ChecklistWorkAnswersPayload,
 ) {
-  return request<ChecklistWorkProgressResponse>(`/api/checklists/${id}/answers`, {
-    body: JSON.stringify(payload),
-    method: "PATCH",
-  });
+  return request<ChecklistWorkProgressResponse>(
+    `/api/checklists/${id}/answers`,
+    {
+      body: JSON.stringify(payload),
+      method: "PATCH",
+    },
+  );
 }
 
 export function completeChecklistWork(
   id: number,
-  payload: ChecklistWorkVersionPayload,
+  payload: ChecklistWorkCompletePayload,
 ) {
   return request<ChecklistWorkDetail>(`/api/checklists/${id}/complete`, {
     body: JSON.stringify(payload),

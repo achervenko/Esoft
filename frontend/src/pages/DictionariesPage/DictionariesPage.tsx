@@ -73,9 +73,11 @@ export function DictionariesPage({ userRole }: DictionariesPageProps) {
       <div className="equipment-edit-tabs admin-tabs" role="tablist">
         {Object.entries(tabLabels).map(([tab, label]) => (
           <button
+            aria-selected={page.activeTab === tab}
             className={page.activeTab === tab ? "active" : undefined}
             key={tab}
             onClick={() => page.setActiveTab(tab as ActiveDictionariesTab)}
+            role="tab"
             type="button"
           >
             {label}
@@ -89,7 +91,8 @@ export function DictionariesPage({ userRole }: DictionariesPageProps) {
       <section className="admin-card dictionaries-card">
         <header>
           <h2>{tabLabels[page.activeTab]}</h2>
-          {page.activeTab !== "locations" && page.activeTab !== "manufacturers" ? (
+          {page.activeTab !== "locations" &&
+          page.activeTab !== "manufacturers" ? (
             <button
               className="admin-primary-button"
               onClick={openCreateForm}
@@ -105,8 +108,10 @@ export function DictionariesPage({ userRole }: DictionariesPageProps) {
         {!page.isLoading && page.activeTab === "employees" ? (
           <DictionaryEmployeesTable
             employees={page.employees}
-            onDelete={(employee) => void page.removeEmployee(employee)}
             onEdit={page.setEmployeeForm}
+            onToggleStatus={(employee) =>
+              void page.toggleEmployeeStatus(employee)
+            }
           />
         ) : null}
         {!page.isLoading && page.activeTab === "manufacturers" ? (
@@ -235,9 +240,7 @@ export function DictionariesPage({ userRole }: DictionariesPageProps) {
           parentLabel="Производитель"
           parentOptions={page.manufacturers}
           title={
-            page.modelForm === "new"
-              ? "Новая модель"
-              : "Редактирование модели"
+            page.modelForm === "new" ? "Новая модель" : "Редактирование модели"
           }
         />
       ) : null}

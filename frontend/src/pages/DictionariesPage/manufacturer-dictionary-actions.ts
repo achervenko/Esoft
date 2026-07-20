@@ -17,7 +17,7 @@ import type {
 } from "./dictionaries-page-types";
 
 type ManufacturerDictionaryActionsParams = {
-  loadData: () => void;
+  loadData: () => Promise<void>;
   manufacturerForm: ManufacturerFormState;
   modelForm: EquipmentModelFormState;
   runSavingAction: (action: () => Promise<void>) => Promise<void>;
@@ -46,7 +46,7 @@ export function createManufacturerDictionaryActions({
       }
 
       setManufacturerForm(null);
-      loadData();
+      await loadData();
     });
   };
 
@@ -58,7 +58,7 @@ export function createManufacturerDictionaryActions({
     await runSavingAction(async () => {
       await deleteDictionaryManufacturer(manufacturer.id);
       setMessage("Производитель удалён.");
-      loadData();
+      await loadData();
     });
   };
 
@@ -73,7 +73,7 @@ export function createManufacturerDictionaryActions({
       }
 
       setModelForm(null);
-      loadData();
+      await loadData();
     });
   };
 
@@ -85,7 +85,7 @@ export function createManufacturerDictionaryActions({
     await runSavingAction(async () => {
       await deleteDictionaryEquipmentModel(model.id);
       setMessage("Модель удалена.");
-      loadData();
+      await loadData();
     });
   };
 

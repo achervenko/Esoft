@@ -3,7 +3,6 @@ import type {
   AdminEmployee,
   AdminRoleOption,
   AdminUserAccount,
-  AdminUserRole,
   UserAccountPayload,
 } from "../../shared/api/users-admin-api";
 import { AdminModal } from "../../shared/ui/AdminModal";
@@ -30,7 +29,7 @@ export function UserAccountFormModal({
     email: user?.email ?? "",
     employeeId: user?.employee?.id ? String(user.employee.id) : "",
     password: "",
-    role: String((user?.role as AdminUserRole | null) ?? "operator"),
+    role: String(user?.role ?? "operator"),
     username: user?.username ?? "",
   });
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +45,7 @@ export function UserAccountFormModal({
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const employeeId = Number(form.employeeId);
+    const selectedRole = roles.find((role) => role.value === form.role);
 
     if (isSaving) {
       return;
@@ -54,7 +54,7 @@ export function UserAccountFormModal({
     if (
       !form.email.trim() ||
       !form.username.trim() ||
-      !form.role ||
+      !selectedRole ||
       !Number.isInteger(employeeId) ||
       employeeId <= 0
     ) {
@@ -84,7 +84,7 @@ export function UserAccountFormModal({
       email: form.email.trim(),
       employeeId,
       password: isCreateMode ? form.password : undefined,
-      role: form.role as AdminUserRole,
+      role: selectedRole.value,
       username: form.username.trim(),
     });
   };
@@ -101,7 +101,11 @@ export function UserAccountFormModal({
           label="Сотрудник"
           onChange={(value) => updateField("employeeId", value)}
           options={employees.map((employee) => ({
-            label: `${employee.fullName} — ${employee.position}`,
+            disabled:
+              !employee.isActive && String(employee.id) !== form.employeeId,
+            label: `${employee.fullName} — ${employee.position}${
+              employee.isActive ? "" : " (отключён)"
+            }`,
             value: String(employee.id),
           }))}
           placeholder="Выберите сотрудника"

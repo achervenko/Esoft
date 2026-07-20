@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { checklistModuleSelect } from './checklist-modules.select';
 import type {
+  ChecklistModuleView,
   ModuleInput,
   ModuleQuery,
   ModuleUpdateInput,
@@ -46,6 +47,24 @@ export class ChecklistModulesRepository {
       select: checklistModuleSelect,
       where: { id },
     });
+  }
+
+  async loadForMutation(id: number, tx: Prisma.TransactionClient) {
+    const rows = await tx.$queryRaw<ChecklistModuleView[]>`
+      SELECT
+        created_at AS "createdAt",
+        description,
+        id,
+        is_active AS "isActive",
+        name,
+        sort_order AS "sortOrder",
+        updated_at AS "updatedAt"
+      FROM checklist_modules
+      WHERE id = ${id}
+      FOR UPDATE
+    `;
+
+    return rows[0] ?? null;
   }
 
   create(

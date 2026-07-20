@@ -6,14 +6,18 @@ import {
   assertModuleExists,
   assertModuleStatusCanChange,
 } from './checklist-modules.assertions';
+import { ChecklistModulesOrderLockService } from './checklist-modules-order-lock.service';
 import { ChecklistModulesReorderService } from './checklist-modules-reorder.service';
 import { ChecklistModulesRepository } from './checklist-modules.repository';
+import { ChecklistQuestionsOrderLockService } from '../checklist-questions/checklist-questions-order-lock.service';
 
 @Injectable()
 export class ChecklistModulesStatusService {
   constructor(
+    private readonly modulesOrderLock: ChecklistModulesOrderLockService,
     private readonly modulesRepository: ChecklistModulesRepository,
     private readonly modulesReorderService: ChecklistModulesReorderService,
+    private readonly questionsOrderLock: ChecklistQuestionsOrderLockService,
   ) {}
 
   activate(id: number, userId: string) {
@@ -27,6 +31,12 @@ export class ChecklistModulesStatusService {
   private async setActive(id: number, isActive: boolean, userId: string) {
     try {
       const module = await this.modulesRepository.transaction(async (tx) => {
+        await this.modulesOrderLock.lock(tx);
+
+        if (!isActive) {
+          await this.questionsOrderLock.lock(tx, id);
+        }
+
         const current = await this.modulesRepository.findById(id, tx);
         assertModuleExists(current);
         assertModuleStatusCanChange(current, isActive);

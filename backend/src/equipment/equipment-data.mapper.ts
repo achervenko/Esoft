@@ -1,47 +1,50 @@
 import { BadRequestException } from '@nestjs/common';
+import { EquipmentStatus } from '@prisma/client';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 
+const MAX_NAME_LENGTH = 128;
+const MAX_INVENTORY_NUMBER_LENGTH = 64;
+const MAX_SERIAL_NUMBER_LENGTH = 128;
+const MAX_TEXT_LENGTH = 4_000;
+const MIN_MANUFACTURE_YEAR = 1900;
+
 export function buildEquipmentData(dto: CreateEquipmentDto) {
-  const name = dto.name?.trim();
-  const inventoryNumber = dto.inventoryNumber?.trim();
+  const name = parseRequiredText(
+    dto.name,
+    'Название оборудования обязательно.',
+    MAX_NAME_LENGTH,
+  );
+  const inventoryNumber = parseRequiredText(
+    dto.inventoryNumber,
+    'Инвентарный номер обязателен.',
+    MAX_INVENTORY_NUMBER_LENGTH,
+  );
+  const manufacturerId = parseRequiredPositiveInteger(
+    dto.manufacturerId,
+    'Производитель обязателен.',
+  );
+  const modelId = parseRequiredPositiveInteger(
+    dto.modelId,
+    'Модель обязательна.',
+  );
+  const sectionId = parseRequiredPositiveInteger(
+    dto.sectionId,
+    'Местонахождение обязательно.',
+  );
+  const responsibleEmployeeId = parseRequiredPositiveInteger(
+    dto.responsibleEmployeeId,
+    'Ответственный обязателен.',
+  );
+  const status = parseEquipmentStatus(dto.status);
+  const manufactureYear = parseManufactureYear(dto.manufactureYear);
+  const commissioningDate = parseRuDate(dto.commissioningDate);
+  const issueDate = parseRuDate(dto.issueDate);
 
-  if (!name) {
-    throw new BadRequestException('Название оборудования обязательно.');
-  }
-
-  if (!inventoryNumber) {
-    throw new BadRequestException('Инвентарный номер обязателен.');
-  }
-
-  if (!dto.manufacturerId) {
-    throw new BadRequestException('Производитель обязателен.');
-  }
-
-  if (!dto.modelId) {
-    throw new BadRequestException('Модель обязательна.');
-  }
-
-  if (!dto.sectionId) {
-    throw new BadRequestException('Местонахождение обязательно.');
-  }
-
-  if (!dto.responsibleEmployeeId) {
-    throw new BadRequestException('Ответственный обязателен.');
-  }
-
-  if (dto.responsibleEmployeeId && !dto.issueDate?.trim()) {
+  if (!issueDate) {
     throw new BadRequestException(
       'Дата выдачи обязательна при назначении ответственного.',
     );
   }
-
-  if (!dto.status) {
-    throw new BadRequestException('Статус обязателен.');
-  }
-
-  const manufactureYear = toNullableNumber(dto.manufactureYear);
-  const commissioningDate = parseRuDate(dto.commissioningDate);
-  const issueDate = parseRuDate(dto.issueDate);
 
   if (
     manufactureYear &&
@@ -63,37 +66,156 @@ export function buildEquipmentData(dto: CreateEquipmentDto) {
     name,
     inventoryNumber,
     serialNumber: toSerialNumber(dto.serialNumber),
-    modelId: dto.modelId,
-    specifications: toNullableText(dto.specifications),
-    manufacturerId: dto.manufacturerId,
-    countryId: toNullableNumber(dto.countryId),
+    modelId,
+    specifications: parseOptionalText(
+      dto.specifications,
+      'Технические характеристики слишком длинные.',
+    ),
+    manufacturerId,
+    countryId: parseOptionalPositiveInteger(
+      dto.countryId,
+      'Некорректная страна производства.',
+    ),
     manufactureYear,
     commissioningDate,
     issueDate,
-    sectionId: dto.sectionId,
-    responsibleEmployeeId: dto.responsibleEmployeeId,
-    status: dto.status,
-    operationText: toNullableText(dto.operationText),
-    notes: toNullableText(dto.notes),
+    sectionId,
+    responsibleEmployeeId,
+    status,
+    operationText: parseOptionalText(
+      dto.operationText,
+      'Технологическая операция слишком длинная.',
+    ),
+    notes: parseOptionalText(dto.notes, 'Примечание слишком длинное.'),
   };
 }
 
-export function toNullableText(value: string | null | undefined) {
-  const cleanValue = value?.trim();
-  return cleanValue ? cleanValue : null;
+export function parseEquipmentVisibleId(value: unknown) {
+  return parseOptionalPositiveInteger(value, 'Некорректный ID оборудования.');
 }
 
-export function toSerialNumber(value: string | null | undefined) {
-  const cleanValue = value?.trim();
-  return cleanValue ? cleanValue : 'б/н';
+function parseRequiredText(
+  value: unknown,
+  requiredMessage: string,
+  maxLength: number,
+) {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new BadRequestException(requiredMessage);
+  }
+
+  const cleanValue = value.trim();
+
+  if (cleanValue.length > maxLength) {
+    throw new BadRequestException(`Максимальная длина: ${maxLength} символов.`);
+  }
+
+  return cleanValue;
 }
 
-export function toNullableNumber(value: number | null | undefined) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+function parseOptionalText(value: unknown, tooLongMessage: string) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  if (typeof value !== 'string') {
+    throw new BadRequestException('Некорректное текстовое значение.');
+  }
+
+  const cleanValue = value.trim();
+
+  if (!cleanValue) {
+    return null;
+  }
+
+  if (cleanValue.length > MAX_TEXT_LENGTH) {
+    throw new BadRequestException(tooLongMessage);
+  }
+
+  return cleanValue;
 }
 
-export function parseRuDate(value: string | null | undefined) {
-  const cleanValue = value?.trim();
+function toSerialNumber(value: unknown) {
+  if (value === null || value === undefined || value === '') {
+    return 'б/н';
+  }
+
+  if (typeof value !== 'string') {
+    throw new BadRequestException('Некорректный заводской номер.');
+  }
+
+  const cleanValue = value.trim();
+
+  if (!cleanValue) {
+    return 'б/н';
+  }
+
+  if (cleanValue.length > MAX_SERIAL_NUMBER_LENGTH) {
+    throw new BadRequestException(
+      `Заводской номер: максимум ${MAX_SERIAL_NUMBER_LENGTH} символов.`,
+    );
+  }
+
+  return cleanValue;
+}
+
+function parseRequiredPositiveInteger(value: unknown, message: string) {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) {
+    throw new BadRequestException(message);
+  }
+
+  return value;
+}
+
+function parseOptionalPositiveInteger(value: unknown, message: string) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  return parseRequiredPositiveInteger(value, message);
+}
+
+function parseManufactureYear(value: unknown) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  if (
+    typeof value !== 'number' ||
+    !Number.isInteger(value) ||
+    value < MIN_MANUFACTURE_YEAR ||
+    value > new Date().getFullYear() + 1
+  ) {
+    throw new BadRequestException(
+      `Год выпуска должен быть от ${MIN_MANUFACTURE_YEAR} до ${
+        new Date().getFullYear() + 1
+      }.`,
+    );
+  }
+
+  return value;
+}
+
+function parseEquipmentStatus(value: unknown) {
+  if (
+    typeof value !== 'string' ||
+    !(Object.values(EquipmentStatus) as string[]).includes(value)
+  ) {
+    throw new BadRequestException('Выберите допустимый статус оборудования.');
+  }
+
+  return value as EquipmentStatus;
+}
+
+function parseRuDate(value: unknown) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  if (typeof value !== 'string') {
+    throw new BadRequestException('Дата должна быть в формате ДД.ММ.ГГГГ.');
+  }
+
+  const cleanValue = value.trim();
 
   if (!cleanValue) {
     return null;
@@ -106,5 +228,18 @@ export function parseRuDate(value: string | null | undefined) {
   }
 
   const [, day, month, year] = match;
-  return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  const parsedDay = Number(day);
+  const parsedMonth = Number(month);
+  const parsedYear = Number(year);
+  const date = new Date(Date.UTC(parsedYear, parsedMonth - 1, parsedDay));
+
+  if (
+    date.getUTCFullYear() !== parsedYear ||
+    date.getUTCMonth() !== parsedMonth - 1 ||
+    date.getUTCDate() !== parsedDay
+  ) {
+    throw new BadRequestException('Указана некорректная дата.');
+  }
+
+  return date;
 }

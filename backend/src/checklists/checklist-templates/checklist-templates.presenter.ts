@@ -1,4 +1,5 @@
 import type { ChecklistTemplate, Prisma } from '@prisma/client';
+import type { TemplateMaintenanceSettingUsage } from './checklist-templates.types';
 
 export function getChecklistTemplateState(
   template: Pick<ChecklistTemplate, 'isActive'>,
@@ -72,5 +73,25 @@ export function presentTemplateDetail(
     state: getChecklistTemplateState(template),
     updatedAt: template.updatedAt,
     version: template.version,
+  };
+}
+
+export function presentTemplateMaintenanceSettingsUsage(
+  usage: TemplateMaintenanceSettingUsage[],
+) {
+  return {
+    maintenanceSettings: usage.map((setting) => ({
+      equipmentModel: {
+        id: setting.equipmentModelId,
+        name: setting.equipmentModelName,
+      },
+      id: setting.id,
+      maintenanceType: {
+        code: setting.maintenanceTypeCode,
+        id: setting.maintenanceTypeId,
+        name: setting.maintenanceTypeName,
+      },
+    })),
+    maintenanceSettingsCount: usage.length,
   };
 }

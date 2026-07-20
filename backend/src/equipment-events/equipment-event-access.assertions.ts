@@ -3,7 +3,6 @@ import { Prisma } from '@prisma/client';
 import {
   throwEquipmentEventBadRequest,
   throwEquipmentEventForbidden,
-  throwEquipmentEventNotFound,
 } from './equipment-events.errors';
 
 @Injectable()
@@ -19,10 +18,24 @@ export class EquipmentEventAccessAssertions {
       );
     }
 
-    const employeeUser = await tx.employeeUser.findUnique({
-      where: { userId },
-      select: { employeeId: true },
-    });
+    const employeeUsers = await tx.$queryRaw<
+      Array<{
+        employee_id: number;
+        employee_is_active: boolean;
+        user_is_banned: boolean | null;
+      }>
+    >`
+      SELECT
+        eu.employee_id,
+        e.is_active AS employee_is_active,
+        u.banned AS user_is_banned
+      FROM employee_users eu
+      JOIN employees e ON e.id = eu.employee_id
+      JOIN "user" u ON u.id = eu.user_id
+      WHERE eu.user_id = ${userId}
+      FOR SHARE OF eu, e, u
+    `;
+    const employeeUser = employeeUsers[0];
 
     if (!employeeUser) {
       throwEquipmentEventForbidden(
@@ -31,7 +44,21 @@ export class EquipmentEventAccessAssertions {
       );
     }
 
-    return employeeUser.employeeId;
+    if (employeeUser.user_is_banned) {
+      throwEquipmentEventForbidden(
+        'USER_INACTIVE',
+        'Учётная запись отключена.',
+      );
+    }
+
+    if (!employeeUser.employee_is_active) {
+      throwEquipmentEventForbidden(
+        'USER_EMPLOYEE_INACTIVE',
+        'Привязанный сотрудник отключён.',
+      );
+    }
+
+    return employeeUser.employee_id;
   }
 
   assertAssignedResponsible(
@@ -59,29 +86,21 @@ export class EquipmentEventAccessAssertions {
       );
     }
 
-    const users = await tx.user.findMany({
-      where: {
-        id: {
-          in: uniqueUserIds,
-        },
-        employeeUser: {
-          isNot: null,
-        },
-      },
-      select: { banned: true, id: true },
-    });
+    const users = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT u.id
+      FROM "user" u
+      JOIN employee_users eu ON eu.user_id = u.id
+      JOIN employees e ON e.id = eu.employee_id
+      WHERE u.id IN (${Prisma.join(uniqueUserIds)})
+        AND COALESCE(u.banned, false) = false
+        AND e.is_active = true
+      FOR SHARE OF u, eu, e
+    `;
 
     if (users.length !== uniqueUserIds.length) {
-      throwEquipmentEventNotFound(
-        'RESPONSIBLE_NOT_FOUND',
-        'Один или несколько ответственных пользователей не найдены.',
-      );
-    }
-
-    if (users.some((user) => user.banned)) {
       throwEquipmentEventBadRequest(
         'RESPONSIBLE_USER_INACTIVE',
-        'Один или несколько ответственных пользователей отключены.',
+        'Один или несколько ответственных не найдены или отключены.',
       );
     }
   }

@@ -17,7 +17,10 @@ import { throwChecklistConflict } from '../checklist-common/checklists.errors';
 import { ChecklistWorkAssertions } from './checklist-work.assertions';
 import { ChecklistWorkQueryService } from './checklist-work-query.service';
 import { ChecklistWorkMutationRepository } from './checklist-work.repository';
-import type { ChecklistVersionInput } from './checklist-work.types';
+import type {
+  ChecklistCompleteInput,
+  ChecklistVersionInput,
+} from './checklist-work.types';
 
 const EVENT_CHECKLIST_ENTITY_TYPE = 'equipment_event_checklist';
 
@@ -138,7 +141,7 @@ export class ChecklistWorkLifecycleService {
 
   async complete(
     id: number,
-    input: ChecklistVersionInput,
+    input: ChecklistCompleteInput,
     userId?: string | null,
   ) {
     const actorUserId = this.assertions.requireUserId(userId);
@@ -155,11 +158,14 @@ export class ChecklistWorkLifecycleService {
         ChecklistStatus.IN_PROGRESS,
       );
       await this.assertRequiredAnswersCompleted(tx, id);
+      const completedDate = getBusinessTodayDate();
 
       await tx.$executeRaw`
         UPDATE checklists
         SET
           status = 'COMPLETED',
+          result = ${input.result}::checklist_result,
+          checklist_date = ${completedDate},
           completed_at = now(),
           completed_by = ${actorUserId},
           version = version + 1
@@ -180,7 +186,8 @@ export class ChecklistWorkLifecycleService {
       if (
         eventChecklists.length > 0 &&
         eventChecklists.every(
-          (eventChecklist) => eventChecklist.status === ChecklistStatus.COMPLETED,
+          (eventChecklist) =>
+            eventChecklist.status === ChecklistStatus.COMPLETED,
         )
       ) {
         const previousAuditSnapshot = await getEquipmentEventAuditSnapshot(

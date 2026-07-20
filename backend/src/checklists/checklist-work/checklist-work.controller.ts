@@ -13,11 +13,13 @@ import type { Auth } from '../../auth/auth.config';
 import { ChecklistWorkService } from './checklist-work.service';
 import type {
   ChecklistAnswersDto,
+  ChecklistCompleteDto,
   ChecklistVersionDto,
   ChecklistWorkQueryDto,
 } from './checklist-work.types';
 import {
   parseChecklistAnswersDto,
+  parseChecklistCompleteDto,
   parseChecklistVersionDto,
   parseChecklistWorkQuery,
 } from './checklist-work.validation';
@@ -76,12 +78,12 @@ export class ChecklistWorkController {
   @Post(':id/complete')
   complete(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: ChecklistVersionDto | undefined,
+    @Body() dto: ChecklistCompleteDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
     return this.checklistWorkService.complete(
       id,
-      parseChecklistVersionDto(dto),
+      parseChecklistCompleteDto(dto),
       session.user.id,
     );
   }
