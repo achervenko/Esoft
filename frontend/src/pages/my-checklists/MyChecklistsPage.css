@@ -8,6 +8,27 @@
   margin-bottom: 0;
 }
 
+.my-checklists-toast {
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  z-index: 80;
+  min-width: min(720px, calc(100vw - 32px));
+  min-height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+  padding: 18px 28px;
+  background: rgba(236, 253, 243, 0.5);
+  box-shadow: 0 18px 48px rgba(16, 24, 40, 0.18);
+  color: #027a48;
+  font-size: 14px;
+  font-weight: 850;
+  text-align: center;
+}
+
 .my-checklists-list {
   display: flex;
   flex-direction: column;

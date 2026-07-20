@@ -13,6 +13,8 @@ import type { SaveChecklistResult } from "./checklist-actions.types";
 import { mapChecklistActionError } from "../my-checklists.errors";
 import type { DraftAnswers } from "../my-checklists.types";
 
+const COMPLETION_FLASH_KEY = "my-checklists-completion-flash";
+
 type UseChecklistActionsParams = {
   changedAnswers: ChecklistWorkAnswerPayload[];
   draftAnswers: DraftAnswers;
@@ -246,10 +248,8 @@ export function useChecklistActions({
         version: checklistForCompletion.version,
       });
       onChecklistChange(detail);
-      showMessage("Чеклист завершен");
-      window.setTimeout(() => {
-        window.location.hash = "#/my-checklists?tab=completed";
-      }, 600);
+      window.sessionStorage.setItem(COMPLETION_FLASH_KEY, "Чеклист завершен");
+      window.location.hash = "#/my-checklists?tab=completed";
     } catch (requestError) {
       applyMutationError(requestError, "form");
     } finally {
@@ -263,7 +263,6 @@ export function useChecklistActions({
     prepareMutation,
     persistChecklistAnswers,
     setIsActionLoading,
-    showMessage,
     validateBeforeAction,
   ]);
 

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getApiErrorMessage } from "../../shared/api/api-error";
 import { buildHashRoute } from "../../shared/lib/hash-navigation";
 import {
@@ -15,6 +15,8 @@ import type { ChecklistTabCountMap } from "./my-checklists.types";
 import { getActiveTab } from "./my-checklists.utils";
 import "./MyChecklistsPage.css";
 
+const COMPLETION_FLASH_KEY = "my-checklists-completion-flash";
+
 export type MyChecklistsPageProps = {
   route: string;
 };
@@ -25,10 +27,34 @@ export function MyChecklistsPage({ route }: MyChecklistsPageProps) {
   const [startingChecklistId, setStartingChecklistId] = useState<number | null>(
     null,
   );
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const checklistList = useMyChecklistsList({
     activeTab,
   });
+
+  useEffect(() => {
+    const flashMessage = window.sessionStorage.getItem(COMPLETION_FLASH_KEY);
+
+    if (!flashMessage) {
+      return;
+    }
+
+    window.sessionStorage.removeItem(COMPLETION_FLASH_KEY);
+    setToastMessage(flashMessage);
+  }, []);
+
+  useEffect(() => {
+    if (!toastMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setToastMessage(null);
+    }, 3200);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [toastMessage]);
 
   const tabCounts: ChecklistTabCountMap = {
     new: checklistList.totalsByStatus.CREATED ?? 0,
@@ -69,6 +95,12 @@ export function MyChecklistsPage({ route }: MyChecklistsPageProps) {
 
   return (
     <div className="admin-page my-checklists-page">
+      {toastMessage ? (
+        <div className="my-checklists-toast" role="status">
+          {toastMessage}
+        </div>
+      ) : null}
+
       <header className="admin-page-header">
         <div>
           <h1>Мои чек-листы</h1>
