@@ -35,6 +35,7 @@ export type ChecklistAnswerInputDto = {
 
 export type ChecklistAnswersDto = {
   answers?: unknown;
+  result?: unknown;
   version?: unknown;
 };
 
@@ -66,4 +67,5 @@ export type ChecklistCompleteInput = ChecklistVersionInput & {
 
 export type ChecklistAnswersInput = ChecklistVersionInput & {
   answers: ChecklistAnswerInput[];
+  result?: ChecklistResult | null;
 };

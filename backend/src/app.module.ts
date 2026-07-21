@@ -8,6 +8,7 @@ import { DictionariesAdminModule } from './dictionaries-admin/dictionaries-admin
 import { EquipmentEventsModule } from './equipment-events/equipment-events.module';
 import { EquipmentModule } from './equipment/equipment.module';
 import { SearchModule } from './search/search.module';
+import { SetupModule } from './setup/setup.module';
 import { StorageModule } from './storage/storage.module';
 import { UsersAdminModule } from './users-admin/users-admin.module';
 import { UsersModule } from './users/users.module';
@@ -21,6 +22,7 @@ import { UsersModule } from './users/users.module';
     EquipmentEventsModule,
     EquipmentModule,
     SearchModule,
+    SetupModule,
     StorageModule,
     UsersAdminModule,
     UsersModule,

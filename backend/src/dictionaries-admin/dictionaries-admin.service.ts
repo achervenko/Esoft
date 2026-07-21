@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { throwDictionaryPrismaError } from './dictionaries-admin.errors';
 import {
@@ -64,12 +65,15 @@ export class DictionariesAdminService {
     name?: unknown;
   }) {
     const data = parseEquipmentModelPayload(payload);
-    await this.assertManufacturerExists(data.manufacturerId);
 
     try {
-      return await this.prisma.equipmentModel.create({
-        data,
-        include: { manufacturer: true },
+      return await this.prisma.$transaction(async (tx) => {
+        await this.assertManufacturerExists(data.manufacturerId, tx);
+
+        return tx.equipmentModel.create({
+          data,
+          include: { manufacturer: true },
+        });
       });
     } catch (error) {
       throwDictionaryPrismaError(error, 'EQUIPMENT_MODEL_NOT_FOUND');
@@ -81,13 +85,16 @@ export class DictionariesAdminService {
     payload: { manufacturerId?: unknown; name?: unknown },
   ) {
     const data = parseEquipmentModelPayload(payload);
-    await this.assertManufacturerExists(data.manufacturerId);
 
     try {
-      return await this.prisma.equipmentModel.update({
-        data,
-        include: { manufacturer: true },
-        where: { id },
+      return await this.prisma.$transaction(async (tx) => {
+        await this.assertManufacturerExists(data.manufacturerId, tx);
+
+        return tx.equipmentModel.update({
+          data,
+          include: { manufacturer: true },
+          where: { id },
+        });
       });
     } catch (error) {
       throwDictionaryPrismaError(error, 'EQUIPMENT_MODEL_NOT_FOUND');
@@ -180,12 +187,15 @@ export class DictionariesAdminService {
 
   async createLocation(payload: { name?: unknown; objectId?: unknown }) {
     const data = parseLocationPayload(payload);
-    await this.assertObjectExists(data.workshopId);
 
     try {
-      return await this.prisma.section.create({
-        data,
-        include: { workshop: true },
+      return await this.prisma.$transaction(async (tx) => {
+        await this.assertObjectExists(data.workshopId, tx);
+
+        return tx.section.create({
+          data,
+          include: { workshop: true },
+        });
       });
     } catch (error) {
       throwDictionaryPrismaError(error, 'LOCATION_NOT_FOUND');
@@ -197,13 +207,16 @@ export class DictionariesAdminService {
     payload: { name?: unknown; objectId?: unknown },
   ) {
     const data = parseLocationPayload(payload);
-    await this.assertObjectExists(data.workshopId);
 
     try {
-      return await this.prisma.section.update({
-        data,
-        include: { workshop: true },
-        where: { id },
+      return await this.prisma.$transaction(async (tx) => {
+        await this.assertObjectExists(data.workshopId, tx);
+
+        return tx.section.update({
+          data,
+          include: { workshop: true },
+          where: { id },
+        });
       });
     } catch (error) {
       throwDictionaryPrismaError(error, 'LOCATION_NOT_FOUND');
@@ -219,10 +232,15 @@ export class DictionariesAdminService {
     }
   }
 
-  private async assertObjectExists(id: number) {
-    const object = await this.prisma.workshop.findUnique({ where: { id } });
+  private async assertObjectExists(id: number, tx: Prisma.TransactionClient) {
+    const objects = await tx.$queryRaw<Array<{ id: number }>>`
+      SELECT id
+      FROM workshops
+      WHERE id = ${id}
+      FOR SHARE
+    `;
 
-    if (!object) {
+    if (!objects[0]) {
       throw new NotFoundException({
         code: 'OBJECT_NOT_FOUND',
         message: 'Запись не найдена.',
@@ -230,12 +248,18 @@ export class DictionariesAdminService {
     }
   }
 
-  private async assertManufacturerExists(id: number) {
-    const manufacturer = await this.prisma.manufacturer.findUnique({
-      where: { id },
-    });
+  private async assertManufacturerExists(
+    id: number,
+    tx: Prisma.TransactionClient,
+  ) {
+    const manufacturers = await tx.$queryRaw<Array<{ id: number }>>`
+      SELECT id
+      FROM manufacturers
+      WHERE id = ${id}
+      FOR SHARE
+    `;
 
-    if (!manufacturer) {
+    if (!manufacturers[0]) {
       throw new NotFoundException({
         code: 'MANUFACTURER_NOT_FOUND',
         message: 'Запись не найдена.',

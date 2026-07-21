@@ -185,15 +185,11 @@ export class EquipmentWriteService {
       Array<{
         id: number;
         manufacturer_id: number;
-        manufacturer_is_active: boolean;
-        model_is_active: boolean;
       }>
     >`
       SELECT
         em.id,
-        em.manufacturer_id,
-        em.is_active AS model_is_active,
-        m.is_active AS manufacturer_is_active
+        em.manufacturer_id
       FROM equipment_models em
       JOIN manufacturers m ON m.id = em.manufacturer_id
       WHERE em.id = ${modelId}
@@ -206,19 +202,13 @@ export class EquipmentWriteService {
         'Выберите модель выбранного производителя.',
       );
     }
-
-    if (!model.model_is_active || !model.manufacturer_is_active) {
-      throw new BadRequestException(
-        'Выбранная модель или производитель отключены.',
-      );
-    }
   }
 
   private async assertResponsibleEmployeeIsActive(
     tx: Prisma.TransactionClient,
     employeeId: number | null | undefined,
   ) {
-    if (!employeeId) {
+    if (employeeId == null) {
       return;
     }
 

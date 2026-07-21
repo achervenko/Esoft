@@ -19,6 +19,8 @@ const COMPLETION_FLASH_KEY = "my-checklists-completion-flash";
 type UseChecklistActionsParams = {
   changedAnswers: ChecklistWorkAnswerPayload[];
   draftAnswers: DraftAnswers;
+  draftResult: ChecklistResult | null;
+  hasResultChange: boolean;
   checklist: ChecklistWorkDetail | null;
   onChecklistChange: (checklist: ChecklistWorkDetail) => void;
 };
@@ -26,15 +28,22 @@ type UseChecklistActionsParams = {
 export function useChecklistActions({
   changedAnswers,
   draftAnswers,
+  draftResult,
+  hasResultChange,
   checklist,
   onChecklistChange,
 }: UseChecklistActionsParams) {
-  const hasChanges = changedAnswers.length > 0;
+  const hasChanges = changedAnswers.length > 0 || hasResultChange;
   const state = useChecklistUiState();
-  const { getRequiredDraftError, validateDraftBeforeMutation } =
+  const {
+    getRequiredDraftError,
+    getRequiredResultError,
+    validateDraftBeforeMutation,
+  } =
     useChecklistValidation({
       checklist,
       draftAnswers,
+      draftResult,
     });
   const {
     applyMutationError: applyMutationErrorState,
@@ -53,6 +62,7 @@ export function useChecklistActions({
     showRequiredErrors,
     showRequiredValidationErrors,
   } = state;
+  const resultError = showRequiredErrors ? getRequiredResultError() : null;
 
   const applyMutationError = useCallback(
     (error: unknown, target: "detail" | "form") => {
@@ -101,6 +111,29 @@ export function useChecklistActions({
     validateDraftBeforeMutation,
   ]);
 
+  const validateBeforeCompletion = useCallback(() => {
+    const actionError = validateBeforeAction();
+
+    if (actionError) {
+      return actionError;
+    }
+
+    const requiredResultError = getRequiredResultError();
+
+    if (requiredResultError) {
+      showFormError(requiredResultError);
+      showRequiredValidationErrors();
+      return requiredResultError;
+    }
+
+    return null;
+  }, [
+    getRequiredResultError,
+    showFormError,
+    showRequiredValidationErrors,
+    validateBeforeAction,
+  ]);
+
   const persistChecklistAnswers = useCallback(
     async ({
       manageLoading = true,
@@ -136,6 +169,7 @@ export function useChecklistActions({
       try {
         await saveChecklistWorkAnswers(checklist.id, {
           answers: changedAnswers,
+          result: hasResultChange ? draftResult : undefined,
           version: checklist.version,
         });
 
@@ -173,7 +207,9 @@ export function useChecklistActions({
     [
       applyMutationError,
       changedAnswers,
+      draftResult,
       hasChanges,
+      hasResultChange,
       checklist,
       handleRefreshError,
       onChecklistChange,
@@ -216,12 +252,12 @@ export function useChecklistActions({
   ]);
 
   const completeChecklist = useCallback(
-    async (result: ChecklistResult) => {
+    async () => {
       if (!checklist) {
         return;
       }
 
-      if (validateBeforeAction()) {
+      if (validateBeforeCompletion()) {
         return;
       }
 
@@ -245,7 +281,7 @@ export function useChecklistActions({
         }
 
         const detail = await completeChecklistWork(checklistForCompletion.id, {
-          result,
+          result: draftResult as ChecklistResult,
           version: checklistForCompletion.version,
         });
         onChecklistChange(detail);
@@ -259,13 +295,14 @@ export function useChecklistActions({
     },
     [
       applyMutationError,
+      draftResult,
       hasChanges,
       checklist,
       onChecklistChange,
       prepareMutation,
       persistChecklistAnswers,
       setIsActionLoading,
-      validateBeforeAction,
+      validateBeforeCompletion,
     ],
   );
 
@@ -277,6 +314,7 @@ export function useChecklistActions({
     mutationDetailError,
     mutationVersionConflict,
     refreshError,
+    resultError,
     saveChecklist,
     showRequiredErrors,
   };

@@ -4,18 +4,9 @@ import { ConfirmDialog } from "../../../shared/ui/ConfirmDialog";
 import { Notice } from "../../../shared/ui/Notice";
 import { checklistStatusLabels } from "../my-checklists.config";
 import { ChecklistModules } from "./ChecklistModules";
+import { ChecklistResultSection } from "./ChecklistResultSection";
 import { ChecklistSummary } from "./ChecklistSummary";
 import type { MyChecklistDetailProps } from "../my-checklists.types";
-import type { ChecklistResult } from "../../../shared/api/checklists";
-
-const checklistResultOptions: Array<{
-  label: string;
-  value: ChecklistResult;
-}> = [
-  { label: "Пройден", value: "PASSED" },
-  { label: "Не пройден", value: "FAILED" },
-  { label: "С замечаниями", value: "WITH_REMARKS" },
-];
 
 function formatChecklistMeta(
   checklist: NonNullable<MyChecklistDetailProps["checklist"]>,
@@ -31,6 +22,7 @@ export function MyChecklistDetail({
   canMutateSelected,
   checklist,
   draftAnswers,
+  draftResult,
   emptyMessage = "Чек-лист не найден или недоступен.",
   formError,
   isActionLoading,
@@ -38,13 +30,13 @@ export function MyChecklistDetail({
   onAnswerChange,
   onComplete,
   onReload,
+  onResultChange,
   onSave,
+  resultError,
   showRequiredErrors,
   versionConflict,
 }: MyChecklistDetailProps) {
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
-  const [completeResult, setCompleteResult] =
-    useState<ChecklistResult>("PASSED");
 
   if (!checklist) {
     return (
@@ -97,6 +89,13 @@ export function MyChecklistDetail({
         showRequiredErrors={showRequiredErrors}
       />
 
+      <ChecklistResultSection
+        canEdit={canEditAnswers}
+        error={resultError}
+        onChange={onResultChange}
+        result={draftResult}
+      />
+
       {hasDetailActions ? (
         <div className="my-checklists-detail-actions">
           {canShowWorkActions ? (
@@ -117,7 +116,6 @@ export function MyChecklistDetail({
                   isActionLoading || isDetailLoading || Boolean(versionConflict)
                 }
                 onClick={() => {
-                  setCompleteResult("PASSED");
                   setIsCompleteDialogOpen(true);
                 }}
                 type="button"
@@ -149,30 +147,10 @@ export function MyChecklistDetail({
           onCancel={() => setIsCompleteDialogOpen(false)}
           onConfirm={() => {
             setIsCompleteDialogOpen(false);
-            onComplete(completeResult);
+            onComplete();
           }}
           title="Завершить чек-лист?"
-        >
-          <div className="my-checklists-complete-result">
-            {checklistResultOptions.map((option) => (
-              <label key={option.value}>
-                <input
-                  checked={completeResult === option.value}
-                  disabled={
-                    isActionLoading ||
-                    isDetailLoading ||
-                    Boolean(versionConflict)
-                  }
-                  name="checklist-result"
-                  onChange={() => setCompleteResult(option.value)}
-                  type="radio"
-                  value={option.value}
-                />
-                <span>{option.label}</span>
-              </label>
-            ))}
-          </div>
-        </ConfirmDialog>
+        />
       ) : null}
     </section>
   );

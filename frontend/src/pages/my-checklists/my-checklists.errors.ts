@@ -19,6 +19,28 @@ export function mapChecklistActionError(
     };
   }
 
+  if (
+    error instanceof ApiRequestError &&
+    error.code === "CHECKLIST_RESULT_REQUIRED"
+  ) {
+    return {
+      detailError: null,
+      formError: "Укажите результат проверки.",
+      versionConflict: null,
+    };
+  }
+
+  if (
+    error instanceof ApiRequestError &&
+    error.code === "CHECKLIST_RESULT_INVALID"
+  ) {
+    return {
+      detailError: null,
+      formError: "Выбран недопустимый результат проверки.",
+      versionConflict: null,
+    };
+  }
+
   return {
     detailError: target === "detail" ? getApiErrorMessage(error) : null,
     formError: target === "form" ? getApiErrorMessage(error) : null,

@@ -94,15 +94,18 @@ export function parseChecklistAnswersDto(
     );
   }
 
-  if (payload.answers.length === 0) {
+  const result = parseOptionalChecklistResult(payload.result);
+
+  if (payload.answers.length === 0 && !('result' in payload)) {
     throwChecklistBadRequest(
       'CHECKLIST_UPDATE_EMPTY',
-      'Передайте хотя бы один ответ.',
+      'Передайте хотя бы один ответ или итоговое состояние.',
     );
   }
 
   return {
     answers: payload.answers.map(parseAnswerInput),
+    result,
     version: parsePositiveInt(
       payload.version,
       'CHECKLIST_VERSION_INVALID',
@@ -112,13 +115,42 @@ export function parseChecklistAnswersDto(
 }
 
 function parseChecklistResult(value: unknown) {
+  if (value === undefined || value === null || value === '') {
+    throwChecklistBadRequest(
+      'CHECKLIST_RESULT_REQUIRED',
+      'Укажите итоговое состояние оборудования.',
+    );
+  }
+
   if (
     typeof value !== 'string' ||
     !Object.values(ChecklistResult).includes(value as ChecklistResult)
   ) {
     throwChecklistBadRequest(
       'CHECKLIST_RESULT_INVALID',
-      'Выберите допустимый результат чек-листа.',
+      'Указано недопустимое итоговое состояние оборудования.',
+    );
+  }
+
+  return value as ChecklistResult;
+}
+
+function parseOptionalChecklistResult(value: unknown) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null || value === '') {
+    return null;
+  }
+
+  if (
+    typeof value !== 'string' ||
+    !Object.values(ChecklistResult).includes(value as ChecklistResult)
+  ) {
+    throwChecklistBadRequest(
+      'CHECKLIST_RESULT_INVALID',
+      'Указано недопустимое итоговое состояние оборудования.',
     );
   }
 

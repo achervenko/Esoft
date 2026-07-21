@@ -12,8 +12,11 @@ export class StorageOwnerLockService {
       owner.entityId,
     ].join(':');
 
-    return tx.$queryRaw`
-      SELECT pg_advisory_xact_lock(hashtext(${key}))
+    return tx.$queryRaw<Array<{ locked: number }>>`
+      SELECT 1 AS locked
+      FROM (
+        SELECT pg_advisory_xact_lock(hashtext(${key}))
+      ) AS storage_owner_lock
     `;
   }
 }

@@ -9,13 +9,24 @@ import type {
 
 export type MaintenanceSettingFormMode = "create" | "edit";
 
-export type MaintenanceSettingFormPayload = {
-  defaultChecklistTemplateId?: number | null;
-  maintenanceTypeId?: number;
+export type MaintenanceSettingCreateFormPayload = {
+  defaultChecklistTemplateId: number;
   executionType: MaintenanceExecutionType;
+  maintenanceTypeId: number;
+  mode: "create";
   periodicity: MaintenancePeriodicity | null;
-  updatePayload?: MaintenanceSettingUpdatePayload;
 };
+
+export type MaintenanceSettingEditFormPayload = {
+  executionType: MaintenanceExecutionType;
+  mode: "edit";
+  periodicity: MaintenancePeriodicity | null;
+  updatePayload: MaintenanceSettingUpdatePayload;
+};
+
+export type MaintenanceSettingFormPayload =
+  | MaintenanceSettingCreateFormPayload
+  | MaintenanceSettingEditFormPayload;
 
 export type MaintenanceSettingFormModalProps = {
   availableMaintenanceTypes: MaintenanceType[];
@@ -25,5 +36,6 @@ export type MaintenanceSettingFormModalProps = {
   onClose: () => void;
   onSubmit: (payload: MaintenanceSettingFormPayload) => void;
   serverErrorCode?: string | null;
+  serverErrorMessage?: string | null;
   setting?: MaintenanceSetting | null;
 };

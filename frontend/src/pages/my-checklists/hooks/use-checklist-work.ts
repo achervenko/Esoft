@@ -28,8 +28,11 @@ export function useChecklistWork({
   const {
     changedAnswers,
     draftAnswers,
+    draftResult,
+    hasResultChange,
     hasUnsavedChanges,
     setAnswerValue,
+    setResultValue,
   } = useChecklistDraft({
     checklist,
   });
@@ -41,12 +44,15 @@ export function useChecklistWork({
     mutationDetailError,
     mutationVersionConflict,
     refreshError,
+    resultError,
     saveChecklist,
     showRequiredErrors,
   } = useChecklistActions({
     changedAnswers,
     checklist,
     draftAnswers,
+    draftResult,
+    hasResultChange,
     onChecklistChange: replaceChecklist,
   });
 
@@ -61,6 +67,7 @@ export function useChecklistWork({
     completeChecklist,
     detailError,
     draftAnswers,
+    draftResult,
     formError,
     hasUnsavedChanges,
     isActionLoading,
@@ -70,6 +77,8 @@ export function useChecklistWork({
     reloadChecklist,
     saveChecklist,
     setAnswerValue,
+    setResultValue,
+    resultError,
     showRequiredErrors,
     versionConflict,
   };

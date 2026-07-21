@@ -1,5 +1,8 @@
 import { useCallback } from "react";
-import type { ChecklistWorkDetail } from "../../../shared/api/checklists";
+import type {
+  ChecklistResult,
+  ChecklistWorkDetail,
+} from "../../../shared/api/checklists";
 import {
   validateDraftAnswers,
   validateRequiredAnswers,
@@ -9,11 +12,13 @@ import type { DraftAnswers } from "../my-checklists.types";
 type UseChecklistValidationParams = {
   checklist: ChecklistWorkDetail | null;
   draftAnswers: DraftAnswers;
+  draftResult: ChecklistResult | null;
 };
 
 export function useChecklistValidation({
   checklist,
   draftAnswers,
+  draftResult,
 }: UseChecklistValidationParams) {
   const getRequiredDraftError = useCallback(() => {
     if (!checklist) {
@@ -22,6 +27,14 @@ export function useChecklistValidation({
 
     return validateRequiredAnswers(checklist, draftAnswers);
   }, [checklist, draftAnswers]);
+
+  const getRequiredResultError = useCallback(() => {
+    if (!checklist || draftResult) {
+      return null;
+    }
+
+    return "Укажите результат проверки.";
+  }, [checklist, draftResult]);
 
   const validateDraftBeforeMutation = useCallback(() => {
     if (!checklist) {
@@ -32,6 +45,7 @@ export function useChecklistValidation({
   }, [checklist, draftAnswers]);
 
   return {
+    getRequiredResultError,
     getRequiredDraftError,
     validateDraftBeforeMutation,
   };

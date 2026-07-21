@@ -1,7 +1,6 @@
 model Manufacturer {
   id        Int              @id @default(autoincrement())
   name      String           @unique @db.VarChar(128)
-  isActive  Boolean          @default(true) @map("is_active")
   equipment Equipment[]
   models    EquipmentModel[]
 
@@ -11,7 +10,6 @@ model Manufacturer {
 model EquipmentModel {
   id                  Int                           @id @default(autoincrement())
   name                String                        @db.VarChar(128)
-  isActive            Boolean                       @default(true) @map("is_active")
   manufacturerId      Int                           @map("manufacturer_id")
   manufacturer        Manufacturer                  @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
   equipment           Equipment[]

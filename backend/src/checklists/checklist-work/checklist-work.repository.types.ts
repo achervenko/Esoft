@@ -1,5 +1,6 @@
 import {
   ChecklistAnswerType,
+  ChecklistResult,
   ChecklistStatus,
   EquipmentEventStatus,
   Prisma,
@@ -15,6 +16,7 @@ export type LockedChecklist = {
   assignedUserId: string;
   equipmentEventId: number;
   id: number;
+  result: ChecklistResult | null;
   status: ChecklistStatus;
   version: number;
 };
@@ -42,6 +44,7 @@ export type ChecklistListRow = {
   maintenanceTypeName: string;
   requiredAnswered: bigint;
   requiredTotal: bigint;
+  result: ChecklistResult | null;
   sortOrder: number;
   status: ChecklistStatus;
   templateName: string;

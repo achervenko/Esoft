@@ -52,6 +52,7 @@ view AdminAuditLogFull {
   module           AuditModule
   entityType       String      @map("entity_type") @db.VarChar(64)
   entityId         Int?        @map("entity_id")
+  entityStringId   String?     @map("entity_string_id") @db.VarChar(128)
   fieldName        String?     @map("field_name") @db.VarChar(128)
   oldValue         String?     @map("old_value") @db.Text
   newValue         String?     @map("new_value") @db.Text

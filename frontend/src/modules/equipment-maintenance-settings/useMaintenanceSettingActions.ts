@@ -45,6 +45,7 @@ export function useMaintenanceSettingActions({
 }: UseMaintenanceSettingActionsOptions) {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [formErrorCode, setFormErrorCode] = useState<string | null>(null);
+  const [formErrorMessage, setFormErrorMessage] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const deletingOperationRef = useRef<symbol | null>(null);
@@ -85,7 +86,10 @@ export function useMaintenanceSettingActions({
       request: () => Promise<MaintenanceSettingsResponse>,
       successMessage: string,
     ): Promise<MaintenanceSettingActionResult> => {
-      if (savingOperationRef.current !== null) {
+      if (
+        savingOperationRef.current !== null ||
+        deletingOperationRef.current !== null
+      ) {
         return { success: false };
       }
 
@@ -94,6 +98,7 @@ export function useMaintenanceSettingActions({
       savingOperationRef.current = operationId;
       setIsSaving(true);
       setFormErrorCode(null);
+      setFormErrorMessage(null);
 
       try {
         const previousSettingsResponse = settingsResponse;
@@ -120,6 +125,7 @@ export function useMaintenanceSettingActions({
 
         if (requestError instanceof ApiRequestError) {
           setFormErrorCode(requestError.code ?? null);
+          setFormErrorMessage(getMaintenanceSettingsErrorMessage(requestError));
 
           if (requestError.code === "MAINTENANCE_SETTING_NOT_FOUND") {
             const didReload = await reloadAfterConflict();
@@ -128,11 +134,15 @@ export function useMaintenanceSettingActions({
               return { success: false };
             }
 
+            setFormErrorMessage(null);
+
             return {
               message: "Данные обновлены.",
               success: true,
             };
           }
+        } else {
+          setFormErrorMessage(getMaintenanceSettingsErrorMessage(requestError));
         }
 
         return { success: false };
@@ -177,7 +187,10 @@ export function useMaintenanceSettingActions({
 
   const deleteSetting = useCallback(
     async (settingId: number): Promise<MaintenanceSettingActionResult> => {
-      if (deletingOperationRef.current !== null) {
+      if (
+        savingOperationRef.current !== null ||
+        deletingOperationRef.current !== null
+      ) {
         return { success: false };
       }
 
@@ -254,11 +267,15 @@ export function useMaintenanceSettingActions({
 
   return {
     clearDeleteError: () => setDeleteError(null),
-    clearFormError: () => setFormErrorCode(null),
+    clearFormError: () => {
+      setFormErrorCode(null);
+      setFormErrorMessage(null);
+    },
     createSetting,
     deleteError,
     deleteSetting,
     formErrorCode,
+    formErrorMessage,
     isDeleting,
     isSaving,
     updateSetting,

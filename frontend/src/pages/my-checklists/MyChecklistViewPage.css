@@ -86,13 +86,28 @@
   margin-top: 14px;
 }
 
-.my-checklists-complete-result {
-  display: grid;
-  gap: 8px;
-  margin-top: 14px;
+.my-checklists-result-section {
+  border: 1px solid var(--chakra-colors-gray-200);
+  border-radius: 14px;
+  margin: 0;
+  padding: 14px;
 }
 
-.my-checklists-complete-result label {
+.my-checklists-result-section h3,
+.my-checklists-result-section legend {
+  color: #111827;
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.my-checklists-result-options {
+  display: grid;
+  gap: 8px;
+}
+
+.my-checklists-result-options label {
   align-items: center;
   border: 1px solid #d7dce3;
   border-radius: 8px;
@@ -103,13 +118,26 @@
   padding: 0 12px;
 }
 
-.my-checklists-complete-result input {
+.my-checklists-result-options input {
   margin: 0;
 }
 
-.my-checklists-complete-result span {
+.my-checklists-result-options span,
+.my-checklists-result-readonly {
   font-size: 14px;
   font-weight: 700;
+}
+
+.my-checklists-result-readonly {
+  margin: 0;
+}
+
+.field-error {
+  color: #b42318;
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 8px;
 }
 
 .my-checklists-modules {

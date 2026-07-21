@@ -51,6 +51,7 @@ export function presentChecklistProgress(
 function presentChecklistListItem(row: ChecklistListRow) {
   return {
     id: row.id,
+    result: row.result,
     status: row.status,
     sortOrder: row.sortOrder,
     version: row.version,

@@ -8,13 +8,17 @@ const CHECKLIST_QUESTIONS_ACTIVE_ORDER_LOCK_PREFIX =
 export class ChecklistQuestionsOrderLockService {
   async lock(tx: Prisma.TransactionClient, checklistModuleId: number | null) {
     if (checklistModuleId === null) {
+      // Unassigned questions are not part of the sortable active order.
       return;
     }
 
-    await tx.$queryRaw`
-      SELECT pg_advisory_xact_lock(
-        hashtext(${this.getLockKey(checklistModuleId)})
-      )
+    await tx.$queryRaw<Array<{ locked: number }>>`
+      SELECT 1 AS locked
+      FROM (
+        SELECT pg_advisory_xact_lock(
+          hashtext(${this.getLockKey(checklistModuleId)})
+        )
+      ) AS checklist_questions_order_lock
     `;
   }
 

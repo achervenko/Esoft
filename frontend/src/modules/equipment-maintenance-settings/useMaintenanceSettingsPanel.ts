@@ -43,6 +43,7 @@ export function useMaintenanceSettingsPanel({
     deleteError,
     deleteSetting,
     formErrorCode,
+    formErrorMessage,
     isDeleting,
     isSaving,
     updateSetting,
@@ -99,15 +100,25 @@ export function useMaintenanceSettingsPanel({
       }
 
       if (activeForm.mode === "create") {
+        if (payload.mode !== "create") {
+          setClientError("Некорректное состояние формы настройки обслуживания.");
+          return;
+        }
+
         if (!payload.maintenanceTypeId) {
           setClientError("Выберите вид обслуживания.");
+          return;
+        }
+
+        if (!payload.defaultChecklistTemplateId) {
+          setClientError("Выберите шаблон чек-листа.");
           return;
         }
 
         clearFeedback();
 
         const result = await createSetting({
-          defaultChecklistTemplateId: payload.defaultChecklistTemplateId!,
+          defaultChecklistTemplateId: payload.defaultChecklistTemplateId,
           maintenanceTypeId: payload.maintenanceTypeId,
           executionType: payload.executionType,
           periodicity: payload.periodicity,
@@ -121,7 +132,7 @@ export function useMaintenanceSettingsPanel({
         return;
       }
 
-      if (!payload.updatePayload) {
+      if (payload.mode !== "edit") {
         setClientError("Форма редактирования не вернула изменения.");
         return;
       }
@@ -183,8 +194,11 @@ export function useMaintenanceSettingsPanel({
     isLoading ||
     isSaving ||
     isAvailableTypesLoading ||
+    isChecklistTemplatesLoading ||
     availableMaintenanceTypes.length === 0 ||
-    Boolean(availableTypesError);
+    checklistTemplates.length === 0 ||
+    Boolean(availableTypesError) ||
+    Boolean(checklistTemplatesError);
 
   const modalState = useMemo(
     () => ({
@@ -203,6 +217,7 @@ export function useMaintenanceSettingsPanel({
     dataError: error,
     deleteError,
     formErrorCode,
+    formErrorMessage,
     isAvailableTypesLoading,
     isChecklistTemplatesLoading,
     isCreateDisabled,

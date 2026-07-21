@@ -25,6 +25,12 @@
   font-weight: 600;
 }
 
+.login-form .app-checkbox {
+  align-items: center;
+  align-self: flex-start;
+  flex-direction: row;
+}
+
 .login-form input[type='text'],
 .login-form input[type='password'] {
   width: 100%;

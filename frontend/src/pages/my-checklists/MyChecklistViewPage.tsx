@@ -43,7 +43,7 @@ export function MyChecklistViewPage({
     if (
       checklistWork.hasUnsavedChanges &&
       !window.confirm(
-        "Перезагрузить чек-лист? Несохранённые ответы будут потеряны.",
+        "Перезагрузить чек-лист? Несохранённые изменения будут потеряны.",
       )
     ) {
       return;
@@ -78,14 +78,17 @@ export function MyChecklistViewPage({
         canMutateSelected={checklistWork.canMutateSelected}
         checklist={checklistWork.checklist}
         draftAnswers={checklistWork.draftAnswers}
+        draftResult={checklistWork.draftResult}
         emptyMessage="Чек-лист не найден или недоступен."
         formError={checklistWork.formError}
         isActionLoading={checklistWork.isActionLoading}
         isDetailLoading={checklistWork.isDetailLoading}
         onAnswerChange={checklistWork.setAnswerValue}
-        onComplete={(result) => void checklistWork.completeChecklist(result)}
+        onComplete={() => void checklistWork.completeChecklist()}
         onReload={handleReload}
+        onResultChange={checklistWork.setResultValue}
         onSave={() => void checklistWork.saveChecklist()}
+        resultError={checklistWork.resultError}
         showRequiredErrors={checklistWork.showRequiredErrors}
         versionConflict={checklistWork.versionConflict}
       />

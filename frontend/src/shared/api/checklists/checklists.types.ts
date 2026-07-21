@@ -178,6 +178,7 @@ export type ChecklistWorkListItem = {
   };
   id: number;
   progress: ChecklistWorkProgress;
+  result: ChecklistResult | null;
   sortOrder: number;
   status: ChecklistWorkStatus;
   template: {
@@ -242,6 +243,7 @@ export type ChecklistWorkAnswerPayload = {
 
 export type ChecklistWorkAnswersPayload = ChecklistWorkVersionPayload & {
   answers: ChecklistWorkAnswerPayload[];
+  result?: ChecklistResult | null;
 };
 
 export type ChecklistWorkProgressResponse = {
@@ -257,6 +259,21 @@ export const checklistAnswerTypeLabels: Record<ChecklistAnswerType, string> = {
   INTEGER: "Целое число",
   TEXT: "Текст",
 };
+
+export const checklistResultLabels: Record<ChecklistResult, string> = {
+  FAILED: "Оборудование неисправно",
+  PASSED: "Оборудование исправно",
+  WITH_REMARKS: "Оборудование исправно с замечаниями",
+};
+
+export const checklistResultOptions: Array<{
+  label: string;
+  value: ChecklistResult;
+}> = [
+  { label: checklistResultLabels.PASSED, value: "PASSED" },
+  { label: checklistResultLabels.WITH_REMARKS, value: "WITH_REMARKS" },
+  { label: checklistResultLabels.FAILED, value: "FAILED" },
+];
 
 export const checklistTemplateStateLabels: Record<
   ChecklistTemplateState,

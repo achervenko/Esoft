@@ -207,10 +207,16 @@ export function useMaintenanceSettingForm({
         return null;
       }
 
+      if (!parsedDefaultChecklistTemplateId.value) {
+        setError("Выберите шаблон чек-листа.");
+        return null;
+      }
+
       return {
         defaultChecklistTemplateId: parsedDefaultChecklistTemplateId.value,
-        maintenanceTypeId: parsedMaintenanceTypeId,
         executionType,
+        maintenanceTypeId: parsedMaintenanceTypeId,
+        mode: "create",
         periodicity: parsedPeriodicityResult.value,
       };
     }
@@ -231,8 +237,8 @@ export function useMaintenanceSettingForm({
       }
 
       return {
-        defaultChecklistTemplateId: parsedDefaultChecklistTemplateId.value,
         executionType,
+        mode: "edit",
         periodicity: parsedPeriodicityResult.value,
         updatePayload,
       };

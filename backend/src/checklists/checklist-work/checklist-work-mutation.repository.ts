@@ -175,6 +175,7 @@ export class ChecklistWorkMutationRepository {
         id,
         equipment_event_id AS "equipmentEventId",
         assigned_user_id AS "assignedUserId",
+        result,
         status,
         version
       FROM checklists

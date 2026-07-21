@@ -10,6 +10,7 @@ type MaintenanceSettingsPanelModalsProps = {
   checklistTemplates: ChecklistTemplateListItem[];
   deleteError: string | null;
   formErrorCode: string | null;
+  formErrorMessage: string | null;
   isDeleting: boolean;
   isSaving: boolean;
   modalState: MaintenanceSettingsPanelModalState;
@@ -24,6 +25,7 @@ export function MaintenanceSettingsPanelModals({
   checklistTemplates,
   deleteError,
   formErrorCode,
+  formErrorMessage,
   isDeleting,
   isSaving,
   modalState,
@@ -43,6 +45,7 @@ export function MaintenanceSettingsPanelModals({
           onClose={onCloseForm}
           onSubmit={(payload) => void onFormSubmit(payload)}
           serverErrorCode={formErrorCode}
+          serverErrorMessage={formErrorMessage}
           setting={modalState.activeForm.setting ?? null}
         />
       ) : null}

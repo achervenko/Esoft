@@ -27,6 +27,7 @@ export class ChecklistWorkQueryRepository {
             checklist.id,
             checklist.version,
             checklist.status,
+            checklist.result,
             checklist.sort_order AS "sortOrder",
             checklist.checklist_template_id AS "checklistTemplateId",
             checklist.assigned_user_id AS "assignedUserId",
@@ -200,6 +201,7 @@ export class ChecklistWorkQueryRepository {
       SELECT
         checklist.id,
         checklist.status,
+        checklist.result,
         checklist.version,
         checklist.started_at AS "startedAt",
         checklist.completed_at AS "completedAt",

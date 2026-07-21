@@ -46,14 +46,17 @@ export type MyChecklistDetailProps = {
   canMutateSelected: boolean;
   checklist: ChecklistWorkDetail | null;
   draftAnswers: DraftAnswers;
+  draftResult: ChecklistResult | null;
   emptyMessage?: string;
   formError: string | null;
   isActionLoading: boolean;
   isDetailLoading: boolean;
   onAnswerChange: (checklistDetailId: number, value: string) => void;
-  onComplete: (result: ChecklistResult) => void;
+  onComplete: () => void;
   onReload: () => void;
+  onResultChange: (result: ChecklistResult) => void;
   onSave: () => void;
+  resultError: string | null;
   showRequiredErrors: boolean;
   versionConflict: string | null;
 };
@@ -68,6 +71,13 @@ export type ChecklistModulesProps = {
   modules: ChecklistWorkModule[];
   onAnswerChange: (checklistDetailId: number, value: string) => void;
   showRequiredErrors: boolean;
+};
+
+export type ChecklistResultSectionProps = {
+  canEdit: boolean;
+  error: string | null;
+  onChange: (result: ChecklistResult) => void;
+  result: ChecklistResult | null;
 };
 
 export type ChecklistQuestionProps = {

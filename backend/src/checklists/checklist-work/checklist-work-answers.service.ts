@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   AuditAction,
   ChecklistAnswerType,
+  ChecklistResult,
   ChecklistStatus,
   Prisma,
 } from '@prisma/client';
@@ -81,8 +82,10 @@ export class ChecklistWorkAnswersService {
           answerRowById.get(answer.checklistDetailId),
         ),
       );
+      const hasResultChange =
+        input.result !== undefined && input.result !== checklist.result;
 
-      if (changedAnswers.length === 0) {
+      if (changedAnswers.length === 0 && !hasResultChange) {
         const progress = await this.mutationRepository.progress(tx, id);
 
         return presentChecklistProgress(id, checklist.version, progress);
@@ -91,6 +94,8 @@ export class ChecklistWorkAnswersService {
       for (const answer of changedAnswers) {
         await this.updateAnswer(tx, answer, actorUserId);
       }
+
+      await this.updateDraftResult(tx, id, input.result);
 
       await tx.$executeRaw`
         UPDATE checklists
@@ -101,8 +106,10 @@ export class ChecklistWorkAnswersService {
         action: AuditAction.UPDATE,
         entityId: id,
         entityType: EVENT_CHECKLIST_ENTITY_TYPE,
-        fieldName: 'answers',
-        newValue: `Обновлено ответов: ${changedAnswers.length}`,
+        fieldName: buildAuditFieldName(changedAnswers.length, hasResultChange),
+        newValue: JSON.stringify(
+          buildAuditValue(changedAnswers.length, hasResultChange, input.result),
+        ),
         userId: actorUserId,
       });
 
@@ -110,6 +117,22 @@ export class ChecklistWorkAnswersService {
 
       return presentChecklistProgress(id, checklist.version + 1, progress);
     });
+  }
+
+  private updateDraftResult(
+    tx: Prisma.TransactionClient,
+    checklistId: number,
+    result: ChecklistResult | null | undefined,
+  ) {
+    if (result === undefined) {
+      return;
+    }
+
+    return tx.$executeRaw`
+      UPDATE checklists
+      SET result = ${result}::checklist_result
+      WHERE id = ${checklistId}
+    `;
   }
 
   private parseAnswer(
@@ -283,4 +306,33 @@ export class ChecklistWorkAnswersService {
       ids.add(answer.checklistDetailId);
     }
   }
+}
+
+function buildAuditFieldName(
+  changedAnswersCount: number,
+  hasResultChange: boolean,
+) {
+  return [
+    changedAnswersCount > 0 ? 'answers' : null,
+    hasResultChange ? 'result' : null,
+  ]
+    .filter((field): field is string => field !== null)
+    .join(',');
+}
+
+function buildAuditValue(
+  changedAnswersCount: number,
+  hasResultChange: boolean,
+  result: ChecklistResult | null | undefined,
+) {
+  const auditValue: Record<string, unknown> = {
+    answersUpdated: changedAnswersCount,
+    resultUpdated: hasResultChange,
+  };
+
+  if (hasResultChange) {
+    auditValue.result = result;
+  }
+
+  return auditValue;
 }

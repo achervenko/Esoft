@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   AuditAction,
+  ChecklistResult,
   ChecklistStatus,
   EquipmentEventStatus,
   Prisma,
@@ -175,6 +176,7 @@ export class ChecklistWorkLifecycleService {
         checklistId: id,
         newStatus: ChecklistStatus.COMPLETED,
         oldStatus: checklist.status,
+        result: input.result,
         userId: actorUserId,
       });
 
@@ -250,6 +252,7 @@ export class ChecklistWorkLifecycleService {
       checklistId: number;
       newStatus: ChecklistStatus;
       oldStatus: ChecklistStatus;
+      result?: ChecklistResult;
       userId: string;
     },
   ) {
@@ -258,7 +261,13 @@ export class ChecklistWorkLifecycleService {
       entityId: params.checklistId,
       entityType: EVENT_CHECKLIST_ENTITY_TYPE,
       fieldName: 'status',
-      newValue: params.newStatus,
+      newValue:
+        params.result === undefined
+          ? params.newStatus
+          : JSON.stringify({
+              result: params.result,
+              status: params.newStatus,
+            }),
       oldValue: params.oldStatus,
       userId: params.userId,
     });

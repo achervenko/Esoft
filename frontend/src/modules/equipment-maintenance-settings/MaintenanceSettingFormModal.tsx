@@ -23,6 +23,7 @@ export function MaintenanceSettingFormModal({
   onClose,
   onSubmit,
   serverErrorCode = null,
+  serverErrorMessage = null,
   setting = null,
 }: MaintenanceSettingFormModalProps) {
   const form = useMaintenanceSettingForm({
@@ -61,6 +62,7 @@ export function MaintenanceSettingFormModal({
           onChange={form.updateDefaultChecklistTemplateId}
           options={form.checklistTemplateOptions}
           placeholder="Выберите шаблон"
+          required={mode === "create"}
           value={form.defaultChecklistTemplateId}
         />
 
@@ -84,7 +86,11 @@ export function MaintenanceSettingFormModal({
           value={form.periodicity}
         />
 
-        {form.error ? <p className="admin-form-error">{form.error}</p> : null}
+        {form.error || serverErrorMessage ? (
+          <p className="admin-form-error">
+            {form.error ?? serverErrorMessage}
+          </p>
+        ) : null}
 
         <AdminFormActions isSaving={isSaving} onClose={onClose} />
       </form>

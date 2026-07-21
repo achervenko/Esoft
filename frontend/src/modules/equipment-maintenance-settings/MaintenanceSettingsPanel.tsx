@@ -65,6 +65,7 @@ function MaintenanceSettingsPanelContent({
         checklistTemplates={panel.checklistTemplates}
         deleteError={panel.deleteError}
         formErrorCode={panel.formErrorCode}
+        formErrorMessage={panel.formErrorMessage}
         isDeleting={panel.isDeleting}
         isSaving={panel.isSaving}
         modalState={panel.modalState}
