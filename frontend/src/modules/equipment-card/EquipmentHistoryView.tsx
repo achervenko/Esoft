@@ -1,5 +1,6 @@
 import { FileCheck2, FileX2 } from "lucide-react";
 import type { EquipmentHistoryItem } from "../../shared/api/equipment/equipment.types";
+import { BUSINESS_TIME_ZONE } from "../../shared/lib/business-date";
 import "./EquipmentHistoryView.css";
 
 type EquipmentHistoryViewProps = {
@@ -15,30 +16,24 @@ type EquipmentHistoryGroup = {
 };
 
 const HISTORY_GROUP_WINDOW_MS = 15_000;
+const BUSINESS_TIME_ZONE_LABEL = "МСК";
 
 const text = {
-  changeCountOne: "1 \u043f\u043e\u043b\u0435",
-  changeCountFew: "\u043f\u043e\u043b\u044f",
-  changeCountMany: "\u043f\u043e\u043b\u0435\u0439",
-  create: "\u0421\u043e\u0437\u0434\u0430\u043d\u0438\u0435",
-  dateFallback:
-    "\u0414\u0430\u0442\u0430 \u043d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d\u0430",
-  document: "\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442",
-  documentDeleted:
-    "\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u0443\u0434\u0430\u043b\u0451\u043d",
-  documentUploaded:
-    "\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043d",
-  empty:
-    "\u041f\u043e \u044d\u0442\u043e\u0439 \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0435 \u043f\u043e\u043a\u0430 \u043d\u0435\u0442 \u0437\u0430\u043f\u0438\u0441\u0435\u0439.",
-  field: "\u041f\u043e\u043b\u0435",
-  historyTitle:
-    "\u0418\u0441\u0442\u043e\u0440\u0438\u044f \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u0439",
-  newValue:
-    "\u041d\u043e\u0432\u043e\u0435 \u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0435",
-  notSpecified: "\u041d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d\u043e",
-  oldValue:
-    "\u0421\u0442\u0430\u0440\u043e\u0435 \u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0435",
-  update: "\u0418\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u0435",
+  changeCountOne: "1 поле",
+  changeCountFew: "поля",
+  changeCountMany: "полей",
+  create: "Создание",
+  dateFallback: "Дата не указана",
+  document: "Документ",
+  documentDeleted: "Документ удалён",
+  documentUploaded: "Документ загружен",
+  empty: "По этой карточке пока нет записей.",
+  field: "Поле",
+  historyTitle: "История изменений",
+  newValue: "Новое значение",
+  notSpecified: "Не указано",
+  oldValue: "Старое значение",
+  update: "Изменение",
 };
 
 const actionLabels: Record<string, string> = {
@@ -104,7 +99,6 @@ export function EquipmentHistoryView({ history }: EquipmentHistoryViewProps) {
 }
 
 function FileHistoryDetails({ group }: { group: EquipmentHistoryGroup }) {
-  const fileName = getFileHistoryName(group);
   const isDelete = group.action === "FILE_DELETE";
   const Icon = isDelete ? FileX2 : FileCheck2;
 
@@ -120,8 +114,10 @@ function FileHistoryDetails({ group }: { group: EquipmentHistoryGroup }) {
         <Icon size={20} />
       </span>
 
-      <div>
-        <strong>{fileName}</strong>
+      <div className="equipment-history-file-list">
+        {group.items.map((item) => (
+          <strong key={item.id}>{getFileHistoryName(group.action, item)}</strong>
+        ))}
       </div>
     </div>
   );
@@ -193,9 +189,11 @@ function isFileHistoryAction(action: string) {
   return action === "FILE_UPLOAD" || action === "FILE_DELETE";
 }
 
-function getFileHistoryName(group: EquipmentHistoryGroup) {
-  const item = group.items[0];
-  const value = group.action === "FILE_DELETE" ? item?.oldValue : item?.newValue;
+function getFileHistoryName(
+  action: EquipmentHistoryGroup["action"],
+  item: EquipmentHistoryItem,
+) {
+  const value = action === "FILE_DELETE" ? item.oldValue : item.newValue;
 
   return formatNullableHistoryText(value);
 }
@@ -221,7 +219,7 @@ function formatNullableHistoryText(value: string | null) {
 
   if (
     normalizedValue.toLocaleLowerCase("ru-RU") ===
-    "\u043d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d\u043e"
+    "не указано"
   ) {
     return text.notSpecified;
   }
@@ -241,7 +239,7 @@ function formatHistoryDate(value: string) {
     hour: "2-digit",
     minute: "2-digit",
     month: "2-digit",
-    timeZone: "UTC",
+    timeZone: BUSINESS_TIME_ZONE,
     year: "numeric",
-  }).format(date)} \u041c\u0421\u041a`;
+  }).format(date)} ${BUSINESS_TIME_ZONE_LABEL}`;
 }

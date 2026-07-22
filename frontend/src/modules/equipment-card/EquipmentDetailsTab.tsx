@@ -1,6 +1,7 @@
 import type { EquipmentCard } from "../../shared/api/equipment/equipment.types";
 import type { EquipmentFile } from "../../shared/api/equipment-files/equipment-files.types";
 import { EquipmentCardGrid } from "./EquipmentCardGrid";
+import { getEquipmentPanelId, getEquipmentTabId } from "./EquipmentCardTabs";
 import { EquipmentMainDataSection } from "./EquipmentMainDataSection";
 import { EquipmentTextBlock } from "./EquipmentTextBlock";
 import {
@@ -26,7 +27,12 @@ export function EquipmentDetailsTab({
   const textBlocks = getEquipmentCardTextBlocks(equipment);
 
   return (
-    <section className="equipment-card-tab-panel" role="tabpanel">
+    <section
+      aria-labelledby={getEquipmentTabId("details")}
+      className="equipment-card-tab-panel"
+      id={getEquipmentPanelId("details")}
+      role="tabpanel"
+    >
       {mainSection ? (
         <EquipmentMainDataSection
           fields={mainSection.fields}

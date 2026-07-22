@@ -1,4 +1,5 @@
 import type { EquipmentHistoryItem } from "../../shared/api/equipment/equipment.types";
+import { getEquipmentPanelId, getEquipmentTabId } from "./EquipmentCardTabs";
 import { EquipmentHistoryView } from "./EquipmentHistoryView";
 
 type EquipmentHistoryTabProps = {
@@ -13,7 +14,12 @@ export function EquipmentHistoryTab({
   isLoading,
 }: EquipmentHistoryTabProps) {
   return (
-    <section className="equipment-card-tab-panel" role="tabpanel">
+    <section
+      aria-labelledby={getEquipmentTabId("history")}
+      className="equipment-card-tab-panel"
+      id={getEquipmentPanelId("history")}
+      role="tabpanel"
+    >
       {error ? (
         <section className="equipment-card-view-section">
           <h2>История изменений</h2>

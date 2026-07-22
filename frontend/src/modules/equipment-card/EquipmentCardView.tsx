@@ -8,7 +8,11 @@ import { buildHashRoute } from "../../shared/lib/hash-navigation";
 import { EquipmentDocumentsPanel } from "../equipment-documents";
 import { EquipmentEventsPanel } from "../equipment-events";
 import { MaintenanceSettingsPanel } from "../equipment-maintenance-settings";
-import { EquipmentCardTabs } from "./EquipmentCardTabs";
+import {
+  EquipmentCardTabs,
+  getEquipmentPanelId,
+  getEquipmentTabId,
+} from "./EquipmentCardTabs";
 import { EquipmentDetailsTab } from "./EquipmentDetailsTab";
 import { EquipmentHistoryTab } from "./EquipmentHistoryTab";
 import { navigateWithViewTransition } from "./equipment-card-navigation";
@@ -112,7 +116,12 @@ export function EquipmentCardView({
       ) : null}
 
       {activeTab === "documents" ? (
-        <section className="equipment-card-tab-panel" role="tabpanel">
+        <section
+          aria-labelledby={getEquipmentTabId("documents")}
+          className="equipment-card-tab-panel"
+          id={getEquipmentPanelId("documents")}
+          role="tabpanel"
+        >
           <EquipmentDocumentsPanel
             mode="view"
             visibleId={equipment.visibleId}
@@ -121,7 +130,12 @@ export function EquipmentCardView({
       ) : null}
 
       {activeTab === "maintenance-settings" ? (
-        <section className="equipment-card-tab-panel" role="tabpanel">
+        <section
+          aria-labelledby={getEquipmentTabId("maintenance-settings")}
+          className="equipment-card-tab-panel"
+          id={getEquipmentPanelId("maintenance-settings")}
+          role="tabpanel"
+        >
           <MaintenanceSettingsPanel
             canManage={canManageMaintenanceSettings}
             visibleId={equipment.visibleId}
@@ -130,7 +144,12 @@ export function EquipmentCardView({
       ) : null}
 
       {activeTab === "events" ? (
-        <section className="equipment-card-tab-panel" role="tabpanel">
+        <section
+          aria-labelledby={getEquipmentTabId("events")}
+          className="equipment-card-tab-panel"
+          id={getEquipmentPanelId("events")}
+          role="tabpanel"
+        >
           <EquipmentEventsPanel
             canManageEvents={canManageEquipmentEvents}
             equipmentStatus={equipment.status}
