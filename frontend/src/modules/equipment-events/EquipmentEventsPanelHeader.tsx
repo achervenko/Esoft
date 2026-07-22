@@ -8,6 +8,7 @@ type EquipmentEventsPanelHeaderProps = {
   onCreate: () => void;
   onReloadFormData: () => void;
   shouldShowMissingSettings: boolean;
+  shouldShowWrittenOffState: boolean;
 };
 
 export function EquipmentEventsPanelHeader({
@@ -18,6 +19,7 @@ export function EquipmentEventsPanelHeader({
   onCreate,
   onReloadFormData,
   shouldShowMissingSettings,
+  shouldShowWrittenOffState,
 }: EquipmentEventsPanelHeaderProps) {
   return (
     <>
@@ -55,6 +57,12 @@ export function EquipmentEventsPanelHeader({
       {shouldShowMissingSettings ? (
         <p className="admin-state">
           Для создания события сначала добавьте настройку обслуживания модели.
+        </p>
+      ) : null}
+
+      {shouldShowWrittenOffState ? (
+        <p className="admin-state">
+          Для списанного оборудования новые активные события недоступны.
         </p>
       ) : null}
     </>

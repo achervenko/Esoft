@@ -1,6 +1,4 @@
 import {
-  BadRequestException,
-  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
@@ -18,7 +16,12 @@ import {
   parseEquipmentVisibleId,
 } from './equipment-data.mapper';
 import { toEquipmentCard } from './equipment-presenter';
+import { EquipmentReferenceValidatorService } from './equipment-reference-validator.service';
 import { equipmentAuditInclude } from './equipment-relations';
+import {
+  throwIfEquipmentUniqueConflict,
+  throwVisibleIdConflict,
+} from './equipment-write.errors';
 
 @Injectable()
 export class EquipmentWriteService {
@@ -29,6 +32,7 @@ export class EquipmentWriteService {
     private readonly equipmentSearchProjector: EquipmentSearchProjector,
     private readonly numbering: IdentityNumberingService,
     private readonly prisma: PrismaService,
+    private readonly referenceValidator: EquipmentReferenceValidatorService,
   ) {}
 
   async create(dto: CreateEquipmentDto, userId?: string | null) {
@@ -42,17 +46,15 @@ export class EquipmentWriteService {
       });
 
       if (existingEquipment) {
-        this.throwVisibleIdConflict();
+        throwVisibleIdConflict();
       }
     }
 
     const equipment = await this.runEquipmentWrite(async (tx) => {
-      await this.assertModelBelongsToManufacturer(
-        tx,
-        data.modelId,
-        data.manufacturerId,
-      );
-      await this.assertResponsibleEmployeeIsActive(
+      await this.referenceValidator.assertEquipmentModelExists(tx, data.modelId);
+      await this.referenceValidator.assertSectionExists(tx, data.sectionId);
+      await this.referenceValidator.assertCountryExists(tx, data.countryId);
+      await this.referenceValidator.assertResponsibleEmployeeIsActive(
         tx,
         data.responsibleEmployeeId,
       );
@@ -71,14 +73,23 @@ export class EquipmentWriteService {
 
       await this.auditLog.logEquipmentCreated(createdEquipment.id, userId, tx);
 
-      return createdEquipment;
+      const equipmentWithRelations = await tx.equipment.findUnique({
+        where: { id: createdEquipment.id },
+        include: equipmentAuditInclude,
+      });
+
+      if (!equipmentWithRelations) {
+        throw new NotFoundException('Оборудование не найдено.');
+      }
+
+      return equipmentWithRelations;
     });
 
     if (nextVisibleId) {
       await this.syncEquipmentNumberingBestEffort();
     }
 
-    return equipment;
+    return toEquipmentCard(equipment);
   }
 
   async update(
@@ -90,12 +101,10 @@ export class EquipmentWriteService {
     const data = buildEquipmentData(dto);
 
     const updatedEquipment = await this.runEquipmentWrite(async (tx) => {
-      await this.assertModelBelongsToManufacturer(
-        tx,
-        data.modelId,
-        data.manufacturerId,
-      );
-      await this.assertResponsibleEmployeeIsActive(
+      await this.referenceValidator.assertEquipmentModelExists(tx, data.modelId);
+      await this.referenceValidator.assertSectionExists(tx, data.sectionId);
+      await this.referenceValidator.assertCountryExists(tx, data.countryId);
+      await this.referenceValidator.assertResponsibleEmployeeIsActive(
         tx,
         data.responsibleEmployeeId,
       );
@@ -128,7 +137,7 @@ export class EquipmentWriteService {
         });
 
         if (existingEquipment) {
-          this.throwVisibleIdConflict();
+          throwVisibleIdConflict();
         }
       }
 
@@ -176,60 +185,6 @@ export class EquipmentWriteService {
     return toEquipmentCard(updatedEquipment.equipment);
   }
 
-  private async assertModelBelongsToManufacturer(
-    tx: Prisma.TransactionClient,
-    modelId: number,
-    manufacturerId: number,
-  ) {
-    const models = await tx.$queryRaw<
-      Array<{
-        id: number;
-        manufacturer_id: number;
-      }>
-    >`
-      SELECT
-        em.id,
-        em.manufacturer_id
-      FROM equipment_models em
-      JOIN manufacturers m ON m.id = em.manufacturer_id
-      WHERE em.id = ${modelId}
-      FOR SHARE OF em, m
-    `;
-    const model = models[0];
-
-    if (!model || model.manufacturer_id !== manufacturerId) {
-      throw new BadRequestException(
-        'Выберите модель выбранного производителя.',
-      );
-    }
-  }
-
-  private async assertResponsibleEmployeeIsActive(
-    tx: Prisma.TransactionClient,
-    employeeId: number | null | undefined,
-  ) {
-    if (employeeId == null) {
-      return;
-    }
-
-    const employees = await tx.$queryRaw<
-      Array<{ id: number; is_active: boolean }>
-    >`
-      SELECT id, is_active
-      FROM employees
-      WHERE id = ${employeeId}
-      FOR SHARE
-    `;
-    const employee = employees[0];
-
-    if (!employee || !employee.is_active) {
-      throw new BadRequestException({
-        code: 'RESPONSIBLE_EMPLOYEE_INACTIVE',
-        message: 'Выбранный ответственный сотрудник не найден или отключён.',
-      });
-    }
-  }
-
   private async syncEquipmentNumberingBestEffort() {
     try {
       await this.numbering.syncSequence(EQUIPMENT_IDENTITY_TARGET);
@@ -247,65 +202,8 @@ export class EquipmentWriteService {
     try {
       return await this.prisma.$transaction(operation);
     } catch (error) {
-      this.throwIfEquipmentUniqueConflict(error);
+      throwIfEquipmentUniqueConflict(error);
       throw error;
     }
-  }
-
-  private throwVisibleIdConflict(): never {
-    throw new ConflictException({
-      code: 'EQUIPMENT_ID_ALREADY_EXISTS',
-      message: 'Оборудование с таким ID уже существует.',
-    });
-  }
-
-  private throwInventoryNumberConflict(): never {
-    throw new ConflictException({
-      code: 'EQUIPMENT_INVENTORY_NUMBER_ALREADY_EXISTS',
-      message: 'Оборудование с таким инвентарным номером уже существует.',
-    });
-  }
-
-  private throwIfEquipmentUniqueConflict(error: unknown) {
-    if (
-      !(error instanceof Prisma.PrismaClientKnownRequestError) ||
-      error.code !== 'P2002'
-    ) {
-      return;
-    }
-
-    const target = this.getUniqueConflictTarget(error.meta?.target);
-
-    if (
-      this.hasAnyTarget(target, [
-        'visible_id',
-        'visibleId',
-        'equipment_visible_id_key',
-      ])
-    ) {
-      this.throwVisibleIdConflict();
-    }
-
-    if (
-      this.hasAnyTarget(target, [
-        'inventory_number',
-        'inventoryNumber',
-        'equipment_inventory_number_key',
-      ])
-    ) {
-      this.throwInventoryNumberConflict();
-    }
-  }
-
-  private getUniqueConflictTarget(target: unknown) {
-    if (Array.isArray(target)) {
-      return target.filter((item): item is string => typeof item === 'string');
-    }
-
-    return typeof target === 'string' ? [target] : [];
-  }
-
-  private hasAnyTarget(target: string[], values: string[]) {
-    return values.some((value) => target.includes(value));
   }
 }

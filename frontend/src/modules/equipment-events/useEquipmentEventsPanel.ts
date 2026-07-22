@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import type { EquipmentStatus } from "../../shared/api/equipment/equipment.types";
 import type { EquipmentEventItem } from "../../shared/api/equipment-events/equipment-events.types";
 import type { EquipmentEventFormPayload } from "./equipment-event-form.types";
 import { useEquipmentEventActions } from "./useEquipmentEventActions";
@@ -9,11 +10,13 @@ import { useEquipmentEventsPanelModals } from "./useEquipmentEventsPanelModals";
 
 type UseEquipmentEventsPanelParams = {
   canManageEvents: boolean;
+  equipmentStatus: EquipmentStatus;
   visibleId: number;
 };
 
 export function useEquipmentEventsPanel({
   canManageEvents,
+  equipmentStatus,
   visibleId,
 }: UseEquipmentEventsPanelParams) {
   const [message, setMessage] = useState<string | null>(null);
@@ -68,13 +71,18 @@ export function useEquipmentEventsPanel({
   });
 
   const topLevelActionError = !activeForm && !cancelCandidate ? actionError : null;
+  const isWrittenOff = equipmentStatus === "WRITTEN_OFF";
   const canEditEvents =
     canManageEvents &&
+    !isWrittenOff &&
+    !isLoading &&
+    activeAction === null &&
     !isFormDataLoading &&
     formDataError === null &&
     responsibleUsers.length > 0;
   const isCreateDisabled =
     isLoading ||
+    isWrittenOff ||
     activeAction !== null ||
     isFormDataLoading ||
     formDataError !== null ||
@@ -82,9 +90,11 @@ export function useEquipmentEventsPanel({
     responsibleUsers.length === 0;
   const shouldShowMissingSettings =
     canManageEvents &&
+    !isWrittenOff &&
     !isFormDataLoading &&
     !formDataError &&
     maintenanceSettings.length === 0;
+  const shouldShowWrittenOffState = canManageEvents && isWrittenOff;
 
   useEffect(() => {
     clearActionError();
@@ -187,6 +197,7 @@ export function useEquipmentEventsPanel({
     requestCancel,
     responsibleUsers,
     shouldShowMissingSettings,
+    shouldShowWrittenOffState,
     topLevelActionError,
   };
 }

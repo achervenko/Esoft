@@ -5,6 +5,7 @@ import {
   EquipmentStatus,
   Prisma,
 } from '@prisma/client';
+import { DATABASE_DATE_TIME_ZONE } from '../application/business-date';
 import { PrismaService } from '../prisma/prisma.service';
 
 type AuditFieldLine = {
@@ -47,8 +48,11 @@ export class AuditLogService {
       where: { id: equipmentId },
       include: {
         country: true,
-        manufacturer: true,
-        model: true,
+        model: {
+          include: {
+            manufacturer: true,
+          },
+        },
         responsibleEmployee: true,
         section: {
           include: {
@@ -67,7 +71,7 @@ export class AuditLogService {
     const lines: AuditFieldLine[] = [
       { label: 'ID', value: equipment.visibleId },
       { label: 'Название оборудования', value: equipment.name },
-      { label: 'Производитель', value: equipment.manufacturer.name },
+      { label: 'Производитель', value: equipment.model.manufacturer.name },
       { label: 'Модель', value: equipment.model.name },
       { label: 'Технические характеристики', value: equipment.specifications },
       { label: 'Заводской номер', value: equipment.serialNumber },
@@ -162,7 +166,9 @@ export class AuditLogService {
       return null;
     }
 
-    return new Intl.DateTimeFormat('ru-RU').format(value);
+    return new Intl.DateTimeFormat('ru-RU', {
+      timeZone: DATABASE_DATE_TIME_ZONE,
+    }).format(value);
   }
 
   private formatValue(value: unknown) {

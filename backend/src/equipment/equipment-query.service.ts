@@ -16,9 +16,23 @@ export class EquipmentQueryService {
 
   async findAll() {
     const equipment = await this.prisma.equipment.findMany({
-      include: {
-        manufacturer: true,
-        model: true,
+      select: {
+        id: true,
+        inventoryNumber: true,
+        model: {
+          select: {
+            name: true,
+            manufacturer: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        name: true,
+        serialNumber: true,
+        status: true,
+        visibleId: true,
       },
       orderBy: [{ visibleId: 'asc' }],
     });

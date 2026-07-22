@@ -2,8 +2,11 @@ import { Prisma } from '@prisma/client';
 
 export const equipmentAuditInclude = {
   country: true,
-  manufacturer: true,
-  model: true,
+  model: {
+    include: {
+      manufacturer: true,
+    },
+  },
   responsibleEmployee: true,
   section: {
     include: {

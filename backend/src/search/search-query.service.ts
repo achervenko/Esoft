@@ -91,10 +91,10 @@ export class SearchQueryService {
       LEFT JOIN equipment
         ON entity_type = 'equipment'
         AND equipment.id = entity_id
-      LEFT JOIN manufacturers
-        ON manufacturers.id = equipment.manufacturer_id
       LEFT JOIN equipment_models
         ON equipment_models.id = equipment.model_id
+      LEFT JOIN manufacturers
+        ON manufacturers.id = equipment_models.manufacturer_id
       LEFT JOIN sections
         ON sections.id = equipment.section_id
       LEFT JOIN workshops
@@ -146,12 +146,13 @@ export class SearchQueryService {
 
   private toLimit(value: unknown) {
     const parsed = Number(value ?? SEARCH_DEFAULT_LIMIT);
+    const limit = Math.trunc(parsed);
 
-    if (!Number.isFinite(parsed) || parsed <= 0) {
+    if (!Number.isFinite(parsed) || limit <= 0) {
       return SEARCH_DEFAULT_LIMIT;
     }
 
-    return Math.min(Math.trunc(parsed), SEARCH_MAX_LIMIT);
+    return Math.min(limit, SEARCH_MAX_LIMIT);
   }
 
   private toOffset(value: unknown) {

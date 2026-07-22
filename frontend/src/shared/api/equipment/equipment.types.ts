@@ -1,3 +1,10 @@
+export type EquipmentStatus =
+  | "ACTIVE"
+  | "RESERVE"
+  | "REPAIR"
+  | "MAINTENANCE"
+  | "WRITTEN_OFF";
+
 export type OptionItem = {
   id: number;
   manufacturerId?: number;
@@ -7,7 +14,7 @@ export type OptionItem = {
 
 export type EquipmentStatusOption = {
   label: string;
-  value: string;
+  value: EquipmentStatus;
 };
 
 export type EquipmentCreateOptions = {
@@ -23,7 +30,6 @@ export type EquipmentCreateOptions = {
 export type CreateEquipmentPayload = {
   visibleId?: number;
   name: string;
-  manufacturerId: number;
   modelId: number;
   specifications?: string | null;
   serialNumber?: string | null;
@@ -34,7 +40,7 @@ export type CreateEquipmentPayload = {
   issueDate?: string | null;
   sectionId: number;
   responsibleEmployeeId: number;
-  status: string;
+  status: EquipmentStatus;
   operationText?: string | null;
   notes?: string | null;
 };
@@ -48,7 +54,7 @@ export type EquipmentRegistryItem = {
   model: string;
   name: string;
   serialNumber: string | null;
-  status: string;
+  status: EquipmentStatus;
   statusLabel: string;
   visibleId: number;
 };
@@ -61,7 +67,6 @@ export type EquipmentCard = {
   inventoryNumber: string;
   issueDate: string | null;
   location: string;
-  manufacturerId: number;
   manufacturer: string;
   manufactureYear: number | null;
   modelId: number;
@@ -75,7 +80,7 @@ export type EquipmentCard = {
   sectionId: number;
   serialNumber: string | null;
   specifications: string | null;
-  status: string;
+  status: EquipmentStatus;
   statusLabel: string;
   visibleId: number;
 };

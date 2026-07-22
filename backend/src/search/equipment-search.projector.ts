@@ -14,13 +14,36 @@ export class EquipmentSearchProjector {
   async upsertEquipment(tx: SearchIndexTx, equipmentId: number) {
     const equipment = await tx.equipment.findUnique({
       where: { id: equipmentId },
-      include: {
-        manufacturer: true,
-        model: true,
-        responsibleEmployee: true,
+      select: {
+        id: true,
+        inventoryNumber: true,
+        model: {
+          select: {
+            name: true,
+            manufacturer: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        name: true,
+        responsibleEmployee: {
+          select: {
+            firstName: true,
+            lastName: true,
+            middleName: true,
+          },
+        },
+        serialNumber: true,
         section: {
-          include: {
-            workshop: true,
+          select: {
+            name: true,
+            workshop: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
       },
@@ -51,7 +74,7 @@ export class EquipmentSearchProjector {
       equipment.inventoryNumber,
       removeInventorySeparators(equipment.inventoryNumber),
       equipment.model.name,
-      equipment.manufacturer.name,
+      equipment.model.manufacturer.name,
       equipment.serialNumber,
       equipment.section.workshop.name,
       equipment.section.name,

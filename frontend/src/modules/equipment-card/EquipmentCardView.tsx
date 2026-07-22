@@ -133,6 +133,7 @@ export function EquipmentCardView({
         <section className="equipment-card-tab-panel" role="tabpanel">
           <EquipmentEventsPanel
             canManageEvents={canManageEquipmentEvents}
+            equipmentStatus={equipment.status}
             visibleId={equipment.visibleId}
           />
         </section>

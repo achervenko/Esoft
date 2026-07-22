@@ -1,7 +1,6 @@
 model Manufacturer {
   id        Int              @id @default(autoincrement())
   name      String           @unique @db.VarChar(128)
-  equipment Equipment[]
   models    EquipmentModel[]
 
   @@map("manufacturers")
@@ -16,7 +15,6 @@ model EquipmentModel {
   maintenanceSettings EquipmentMaintenanceSetting[]
 
   @@unique([manufacturerId, name], map: "uq_equipment_models_manufacturer_name")
-  @@index([manufacturerId], map: "idx_equipment_models_manufacturer_id")
   @@map("equipment_models")
 }
 
@@ -87,6 +85,5 @@ model Section {
   equipment  Equipment[]
 
   @@unique([workshopId, name], map: "uq_sections_workshop_name")
-  @@index([workshopId], map: "idx_sections_workshop_id")
   @@map("sections")
 }

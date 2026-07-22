@@ -9,14 +9,16 @@ import type { EquipmentCreateOptions } from '../../shared/api/equipment/equipmen
 import { Notice } from '../../shared/ui/Notice';
 import { UnsavedChangesGuard } from '../../shared/ui/UnsavedChangesGuard';
 import { EquipmentCreateForm } from './EquipmentCreateForm';
+import { toEquipmentCreatePayload } from './model/equipment-create-form.mapper';
 import {
   type EquipmentCreateFieldErrors,
-  getEquipmentFieldErrorsFromMessage,
   initialEquipmentCreateFormState,
-  toEquipmentCreatePayload,
-  validateEquipmentCreateForm,
   type EquipmentCreateFormState,
-} from './model/equipment-create-form';
+} from './model/equipment-create-form.types';
+import {
+  getEquipmentFieldErrorsFromMessage,
+  validateEquipmentCreateForm,
+} from './model/equipment-create-form.validation';
 import './EquipmentCreatePage.css';
 
 type EquipmentCreatePageProps = {
@@ -45,6 +47,13 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
   useEffect(() => {
     let isMounted = true;
 
+    if (!isCreateAllowed) {
+      setIsLoading(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
     getEquipmentCreateOptions()
       .then((data) => {
         if (isMounted) {
@@ -69,7 +78,7 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isCreateAllowed]);
 
   const updateForm = <Key extends keyof EquipmentCreateFormState>(
     key: Key,
@@ -82,6 +91,10 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
     if (fieldErrors[key]) {
       setError(null);
       setMessage(null);
+      setFieldErrors((currentErrors) => ({
+        ...currentErrors,
+        [key]: undefined,
+      }));
     }
   };
 
@@ -99,11 +112,13 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
     }
 
     setIsSubmitting(true);
+    let shouldResetSubmitting = true;
 
     try {
       await createEquipment(toEquipmentCreatePayload(form));
 
       setMessage('Оборудование добавлено.');
+      shouldResetSubmitting = false;
       window.setTimeout(() => {
         window.location.hash = '#/equipment';
       }, 500);
@@ -119,7 +134,9 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
         ...getEquipmentFieldErrorsFromMessage(errorMessage),
       }));
     } finally {
-      setIsSubmitting(false);
+      if (shouldResetSubmitting) {
+        setIsSubmitting(false);
+      }
     }
   };
 

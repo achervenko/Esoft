@@ -7,6 +7,7 @@ const MAX_INVENTORY_NUMBER_LENGTH = 64;
 const MAX_SERIAL_NUMBER_LENGTH = 128;
 const MAX_TEXT_LENGTH = 4_000;
 const MIN_MANUFACTURE_YEAR = 1900;
+const MAX_MANUFACTURE_YEAR = 2100;
 
 export function buildEquipmentData(dto: CreateEquipmentDto) {
   const name = parseRequiredText(
@@ -18,10 +19,6 @@ export function buildEquipmentData(dto: CreateEquipmentDto) {
     dto.inventoryNumber,
     'Инвентарный номер обязателен.',
     MAX_INVENTORY_NUMBER_LENGTH,
-  );
-  const manufacturerId = parseRequiredPositiveInteger(
-    dto.manufacturerId,
-    'Производитель обязателен.',
   );
   const modelId = parseRequiredPositiveInteger(
     dto.modelId,
@@ -41,9 +38,7 @@ export function buildEquipmentData(dto: CreateEquipmentDto) {
   const issueDate = parseRuDate(dto.issueDate);
 
   if (!issueDate) {
-    throw new BadRequestException(
-      'Дата выдачи обязательна при назначении ответственного.',
-    );
+    throw new BadRequestException('Дата выдачи обязательна.');
   }
 
   if (
@@ -62,6 +57,17 @@ export function buildEquipmentData(dto: CreateEquipmentDto) {
     );
   }
 
+  if (
+    issueDate &&
+    !commissioningDate &&
+    manufactureYear &&
+    issueDate.getUTCFullYear() < manufactureYear
+  ) {
+    throw new BadRequestException(
+      'Дата выдачи не может быть раньше года выпуска оборудования.',
+    );
+  }
+
   return {
     name,
     inventoryNumber,
@@ -71,7 +77,6 @@ export function buildEquipmentData(dto: CreateEquipmentDto) {
       dto.specifications,
       'Технические характеристики слишком длинные.',
     ),
-    manufacturerId,
     countryId: parseOptionalPositiveInteger(
       dto.countryId,
       'Некорректная страна производства.',
@@ -136,7 +141,7 @@ function parseOptionalText(value: unknown, tooLongMessage: string) {
 
 function toSerialNumber(value: unknown) {
   if (value === null || value === undefined || value === '') {
-    return 'б/н';
+    return null;
   }
 
   if (typeof value !== 'string') {
@@ -146,7 +151,11 @@ function toSerialNumber(value: unknown) {
   const cleanValue = value.trim();
 
   if (!cleanValue) {
-    return 'б/н';
+    return null;
+  }
+
+  if (cleanValue.toLocaleLowerCase('ru-RU') === 'б/н') {
+    return null;
   }
 
   if (cleanValue.length > MAX_SERIAL_NUMBER_LENGTH) {
@@ -183,12 +192,10 @@ function parseManufactureYear(value: unknown) {
     typeof value !== 'number' ||
     !Number.isInteger(value) ||
     value < MIN_MANUFACTURE_YEAR ||
-    value > new Date().getFullYear() + 1
+    value > MAX_MANUFACTURE_YEAR
   ) {
     throw new BadRequestException(
-      `Год выпуска должен быть от ${MIN_MANUFACTURE_YEAR} до ${
-        new Date().getFullYear() + 1
-      }.`,
+      `Год выпуска должен быть от ${MIN_MANUFACTURE_YEAR} до ${MAX_MANUFACTURE_YEAR}.`,
     );
   }
 

@@ -1,4 +1,5 @@
 export const BUSINESS_TIME_ZONE = 'Europe/Moscow';
+export const DATABASE_DATE_TIME_ZONE = 'UTC';
 
 export function getBusinessTodayDateString() {
   const parts = new Intl.DateTimeFormat('en-US', {

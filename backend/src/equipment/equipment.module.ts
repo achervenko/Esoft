@@ -8,6 +8,7 @@ import { EquipmentFilesController } from './equipment-files.controller';
 import { EquipmentController } from './equipment.controller';
 import { EquipmentHistoryService } from './equipment-history.service';
 import { EquipmentQueryService } from './equipment-query.service';
+import { EquipmentReferenceValidatorService } from './equipment-reference-validator.service';
 import { EquipmentService } from './equipment.service';
 import { EquipmentWriteService } from './equipment-write.service';
 
@@ -23,6 +24,7 @@ import { EquipmentWriteService } from './equipment-write.service';
   providers: [
     EquipmentHistoryService,
     EquipmentQueryService,
+    EquipmentReferenceValidatorService,
     EquipmentService,
     EquipmentWriteService,
   ],

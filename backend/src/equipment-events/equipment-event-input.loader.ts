@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  EquipmentStatus,
   type EquipmentMaintenanceExecutionType,
   EquipmentEventStatus,
   Prisma,
@@ -111,9 +112,7 @@ export class EquipmentEventInputLoader {
             tx,
             params.equipmentVisibleId,
           )
-        : params.maintenanceTypeId !== undefined
-          ? await this.loadAndLockEquipmentById(tx, event.equipment.id)
-          : event.equipment;
+        : await this.loadAndLockEquipmentById(tx, event.equipment.id);
     const maintenanceTypeId = params.maintenanceTypeId ?? event.eventTypeId;
 
     const maintenanceSetting = shouldValidateEventType
@@ -219,10 +218,11 @@ export class EquipmentEventInputLoader {
         id: number;
         model_id: number;
         name: string;
+        status: EquipmentStatus;
         visible_id: number;
       }>
     >`
-      SELECT id, model_id, name, visible_id
+      SELECT id, model_id, name, status, visible_id
       FROM equipment
       WHERE visible_id = ${visibleId}
       FOR SHARE
@@ -235,6 +235,8 @@ export class EquipmentEventInputLoader {
         'Оборудование не найдено.',
       );
     }
+
+    this.assertEquipmentAllowsActiveEvents(equipment.status);
 
     return {
       id: equipment.id,
@@ -252,9 +254,10 @@ export class EquipmentEventInputLoader {
       Array<{
         id: number;
         model_id: number;
+        status: EquipmentStatus;
       }>
     >`
-      SELECT id, model_id
+      SELECT id, model_id, status
       FROM equipment
       WHERE id = ${equipmentId}
       FOR SHARE
@@ -268,10 +271,21 @@ export class EquipmentEventInputLoader {
       );
     }
 
+    this.assertEquipmentAllowsActiveEvents(equipment.status);
+
     return {
       id: equipment.id,
       modelId: equipment.model_id,
     };
+  }
+
+  private assertEquipmentAllowsActiveEvents(status: EquipmentStatus) {
+    if (status === EquipmentStatus.WRITTEN_OFF) {
+      throwEquipmentEventBadRequest(
+        'EQUIPMENT_WRITTEN_OFF',
+        'Для списанного оборудования нельзя создавать или изменять активные события.',
+      );
+    }
   }
 
   private async lockEventForUpdate(

@@ -1,26 +1,18 @@
 import { ArrowLeft } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
 import { EquipmentDocumentsPanel } from "../../modules/equipment-documents";
-import { canEditEquipment } from "../../modules/equipment-permissions";
-import {
-  getEquipmentCard,
-  getEquipmentCreateOptions,
-  updateEquipment,
-} from "../../shared/api/equipment/equipment.api";
-import type { EquipmentCreateOptions } from "../../shared/api/equipment/equipment.types";
-import { buildHashRoute } from "../../shared/lib/hash-navigation";
 import { Notice } from "../../shared/ui/Notice";
 import { UnsavedChangesGuard } from "../../shared/ui/UnsavedChangesGuard";
 import { EquipmentCreateForm } from "../EquipmentCreatePage/EquipmentCreateForm";
 import {
-  type EquipmentCreateFieldErrors,
-  getEquipmentFieldErrorsFromMessage,
-  initialEquipmentCreateFormState,
-  toEquipmentCreatePayload,
-  toEquipmentFormState,
-  validateEquipmentCreateForm,
-  type EquipmentCreateFormState,
-} from "../EquipmentCreatePage/model/equipment-create-form";
+  EquipmentEditTabs,
+  getEquipmentEditPanelId,
+  getEquipmentEditTabId,
+} from "./EquipmentEditTabs";
+import {
+  buildEquipmentViewHref,
+  type EquipmentEditTab,
+} from "./equipment-edit-navigation";
+import { useEquipmentEditPage } from "./useEquipmentEditPage";
 import "../EquipmentCreatePage/EquipmentCreatePage.css";
 
 type EquipmentEditPageProps = {
@@ -30,140 +22,24 @@ type EquipmentEditPageProps = {
   visibleId: number;
 };
 
-type EquipmentEditTab = "details" | "documents";
-
 export function EquipmentEditPage({
   initialTab = "details",
   returnTo,
   userRole,
   visibleId,
 }: EquipmentEditPageProps) {
-  const isEditAllowed = canEditEquipment(userRole);
-  const [form, setForm] = useState<EquipmentCreateFormState>(
-    initialEquipmentCreateFormState,
-  );
-  const [initialForm, setInitialForm] =
-    useState<EquipmentCreateFormState | null>(null);
-  const [options, setOptions] = useState<EquipmentCreateOptions | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<EquipmentEditTab>(initialTab);
-  const [fieldErrors, setFieldErrors] = useState<EquipmentCreateFieldErrors>(
-    {},
-  );
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const page = useEquipmentEditPage({
+    initialTab,
+    returnTo,
+    userRole,
+    visibleId,
+  });
 
-  const hasUnsavedChanges = useMemo(
-    () =>
-      Boolean(
-        initialForm && JSON.stringify(form) !== JSON.stringify(initialForm),
-      ),
-    [form, initialForm],
-  );
-
-  useEffect(() => {
-    let isMounted = true;
-
-    Promise.all([getEquipmentCreateOptions(), getEquipmentCard(visibleId)])
-      .then(([optionsData, equipment]) => {
-        if (!isMounted) {
-          return;
-        }
-
-        const formState = toEquipmentFormState(equipment);
-        setOptions(optionsData);
-        setForm(formState);
-        setInitialForm(formState);
-      })
-      .catch((requestError: Error) => {
-        if (isMounted) {
-          setError(requestError.message);
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [visibleId]);
-
-  useEffect(() => {
-    setActiveTab(initialTab);
-  }, [initialTab]);
-
-  const updateForm = <Key extends keyof EquipmentCreateFormState>(
-    key: Key,
-    value: EquipmentCreateFormState[Key],
-  ) => {
-    setForm((currentForm) => ({ ...currentForm, [key]: value }));
-  };
-
-  const handleFieldFocus = (key: keyof EquipmentCreateFormState) => {
-    if (fieldErrors[key]) {
-      setError(null);
-      setMessage(null);
-    }
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError(null);
-    setMessage(null);
-
-    const validation = validateEquipmentCreateForm(form);
-    setFieldErrors(validation.fieldErrors);
-
-    if (validation.formError) {
-      setError(validation.formError);
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const updatedEquipment = await updateEquipment(
-        visibleId,
-        toEquipmentCreatePayload(form),
-      );
-
-      setMessage("Оборудование сохранено.");
-      const updatedForm = toEquipmentFormState(updatedEquipment);
-      setInitialForm(updatedForm);
-      setForm(updatedForm);
-
-      window.setTimeout(() => {
-        window.location.hash = buildEquipmentViewHref(
-          updatedEquipment.visibleId,
-          activeTab,
-          returnTo,
-        );
-      }, 500);
-    } catch (requestError) {
-      const errorMessage =
-        requestError instanceof Error
-          ? requestError.message
-          : "Не удалось сохранить оборудование.";
-
-      setError(errorMessage);
-      setFieldErrors((currentErrors) => ({
-        ...currentErrors,
-        ...getEquipmentFieldErrorsFromMessage(errorMessage),
-      }));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (!isEditAllowed) {
+  if (!page.isEditAllowed) {
     return (
       <div className="equipment-create-page">
         <BackToCardLink
-          activeTab={activeTab}
+          activeTab={page.activeTab}
           returnTo={returnTo}
           visibleId={visibleId}
         />
@@ -177,9 +53,9 @@ export function EquipmentEditPage({
 
   return (
     <div className="equipment-create-page">
-      <UnsavedChangesGuard hasChanges={hasUnsavedChanges} />
+      <UnsavedChangesGuard hasChanges={page.hasUnsavedChanges} />
       <BackToCardLink
-        activeTab={activeTab}
+        activeTab={page.activeTab}
         returnTo={returnTo}
         visibleId={visibleId}
       />
@@ -188,64 +64,54 @@ export function EquipmentEditPage({
         <h1>Редактирование оборудования</h1>
       </header>
 
-      {isLoading ? <Notice>Загрузка карточки оборудования...</Notice> : null}
-      {error ? (
+      {page.isLoading ? <Notice>Загрузка карточки оборудования...</Notice> : null}
+      {page.error ? (
         <Notice floating tone="error">
-          {error}
+          {page.error}
         </Notice>
       ) : null}
-      {message ? (
+      {page.message ? (
         <Notice floating tone="success">
-          {message}
+          {page.message}
         </Notice>
       ) : null}
 
-      <div className="equipment-edit-tabs" role="tablist">
-        <button
-          aria-selected={activeTab === "details"}
-          className={activeTab === "details" ? "active" : undefined}
-          onClick={() => setActiveTab("details")}
-          role="tab"
-          type="button"
-        >
-          Данные
-        </button>
-        <button
-          aria-selected={activeTab === "documents"}
-          className={activeTab === "documents" ? "active" : undefined}
-          onClick={() => setActiveTab("documents")}
-          role="tab"
-          type="button"
-        >
-          Документы
-        </button>
-      </div>
+      <EquipmentEditTabs
+        activeTab={page.activeTab}
+        onTabChange={page.setActiveTab}
+      />
 
-      {options ? (
-        activeTab === "details" ? (
-          <EquipmentCreateForm
-            fieldErrors={fieldErrors}
-            form={form}
-            isSubmitting={isSubmitting}
-            onChange={updateForm}
-            onFieldFocus={handleFieldFocus}
-            onSubmit={handleSubmit}
-            options={options}
-            submitLabel="Сохранить изменения"
-            submittingLabel="Сохранение..."
-          />
+      {page.options && page.initialForm && !page.isLoading ? (
+        page.activeTab === "details" ? (
+          <section
+            aria-labelledby={getEquipmentEditTabId("details")}
+            id={getEquipmentEditPanelId("details")}
+            role="tabpanel"
+          >
+            <EquipmentCreateForm
+              fieldErrors={page.fieldErrors}
+              form={page.form}
+              isSubmitting={page.isSubmitting}
+              onChange={page.updateForm}
+              onFieldFocus={page.handleFieldFocus}
+              onSubmit={page.handleSubmit}
+              options={page.options}
+              submitLabel="Сохранить изменения"
+              submittingLabel="Сохранение..."
+            />
+          </section>
         ) : (
-          <EquipmentDocumentsPanel
-            mode="edit"
-            onSaved={() => {
-              window.location.hash = buildEquipmentViewHref(
-                visibleId,
-                "documents",
-                returnTo,
-              );
-            }}
-            visibleId={visibleId}
-          />
+          <section
+            aria-labelledby={getEquipmentEditTabId("documents")}
+            id={getEquipmentEditPanelId("documents")}
+            role="tabpanel"
+          >
+            <EquipmentDocumentsPanel
+              mode="edit"
+              onSaved={page.handleDocumentsSaved}
+              visibleId={visibleId}
+            />
+          </section>
         )
       ) : null}
     </div>
@@ -270,15 +136,4 @@ function BackToCardLink({
       <span>{"Назад"}</span>
     </a>
   );
-}
-
-function buildEquipmentViewHref(
-  visibleId: number,
-  activeTab: EquipmentEditTab,
-  returnTo: string,
-) {
-  return buildHashRoute(`#/equipment/${visibleId}`, {
-    returnTo,
-    tab: activeTab === "documents" ? "documents" : null,
-  });
 }

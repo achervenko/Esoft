@@ -2,11 +2,11 @@ import { Save } from 'lucide-react';
 import type { EquipmentCreateOptions } from '../../shared/api/equipment/equipment.types';
 import { SearchSelect } from '../../shared/ui/SearchSelect';
 import { SelectDropdown } from '../../shared/ui/SelectDropdown';
-import {
-  formatRuDate,
-  type EquipmentCreateFieldErrors,
-  type EquipmentCreateFormState,
-} from './model/equipment-create-form';
+import { formatRuDate } from './model/equipment-create-form.formatters';
+import type {
+  EquipmentCreateFieldErrors,
+  EquipmentCreateFormState,
+} from './model/equipment-create-form.types';
 
 type EquipmentCreateFormProps = {
   fieldErrors: EquipmentCreateFieldErrors;
@@ -111,7 +111,7 @@ export function EquipmentCreateForm({
           value={form.modelId}
         />
 
-        <label className="form-field form-field-wide">
+        <label className={`form-field form-field-wide${fieldErrors.specifications ? ' has-error' : ''}`}>
           <span>Технические характеристики</span>
           <textarea
             onChange={(event) => onChange('specifications', event.target.value)}
@@ -119,6 +119,9 @@ export function EquipmentCreateForm({
             rows={5}
             value={form.specifications}
           />
+          {fieldErrors.specifications ? (
+            <small className="field-error">{fieldErrors.specifications}</small>
+          ) : null}
         </label>
 
         <label className={`form-field${fieldErrors.serialNumber ? ' has-error' : ''}`}>
@@ -245,7 +248,7 @@ export function EquipmentCreateForm({
           value={form.status}
         />
 
-        <label className="form-field form-field-wide">
+        <label className={`form-field form-field-wide${fieldErrors.operationText ? ' has-error' : ''}`}>
           <span>Технологическая операция</span>
           <textarea
             onChange={(event) => onChange('operationText', event.target.value)}
@@ -253,9 +256,12 @@ export function EquipmentCreateForm({
             rows={5}
             value={form.operationText}
           />
+          {fieldErrors.operationText ? (
+            <small className="field-error">{fieldErrors.operationText}</small>
+          ) : null}
         </label>
 
-        <label className="form-field form-field-wide">
+        <label className={`form-field form-field-wide${fieldErrors.notes ? ' has-error' : ''}`}>
           <span>Примечание</span>
           <textarea
             onChange={(event) => onChange('notes', event.target.value)}
@@ -263,6 +269,9 @@ export function EquipmentCreateForm({
             rows={5}
             value={form.notes}
           />
+          {fieldErrors.notes ? (
+            <small className="field-error">{fieldErrors.notes}</small>
+          ) : null}
         </label>
       </div>
 

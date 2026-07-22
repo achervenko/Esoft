@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { DATABASE_DATE_TIME_ZONE } from '../application/business-date';
 import { EquipmentWithAuditRelations } from './equipment-relations';
 import { getEquipmentStatusLabel } from './equipment-presenter';
 
@@ -46,7 +47,7 @@ export function toEquipmentAuditValues(
   return {
     ID: String(equipment.visibleId),
     'Название оборудования': equipment.name,
-    Производитель: equipment.manufacturer.name,
+    Производитель: equipment.model.manufacturer.name,
     Модель: equipment.model.name,
     'Технические характеристики': equipment.specifications,
     'Заводской номер': equipment.serialNumber,
@@ -82,5 +83,7 @@ export function formatDateForAudit(value: Date | null) {
     return null;
   }
 
-  return new Intl.DateTimeFormat('ru-RU').format(value);
+  return new Intl.DateTimeFormat('ru-RU', {
+    timeZone: DATABASE_DATE_TIME_ZONE,
+  }).format(value);
 }

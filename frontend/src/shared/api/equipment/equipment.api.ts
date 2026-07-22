@@ -25,7 +25,7 @@ export function getEquipmentHistory(visibleId: number) {
 }
 
 export function createEquipment(payload: CreateEquipmentPayload) {
-  return request("/api/equipment", {
+  return request<EquipmentCard>("/api/equipment", {
     body: JSON.stringify(payload),
     method: "POST",
   });

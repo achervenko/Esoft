@@ -16,14 +16,12 @@ model Equipment {
   name                  String           @db.VarChar(128)
   modelId               Int              @map("model_id")
   model                 EquipmentModel   @relation(fields: [modelId], references: [id], onDelete: Restrict)
-  specifications        String?
-  manufacturerId        Int              @map("manufacturer_id")
-  manufacturer          Manufacturer     @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
+  specifications        String?          @db.VarChar(4000)
   countryId             Int?             @map("country_id")
   country               Country?         @relation(fields: [countryId], references: [id], onDelete: Restrict)
   manufactureYear       Int?             @map("manufacture_year") @db.SmallInt
   commissioningDate     DateTime?        @map("commissioning_date") @db.Date
-  issueDate             DateTime?        @map("issue_date") @db.Date
+  issueDate             DateTime         @map("issue_date") @db.Date
   sectionId             Int              @map("section_id")
   section               Section          @relation(fields: [sectionId], references: [id], onDelete: Restrict)
   responsibleEmployeeId Int              @map("responsible_employee_id")
@@ -31,8 +29,8 @@ model Equipment {
   events                EquipmentEvent[]
   checklists            Checklist[]
   status                EquipmentStatus  @default(ACTIVE)
-  operationText         String?          @map("operation_text")
-  notes                 String?
+  operationText         String?          @map("operation_text") @db.VarChar(4000)
+  notes                 String?          @db.VarChar(4000)
 
   @@index([serialNumber], map: "idx_equipment_serial_number")
   @@index([status], map: "idx_equipment_status")

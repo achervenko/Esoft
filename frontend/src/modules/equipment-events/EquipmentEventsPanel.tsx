@@ -1,3 +1,4 @@
+import type { EquipmentStatus } from "../../shared/api/equipment/equipment.types";
 import "../../shared/ui/AdminPage.css";
 import { Notice } from "../../shared/ui/Notice";
 import { EquipmentEventsPanelHeader } from "./EquipmentEventsPanelHeader";
@@ -8,14 +9,20 @@ import "./EquipmentEventsPanel.css";
 
 type EquipmentEventsPanelProps = {
   canManageEvents: boolean;
+  equipmentStatus: EquipmentStatus;
   visibleId: number;
 };
 
 export function EquipmentEventsPanel({
   canManageEvents,
+  equipmentStatus,
   visibleId,
 }: EquipmentEventsPanelProps) {
-  const panel = useEquipmentEventsPanel({ canManageEvents, visibleId });
+  const panel = useEquipmentEventsPanel({
+    canManageEvents,
+    equipmentStatus,
+    visibleId,
+  });
 
   return (
     <section className="equipment-events-panel">
@@ -39,6 +46,7 @@ export function EquipmentEventsPanel({
           isFormDataLoading={panel.isFormDataLoading}
           onCreate={panel.openCreateForm}
           onReloadFormData={() => void panel.reloadFormData()}
+          shouldShowWrittenOffState={panel.shouldShowWrittenOffState}
           shouldShowMissingSettings={panel.shouldShowMissingSettings}
         />
 
