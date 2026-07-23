@@ -1,17 +1,13 @@
+import {
+  getEquipmentEditPanelId,
+  getEquipmentEditTabId,
+} from "./equipment-edit-tab-ids";
 import type { EquipmentEditTab } from "./equipment-edit-navigation";
 
 type EquipmentEditTabsProps = {
   activeTab: EquipmentEditTab;
   onTabChange: (tab: EquipmentEditTab) => void;
 };
-
-export function getEquipmentEditTabId(tab: EquipmentEditTab) {
-  return `equipment-edit-tab-${tab}`;
-}
-
-export function getEquipmentEditPanelId(tab: EquipmentEditTab) {
-  return `equipment-edit-panel-${tab}`;
-}
 
 export function EquipmentEditTabs({
   activeTab,

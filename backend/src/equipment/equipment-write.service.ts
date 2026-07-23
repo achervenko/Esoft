@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { IdentityNumberingService } from '../application/numbering/identity-numbering.service';
 import { AuditLogService } from '../audit/audit-log.service';
@@ -51,7 +47,10 @@ export class EquipmentWriteService {
     }
 
     const equipment = await this.runEquipmentWrite(async (tx) => {
-      await this.referenceValidator.assertEquipmentModelExists(tx, data.modelId);
+      await this.referenceValidator.assertEquipmentModelExists(
+        tx,
+        data.modelId,
+      );
       await this.referenceValidator.assertSectionExists(tx, data.sectionId);
       await this.referenceValidator.assertCountryExists(tx, data.countryId);
       await this.referenceValidator.assertResponsibleEmployeeIsActive(
@@ -101,7 +100,10 @@ export class EquipmentWriteService {
     const data = buildEquipmentData(dto);
 
     const updatedEquipment = await this.runEquipmentWrite(async (tx) => {
-      await this.referenceValidator.assertEquipmentModelExists(tx, data.modelId);
+      await this.referenceValidator.assertEquipmentModelExists(
+        tx,
+        data.modelId,
+      );
       await this.referenceValidator.assertSectionExists(tx, data.sectionId);
       await this.referenceValidator.assertCountryExists(tx, data.countryId);
       await this.referenceValidator.assertResponsibleEmployeeIsActive(

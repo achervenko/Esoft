@@ -67,7 +67,9 @@ describe('equipment write errors', () => {
   });
 
   it('ignores non-Prisma errors', () => {
-    expect(() => throwIfEquipmentUniqueConflict(new Error('boom'))).not.toThrow();
+    expect(() =>
+      throwIfEquipmentUniqueConflict(new Error('boom')),
+    ).not.toThrow();
   });
 });
 

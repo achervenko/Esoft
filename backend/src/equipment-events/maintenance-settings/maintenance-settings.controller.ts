@@ -26,17 +26,13 @@ export class MaintenanceSettingsController {
   ) {}
 
   @Get()
-  getSettings(
-    @Param('visibleId', ParseIntPipe) visibleId: number,
-    @Session() _session: UserSession<Auth>,
-  ) {
+  getSettings(@Param('visibleId', ParseIntPipe) visibleId: number) {
     return this.maintenanceSettingsService.getSettings(visibleId);
   }
 
   @Get('available-types')
   getAvailableMaintenanceTypes(
     @Param('visibleId', ParseIntPipe) visibleId: number,
-    @Session() _session: UserSession<Auth>,
   ) {
     return this.maintenanceSettingsService.getAvailableMaintenanceTypes(
       visibleId,

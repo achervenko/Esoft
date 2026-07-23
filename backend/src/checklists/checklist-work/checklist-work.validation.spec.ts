@@ -61,12 +61,13 @@ describe('checklist work validation', () => {
     });
 
     it('allows draft result to be null', () => {
-      expect(parseChecklistAnswersDto({ answers: [], result: null, version: 1 }))
-        .toEqual({
-          answers: [],
-          result: null,
-          version: 1,
-        });
+      expect(
+        parseChecklistAnswersDto({ answers: [], result: null, version: 1 }),
+      ).toEqual({
+        answers: [],
+        result: null,
+        version: 1,
+      });
     });
 
     it('rejects unknown draft result', () => {
@@ -119,12 +120,13 @@ describe('checklist work validation', () => {
     });
 
     it('converts empty draft result to null', () => {
-      expect(parseChecklistAnswersDto({ answers: [], result: '', version: 1 }))
-        .toEqual({
-          answers: [],
-          result: null,
-          version: 1,
-        });
+      expect(
+        parseChecklistAnswersDto({ answers: [], result: '', version: 1 }),
+      ).toEqual({
+        answers: [],
+        result: null,
+        version: 1,
+      });
     });
   });
 });

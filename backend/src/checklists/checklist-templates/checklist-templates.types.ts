@@ -1,4 +1,3 @@
-import type { Prisma } from '@prisma/client';
 import type { parseArchiveTemplateDto } from './checklist-template-lifecycle.validation';
 import type { parseChecklistTemplatePayload } from './checklist-template.validation';
 import type { parseChecklistTemplatesQuery } from './checklist-templates-query.validation';

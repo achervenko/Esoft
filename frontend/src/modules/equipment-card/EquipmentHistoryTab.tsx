@@ -1,6 +1,9 @@
 import type { EquipmentHistoryItem } from "../../shared/api/equipment/equipment.types";
-import { getEquipmentPanelId, getEquipmentTabId } from "./EquipmentCardTabs";
 import { EquipmentHistoryView } from "./EquipmentHistoryView";
+import {
+  getEquipmentPanelId,
+  getEquipmentTabId,
+} from "./equipment-card-tab-ids";
 
 type EquipmentHistoryTabProps = {
   error: string | null;

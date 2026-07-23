@@ -51,10 +51,7 @@ export class EquipmentReferenceValidatorService {
     }
   }
 
-  async assertSectionExists(
-    tx: Prisma.TransactionClient,
-    sectionId: number,
-  ) {
+  async assertSectionExists(tx: Prisma.TransactionClient, sectionId: number) {
     const section = await tx.section.findUnique({
       where: { id: sectionId },
       select: { id: true },

@@ -28,10 +28,7 @@ export class EquipmentEventsController {
   ) {}
 
   @Get('equipment-events')
-  findAll(
-    @Query() query: EquipmentEventsQueryDto,
-    @Session() _session: UserSession<Auth>,
-  ) {
+  findAll(@Query() query: EquipmentEventsQueryDto) {
     return this.equipmentEventsService.findAll(
       parseEquipmentEventsQuery(query),
     );
@@ -45,10 +42,7 @@ export class EquipmentEventsController {
   }
 
   @Get('equipment-events/:id')
-  findOne(
-    @Param('id', ParseIntPipe) id: number,
-    @Session() _session: UserSession<Auth>,
-  ) {
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.equipmentEventsService.findOne(id);
   }
 

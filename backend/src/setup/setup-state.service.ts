@@ -108,10 +108,7 @@ export class SetupStateService {
     }
   }
 
-  async lockSetupEmployee(
-    employeeId: number,
-    tx: Prisma.TransactionClient,
-  ) {
+  async lockSetupEmployee(employeeId: number, tx: Prisma.TransactionClient) {
     const employees = await tx.$queryRaw<LockedSetupEmployeeRow[]>`
       SELECT id, last_name, first_name, middle_name, position, is_active
       FROM employees

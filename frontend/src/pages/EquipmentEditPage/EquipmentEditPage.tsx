@@ -3,11 +3,11 @@ import { EquipmentDocumentsPanel } from "../../modules/equipment-documents";
 import { Notice } from "../../shared/ui/Notice";
 import { UnsavedChangesGuard } from "../../shared/ui/UnsavedChangesGuard";
 import { EquipmentCreateForm } from "../EquipmentCreatePage/EquipmentCreateForm";
+import { EquipmentEditTabs } from "./EquipmentEditTabs";
 import {
-  EquipmentEditTabs,
   getEquipmentEditPanelId,
   getEquipmentEditTabId,
-} from "./EquipmentEditTabs";
+} from "./equipment-edit-tab-ids";
 import {
   buildEquipmentViewHref,
   type EquipmentEditTab,

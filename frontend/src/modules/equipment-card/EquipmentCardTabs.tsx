@@ -1,5 +1,9 @@
 import { useRef } from "react";
 import type { KeyboardEvent } from "react";
+import {
+  getEquipmentPanelId,
+  getEquipmentTabId,
+} from "./equipment-card-tab-ids";
 import type { EquipmentViewTab } from "./equipment-card-tabs";
 
 type EquipmentCardTabsProps = {
@@ -14,14 +18,6 @@ const tabConfig: Array<{ label: string; value: EquipmentViewTab }> = [
   { label: "Настройки обслуживания", value: "maintenance-settings" },
   { label: "История изменений", value: "history" },
 ];
-
-function getEquipmentTabId(tab: EquipmentViewTab) {
-  return `equipment-tab-${tab}`;
-}
-
-function getEquipmentPanelId(tab: EquipmentViewTab) {
-  return `equipment-panel-${tab}`;
-}
 
 export function EquipmentCardTabs({
   activeTab,
@@ -100,5 +96,3 @@ export function EquipmentCardTabs({
     </div>
   );
 }
-
-export { getEquipmentPanelId, getEquipmentTabId };

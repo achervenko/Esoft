@@ -12,6 +12,14 @@ describe('EquipmentWriteService', () => {
   let auditLog: jest.Mocked<AuditLogService>;
   let equipmentSearchProjector: jest.Mocked<EquipmentSearchProjector>;
   let numbering: jest.Mocked<IdentityNumberingService>;
+  let logEquipmentCreated: jest.Mock;
+  let logEquipmentUpdated: jest.Mock;
+  let upsertEquipment: jest.Mock;
+  let syncSequence: jest.Mock;
+  let assertCountryExists: jest.Mock;
+  let assertEquipmentModelExists: jest.Mock;
+  let assertResponsibleEmployeeIsActive: jest.Mock;
+  let assertSectionExists: jest.Mock;
   let prisma: {
     equipment: { findUnique: jest.Mock };
     $transaction: jest.Mock;
@@ -19,15 +27,24 @@ describe('EquipmentWriteService', () => {
   let referenceValidator: jest.Mocked<EquipmentReferenceValidatorService>;
 
   beforeEach(() => {
+    logEquipmentCreated = jest.fn();
+    logEquipmentUpdated = jest.fn();
+    upsertEquipment = jest.fn();
+    syncSequence = jest.fn();
+    assertCountryExists = jest.fn();
+    assertEquipmentModelExists = jest.fn();
+    assertResponsibleEmployeeIsActive = jest.fn();
+    assertSectionExists = jest.fn();
+
     auditLog = {
-      logEquipmentCreated: jest.fn(),
-      logEquipmentUpdated: jest.fn(),
+      logEquipmentCreated,
+      logEquipmentUpdated,
     } as never;
     equipmentSearchProjector = {
-      upsertEquipment: jest.fn(),
+      upsertEquipment,
     } as never;
     numbering = {
-      syncSequence: jest.fn(),
+      syncSequence,
     } as never;
     prisma = {
       equipment: {
@@ -36,11 +53,11 @@ describe('EquipmentWriteService', () => {
       $transaction: jest.fn(),
     };
     referenceValidator = {
-      assertCountryExists: jest.fn(),
-      assertEquipmentModelExists: jest.fn(),
-      assertResponsibleEmployeeIsActive: jest.fn(),
-      assertSectionExists: jest.fn(),
-    } as never;
+      assertCountryExists,
+      assertEquipmentModelExists,
+      assertResponsibleEmployeeIsActive,
+      assertSectionExists,
+    };
 
     service = new EquipmentWriteService(
       auditLog,
@@ -50,6 +67,14 @@ describe('EquipmentWriteService', () => {
       referenceValidator,
     );
   });
+
+  function useTransactionMock<TTransaction>(tx: TTransaction) {
+    prisma.$transaction.mockImplementation(
+      (
+        operation: (transaction: TTransaction) => Promise<unknown>,
+      ): Promise<unknown> => operation(tx),
+    );
+  }
 
   it('creates equipment and returns a presented card', async () => {
     const equipmentWithRelations = createEquipmentWithRelations({
@@ -63,29 +88,20 @@ describe('EquipmentWriteService', () => {
       },
     };
 
-    prisma.$transaction.mockImplementation(async (operation) => operation(tx as never));
+    useTransactionMock(tx);
 
-    const result = await service.create(createDto({ visibleId: 500 }), 'user-1');
+    const result = await service.create(
+      createDto({ visibleId: 500 }),
+      'user-1',
+    );
 
-    expect(referenceValidator.assertEquipmentModelExists).toHaveBeenCalledWith(
-      tx,
-      2,
-    );
-    expect(referenceValidator.assertResponsibleEmployeeIsActive).toHaveBeenCalledWith(
-      tx,
-      7,
-    );
-    expect(referenceValidator.assertSectionExists).toHaveBeenCalledWith(tx, 3);
-    expect(referenceValidator.assertCountryExists).toHaveBeenCalledWith(
-      tx,
-      null,
-    );
-    expect(auditLog.logEquipmentCreated).toHaveBeenCalledWith(101, 'user-1', tx);
-    expect(equipmentSearchProjector.upsertEquipment).toHaveBeenCalledWith(
-      tx,
-      101,
-    );
-    expect(numbering.syncSequence).toHaveBeenCalled();
+    expect(assertEquipmentModelExists).toHaveBeenCalledWith(tx, 2);
+    expect(assertResponsibleEmployeeIsActive).toHaveBeenCalledWith(tx, 7);
+    expect(assertSectionExists).toHaveBeenCalledWith(tx, 3);
+    expect(assertCountryExists).toHaveBeenCalledWith(tx, null);
+    expect(logEquipmentCreated).toHaveBeenCalledWith(101, 'user-1', tx);
+    expect(upsertEquipment).toHaveBeenCalledWith(tx, 101);
+    expect(syncSequence).toHaveBeenCalled();
     expect(result).toEqual(
       expect.objectContaining({
         manufacturer: 'DMG',
@@ -107,19 +123,19 @@ describe('EquipmentWriteService', () => {
       },
     };
 
-    prisma.$transaction.mockImplementation(async (operation) => operation(tx as never));
+    useTransactionMock(tx);
 
     await service.create(createDto({ visibleId: undefined }), 'user-1');
 
-    expect(numbering.syncSequence).not.toHaveBeenCalled();
+    expect(syncSequence).not.toHaveBeenCalled();
   });
 
   it('throws conflict when a custom visible id already exists on create', async () => {
     prisma.equipment.findUnique.mockResolvedValue({ id: 1 });
 
-    await expect(service.create(createDto({ visibleId: 500 }), 'user-1')).rejects.toThrow(
-      ConflictException,
-    );
+    await expect(
+      service.create(createDto({ visibleId: 500 }), 'user-1'),
+    ).rejects.toThrow(ConflictException);
   });
 
   it('maps Prisma unique conflicts from transaction failures', async () => {
@@ -131,9 +147,9 @@ describe('EquipmentWriteService', () => {
       }),
     );
 
-    await expect(service.create(createDto({ visibleId: undefined }), 'user-1')).rejects.toThrow(
-      ConflictException,
-    );
+    await expect(
+      service.create(createDto({ visibleId: undefined }), 'user-1'),
+    ).rejects.toThrow(ConflictException);
   });
 
   it('updates equipment, refreshes search, writes audit and returns a presented card', async () => {
@@ -156,7 +172,7 @@ describe('EquipmentWriteService', () => {
       },
     };
 
-    prisma.$transaction.mockImplementation(async (operation) => operation(tx as never));
+    useTransactionMock(tx);
 
     const result = await service.update(
       42,
@@ -169,11 +185,8 @@ describe('EquipmentWriteService', () => {
         where: { id: 101 },
       }),
     );
-    expect(equipmentSearchProjector.upsertEquipment).toHaveBeenCalledWith(
-      tx,
-      101,
-    );
-    expect(auditLog.logEquipmentUpdated).toHaveBeenCalledWith(
+    expect(upsertEquipment).toHaveBeenCalledWith(tx, 101);
+    expect(logEquipmentUpdated).toHaveBeenCalledWith(
       expect.objectContaining({
         equipmentId: 101,
         tx,
@@ -210,7 +223,7 @@ describe('EquipmentWriteService', () => {
       },
     };
 
-    prisma.$transaction.mockImplementation(async (operation) => operation(tx as never));
+    useTransactionMock(tx);
 
     await service.update(42, createDto({ visibleId: 500 }), 'user-1');
 
@@ -221,7 +234,7 @@ describe('EquipmentWriteService', () => {
         where: { visibleId: 500 },
       }),
     );
-    expect(numbering.syncSequence).toHaveBeenCalled();
+    expect(syncSequence).toHaveBeenCalled();
   });
 
   it('throws conflict when the new visible id already exists on update', async () => {
@@ -239,13 +252,13 @@ describe('EquipmentWriteService', () => {
       },
     };
 
-    prisma.$transaction.mockImplementation(async (operation) => operation(tx as never));
+    useTransactionMock(tx);
 
     await expect(
       service.update(42, createDto({ visibleId: 500 }), 'user-1'),
     ).rejects.toThrow(ConflictException);
 
-    expect(numbering.syncSequence).not.toHaveBeenCalled();
+    expect(syncSequence).not.toHaveBeenCalled();
   });
 
   it('does not sync numbering when visible id stays the same on update', async () => {
@@ -268,11 +281,11 @@ describe('EquipmentWriteService', () => {
       },
     };
 
-    prisma.$transaction.mockImplementation(async (operation) => operation(tx as never));
+    useTransactionMock(tx);
 
     await service.update(42, createDto({ visibleId: 42 }), 'user-1');
 
-    expect(numbering.syncSequence).not.toHaveBeenCalled();
+    expect(syncSequence).not.toHaveBeenCalled();
   });
 
   it('throws not found when updated equipment row is missing', async () => {
@@ -280,11 +293,11 @@ describe('EquipmentWriteService', () => {
       $queryRaw: jest.fn().mockResolvedValue([]),
     };
 
-    prisma.$transaction.mockImplementation(async (operation) => operation(tx as never));
+    useTransactionMock(tx);
 
-    await expect(service.update(42, createDto({ visibleId: undefined }), 'user-1')).rejects.toThrow(
-      NotFoundException,
-    );
+    await expect(
+      service.update(42, createDto({ visibleId: undefined }), 'user-1'),
+    ).rejects.toThrow(NotFoundException);
   });
 });
 
@@ -301,9 +314,10 @@ function createDto(overrides: { visibleId?: number | undefined }) {
   };
 }
 
-function createEquipmentWithRelations(
-  overrides: { id: number; visibleId: number },
-) {
+function createEquipmentWithRelations(overrides: {
+  id: number;
+  visibleId: number;
+}) {
   return {
     commissioningDate: new Date(Date.UTC(2020, 1, 10)),
     country: { name: 'Германия' },

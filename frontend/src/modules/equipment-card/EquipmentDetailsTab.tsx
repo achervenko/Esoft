@@ -1,9 +1,12 @@
 import type { EquipmentCard } from "../../shared/api/equipment/equipment.types";
 import type { EquipmentFile } from "../../shared/api/equipment-files/equipment-files.types";
 import { EquipmentCardGrid } from "./EquipmentCardGrid";
-import { getEquipmentPanelId, getEquipmentTabId } from "./EquipmentCardTabs";
 import { EquipmentMainDataSection } from "./EquipmentMainDataSection";
 import { EquipmentTextBlock } from "./EquipmentTextBlock";
+import {
+  getEquipmentPanelId,
+  getEquipmentTabId,
+} from "./equipment-card-tab-ids";
 import {
   getEquipmentCardSections,
   getEquipmentCardTextBlocks,

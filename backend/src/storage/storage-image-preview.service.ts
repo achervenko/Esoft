@@ -78,11 +78,26 @@ function createPreviewObjectKey(
   return `storage-previews/${file.id}/${size}.webp`;
 }
 
-async function streamToBuffer(stream: Readable) {
+async function streamToBuffer(stream: Readable): Promise<Buffer> {
   const chunks: Buffer[] = [];
 
   for await (const chunk of stream) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    if (Buffer.isBuffer(chunk)) {
+      chunks.push(chunk);
+      continue;
+    }
+
+    if (typeof chunk === 'string') {
+      chunks.push(Buffer.from(chunk));
+      continue;
+    }
+
+    if (chunk instanceof Uint8Array) {
+      chunks.push(Buffer.from(chunk));
+      continue;
+    }
+
+    throw new TypeError('Поток содержит неподдерживаемый тип данных.');
   }
 
   return Buffer.concat(chunks);

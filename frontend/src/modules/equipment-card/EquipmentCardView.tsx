@@ -8,13 +8,13 @@ import { buildHashRoute } from "../../shared/lib/hash-navigation";
 import { EquipmentDocumentsPanel } from "../equipment-documents";
 import { EquipmentEventsPanel } from "../equipment-events";
 import { MaintenanceSettingsPanel } from "../equipment-maintenance-settings";
-import {
-  EquipmentCardTabs,
-  getEquipmentPanelId,
-  getEquipmentTabId,
-} from "./EquipmentCardTabs";
+import { EquipmentCardTabs } from "./EquipmentCardTabs";
 import { EquipmentDetailsTab } from "./EquipmentDetailsTab";
 import { EquipmentHistoryTab } from "./EquipmentHistoryTab";
+import {
+  getEquipmentPanelId,
+  getEquipmentTabId,
+} from "./equipment-card-tab-ids";
 import { navigateWithViewTransition } from "./equipment-card-navigation";
 import type { EquipmentViewTab } from "./equipment-card-tabs";
 import { useEquipmentPhotos } from "./use-equipment-photos";

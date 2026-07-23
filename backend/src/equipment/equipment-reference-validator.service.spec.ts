@@ -13,7 +13,9 @@ describe('EquipmentReferenceValidatorService', () => {
       $queryRaw: jest.fn().mockResolvedValue([{ id: 10 }]),
     } as never;
 
-    await expect(service.assertEquipmentModelExists(tx, 10)).resolves.toBeUndefined();
+    await expect(
+      service.assertEquipmentModelExists(tx, 10),
+    ).resolves.toBeUndefined();
   });
 
   it('rejects a missing equipment model', async () => {
@@ -106,7 +108,9 @@ describe('EquipmentReferenceValidatorService', () => {
       await expectBadRequestMessage(() => service.assertCountryExists(tx, 4)),
     ).toBe('Выберите страну производства из списка.');
 
-    await expect(service.assertCountryExists(tx, null)).resolves.toBeUndefined();
+    await expect(
+      service.assertCountryExists(tx, null),
+    ).resolves.toBeUndefined();
   });
 
   it('accepts an existing country', async () => {

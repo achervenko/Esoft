@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
 import type { StorageFile } from '@prisma/client';
-import { StorageDocumentType, StorageOwnerModule } from '@prisma/client';
+import { StorageDocumentType } from '@prisma/client';
 import type { StorageOwnerContext, UploadedFileInput } from './storage.types';
 
 export function createStorageObjectKey(params: {
@@ -9,11 +9,7 @@ export function createStorageObjectKey(params: {
   extension: string;
   owner: StorageOwnerContext;
 }) {
-  if (params.owner.module === StorageOwnerModule.EQUIPMENT) {
-    return `equipment/${params.owner.entityId}/${params.documentType}/${randomUUID()}.${params.extension}`;
-  }
-
-  return `${params.owner.module}/${params.owner.entityId}/${params.documentType}/${randomUUID()}.${params.extension}`;
+  return `equipment/${params.owner.entityId}/${params.documentType}/${randomUUID()}.${params.extension}`;
 }
 
 export function getSafeExtension(file: UploadedFileInput) {
