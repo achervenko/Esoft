@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { EquipmentStatus } from "../../shared/api/equipment/equipment.types";
 import type { EquipmentEventItem } from "../../shared/api/equipment-events/equipment-events.types";
+import { useNotifications } from "../../shared/ui/notifications";
 import type { EquipmentEventFormPayload } from "./equipment-event-form.types";
 import { useEquipmentEventActions } from "./useEquipmentEventActions";
 import { useEquipmentEventDetail } from "./useEquipmentEventDetail";
@@ -19,8 +20,8 @@ export function useEquipmentEventsPanel({
   equipmentStatus,
   visibleId,
 }: UseEquipmentEventsPanelParams) {
-  const [message, setMessage] = useState<string | null>(null);
-  const clearMessage = useCallback(() => setMessage(null), []);
+  const { notifyError } = useNotifications();
+  const notifiedErrorsRef = useRef(new Set<string>());
 
   const {
     events,
@@ -67,7 +68,6 @@ export function useEquipmentEventsPanel({
   } = useEquipmentEventsPanelModals({
     canCloseActionModal: activeAction === null,
     clearActionError,
-    clearMessage,
   });
 
   const topLevelActionError = !activeForm && !cancelCandidate ? actionError : null;
@@ -98,10 +98,50 @@ export function useEquipmentEventsPanel({
 
   useEffect(() => {
     clearActionError();
-    clearMessage();
     resetModals();
     resetDetail();
-  }, [clearActionError, clearMessage, resetDetail, resetModals, visibleId]);
+    notifiedErrorsRef.current.clear();
+  }, [clearActionError, resetDetail, resetModals, visibleId]);
+
+  useEffect(() => {
+    notifyEquipmentEventsError(
+      "list",
+      "Не удалось загрузить события оборудования",
+      error,
+      notifiedErrorsRef.current,
+      notifyError,
+    );
+  }, [error, notifyError]);
+
+  useEffect(() => {
+    notifyEquipmentEventsError(
+      "form-data",
+      "Не удалось загрузить данные для события",
+      formDataError,
+      notifiedErrorsRef.current,
+      notifyError,
+    );
+  }, [formDataError, notifyError]);
+
+  useEffect(() => {
+    notifyEquipmentEventsError(
+      "action",
+      "Не удалось сохранить событие",
+      actionError,
+      notifiedErrorsRef.current,
+      notifyError,
+    );
+  }, [actionError, notifyError]);
+
+  useEffect(() => {
+    notifyEquipmentEventsError(
+      "refresh",
+      "Не удалось обновить список событий",
+      refreshError,
+      notifiedErrorsRef.current,
+      notifyError,
+    );
+  }, [notifyError, refreshError]);
 
   const openCreateForm = () => {
     openForm({ mode: "create" });
@@ -120,8 +160,6 @@ export function useEquipmentEventsPanel({
       return;
     }
 
-    clearMessage();
-
     if (activeForm.mode === "create") {
       const isCreated = await createEvent({
         checklistAssignments: payload.checklistAssignments,
@@ -133,7 +171,6 @@ export function useEquipmentEventsPanel({
       });
 
       if (isCreated) {
-        setMessage("Событие назначено.");
         clearForm();
       }
 
@@ -147,7 +184,6 @@ export function useEquipmentEventsPanel({
       );
 
       if (isUpdated) {
-        setMessage("Событие обновлено.");
         clearForm();
       }
     }
@@ -158,11 +194,8 @@ export function useEquipmentEventsPanel({
       return;
     }
 
-    clearMessage();
-
     if (await cancelEvent(cancelCandidate.id)) {
       clearCancel();
-      setMessage("Событие отменено.");
     }
   };
 
@@ -186,7 +219,6 @@ export function useEquipmentEventsPanel({
     listError: error,
     maintenanceSettings,
     checklistTemplates,
-    message,
     modalState: {
       ...modalState,
       detailEvent,
@@ -200,4 +232,36 @@ export function useEquipmentEventsPanel({
     shouldShowWrittenOffState,
     topLevelActionError,
   };
+}
+
+function notifyEquipmentEventsError(
+  key: string,
+  title: string,
+  message: string | null,
+  notifiedErrors: Set<string>,
+  notifyError: (title: string, message?: string) => string,
+) {
+  if (!message) {
+    removeNotifiedErrorKey(key, notifiedErrors);
+    return;
+  }
+
+  const fingerprint = `${key}:${message}`;
+
+  if (notifiedErrors.has(fingerprint)) {
+    return;
+  }
+
+  notifiedErrors.add(fingerprint);
+  notifyError(title, message);
+}
+
+function removeNotifiedErrorKey(key: string, notifiedErrors: Set<string>) {
+  const prefix = `${key}:`;
+
+  for (const fingerprint of notifiedErrors) {
+    if (fingerprint.startsWith(prefix)) {
+      notifiedErrors.delete(fingerprint);
+    }
+  }
 }

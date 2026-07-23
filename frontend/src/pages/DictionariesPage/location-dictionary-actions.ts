@@ -22,7 +22,7 @@ type LocationDictionaryActionsParams = {
   objectForm: ObjectFormState;
   runSavingAction: (action: () => Promise<void>) => Promise<void>;
   setLocationForm: Dispatch<SetStateAction<LocationFormState>>;
-  setMessage: Dispatch<SetStateAction<string | null>>;
+  setMessage: (message: string | null) => void;
   setObjectForm: Dispatch<SetStateAction<ObjectFormState>>;
 };
 
@@ -39,10 +39,10 @@ export function createLocationDictionaryActions({
     await runSavingAction(async () => {
       if (objectForm === "new") {
         await createDictionaryObject(payload);
-        setMessage("Объект добавлен.");
+        setMessage("Объект добавлен");
       } else if (objectForm) {
         await updateDictionaryObject(objectForm.id, payload);
-        setMessage("Объект обновлён.");
+        setMessage("Объект обновлён");
       }
 
       setObjectForm(null);
@@ -57,7 +57,7 @@ export function createLocationDictionaryActions({
 
     await runSavingAction(async () => {
       await deleteDictionaryObject(object.id);
-      setMessage("Объект удалён.");
+      setMessage("Объект удалён");
       await loadData();
     });
   };
@@ -66,10 +66,10 @@ export function createLocationDictionaryActions({
     await runSavingAction(async () => {
       if (locationForm === "new") {
         await createDictionaryLocation(payload);
-        setMessage("Местонахождение добавлено.");
+        setMessage("Местонахождение добавлено");
       } else if (locationForm) {
         await updateDictionaryLocation(locationForm.id, payload);
-        setMessage("Местонахождение обновлено.");
+        setMessage("Местонахождение обновлено");
       }
 
       setLocationForm(null);
@@ -84,7 +84,7 @@ export function createLocationDictionaryActions({
 
     await runSavingAction(async () => {
       await deleteDictionaryLocation(location.id);
-      setMessage("Местонахождение удалено.");
+      setMessage("Местонахождение удалено");
       await loadData();
     });
   };

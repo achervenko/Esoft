@@ -33,7 +33,7 @@ export function ManufacturersDictionaryPanel({
         <header>
           <h3>Производители</h3>
           <button
-            className="admin-secondary-button"
+            className="admin-primary-button"
             onClick={onCreateManufacturer}
             type="button"
           >
@@ -52,7 +52,7 @@ export function ManufacturersDictionaryPanel({
         <header>
           <h3>Модели</h3>
           <button
-            className="admin-secondary-button"
+            className="admin-primary-button"
             disabled={manufacturers.length === 0}
             onClick={onCreateModel}
             type="button"

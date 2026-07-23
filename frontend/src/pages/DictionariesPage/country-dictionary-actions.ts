@@ -13,7 +13,7 @@ type CountryDictionaryActionsParams = {
   loadData: () => Promise<void>;
   runSavingAction: (action: () => Promise<void>) => Promise<void>;
   setCountryForm: Dispatch<SetStateAction<CountryFormState>>;
-  setMessage: Dispatch<SetStateAction<string | null>>;
+  setMessage: (message: string | null) => void;
 };
 
 export function createCountryDictionaryActions({
@@ -27,10 +27,10 @@ export function createCountryDictionaryActions({
     await runSavingAction(async () => {
       if (countryForm === "new") {
         await createDictionaryCountry(payload);
-        setMessage("Страна добавлена.");
+        setMessage("Страна добавлена");
       } else if (countryForm) {
         await updateDictionaryCountry(countryForm.id, payload);
-        setMessage("Страна обновлена.");
+        setMessage("Страна обновлена");
       }
 
       setCountryForm(null);
@@ -45,7 +45,7 @@ export function createCountryDictionaryActions({
 
     await runSavingAction(async () => {
       await deleteDictionaryCountry(country.id);
-      setMessage("Страна удалена.");
+      setMessage("Страна удалена");
       await loadData();
     });
   };

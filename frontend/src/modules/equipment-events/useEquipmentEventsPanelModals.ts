@@ -8,13 +8,11 @@ import type {
 type UseEquipmentEventsPanelModalsParams = {
   canCloseActionModal: boolean;
   clearActionError: () => void;
-  clearMessage: () => void;
 };
 
 export function useEquipmentEventsPanelModals({
   canCloseActionModal,
   clearActionError,
-  clearMessage,
 }: UseEquipmentEventsPanelModalsParams) {
   const [activeForm, setActiveForm] =
     useState<EquipmentEventsPanelActiveForm | null>(null);
@@ -23,15 +21,13 @@ export function useEquipmentEventsPanelModals({
 
   const openForm = useCallback((form: EquipmentEventsPanelActiveForm) => {
     clearActionError();
-    clearMessage();
     setActiveForm(form);
-  }, [clearActionError, clearMessage]);
+  }, [clearActionError]);
 
   const requestCancel = useCallback((event: EquipmentEventItem) => {
     clearActionError();
-    clearMessage();
     setCancelCandidate(event);
-  }, [clearActionError, clearMessage]);
+  }, [clearActionError]);
 
   const closeForm = useCallback(() => {
     if (canCloseActionModal) {

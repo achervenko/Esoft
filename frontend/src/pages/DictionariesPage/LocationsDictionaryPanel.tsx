@@ -33,7 +33,7 @@ export function LocationsDictionaryPanel({
         <header>
           <h3>Объекты</h3>
           <button
-            className="admin-secondary-button"
+            className="admin-primary-button"
             onClick={onCreateObject}
             type="button"
           >
@@ -52,7 +52,7 @@ export function LocationsDictionaryPanel({
         <header>
           <h3>Местонахождения</h3>
           <button
-            className="admin-secondary-button"
+            className="admin-primary-button"
             disabled={objects.length === 0}
             onClick={onCreateLocation}
             type="button"

@@ -13,7 +13,7 @@ type EmployeeDictionaryActionsParams = {
   loadData: () => Promise<void>;
   runSavingAction: (action: () => Promise<void>) => Promise<void>;
   setEmployeeForm: Dispatch<SetStateAction<EmployeeDictionaryFormState>>;
-  setMessage: Dispatch<SetStateAction<string | null>>;
+  setMessage: (message: string | null) => void;
 };
 
 export function createEmployeeDictionaryActions({
@@ -27,10 +27,10 @@ export function createEmployeeDictionaryActions({
     await runSavingAction(async () => {
       if (employeeForm === "new") {
         await createAdminEmployee(payload);
-        setMessage("Сотрудник добавлен.");
+        setMessage("Сотрудник добавлен");
       } else if (employeeForm) {
         await updateAdminEmployee(employeeForm.id, payload);
-        setMessage("Сотрудник обновлён.");
+        setMessage("Сотрудник обновлён");
       }
 
       setEmployeeForm(null);
@@ -42,7 +42,7 @@ export function createEmployeeDictionaryActions({
     await runSavingAction(async () => {
       await setAdminEmployeeStatus(employee.id, !employee.isActive);
       setMessage(
-        employee.isActive ? "Сотрудник отключён." : "Сотрудник включён.",
+        employee.isActive ? "Сотрудник отключён" : "Сотрудник включён",
       );
       await loadData();
     });

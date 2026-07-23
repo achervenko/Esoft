@@ -85,9 +85,6 @@ export function DictionariesPage({ userRole }: DictionariesPageProps) {
         ))}
       </div>
 
-      {page.error ? <Notice tone="error">{page.error}</Notice> : null}
-      {page.message ? <Notice tone="success">{page.message}</Notice> : null}
-
       <section className="admin-card dictionaries-card">
         <header>
           <h2>{tabLabels[page.activeTab]}</h2>

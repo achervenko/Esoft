@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { canEditEquipment } from "../../modules/equipment-permissions";
+import { getApiErrorMessage } from "../../shared/api/api-error";
 import {
   getEquipmentCard,
   getEquipmentCreateOptions,
@@ -23,6 +24,7 @@ import {
   buildEquipmentViewHref,
   type EquipmentEditTab,
 } from "./equipment-edit-navigation";
+import { useNotifications } from "../../shared/ui/notifications";
 
 type UseEquipmentEditPageParams = {
   initialTab: EquipmentEditTab;
@@ -37,7 +39,9 @@ export function useEquipmentEditPage({
   userRole,
   visibleId,
 }: UseEquipmentEditPageParams) {
+  const { notifyError, notifySuccess, notifyWarning } = useNotifications();
   const redirectTimeoutRef = useRef<number | null>(null);
+  const visibleIdRef = useRef(visibleId);
   const isEditAllowed = canEditEquipment(userRole);
   const [form, setForm] = useState<EquipmentCreateFormState>(
     initialEquipmentCreateFormState,
@@ -52,7 +56,6 @@ export function useEquipmentEditPage({
     {},
   );
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
   const hasUnsavedChanges = useMemo(
     () =>
@@ -77,7 +80,6 @@ export function useEquipmentEditPage({
     setInitialForm(null);
     setFieldErrors({});
     setError(null);
-    setMessage(null);
 
     Promise.all([getEquipmentCreateOptions(), getEquipmentCard(visibleId)])
       .then(([optionsData, equipment]) => {
@@ -90,9 +92,11 @@ export function useEquipmentEditPage({
         setForm(formState);
         setInitialForm(formState);
       })
-      .catch((requestError: Error) => {
+      .catch((requestError) => {
         if (isMounted) {
-          setError(requestError.message);
+          const errorMessage = getApiErrorMessage(requestError);
+          setError(errorMessage);
+          notifyError("Не удалось загрузить карточку оборудования", errorMessage);
         }
       })
       .finally(() => {
@@ -104,11 +108,22 @@ export function useEquipmentEditPage({
     return () => {
       isMounted = false;
     };
-  }, [isEditAllowed, visibleId]);
+  }, [isEditAllowed, notifyError, visibleId]);
 
   useEffect(() => {
     setActiveTab(initialTab);
-  }, [initialTab]);
+  }, [initialTab, visibleId]);
+
+  useEffect(() => {
+    visibleIdRef.current = visibleId;
+
+    if (redirectTimeoutRef.current !== null) {
+      window.clearTimeout(redirectTimeoutRef.current);
+      redirectTimeoutRef.current = null;
+    }
+
+    setIsSubmitting(false);
+  }, [visibleId]);
 
   useEffect(() => {
     return () => {
@@ -128,7 +143,6 @@ export function useEquipmentEditPage({
   const handleFieldFocus = (key: keyof EquipmentCreateFormState) => {
     if (fieldErrors[key]) {
       setError(null);
-      setMessage(null);
       setFieldErrors((currentErrors) => ({
         ...currentErrors,
         [key]: undefined,
@@ -139,10 +153,11 @@ export function useEquipmentEditPage({
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
-    setMessage(null);
 
     if (!options) {
-      setError("Справочники для редактирования ещё не загружены.");
+      const errorMessage = "Справочники для редактирования ещё не загружены.";
+      setError(errorMessage);
+      notifyWarning(errorMessage);
       return;
     }
 
@@ -151,19 +166,25 @@ export function useEquipmentEditPage({
 
     if (validation.formError) {
       setError(validation.formError);
+      notifyWarning(validation.formError);
       return;
     }
 
     setIsSubmitting(true);
     let shouldResetSubmitting = true;
+    const requestedVisibleId = visibleId;
 
     try {
       const updatedEquipment = await updateEquipment(
-        visibleId,
+        requestedVisibleId,
         toEquipmentCreatePayload(form),
       );
 
-      setMessage("Оборудование сохранено.");
+      if (visibleIdRef.current !== requestedVisibleId) {
+        return;
+      }
+
+      notifySuccess("Основные данные оборудования сохранены");
       const updatedForm = toEquipmentFormState(updatedEquipment, options);
       setInitialForm(updatedForm);
       setForm(updatedForm);
@@ -182,18 +203,26 @@ export function useEquipmentEditPage({
         redirectTimeoutRef.current = null;
       }, 500);
     } catch (requestError) {
-      const errorMessage =
-        requestError instanceof Error
-          ? requestError.message
-          : "Не удалось сохранить оборудование.";
+      if (visibleIdRef.current !== requestedVisibleId) {
+        return;
+      }
+
+      const errorMessage = getApiErrorMessage(
+        requestError,
+        "Не удалось сохранить оборудование.",
+      );
 
       setError(errorMessage);
+      notifyError("Не удалось сохранить основные данные", errorMessage);
       setFieldErrors((currentErrors) => ({
         ...currentErrors,
         ...getEquipmentFieldErrorsFromMessage(errorMessage),
       }));
     } finally {
-      if (shouldResetSubmitting) {
+      if (
+        shouldResetSubmitting &&
+        visibleIdRef.current === requestedVisibleId
+      ) {
         setIsSubmitting(false);
       }
     }
@@ -220,7 +249,6 @@ export function useEquipmentEditPage({
     isEditAllowed,
     isLoading,
     isSubmitting,
-    message,
     options,
     setActiveTab,
     updateForm,

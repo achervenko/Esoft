@@ -19,6 +19,7 @@ import type {
 } from "../../shared/api/equipment/equipment.types";
 import { getApiErrorMessage } from "../../shared/api/api-error";
 import { Notice } from "../../shared/ui/Notice";
+import { useNotifications } from "../../shared/ui/notifications";
 import "./EquipmentViewPage.css";
 
 type EquipmentViewPageProps = {
@@ -34,6 +35,7 @@ export function EquipmentViewPage({
   userRole,
   visibleId,
 }: EquipmentViewPageProps) {
+  const { notifyError } = useNotifications();
   const [activeTab, setActiveTab] = useState<EquipmentViewTab>(initialTab);
   const [equipment, setEquipment] = useState<EquipmentCard | null>(null);
   const [history, setHistory] = useState<EquipmentHistoryItem[]>([]);
@@ -58,7 +60,9 @@ export function EquipmentViewPage({
       })
       .catch((requestError) => {
         if (isMounted) {
-          setError(getApiErrorMessage(requestError));
+          const errorMessage = getApiErrorMessage(requestError);
+          setError(errorMessage);
+          notifyError("Не удалось загрузить карточку оборудования", errorMessage);
         }
       })
       .finally(() => {
@@ -70,11 +74,11 @@ export function EquipmentViewPage({
     return () => {
       isMounted = false;
     };
-  }, [visibleId]);
+  }, [notifyError, visibleId]);
 
   useEffect(() => {
     setActiveTab(initialTab);
-  }, [initialTab]);
+  }, [initialTab, visibleId]);
 
   useEffect(() => {
     setHistory([]);
@@ -105,7 +109,9 @@ export function EquipmentViewPage({
       })
       .catch((requestError) => {
         if (isMounted) {
-          setHistoryError(getApiErrorMessage(requestError));
+          const errorMessage = getApiErrorMessage(requestError);
+          setHistoryError(errorMessage);
+          notifyError("Не удалось загрузить историю изменений", errorMessage);
         }
       })
       .finally(() => {
@@ -117,7 +123,7 @@ export function EquipmentViewPage({
     return () => {
       isMounted = false;
     };
-  }, [activeTab, hasLoadedHistory, visibleId]);
+  }, [activeTab, hasLoadedHistory, notifyError, visibleId]);
 
   return (
     <div className="equipment-view-page">

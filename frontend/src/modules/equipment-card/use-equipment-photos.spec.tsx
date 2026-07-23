@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiRequestError } from "../../shared/api/api-error";
 import { getEquipmentFiles } from "../../shared/api/equipment-files/equipment-files.api";
+import { NotificationProvider } from "../../shared/ui/notifications";
 import { createEquipmentPhoto } from "./equipment-card.test-helpers";
 import { useEquipmentPhotos } from "./use-equipment-photos";
 
@@ -33,13 +34,21 @@ function HookProbe(props: { enabled: boolean; visibleId: number }) {
   );
 }
 
+function renderHookProbe(props: { enabled: boolean; visibleId: number }) {
+  return render(
+    <NotificationProvider>
+      <HookProbe {...props} />
+    </NotificationProvider>,
+  );
+}
+
 describe("useEquipmentPhotos", () => {
   beforeEach(() => {
     vi.mocked(getEquipmentFiles).mockReset();
   });
 
   it("does not load photos when disabled", () => {
-    render(<HookProbe enabled={false} visibleId={42} />);
+    renderHookProbe({ enabled: false, visibleId: 42 });
 
     expect(getEquipmentFiles).not.toHaveBeenCalled();
     expect(screen.getByTestId("loading")).toHaveTextContent("false");
@@ -47,18 +56,13 @@ describe("useEquipmentPhotos", () => {
   });
 
   it("loads only equipment photos successfully", async () => {
-    const request = deferredPromise([
-      createEquipmentPhoto({ id: 1 }),
-      createEquipmentPhoto({
-        documentType: "passport",
-        displayName: "Паспорт.pdf",
-        id: 2,
-      }),
-    ]);
+    const request = deferredPromise<
+      ReturnType<typeof createEquipmentPhoto>[]
+    >();
 
     vi.mocked(getEquipmentFiles).mockReturnValueOnce(request.promise);
 
-    render(<HookProbe enabled visibleId={42} />);
+    renderHookProbe({ enabled: true, visibleId: 42 });
 
     expect(getEquipmentFiles).toHaveBeenCalledWith(42);
     expect(screen.getByTestId("loading")).toHaveTextContent("true");
@@ -81,18 +85,46 @@ describe("useEquipmentPhotos", () => {
     expect(screen.getByTestId("error")).toHaveTextContent("");
   });
 
+  it("stops loading when disabled before the request finishes", async () => {
+    const request = deferredPromise<
+      ReturnType<typeof createEquipmentPhoto>[]
+    >();
+
+    vi.mocked(getEquipmentFiles).mockReturnValueOnce(request.promise);
+
+    const { rerender } = renderHookProbe({ enabled: true, visibleId: 42 });
+
+    expect(screen.getByTestId("loading")).toHaveTextContent("true");
+
+    rerender(
+      <NotificationProvider>
+        <HookProbe enabled={false} visibleId={42} />
+      </NotificationProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("loading")).toHaveTextContent("false");
+    });
+
+    request.resolve([createEquipmentPhoto({ id: 1 })]);
+  });
+
   it("stores API error and clears stale photos for a new visibleId", async () => {
     vi.mocked(getEquipmentFiles)
       .mockResolvedValueOnce([createEquipmentPhoto({ id: 1 })])
       .mockRejectedValueOnce(new ApiRequestError("Ошибка загрузки", 500));
 
-    const { rerender } = render(<HookProbe enabled visibleId={42} />);
+    const { rerender } = renderHookProbe({ enabled: true, visibleId: 42 });
 
     await waitFor(() => {
       expect(screen.getByTestId("count")).toHaveTextContent("1");
     });
 
-    rerender(<HookProbe enabled visibleId={43} />);
+    rerender(
+      <NotificationProvider>
+        <HookProbe enabled visibleId={43} />
+      </NotificationProvider>,
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId("error")).toHaveTextContent("Ошибка загрузки");
@@ -107,13 +139,17 @@ describe("useEquipmentPhotos", () => {
       .mockResolvedValueOnce([createEquipmentPhoto({ id: 1 })])
       .mockResolvedValueOnce([createEquipmentPhoto({ id: 2 })]);
 
-    const { rerender } = render(<HookProbe enabled visibleId={42} />);
+    const { rerender } = renderHookProbe({ enabled: true, visibleId: 42 });
 
     await waitFor(() => {
       expect(screen.getByTestId("ids")).toHaveTextContent("1");
     });
 
-    rerender(<HookProbe enabled visibleId={43} />);
+    rerender(
+      <NotificationProvider>
+        <HookProbe enabled visibleId={43} />
+      </NotificationProvider>,
+    );
 
     expect(screen.getByTestId("count")).toHaveTextContent("0");
 
@@ -127,14 +163,22 @@ describe("useEquipmentPhotos", () => {
       .mockResolvedValueOnce([createEquipmentPhoto({ id: 1 })])
       .mockResolvedValueOnce([createEquipmentPhoto({ id: 1 })]);
 
-    const { rerender } = render(<HookProbe enabled visibleId={42} />);
+    const { rerender } = renderHookProbe({ enabled: true, visibleId: 42 });
 
     await waitFor(() => {
       expect(screen.getByTestId("count")).toHaveTextContent("1");
     });
 
-    rerender(<HookProbe enabled={false} visibleId={42} />);
-    rerender(<HookProbe enabled visibleId={42} />);
+    rerender(
+      <NotificationProvider>
+        <HookProbe enabled={false} visibleId={42} />
+      </NotificationProvider>,
+    );
+    rerender(
+      <NotificationProvider>
+        <HookProbe enabled visibleId={42} />
+      </NotificationProvider>,
+    );
 
     await waitFor(() => {
       expect(vi.mocked(getEquipmentFiles)).toHaveBeenCalledTimes(2);

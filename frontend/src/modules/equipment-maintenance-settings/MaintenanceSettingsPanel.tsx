@@ -34,8 +34,6 @@ function MaintenanceSettingsPanelContent({
       {panel.clientError ? (
         <Notice tone="error">{panel.clientError}</Notice>
       ) : null}
-      {panel.message ? <Notice tone="success">{panel.message}</Notice> : null}
-
       <section className="admin-card maintenance-settings-card">
         <MaintenanceSettingsPanelHeader
           availableTypesError={panel.availableTypesError}

@@ -8,6 +8,8 @@ coverage/
 !.env.example
 esoft.config.json
 *.log
+backend-runtime.pid
+frontend.pid
 .DS_Store
 Thumbs.db
 frontend/src/assets/auth-visual.png

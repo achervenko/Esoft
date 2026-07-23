@@ -33,7 +33,6 @@ export function EquipmentEventsPanel({
       {panel.refreshError ? (
         <Notice tone="error">{panel.refreshError}</Notice>
       ) : null}
-      {panel.message ? <Notice tone="success">{panel.message}</Notice> : null}
       {panel.isDetailLoading ? (
         <Notice tone="info">Загрузка события...</Notice>
       ) : null}

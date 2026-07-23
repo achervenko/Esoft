@@ -1,6 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { canCreateEquipment } from '../../modules/equipment-permissions';
+import { getApiErrorMessage } from '../../shared/api/api-error';
 import {
   createEquipment,
   getEquipmentCreateOptions,
@@ -8,6 +9,7 @@ import {
 import type { EquipmentCreateOptions } from '../../shared/api/equipment/equipment.types';
 import { Notice } from '../../shared/ui/Notice';
 import { UnsavedChangesGuard } from '../../shared/ui/UnsavedChangesGuard';
+import { useNotifications } from '../../shared/ui/notifications';
 import { EquipmentCreateForm } from './EquipmentCreateForm';
 import { toEquipmentCreatePayload } from './model/equipment-create-form.mapper';
 import {
@@ -26,6 +28,7 @@ type EquipmentCreatePageProps = {
 };
 
 export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
+  const { notifyError, notifySuccess, notifyWarning } = useNotifications();
   const isCreateAllowed = canCreateEquipment(userRole);
   const [form, setForm] = useState<EquipmentCreateFormState>(
     initialEquipmentCreateFormState,
@@ -35,7 +38,6 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<EquipmentCreateFieldErrors>({});
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
   const hasUnsavedChanges = useMemo(
     () =>
@@ -64,9 +66,11 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
           }));
         }
       })
-      .catch((requestError: Error) => {
+      .catch((requestError) => {
         if (isMounted) {
-          setError(requestError.message);
+          const errorMessage = getApiErrorMessage(requestError);
+          setError(errorMessage);
+          notifyError("Не удалось загрузить справочники оборудования", errorMessage);
         }
       })
       .finally(() => {
@@ -78,7 +82,7 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
     return () => {
       isMounted = false;
     };
-  }, [isCreateAllowed]);
+  }, [isCreateAllowed, notifyError]);
 
   const updateForm = <Key extends keyof EquipmentCreateFormState>(
     key: Key,
@@ -90,7 +94,6 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
   const handleFieldFocus = (key: keyof EquipmentCreateFormState) => {
     if (fieldErrors[key]) {
       setError(null);
-      setMessage(null);
       setFieldErrors((currentErrors) => ({
         ...currentErrors,
         [key]: undefined,
@@ -101,13 +104,13 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
-    setMessage(null);
 
     const validation = validateEquipmentCreateForm(form);
     setFieldErrors(validation.fieldErrors);
 
     if (validation.formError) {
       setError(validation.formError);
+      notifyWarning(validation.formError);
       return;
     }
 
@@ -117,18 +120,19 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
     try {
       await createEquipment(toEquipmentCreatePayload(form));
 
-      setMessage('Оборудование добавлено.');
+      notifySuccess("Оборудование добавлено");
       shouldResetSubmitting = false;
       window.setTimeout(() => {
         window.location.hash = '#/equipment';
       }, 500);
     } catch (requestError) {
-      const errorMessage =
-        requestError instanceof Error
-          ? requestError.message
-          : 'Не удалось добавить оборудование.';
+      const errorMessage = getApiErrorMessage(
+        requestError,
+        'Не удалось добавить оборудование.',
+      );
 
       setError(errorMessage);
+      notifyError("Не удалось добавить оборудование", errorMessage);
       setFieldErrors((currentErrors) => ({
         ...currentErrors,
         ...getEquipmentFieldErrorsFromMessage(errorMessage),
@@ -167,12 +171,6 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
           {error}
         </Notice>
       ) : null}
-      {message ? (
-        <Notice floating tone="success">
-          {message}
-        </Notice>
-      ) : null}
-
       {options ? (
         <EquipmentCreateForm
           fieldErrors={fieldErrors}

@@ -21,12 +21,6 @@ const employeeColumns = (
     sortValue: (employee) => employee.fullName,
   },
   {
-    key: "status",
-    label: "Статус",
-    render: (employee) => (employee.isActive ? "Включён" : "Отключён"),
-    sortValue: (employee) => (employee.isActive ? "1" : "0"),
-  },
-  {
     key: "position",
     label: "Должность",
     render: (employee) => employee.position,

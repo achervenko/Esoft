@@ -22,7 +22,7 @@ type ManufacturerDictionaryActionsParams = {
   modelForm: EquipmentModelFormState;
   runSavingAction: (action: () => Promise<void>) => Promise<void>;
   setManufacturerForm: Dispatch<SetStateAction<ManufacturerFormState>>;
-  setMessage: Dispatch<SetStateAction<string | null>>;
+  setMessage: (message: string | null) => void;
   setModelForm: Dispatch<SetStateAction<EquipmentModelFormState>>;
 };
 
@@ -39,10 +39,10 @@ export function createManufacturerDictionaryActions({
     await runSavingAction(async () => {
       if (manufacturerForm === "new") {
         await createDictionaryManufacturer(payload);
-        setMessage("Производитель добавлен.");
+        setMessage("Производитель добавлен");
       } else if (manufacturerForm) {
         await updateDictionaryManufacturer(manufacturerForm.id, payload);
-        setMessage("Производитель обновлён.");
+        setMessage("Производитель обновлён");
       }
 
       setManufacturerForm(null);
@@ -57,7 +57,7 @@ export function createManufacturerDictionaryActions({
 
     await runSavingAction(async () => {
       await deleteDictionaryManufacturer(manufacturer.id);
-      setMessage("Производитель удалён.");
+      setMessage("Производитель удалён");
       await loadData();
     });
   };
@@ -66,10 +66,10 @@ export function createManufacturerDictionaryActions({
     await runSavingAction(async () => {
       if (modelForm === "new") {
         await createDictionaryEquipmentModel(payload);
-        setMessage("Модель добавлена.");
+        setMessage("Модель добавлена");
       } else if (modelForm) {
         await updateDictionaryEquipmentModel(modelForm.id, payload);
-        setMessage("Модель обновлена.");
+        setMessage("Модель обновлена");
       }
 
       setModelForm(null);
@@ -84,7 +84,7 @@ export function createManufacturerDictionaryActions({
 
     await runSavingAction(async () => {
       await deleteDictionaryEquipmentModel(model.id);
-      setMessage("Модель удалена.");
+      setMessage("Модель удалена");
       await loadData();
     });
   };

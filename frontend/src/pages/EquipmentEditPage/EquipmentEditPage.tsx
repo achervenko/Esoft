@@ -70,11 +70,6 @@ export function EquipmentEditPage({
           {page.error}
         </Notice>
       ) : null}
-      {page.message ? (
-        <Notice floating tone="success">
-          {page.message}
-        </Notice>
-      ) : null}
 
       <EquipmentEditTabs
         activeTab={page.activeTab}

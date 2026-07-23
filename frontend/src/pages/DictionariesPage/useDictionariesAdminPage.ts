@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNotifications } from "../../shared/ui/notifications";
 import { createCountryDictionaryActions } from "./country-dictionary-actions";
 import {
   type ActiveDictionariesTab,
@@ -10,6 +11,7 @@ import {
   type ObjectFormState,
 } from "./dictionaries-page-types";
 import { createEmployeeDictionaryActions } from "./employee-dictionary-actions";
+import { getDictionariesAdminErrorMessage } from "./dictionaries-admin-error-messages";
 import { createLocationDictionaryActions } from "./location-dictionary-actions";
 import { createManufacturerDictionaryActions } from "./manufacturer-dictionary-actions";
 import { useDictionariesAdminData } from "./useDictionariesAdminData";
@@ -44,29 +46,44 @@ export function useDictionariesAdminPage({
   const [objectForm, setObjectForm] = useState<ObjectFormState>(null);
   const [message, setMessage] = useState<string | null>(null);
   const isAdmin = userRole === "admin";
+  const { notifyError, notifySuccess } = useNotifications();
 
   const data = useDictionariesAdminData();
   const { loadData, setIsLoading } = data;
   const { isSaving, runSavingAction } = useDictionariesSaving({
+    notifyError,
     setError: data.setError,
     setMessage,
   });
 
   useEffect(() => {
     if (isAdmin) {
-      void loadData().catch(() => undefined);
+      void loadData().catch((requestError) => {
+        notifyError(
+          "Не удалось загрузить справочники",
+          getDictionariesAdminErrorMessage(requestError),
+        );
+      });
       return;
     }
 
     setIsLoading(false);
-  }, [isAdmin, loadData, setIsLoading]);
+  }, [isAdmin, loadData, notifyError, setIsLoading]);
+
+  const showSuccessMessage = (nextMessage: string | null) => {
+    setMessage(nextMessage);
+
+    if (nextMessage) {
+      notifySuccess(nextMessage);
+    }
+  };
 
   const employeeActions = createEmployeeDictionaryActions({
     employeeForm,
     loadData,
     runSavingAction,
     setEmployeeForm,
-    setMessage,
+    setMessage: showSuccessMessage,
   });
 
   const manufacturerActions = createManufacturerDictionaryActions({
@@ -75,7 +92,7 @@ export function useDictionariesAdminPage({
     modelForm,
     runSavingAction,
     setManufacturerForm,
-    setMessage,
+    setMessage: showSuccessMessage,
     setModelForm,
   });
 
@@ -84,7 +101,7 @@ export function useDictionariesAdminPage({
     loadData,
     runSavingAction,
     setCountryForm,
-    setMessage,
+    setMessage: showSuccessMessage,
   });
 
   const locationActions = createLocationDictionaryActions({
@@ -93,7 +110,7 @@ export function useDictionariesAdminPage({
     objectForm,
     runSavingAction,
     setLocationForm,
-    setMessage,
+    setMessage: showSuccessMessage,
     setObjectForm,
   });
 

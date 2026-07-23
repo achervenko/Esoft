@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MaintenanceSetting } from "../../shared/api/maintenance/maintenance.types";
+import { useNotifications } from "../../shared/ui/notifications";
 import type { MaintenanceSettingFormPayload } from "./maintenance-setting-form.types";
 import type {
   MaintenanceSettingsPanelActiveForm,
@@ -14,12 +15,13 @@ export function useMaintenanceSettingsPanel({
   canManage,
   visibleId,
 }: UseMaintenanceSettingsPanelParams) {
+  const { notifyError, notifyWarning } = useNotifications();
   const [activeForm, setActiveForm] =
     useState<MaintenanceSettingsPanelActiveForm | null>(null);
   const [deleteCandidate, setDeleteCandidate] =
     useState<MaintenanceSetting | null>(null);
   const [clientError, setClientError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const notifiedErrorsRef = useRef(new Set<string>());
   const {
     applySettingsResponse,
     availableMaintenanceTypes,
@@ -59,14 +61,66 @@ export function useMaintenanceSettingsPanel({
   const clearFeedback = useCallback(() => {
     clearDataError();
     setClientError(null);
-    setMessage(null);
   }, [clearDataError]);
+
+  useEffect(() => {
+    notifiedErrorsRef.current.clear();
+  }, [visibleId]);
+
+  useEffect(() => {
+    notifyMaintenanceSettingsError(
+      "settings",
+      "Не удалось загрузить настройки обслуживания",
+      error,
+      notifiedErrorsRef.current,
+      notifyError,
+    );
+  }, [error, notifyError]);
+
+  useEffect(() => {
+    notifyMaintenanceSettingsError(
+      "available-types",
+      "Не удалось загрузить виды обслуживания",
+      availableTypesError,
+      notifiedErrorsRef.current,
+      notifyError,
+    );
+  }, [availableTypesError, notifyError]);
+
+  useEffect(() => {
+    notifyMaintenanceSettingsError(
+      "checklist-templates",
+      "Не удалось загрузить шаблоны чек-листов",
+      checklistTemplatesError,
+      notifiedErrorsRef.current,
+      notifyError,
+    );
+  }, [checklistTemplatesError, notifyError]);
+
+  useEffect(() => {
+    notifyMaintenanceSettingsError(
+      "form",
+      "Не удалось сохранить настройку обслуживания",
+      formErrorMessage,
+      notifiedErrorsRef.current,
+      notifyError,
+    );
+  }, [formErrorMessage, notifyError]);
+
+  useEffect(() => {
+    notifyMaintenanceSettingsError(
+      "delete",
+      "Не удалось удалить настройку обслуживания",
+      deleteError,
+      notifiedErrorsRef.current,
+      notifyError,
+    );
+  }, [deleteError, notifyError]);
 
   const openForm = useCallback(
     (form: MaintenanceSettingsPanelActiveForm) => {
       clearFormError();
       setClientError(null);
-      setMessage(null);
       setActiveForm(form);
     },
     [clearFormError],
@@ -101,17 +155,24 @@ export function useMaintenanceSettingsPanel({
 
       if (activeForm.mode === "create") {
         if (payload.mode !== "create") {
-          setClientError("Некорректное состояние формы настройки обслуживания.");
+          const errorMessage =
+            "Некорректное состояние формы настройки обслуживания.";
+          setClientError(errorMessage);
+          notifyWarning(errorMessage);
           return;
         }
 
         if (!payload.maintenanceTypeId) {
-          setClientError("Выберите вид обслуживания.");
+          const errorMessage = "Выберите вид обслуживания.";
+          setClientError(errorMessage);
+          notifyWarning(errorMessage);
           return;
         }
 
         if (!payload.defaultChecklistTemplateId) {
-          setClientError("Выберите шаблон чек-листа.");
+          const errorMessage = "Выберите шаблон чек-листа.";
+          setClientError(errorMessage);
+          notifyWarning(errorMessage);
           return;
         }
 
@@ -126,19 +187,22 @@ export function useMaintenanceSettingsPanel({
 
         if (result.success) {
           setActiveForm(null);
-          setMessage(result.message);
         }
 
         return;
       }
 
       if (payload.mode !== "edit") {
-        setClientError("Форма редактирования не вернула изменения.");
+        const errorMessage = "Форма редактирования не вернула изменения.";
+        setClientError(errorMessage);
+        notifyWarning(errorMessage);
         return;
       }
 
       if (Object.keys(payload.updatePayload).length === 0) {
-        setClientError("Нет изменений для сохранения.");
+        const errorMessage = "Нет изменений для сохранения.";
+        setClientError(errorMessage);
+        notifyWarning(errorMessage);
         return;
       }
 
@@ -151,10 +215,15 @@ export function useMaintenanceSettingsPanel({
 
       if (result.success) {
         setActiveForm(null);
-        setMessage(result.message);
       }
     },
-    [activeForm, clearFeedback, createSetting, updateSetting],
+    [
+      activeForm,
+      clearFeedback,
+      createSetting,
+      notifyWarning,
+      updateSetting,
+    ],
   );
 
   const requestDelete = useCallback(
@@ -186,7 +255,6 @@ export function useMaintenanceSettingsPanel({
 
     if (result.success) {
       setDeleteCandidate(null);
-      setMessage(result.message);
     }
   }, [clearFeedback, deleteCandidate, deleteSetting]);
 
@@ -224,7 +292,6 @@ export function useMaintenanceSettingsPanel({
     isDeleting,
     isLoading,
     isSaving,
-    message,
     modalState,
     reloadAvailableMaintenanceTypes,
     reloadChecklistTemplates,
@@ -237,4 +304,36 @@ export function useMaintenanceSettingsPanel({
     openEditForm,
     requestDelete,
   };
+}
+
+function notifyMaintenanceSettingsError(
+  key: string,
+  title: string,
+  message: string | null,
+  notifiedErrors: Set<string>,
+  notifyError: (title: string, message?: string) => string,
+) {
+  if (!message) {
+    removeNotifiedErrorKey(key, notifiedErrors);
+    return;
+  }
+
+  const fingerprint = `${key}:${message}`;
+
+  if (notifiedErrors.has(fingerprint)) {
+    return;
+  }
+
+  notifiedErrors.add(fingerprint);
+  notifyError(title, message);
+}
+
+function removeNotifiedErrorKey(key: string, notifiedErrors: Set<string>) {
+  const prefix = `${key}:`;
+
+  for (const fingerprint of notifiedErrors) {
+    if (fingerprint.startsWith(prefix)) {
+      notifiedErrors.delete(fingerprint);
+    }
+  }
 }

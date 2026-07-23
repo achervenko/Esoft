@@ -1,9 +1,11 @@
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { canCreateEquipment } from "../../modules/equipment-permissions";
+import { getApiErrorMessage } from "../../shared/api/api-error";
 import { getEquipmentRegistry } from "../../shared/api/equipment/equipment.api";
 import type { EquipmentRegistryItem } from "../../shared/api/equipment/equipment.types";
 import { buildHashRoute } from "../../shared/lib/hash-navigation";
+import { useNotifications } from "../../shared/ui/notifications";
 import { EquipmentRegistryTable } from "./EquipmentRegistryTable";
 import "./EquipmentPage.css";
 
@@ -12,6 +14,7 @@ type EquipmentPageProps = {
 };
 
 export function EquipmentPage({ userRole }: EquipmentPageProps) {
+  const { notifyError } = useNotifications();
   const isCreateAllowed = canCreateEquipment(userRole);
   const [items, setItems] = useState<EquipmentRegistryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -26,9 +29,11 @@ export function EquipmentPage({ userRole }: EquipmentPageProps) {
           setItems(data);
         }
       })
-      .catch((requestError: Error) => {
+      .catch((requestError) => {
         if (isMounted) {
-          setError(requestError.message);
+          const errorMessage = getApiErrorMessage(requestError);
+          setError(errorMessage);
+          notifyError("Не удалось загрузить оборудование", errorMessage);
         }
       })
       .finally(() => {
@@ -40,7 +45,7 @@ export function EquipmentPage({ userRole }: EquipmentPageProps) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [notifyError]);
 
   const openEquipmentCard = (visibleId: number) => {
     window.location.hash = buildHashRoute(`#/equipment/${visibleId}`, {
