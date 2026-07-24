@@ -39,6 +39,22 @@ export function createEmployeeDictionaryActions({
   };
 
   const toggleEmployeeStatus = async (employee: AdminEmployee) => {
+    const shouldDisable = employee.isActive;
+
+    if (shouldDisable && employee.isLinkedToCurrentUser) {
+      return;
+    }
+
+    if (
+      shouldDisable &&
+      employee.activeAccountCount > 0 &&
+      !window.confirm(
+        "Сотрудник будет отключён. Все связанные активные учётные записи пользователей также будут отключены.",
+      )
+    ) {
+      return;
+    }
+
     await runSavingAction(async () => {
       await setAdminEmployeeStatus(employee.id, !employee.isActive);
       setMessage(

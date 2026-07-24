@@ -10,6 +10,15 @@
   color: #b42318;
 }
 
+.users-card .admin-table-actions {
+  flex-wrap: nowrap;
+}
+
+.users-card .data-table th:last-child,
+.users-card .data-table td:last-child {
+  min-width: 176px;
+}
+
 .user-photo-form {
   gap: 16px;
 }

@@ -10,11 +10,14 @@ export type AdminUserRole =
 
 export type AdminEmployee = {
   accountCount: number;
+  activeAccountCount: number;
   equipmentCount: number;
   firstName: string;
   fullName: string;
+  hasUserAccounts: boolean;
   id: number;
   isActive: boolean;
+  isLinkedToCurrentUser: boolean;
   lastName: string;
   middleName: string | null;
   position: string;

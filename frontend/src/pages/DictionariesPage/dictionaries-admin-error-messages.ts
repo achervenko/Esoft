@@ -15,7 +15,7 @@ export function getDictionariesAdminErrorMessage(error: unknown) {
       return "Недостаточно прав для управления справочниками.";
     }
 
-    return error.message;
+    return getUserAdminErrorByCode(error.code) ?? error.message;
   }
 
   if (error instanceof DictionariesAdminApiError) {
@@ -35,6 +35,15 @@ export function getDictionariesAdminErrorMessage(error: unknown) {
   }
 
   return "Не удалось загрузить справочники.";
+}
+
+function getUserAdminErrorByCode(code: string | undefined) {
+  switch (code) {
+    case "CANNOT_DISABLE_OWN_EMPLOYEE":
+      return "Нельзя отключить сотрудника, связанного с текущей учётной записью.";
+    default:
+      return null;
+  }
 }
 
 function getDictionaryErrorByCode(code: string | null) {

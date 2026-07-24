@@ -29,34 +29,45 @@ const employeeColumns = (
   {
     key: "actions",
     label: "",
-    render: (employee) => (
-      <div className="admin-table-actions">
-        <button
-          aria-label={`Редактировать сотрудника ${employee.fullName}`}
-          className="admin-icon-button"
-          onClick={() => onEdit(employee)}
-          title="Редактировать"
-          type="button"
-        >
-          <Edit2 size={17} />
-        </button>
-        <button
-          aria-label={
-            employee.isActive
-              ? `Отключить сотрудника ${employee.fullName}`
-              : `Включить сотрудника ${employee.fullName}`
-          }
-          className={`admin-icon-button admin-status-toggle${
-            employee.isActive ? " active" : " inactive"
-          }`}
-          onClick={() => onToggleStatus(employee)}
-          title={employee.isActive ? "Отключить" : "Включить"}
-          type="button"
-        >
-          <Power size={17} />
-        </button>
-      </div>
-    ),
+    render: (employee) => {
+      const isOwnActiveEmployee =
+        employee.isActive && employee.isLinkedToCurrentUser;
+      const statusTitle = isOwnActiveEmployee
+        ? "Нельзя отключить сотрудника, связанного с текущей учётной записью"
+        : employee.isActive
+          ? "Отключить"
+          : "Включить";
+
+      return (
+        <div className="admin-table-actions">
+          <button
+            aria-label={`Редактировать сотрудника ${employee.fullName}`}
+            className="admin-icon-button"
+            onClick={() => onEdit(employee)}
+            title="Редактировать"
+            type="button"
+          >
+            <Edit2 size={17} />
+          </button>
+          <button
+            aria-label={
+              employee.isActive
+                ? `Отключить сотрудника ${employee.fullName}`
+                : `Включить сотрудника ${employee.fullName}`
+            }
+            className={`admin-icon-button admin-status-toggle${
+              employee.isActive ? " active" : " inactive"
+            }`}
+            disabled={isOwnActiveEmployee}
+            onClick={() => onToggleStatus(employee)}
+            title={statusTitle}
+            type="button"
+          >
+            <Power size={17} />
+          </button>
+        </div>
+      );
+    },
   },
 ];
 

@@ -1,23 +1,41 @@
 import { toUserPhotoDto } from '../users/user-photo.dto';
 
-export function toEmployeeDto(employee: {
-  _count?: {
-    employeeUsers: number;
-    responsibleEquipment: number;
-  };
-  firstName: string;
-  id: number;
-  isActive: boolean;
-  lastName: string;
-  middleName: string | null;
-  position: string;
-}) {
+export function toEmployeeDto(
+  employee: {
+    _count?: {
+      employeeUsers: number;
+      responsibleEquipment: number;
+    };
+    employeeUsers?: Array<{
+      user: {
+        banned?: boolean | null;
+        id: string;
+      };
+    }>;
+    firstName: string;
+    id: number;
+    isActive: boolean;
+    lastName: string;
+    middleName: string | null;
+    position: string;
+  },
+  currentUserId?: string | null,
+) {
   return {
     accountCount: employee._count?.employeeUsers ?? 0,
+    activeAccountCount:
+      employee.employeeUsers?.filter((item) => !item.user.banned).length ?? 0,
     equipmentCount: employee._count?.responsibleEquipment ?? 0,
     firstName: employee.firstName,
     fullName: getEmployeeFullName(employee),
+    hasUserAccounts:
+      (employee._count?.employeeUsers ?? employee.employeeUsers?.length ?? 0) >
+      0,
     id: employee.id,
+    isLinkedToCurrentUser: Boolean(
+      currentUserId &&
+        employee.employeeUsers?.some((item) => item.user.id === currentUserId),
+    ),
     isActive: employee.isActive,
     lastName: employee.lastName,
     middleName: employee.middleName,

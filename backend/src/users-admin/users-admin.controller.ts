@@ -45,7 +45,7 @@ export class UsersAdminController {
   listEmployees(@Session() session: UserSession<Auth>) {
     assertAdmin(session.user.role);
 
-    return this.employeeAdminService.listEmployees();
+    return this.employeeAdminService.listEmployees(session.user.id);
   }
 
   @Post('employees')

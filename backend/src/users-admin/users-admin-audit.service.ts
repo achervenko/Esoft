@@ -155,6 +155,29 @@ export class UsersAdminAuditService {
     });
   }
 
+  logUserAutoDisabledForEmployee(params: {
+    actorUserId?: string | null;
+    oldBanned?: boolean | null;
+    tx?: Prisma.TransactionClient;
+    userId: string;
+  }) {
+    return this.auditLog.writeFieldChanges({
+      action: AuditAction.STATUS_CHANGE,
+      entityType: this.userEntityType(params.userId),
+      fields: [
+        {
+          fieldName: 'Статус учётной записи',
+          newValue:
+            'отключена автоматически вследствие отключения связанного сотрудника',
+          oldValue: this.getUserStatusLabel(params.oldBanned),
+        },
+      ],
+      module: AuditModule.USERS,
+      tx: params.tx,
+      userId: params.actorUserId,
+    });
+  }
+
   logUserPhotoUploaded(params: {
     actorUserId?: string | null;
     hadPreviousPhoto: boolean;
