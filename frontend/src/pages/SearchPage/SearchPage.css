@@ -7,7 +7,7 @@
   gap: 8px;
   color: #4b5563;
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 500;
 }
 
 .search-input-shell {
@@ -35,11 +35,16 @@
   color: #15171c;
   font: inherit;
   font-size: 15px;
-  font-weight: 750;
+  font-weight: 400;
 }
 
 .search-input-shell input::placeholder {
   color: #9ca3af;
+  font-weight: 400;
+}
+
+.search-card .admin-state {
+  font-weight: 400;
 }
 
 .search-results {

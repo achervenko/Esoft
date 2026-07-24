@@ -23,11 +23,6 @@ export const sidebarSections: SidebarSection[] = [
         label: "Панель",
       },
       {
-        href: "#/my-checklists",
-        icon: ClipboardList,
-        label: "Мои чек-листы",
-      },
-      {
         href: "#/equipment",
         icon: Factory,
         label: "Оборудование",
@@ -36,6 +31,22 @@ export const sidebarSections: SidebarSection[] = [
         href: "#/search",
         icon: Search,
         label: "Поиск",
+      },
+    ],
+  },
+  {
+    title: "Чек-листы",
+    items: [
+      {
+        href: "#/my-checklists",
+        icon: ClipboardList,
+        label: "Мои чек-листы",
+      },
+      {
+        href: "#/checklist-admin",
+        icon: BookCheck,
+        label: "Редактор чек-листов",
+        roles: ["admin", "chief_engineer"],
       },
     ],
   },
@@ -53,12 +64,6 @@ export const sidebarSections: SidebarSection[] = [
         icon: BookOpen,
         label: "Справочники",
         roles: ["admin"],
-      },
-      {
-        href: "#/checklist-admin",
-        icon: BookCheck,
-        label: "Чек-листы",
-        roles: ["admin", "chief_engineer"],
       },
     ],
   },
