@@ -37,7 +37,7 @@ export function ManufacturersDictionaryPanel({
             onClick={onCreateManufacturer}
             type="button"
           >
-            <Plus size={17} />
+            <Plus size={18} />
             Добавить
           </button>
         </header>
@@ -57,7 +57,7 @@ export function ManufacturersDictionaryPanel({
             onClick={onCreateModel}
             type="button"
           >
-            <Plus size={17} />
+            <Plus size={18} />
             Добавить
           </button>
         </header>

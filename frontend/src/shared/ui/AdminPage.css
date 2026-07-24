@@ -55,6 +55,10 @@
   gap: 12px;
 }
 
+.admin-card > header.admin-card-actions-header {
+  justify-content: flex-end;
+}
+
 .admin-card h2 {
   color: #15171c;
   font-size: 18px;
@@ -68,7 +72,7 @@
 
 .admin-nested-section {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .admin-nested-section > header {

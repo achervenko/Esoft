@@ -37,7 +37,7 @@ export function LocationsDictionaryPanel({
             onClick={onCreateObject}
             type="button"
           >
-            <Plus size={17} />
+            <Plus size={18} />
             Добавить
           </button>
         </header>
@@ -57,7 +57,7 @@ export function LocationsDictionaryPanel({
             onClick={onCreateLocation}
             type="button"
           >
-            <Plus size={17} />
+            <Plus size={18} />
             Добавить
           </button>
         </header>

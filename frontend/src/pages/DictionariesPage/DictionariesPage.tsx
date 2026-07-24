@@ -86,10 +86,9 @@ export function DictionariesPage({ userRole }: DictionariesPageProps) {
       </div>
 
       <section className="admin-card dictionaries-card">
-        <header>
-          <h2>{tabLabels[page.activeTab]}</h2>
-          {page.activeTab !== "locations" &&
-          page.activeTab !== "manufacturers" ? (
+        {page.activeTab !== "locations" &&
+        page.activeTab !== "manufacturers" ? (
+          <header className="admin-card-actions-header">
             <button
               className="admin-primary-button"
               onClick={openCreateForm}
@@ -98,8 +97,8 @@ export function DictionariesPage({ userRole }: DictionariesPageProps) {
               <Plus size={18} />
               {addButtonLabels[page.activeTab]}
             </button>
-          ) : null}
-        </header>
+          </header>
+        ) : null}
 
         {page.isLoading ? <p className="admin-state">Загрузка...</p> : null}
         {!page.isLoading && page.activeTab === "employees" ? (
