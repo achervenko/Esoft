@@ -8,7 +8,7 @@ export function toEmployeeDto(
     };
     employeeUsers?: Array<{
       user: {
-        banned?: boolean | null;
+        banned: boolean | null;
         id: string;
       };
     }>;
@@ -21,6 +21,12 @@ export function toEmployeeDto(
   },
   currentUserId?: string | null,
 ) {
+  const isLinkedToCurrentUser =
+    currentUserId !== null &&
+    currentUserId !== undefined &&
+    (employee.employeeUsers?.some((item) => item.user.id === currentUserId) ??
+      false);
+
   return {
     accountCount: employee._count?.employeeUsers ?? 0,
     activeAccountCount:
@@ -32,10 +38,7 @@ export function toEmployeeDto(
       (employee._count?.employeeUsers ?? employee.employeeUsers?.length ?? 0) >
       0,
     id: employee.id,
-    isLinkedToCurrentUser: Boolean(
-      currentUserId &&
-        employee.employeeUsers?.some((item) => item.user.id === currentUserId),
-    ),
+    isLinkedToCurrentUser,
     isActive: employee.isActive,
     lastName: employee.lastName,
     middleName: employee.middleName,

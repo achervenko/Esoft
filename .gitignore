@@ -1,5 +1,7 @@
 node_modules/
 package-lock.json
+backend/package-lock.json
+frontend/package-lock.json
 dist/
 build/
 coverage/
@@ -7,13 +9,13 @@ coverage/
 .env.*
 !.env.example
 esoft.config.json
+esoft.config.local.json
 *.log
 backend-runtime.pid
 frontend.pid
 .DS_Store
 Thumbs.db
-frontend/src/assets/auth-visual.png
 
 # Local MinIO runtime and object storage data.
 minio/
-tools/
+tools/minio.exe

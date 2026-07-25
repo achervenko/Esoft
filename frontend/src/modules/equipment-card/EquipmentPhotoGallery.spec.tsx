@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { getFilePreviewUrl } from "../../shared/api/files-api";
 import { createEquipmentPhoto } from "./equipment-card.test-helpers";
 import { EquipmentPhotoGallery } from "./EquipmentPhotoGallery";
 
@@ -48,7 +49,10 @@ describe("EquipmentPhotoGallery", () => {
     });
     const previewImage = screen.getByRole("img", { name: "Главное.jpg" });
 
-    expect(previewImage).toHaveAttribute("src", "/api/files/10/preview?size=medium");
+    expect(previewImage).toHaveAttribute(
+      "src",
+      getFilePreviewUrl(10, { size: "medium" }),
+    );
 
     await user.click(previewButton);
 

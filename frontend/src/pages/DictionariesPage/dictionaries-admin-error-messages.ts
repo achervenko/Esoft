@@ -1,12 +1,11 @@
-import { DictionariesAdminApiError } from "../../shared/api/dictionaries-admin-api";
-import { AdminApiError } from "../../shared/api/users-admin-api";
+import { ApiRequestError } from "../../shared/api/api-error";
 
 export function getDictionariesAdminErrorMessage(error: unknown) {
   if (error instanceof TypeError) {
     return "Нет соединения с сервером.";
   }
 
-  if (error instanceof AdminApiError) {
+  if (error instanceof ApiRequestError) {
     if (error.status === 401) {
       return "Сессия завершена. Войдите в систему повторно.";
     }
@@ -15,19 +14,11 @@ export function getDictionariesAdminErrorMessage(error: unknown) {
       return "Недостаточно прав для управления справочниками.";
     }
 
-    return getUserAdminErrorByCode(error.code) ?? error.message;
-  }
-
-  if (error instanceof DictionariesAdminApiError) {
-    if (error.status === 401) {
-      return "Сессия завершена. Войдите в систему повторно.";
-    }
-
-    if (error.status === 403) {
-      return "Недостаточно прав для управления справочниками.";
-    }
-
-    return getDictionaryErrorByCode(error.code) ?? error.message;
+    return (
+      getDictionaryErrorByCode(error.code) ??
+      getUserAdminErrorByCode(error.code) ??
+      error.message
+    );
   }
 
   if (error instanceof Error) {
@@ -46,7 +37,7 @@ function getUserAdminErrorByCode(code: string | undefined) {
   }
 }
 
-function getDictionaryErrorByCode(code: string | null) {
+function getDictionaryErrorByCode(code: string | null | undefined) {
   switch (code) {
     case "COUNTRY_ISO_INVALID":
       return "ISO должен состоять из двух латинских букв.";

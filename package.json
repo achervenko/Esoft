@@ -2,16 +2,27 @@
   "name": "esoft",
   "private": true,
   "version": "0.0.1",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "scripts": {
-    "build": "npm --prefix backend run build && npm --prefix frontend run build",
+    "dev": "node ./scripts/dev.mjs",
+    "doctor": "node ./scripts/doctor.mjs",
+    "build": "npm run config:validate && npm run build:backend && npm run build:frontend",
+    "build:backend": "npm run build --workspace backend",
+    "build:frontend": "npm run build --workspace frontend",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "npm run lint --workspace backend",
+    "lint:frontend": "npm run lint --workspace frontend",
+    "lint:fix": "npm run lint:fix --workspace backend && npm run lint:fix --workspace frontend",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "npm run test --workspace backend -- --runInBand",
+    "test:frontend": "npm run test --workspace frontend",
+    "test:e2e": "npm run config:validate && npm run test:e2e --workspace backend -- --runInBand",
+    "start": "node ./scripts/start.mjs",
     "check:encoding": "node ./tools/check-encoding.mjs",
     "check:encoding:strict": "node ./tools/check-encoding.mjs --strict",
-    "install:minio": "powershell -ExecutionPolicy Bypass -File ./install-minio.ps1",
-    "start:minio": "powershell -ExecutionPolicy Bypass -File ./start-minio.ps1",
-    "start:simple": "powershell -ExecutionPolicy Bypass -File ./start-esoft-npm.ps1",
-    "start:server": "powershell -ExecutionPolicy Bypass -File ./start-esoft-server.ps1",
-    "start:production": "powershell -ExecutionPolicy Bypass -File ./start-esoft-production.ps1",
-    "backend:dev": "npm --prefix backend run start:dev",
-    "frontend:dev": "npm --prefix frontend run dev"
+    "config:validate": "node ./scripts/config/validate-config.mjs"
   }
 }

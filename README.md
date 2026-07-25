@@ -1,223 +1,175 @@
 # Esoft
 
-Esoft is a local equipment accounting app.
+Esoft - локальное приложение для учёта оборудования.
 
 - `backend` - NestJS API, Better Auth, Prisma
 - `frontend` - React + Vite
-- `esoft.config.json` - local launcher config
+- `scripts` - общая конфигурация проекта и запуск процессов
 
-## Requirements
+## Требования
 
 - Node.js
 - PostgreSQL
-- MinIO, installed by project script
+- S3-хранилище, совместимое с MinIO
 
-## Config
+PostgreSQL устанавливается и управляется вне npm-скриптов. Локальный MinIO
+запускается через `npm run dev` и может временно запускаться через
+`npm run doctor`. Команды проекта не создают базы данных, бакеты, пользователей
+или данные хранилища.
 
-Main settings are stored in:
+## Конфигурация
+
+Проект использует один корневой файл конфигурации:
 
 ```text
-esoft.config.json
+.env
 ```
 
-This file is local and is ignored by Git because it can contain passwords and
-auth secrets. Use `esoft.config.example.json` as a template.
+Создайте его из корневого шаблона.
 
-Edit this file when you need to change:
-
-- frontend/backend ports
-- local network host
-- database host, port, name, user and password
-- auth secret
-- MinIO endpoint, bucket, credentials, executable path and data path
-- browser startup behavior
-
-The launcher syncs generated env files on every start:
-
-- `backend/.env`
-- `frontend/.env`
-
-Do not edit generated env files unless you need a temporary manual override.
-
-## MinIO
-
-MinIO is used as local S3-compatible file storage.
-
-The repository does not store:
-
-- `tools/minio.exe`
-- `minio/` object storage data
-
-These paths are local runtime files and are ignored by Git.
-
-Install or update MinIO from the project root:
+Windows PowerShell:
 
 ```powershell
-npm run install:minio
+Copy-Item .env.example .env
 ```
 
-The installer downloads the official Windows binary from:
+macOS/Linux:
+
+```bash
+cp .env.example .env
+```
+
+Затем заполните локальные значения базы данных, Better Auth, backend, frontend
+и MinIO.
+
+Проверить конфигурацию из корня проекта:
+
+```bash
+npm run config:validate
+```
+
+Подробнее:
 
 ```text
-https://dl.min.io/server/minio/release/windows-amd64/minio.exe
+Документация/CONFIGURATION.md
 ```
 
-It uses `esoft.config.json`:
+## Установка
 
-- `storage.executablePath` - where `minio.exe` is saved
-- `storage.dataPath` - where object data is stored
-- `storage.accessKey` and `storage.secretKey` - MinIO admin login
+Установите зависимости всех пакетов рабочих областей из корня:
 
-Start MinIO:
-
-```powershell
-npm run start:minio
+```bash
+npm install
 ```
 
-Default local addresses:
+Корневой пакет использует npm workspaces для `backend` и `frontend`.
+
+## Разработка
+
+Запустить MinIO, backend в режиме наблюдения за изменениями и frontend Vite из
+одного терминала:
+
+```bash
+npm run dev
+```
+
+Команда сначала валидирует `.env`, затем запускает процессы. Для остановки
+нажмите `Ctrl+C`.
+
+Запустить проверку локального проекта без оставления временных процессов:
+
+```bash
+npm run doctor
+```
+
+Команда проверяет конфигурацию, PostgreSQL, MinIO, backend `/health` и HTML-ответ
+frontend. Если компонент уже работает, doctor оставляет его работать. Если
+doctor временно запускает компонент, он останавливает только этот компонент
+перед завершением.
+
+## Сборка
+
+```bash
+npm run build
+```
+
+Команда выполняет:
+
+1. `config:validate`
+2. сборку backend для промышленной среды
+3. сборку frontend для промышленной среды
+
+Результат успешной сборки:
 
 ```text
-API:     http://127.0.0.1:9000
-Console: http://127.0.0.1:9001
+backend/dist/
+frontend/dist/
 ```
 
-On first setup, open the MinIO console and create the bucket from
-`storage.bucket` in `esoft.config.json` usually:
+## Проверка кода
 
-```text
-esoft
+```bash
+npm run lint
 ```
 
-## Start
+Команда только проверяет файлы и не изменяет их.
 
-Make sure PostgreSQL is running and the database from `esoft.config.json` exists.
+Автоисправление запускается отдельно:
 
-If the database does not exist yet, run this script in pgAdmin as a PostgreSQL
-administrator:
-
-```text
-database/setup-postgres.sql
+```bash
+npm run lint:fix
 ```
 
-Then apply Prisma migrations:
+## Тесты
 
-```powershell
-cd backend
-npm run prisma:migrate
+Запустить модульные тесты серверной и клиентской частей:
+
+```bash
+npm run test
 ```
 
-From the project root:
+Запустить сквозные тесты серверной части:
 
-```powershell
-npm run start:minio
-npm run start:simple
+```bash
+npm run test:e2e
 ```
 
-The launcher will:
+## Локальный запуск собранного проекта
 
-- stop old Esoft processes on configured ports
-- sync env files from `esoft.config.json`
-- start backend
-- start frontend
-- open the browser when enabled
+Сначала соберите проект:
 
-Logs are written to:
-
-```text
-logs
+```bash
+npm run build
 ```
 
-## Production-like Server Start
+Затем запустите backend из `backend/dist` и frontend через Vite preview:
 
-Use this path for a small Windows server without Docker.
-
-Prepare the server once:
-
-- install Node.js LTS;
-- install PostgreSQL;
-- run `database/setup-postgres.sql` if the database and user do not exist yet;
-- run `npm run install:minio`;
-- copy `esoft.config.example.json` to `esoft.config.json`;
-- fill database, auth and MinIO settings in `esoft.config.json`.
-
-Then start Esoft from the project root:
-
-```powershell
-npm run start:production
+```bash
+npm run start
 ```
 
-The production launcher:
-
-- syncs `backend/.env` and `frontend/.env` from `esoft.config.json`;
-- starts MinIO from the configured executable and data folder;
-- installs npm dependencies if `node_modules` is missing;
-- generates Prisma client;
-- applies migrations with `prisma migrate deploy`;
-- builds backend and frontend;
-- starts backend from `dist/main`;
-- starts frontend from the built `dist` via Vite preview;
-- opens the browser if `app.openBrowser` is enabled.
-
-For this deployment mode the operator usually changes only one file:
-
-```text
-esoft.config.json
-```
-
-Keep backups of:
-
-- PostgreSQL database;
-- MinIO data folder from `storage.dataPath`;
-- `esoft.config.json`.
-
-## Manual Dev Start
-
-Use this only when you need to debug parts separately:
-
-```powershell
-npm run backend:dev
-npm run frontend:dev
-```
+Эта команда предназначена для локальной проверки сборки для промышленной среды.
+Это не финальная промышленная схема развёртывания веб-сервера.
 
 ## Prisma
 
-```powershell
-cd backend
-npm run prisma:generate
-npm run prisma:migrate
+Команды Prisma запускаются через npm workspace `backend`:
+
+```bash
+npm run prisma:generate --workspace backend
+npm run prisma:migrate --workspace backend
 ```
 
-## Auth
+## Типографика интерфейса
 
-Better Auth is mounted in the NestJS backend at:
+Для новых экранов клиентской части используйте общую шкалу текста:
 
-```text
-/api/auth
-```
+- Заголовок страницы: `30px`, `line-height: 1.2`, `font-weight: 800`, цвет `#15171c`.
+- Заголовок сущности/карточки: `30px`, `line-height: 1.2`, `font-weight: 800`, цвет `#15171c`.
+- Заголовок секции карточки: `18px`, `font-weight: 800`, цвет `#15171c`.
+- Подпись поля: `12px`, `font-weight: 800`, цвет `#6b7280`.
+- Значение поля: `15px`, `font-weight: 650`, цвет `#15171c`.
+- Вторичный текст: `14px`, `line-height: 1.4`, `font-weight: 650`, цвет `#6b7280`.
 
-Enabled:
-
-- email/password auth
-- username/password auth
-- admin role plugin
-- NestJS auth guard integration
-
-React client helper:
-
-```text
-frontend/src/lib/auth-client.ts
-```
-
-## UI typography
-
-Use the same text scale across new frontend screens:
-
-- Page title, for example registry or profile header: `30px`, `line-height: 1.2`, `font-weight: 800`, color `#15171c`.
-- Entity/card title, for example equipment card title or profile name: `30px`, `line-height: 1.2`, `font-weight: 800`, color `#15171c`.
-- Card section title, for example `Основные данные` or `Данные пользователя`: `18px`, `font-weight: 800`, color `#15171c`.
-- Field label: `12px`, `font-weight: 800`, color `#6b7280`.
-- Field value: `15px`, `font-weight: 650`, color `#15171c`.
-- Secondary description text: `14px`, `line-height: 1.4`, `font-weight: 650`, color `#6b7280`.
-
-When adding a new page, copy these settings from the equipment registry and
-equipment card styles instead of inventing a separate text scale.
+При добавлении новой страницы копируйте эти настройки из реестра оборудования и
+карточки оборудования, а не вводите отдельную шкалу текста.

@@ -1,3 +1,5 @@
+import { request } from "./api-client";
+
 export type DictionariesAdminOverview = {
   dictionaries: Array<never>;
 };
@@ -50,20 +52,6 @@ export type EquipmentModelPayload = {
   manufacturerId: number;
   name: string;
 };
-
-const API_URL = import.meta.env.VITE_API_URL || "";
-
-export class DictionariesAdminApiError extends Error {
-  readonly code: string | null;
-  readonly status: number;
-
-  constructor(message: string, status: number, code: string | null = null) {
-    super(message);
-    this.name = "DictionariesAdminApiError";
-    this.code = code;
-    this.status = status;
-  }
-}
 
 export function getDictionariesAdminOverview() {
   return request<DictionariesAdminOverview>("/api/dictionaries/admin/overview");
@@ -210,27 +198,4 @@ export function deleteDictionaryLocation(id: number) {
   return request<{ ok: true }>(`/api/dictionaries/admin/locations/${id}`, {
     method: "DELETE",
   });
-}
-
-async function request<T>(path: string, init?: RequestInit) {
-  const response = await fetch(`${API_URL}${path}`, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
-    ...init,
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => null);
-
-    throw new DictionariesAdminApiError(
-      errorBody?.message ?? "Не удалось выполнить запрос.",
-      response.status,
-      typeof errorBody?.code === "string" ? errorBody.code : null,
-    );
-  }
-
-  return (await response.json()) as T;
 }

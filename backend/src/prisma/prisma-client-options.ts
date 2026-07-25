@@ -1,13 +1,12 @@
 import { PrismaPg } from '@prisma/adapter-pg';
+import { loadRootConfig } from '../config/root-environment';
 
 export const createPrismaClientOptions = () => {
-  const connectionString = process.env.DATABASE_URL;
-
-  if (!connectionString) {
-    throw new Error('DATABASE_URL is not set');
-  }
+  const config = loadRootConfig();
 
   return {
-    adapter: new PrismaPg({ connectionString }),
+    adapter: new PrismaPg({
+      connectionString: config.database.url,
+    }),
   };
 };

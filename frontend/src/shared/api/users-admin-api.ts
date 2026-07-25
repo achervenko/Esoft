@@ -1,3 +1,4 @@
+import { request } from "./api-client";
 import type { UserPhoto } from "./user-profile-api";
 
 export type AdminRoleOption = {
@@ -56,20 +57,6 @@ export type UserAccountPayload = {
   role: AdminUserRole;
   username: string;
 };
-
-const API_URL = import.meta.env.VITE_API_URL || "";
-
-export class AdminApiError extends Error {
-  readonly code?: string;
-  readonly status: number;
-
-  constructor(message: string, status: number, code?: string) {
-    super(message);
-    this.name = "AdminApiError";
-    this.code = code;
-    this.status = status;
-  }
-}
 
 export function getAdminRoles() {
   return request<AdminRoleOption[]>("/api/users/admin/roles");
@@ -149,30 +136,4 @@ export function deleteAdminUserPhoto(id: string) {
   return request<AdminUserAccount>(`/api/users/admin/accounts/${id}/photo`, {
     method: "DELETE",
   });
-}
-
-async function request<T>(path: string, init?: RequestInit) {
-  const isFormData = init?.body instanceof FormData;
-  const response = await fetch(`${API_URL}${path}`, {
-    ...init,
-    credentials: "include",
-    headers: isFormData
-      ? init?.headers
-      : {
-          "Content-Type": "application/json",
-          ...init?.headers,
-        },
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => null);
-
-    throw new AdminApiError(
-      errorBody?.message ?? "Не удалось выполнить запрос.",
-      response.status,
-      errorBody?.code,
-    );
-  }
-
-  return (await response.json()) as T;
 }

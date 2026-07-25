@@ -1,4 +1,5 @@
-const API_URL = import.meta.env.VITE_API_URL || "";
+import { ApiRequestError } from "./api-error";
+import { API_URL } from "./api-config";
 
 export type FilePreviewSize = "small" | "medium";
 
@@ -20,10 +21,11 @@ export async function fetchPdfPreviewBlob(fileId: number) {
   });
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => null);
-    throw new Error(
-      errorBody?.message ??
-        "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043a\u0440\u044b\u0442\u044c PDF.",
+    const errorBody = await readFileErrorResponse(response);
+    throw new ApiRequestError(
+      errorBody?.message ?? "Не удалось открыть PDF.",
+      response.status,
+      errorBody?.code,
     );
   }
 
@@ -39,10 +41,11 @@ export async function downloadFileById(params: {
   });
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => null);
-    throw new Error(
-      errorBody?.message ??
-        "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043a\u0430\u0447\u0430\u0442\u044c \u0444\u0430\u0439\u043b.",
+    const errorBody = await readFileErrorResponse(response);
+    throw new ApiRequestError(
+      errorBody?.message ?? "Не удалось скачать файл.",
+      response.status,
+      errorBody?.code,
     );
   }
 
@@ -74,4 +77,11 @@ function getFileNameFromContentDisposition(value: string | null) {
   }
 
   return value.match(/filename="([^"]+)"/i)?.[1] ?? null;
+}
+
+async function readFileErrorResponse(response: Response) {
+  return response.json().catch(() => null) as Promise<{
+    code?: string;
+    message?: string;
+  } | null>;
 }

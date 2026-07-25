@@ -1,6 +1,5 @@
 import { ApiRequestError } from "./api-error";
-
-export const API_URL = import.meta.env.VITE_API_URL || "";
+import { API_URL } from "./api-config";
 
 export async function request<T>(path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
@@ -34,7 +33,14 @@ export async function request<T>(path: string, init: RequestInit = {}) {
     return undefined as T;
   }
 
-  return JSON.parse(responseText) as T;
+  try {
+    return JSON.parse(responseText) as T;
+  } catch {
+    throw new ApiRequestError(
+      "Сервер вернул некорректный ответ.",
+      response.status,
+    );
+  }
 }
 
 async function readJsonResponse(response: Response) {

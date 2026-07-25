@@ -5,7 +5,11 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { Inject, Injectable } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { Readable } from 'node:stream';
 import type { StorageConfig } from './config/storage-config.type';
 import { S3_CLIENT, STORAGE_CONFIG } from './storage.tokens';
@@ -57,7 +61,10 @@ export class StorageObjectService {
     );
 
     if (!response.Body || !isReadableStream(response.Body)) {
-      throw new Error(`Storage object body is empty: ${key}`);
+      throw new InternalServerErrorException({
+        code: 'STORAGE_OBJECT_EMPTY',
+        message: 'Не удалось прочитать файл из хранилища.',
+      });
     }
 
     return {

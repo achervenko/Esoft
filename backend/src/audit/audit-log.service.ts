@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import {
   AuditAction,
   AuditModule,
@@ -63,9 +63,10 @@ export class AuditLogService {
     });
 
     if (!equipment) {
-      throw new Error(
-        `Cannot write equipment creation audit: equipment ${equipmentId} not found`,
-      );
+      throw new InternalServerErrorException({
+        code: 'AUDIT_EQUIPMENT_NOT_FOUND',
+        message: 'Не удалось записать аудит создания оборудования.',
+      });
     }
 
     const lines: AuditFieldLine[] = [

@@ -1,4 +1,4 @@
-import { AdminApiError } from "../../shared/api/users-admin-api";
+import { ApiRequestError } from "../../shared/api/api-error";
 
 const messagesByCode: Record<string, string> = {
   CANNOT_CHANGE_OWN_ROLE: "Нельзя изменить собственную роль.",
@@ -46,7 +46,7 @@ export function getUsersAdminErrorMessage(error: unknown) {
     return "Нет соединения с сервером.";
   }
 
-  if (error instanceof AdminApiError) {
+  if (error instanceof ApiRequestError) {
     if (error.status === 401) {
       return "Сессия завершена. Войдите в систему повторно.";
     }

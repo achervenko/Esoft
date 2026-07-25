@@ -2,6 +2,7 @@ import type {
   CreateEquipmentPayload,
   EquipmentCard,
   EquipmentCreateOptions,
+  EquipmentStatus,
 } from "../../../shared/api/equipment/equipment.types";
 import type { EquipmentCreateFormState } from "./equipment-create-form.types";
 
@@ -9,14 +10,14 @@ export function toEquipmentCreatePayload(
   form: EquipmentCreateFormState,
 ): CreateEquipmentPayload {
   return {
-    visibleId: toOptionalNumber(form.visibleId),
+    visibleId: toOptionalNumber(form.visibleId, "Номер"),
     name: form.name.trim(),
     modelId: toRequiredNumber(form.modelId, "Модель"),
     specifications: toOptionalText(form.specifications),
     serialNumber: toOptionalText(form.serialNumber),
     inventoryNumber: form.inventoryNumber.trim(),
     countryId: form.countryId,
-    manufactureYear: toOptionalNumber(form.manufactureYear) ?? null,
+    manufactureYear: toOptionalNumber(form.manufactureYear, "Год выпуска") ?? null,
     commissioningDate: toOptionalText(form.commissioningDate),
     issueDate: toOptionalText(form.issueDate),
     sectionId: toRequiredNumber(form.sectionId, "Местонахождение"),
@@ -24,7 +25,7 @@ export function toEquipmentCreatePayload(
       form.responsibleEmployeeId,
       "Ответственный",
     ),
-    status: form.status,
+    status: toEquipmentStatus(form.status),
     operationText: toOptionalText(form.operationText),
     notes: toOptionalText(form.notes),
   };
@@ -60,9 +61,36 @@ export function toEquipmentFormState(
   };
 }
 
-function toOptionalNumber(value: string) {
+const equipmentStatuses = new Set<EquipmentStatus>([
+  "ACTIVE",
+  "RESERVE",
+  "REPAIR",
+  "MAINTENANCE",
+  "WRITTEN_OFF",
+]);
+
+function toEquipmentStatus(value: string): EquipmentStatus {
+  if (equipmentStatuses.has(value as EquipmentStatus)) {
+    return value as EquipmentStatus;
+  }
+
+  throw new Error('Поле "Статус" обязательно.');
+}
+
+function toOptionalNumber(value: string, label: string) {
   const cleanValue = value.trim();
-  return cleanValue ? Number(cleanValue) : undefined;
+
+  if (!cleanValue) {
+    return undefined;
+  }
+
+  const numberValue = Number(cleanValue);
+
+  if (!Number.isFinite(numberValue)) {
+    throw new Error(`Поле "${label}" должно быть числом.`);
+  }
+
+  return numberValue;
 }
 
 function toRequiredNumber(value: number | null, label: string) {

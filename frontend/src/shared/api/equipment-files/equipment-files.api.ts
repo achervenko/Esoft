@@ -1,5 +1,4 @@
-import { API_URL, request } from "../api-client";
-import { ApiRequestError } from "../api-error";
+import { request } from "../api-client";
 import { downloadFileById, getFileDownloadUrl } from "../files-api";
 import type {
   EquipmentFile,
@@ -26,27 +25,18 @@ export async function uploadEquipmentFile(params: {
     () => abortController.abort(),
     UPLOAD_TIMEOUT_MS,
   );
-  const response = await fetch(
-    `${API_URL}/api/equipment/${params.visibleId}/files`,
-    {
-      body: formData,
-      credentials: "include",
-      method: "POST",
-      signal: abortController.signal,
-    },
-  ).finally(() => window.clearTimeout(timeoutId));
-
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => null);
-    throw new ApiRequestError(
-      errorBody?.message ??
-        "Не удалось загрузить документ оборудования.",
-      response.status,
-      errorBody?.code,
+  try {
+    return await request<EquipmentFile>(
+      `/api/equipment/${params.visibleId}/files`,
+      {
+        body: formData,
+        method: "POST",
+        signal: abortController.signal,
+      },
     );
+  } finally {
+    window.clearTimeout(timeoutId);
   }
-
-  return (await response.json()) as EquipmentFile;
 }
 
 export function deleteEquipmentFile(fileId: number) {

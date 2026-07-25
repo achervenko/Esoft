@@ -1,5 +1,4 @@
-import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
+import { Logger } from '@nestjs/common';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { admin, username } from 'better-auth/plugins';
@@ -12,71 +11,19 @@ import {
   engineerRole,
   operatorRole,
 } from './better-auth-access';
-import { createPrismaClientOptions } from '../prisma/prisma-client-options';
+import { getFrontendOrigins } from '../config/frontend-origins';
+import { loadRootConfig } from '../config/root-environment';
+import { prismaService } from '../prisma/prisma.service';
 
-const isProduction = process.env.NODE_ENV === 'production';
-const betterAuthUrl = process.env.BETTER_AUTH_URL?.trim();
-const betterAuthSecret = process.env.BETTER_AUTH_SECRET?.trim();
-const frontendUrl = process.env.FRONTEND_URL?.trim();
+const config = loadRootConfig();
 
-const allowedUrlProtocols = ['http:', 'https:'];
+const betterAuthSecret = config.auth.secret;
+const resolvedBetterAuthUrl = config.auth.url;
+const trustedOrigins = getFrontendOrigins(config);
 
-const isDefined = <T>(value: T | undefined): value is T => value !== undefined;
-
-const validateHttpOrigin = (value: string, name: string) => {
-  try {
-    const url = new URL(value);
-
-    if (
-      !allowedUrlProtocols.includes(url.protocol) ||
-      url.pathname !== '/' ||
-      url.search ||
-      url.hash
-    ) {
-      throw new Error();
-    }
-
-    return url.origin;
-  } catch {
-    throw new Error(
-      `${name} must be a valid HTTP(S) origin without path, query or hash`,
-    );
-  }
-};
-
-if (!betterAuthSecret) {
-  throw new Error('BETTER_AUTH_SECRET is required');
-}
-
-if (isProduction && !betterAuthUrl) {
-  throw new Error('BETTER_AUTH_URL is required in production');
-}
-
-if (isProduction && !frontendUrl) {
-  throw new Error('FRONTEND_URL is required in production');
-}
-
-const resolvedBetterAuthUrl = validateHttpOrigin(
-  betterAuthUrl ?? 'http://127.0.0.1:3000',
-  'BETTER_AUTH_URL',
-);
-const resolvedFrontendOrigin = validateHttpOrigin(
-  frontendUrl ?? 'http://127.0.0.1:5173',
-  'FRONTEND_URL',
-);
-
-const trustedOrigins = Array.from(
-  new Set(
-    [
-      resolvedFrontendOrigin,
-      !isProduction ? 'http://localhost:5173' : undefined,
-      !isProduction ? 'http://127.0.0.1:5173' : undefined,
-    ].filter(isDefined),
-  ),
-);
-
-const prisma = new PrismaClient(createPrismaClientOptions());
+const prisma = prismaService;
 const authLoginService = new AuthLoginService(prisma);
+const logger = new Logger('Auth');
 
 export const auth = betterAuth({
   appName: 'Esoft',
@@ -93,9 +40,9 @@ export const auth = betterAuth({
           await authLoginService
             .recordSuccessfulLogin(session)
             .catch((error) => {
-              console.error(
+              logger.error(
                 '[auth-login] Failed to update last login timestamp',
-                error,
+                error instanceof Error ? error.stack : String(error),
               );
             });
         },

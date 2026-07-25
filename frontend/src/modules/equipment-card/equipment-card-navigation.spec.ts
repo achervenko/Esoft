@@ -29,7 +29,17 @@ describe("navigateWithViewTransition", () => {
 
   it("uses startViewTransition when it is available", () => {
     window.location.hash = "#/equipment/42";
-    const transitionSpy = vi.fn((callback: () => void) => callback());
+    const transitionSpy = vi.fn((callback: () => void) => {
+      callback();
+
+      return {
+        finished: Promise.resolve(),
+        ready: Promise.resolve(),
+        skipTransition: vi.fn(),
+        types: new Set<string>(),
+        updateCallbackDone: Promise.resolve(),
+      } as ViewTransition;
+    });
 
     document.startViewTransition = transitionSpy;
 

@@ -10,12 +10,16 @@ import {
 } from '@nestjs/common';
 import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import type { Request } from 'express';
+import { getFrontendOrigins } from '../config/frontend-origins';
+import { loadRootConfig } from '../config/root-environment';
 import { SetupService } from './setup.service';
 import { parseCreateInitialAdminDto } from './setup.validation';
 import type { CreateInitialAdminDto } from './setup.types';
 
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
+const config = loadRootConfig();
+const allowedOrigins = new Set(getFrontendOrigins(config));
 
 type RateLimitBucket = {
   count: number;
@@ -59,12 +63,6 @@ export class SetupController {
 
   private assertAllowedOrigin(request: Request) {
     const origin = request.get('origin');
-    const frontendUrl = process.env.FRONTEND_URL?.trim();
-    const allowedOrigins = new Set([
-      frontendUrl,
-      process.env.NODE_ENV !== 'production' ? 'http://127.0.0.1:5173' : null,
-      process.env.NODE_ENV !== 'production' ? 'http://localhost:5173' : null,
-    ]);
 
     if (!origin || !allowedOrigins.has(origin)) {
       throw new ForbiddenException({

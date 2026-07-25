@@ -1,3 +1,5 @@
+import { request } from "./api-client";
+
 export type SearchResultItem = {
   details: {
     location: string | null;
@@ -15,18 +17,6 @@ export type SearchResultItem = {
   targetUrl: string | null;
   title: string;
 };
-
-const API_URL = import.meta.env.VITE_API_URL || "";
-
-export class SearchApiError extends Error {
-  readonly status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = "SearchApiError";
-    this.status = status;
-  }
-}
 
 export async function searchApp(params: {
   entityType?: string;
@@ -49,17 +39,5 @@ export async function searchApp(params: {
     searchParams.set("offset", String(params.offset));
   }
 
-  const response = await fetch(`${API_URL}/api/search?${searchParams}`, {
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => null);
-    throw new SearchApiError(
-      errorBody?.message ?? "Не удалось выполнить поиск.",
-      response.status,
-    );
-  }
-
-  return (await response.json()) as SearchResultItem[];
+  return request<SearchResultItem[]>(`/api/search?${searchParams}`);
 }

@@ -1,3 +1,5 @@
+import { request } from './api-client';
+
 export type EmployeeProfile = {
   displayName: string;
   firstName: string;
@@ -26,19 +28,6 @@ export type UserPhoto = {
   updatedAt: string;
 };
 
-const API_URL = import.meta.env.VITE_API_URL || '';
-
 export async function getUserProfile(userId: string) {
-  const response = await fetch(`${API_URL}/api/users/${userId}/profile`, {
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error('Не удалось загрузить профиль пользователя.');
-  }
-
-  return (await response.json()) as UserProfile;
+  return request<UserProfile>(`/api/users/${userId}/profile`);
 }
