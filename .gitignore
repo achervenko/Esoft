@@ -19,3 +19,5 @@ Thumbs.db
 # Local MinIO runtime and object storage data.
 minio/
 tools/minio.exe
+
+esoft_before_squash.backup
