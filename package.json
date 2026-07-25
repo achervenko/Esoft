@@ -23,6 +23,9 @@
     "start": "node ./scripts/start.mjs",
     "check:encoding": "node ./tools/check-encoding.mjs",
     "check:encoding:strict": "node ./tools/check-encoding.mjs --strict",
-    "config:validate": "node ./scripts/config/validate-config.mjs"
+    "config:validate": "node ./scripts/config/validate-config.mjs",
+    "db:generate": "npm run db:generate --workspace backend",
+    "db:migrate": "npm run db:migrate --workspace backend",
+    "db:seed": "npm run db:seed --workspace backend"
   }
 }

@@ -94,8 +94,8 @@ function formatValidationReport(result) {
   }
 
   const documentationPath = result.projectRoot
-    ? join(result.projectRoot, 'Документация', 'CONFIGURATION.md')
-    : 'Документация/CONFIGURATION.md';
+    ? join(result.projectRoot, 'docs', 'CONFIGURATION.md')
+    : 'docs/CONFIGURATION.md';
 
   lines.push('Документация:', documentationPath);
 

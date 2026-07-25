@@ -51,7 +51,7 @@ npm run config:validate
 Подробнее:
 
 ```text
-Документация/CONFIGURATION.md
+docs/CONFIGURATION.md
 ```
 
 ## Установка

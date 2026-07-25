@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { loadRootConfig } from './config/root-environment';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { AppAuthModule } from './auth/auth.module';
 import { ChecklistsModule } from './checklists/checklists.module';
 import { DictionariesAdminModule } from './dictionaries-admin/dictionaries-admin.module';
@@ -35,7 +33,5 @@ loadRootConfig();
     UsersAdminModule,
     UsersModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}
