@@ -1,10 +1,9 @@
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
+
 import { defineConfig } from 'prisma/config';
 
 import { loadValidatedConfig } from '../scripts/infrastructure/config/validated-config.mjs';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, '..');
 
 const result = loadValidatedConfig({

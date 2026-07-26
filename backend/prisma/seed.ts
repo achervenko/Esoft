@@ -1,3 +1,8 @@
+import { PrismaClient } from '@prisma/client';
+
+import { createPrismaClientOptions } from '../src/prisma/prisma-client-options';
+import { seedCountries } from './seed/countries';
+
 async function runSeed() {
   const prisma = new PrismaClient(createPrismaClientOptions());
   let seedError: unknown = null;
@@ -25,3 +30,8 @@ async function runSeed() {
     throw seedError;
   }
 }
+
+void runSeed().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
