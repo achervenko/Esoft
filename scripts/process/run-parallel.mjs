@@ -1,42 +1,50 @@
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
 
-const npmCliPath = resolveNpmCliPath();
-const npmSpawn = createNpmSpawnConfig(npmCliPath);
+export {
+  npmArgs,
+  npmCommandName,
+  npmScriptArgs,
+} from '../infrastructure/commands/npm-command.mjs';
 
-export function npmScriptArgs(script, workspace, extraArgs = []) {
-  return npmArgs(['run', script, '--workspace', workspace, ...extraArgs]);
-}
-
-export function npmArgs(args) {
-  return [...npmSpawn.argsPrefix, ...args];
-}
-
-export function npmCommandName() {
-  return npmSpawn.command;
-}
-
-export async function runCommand(command, args, options = {}) {
+export async function runCommand(command, args = [], options = {}) {
   const spawnConfig = createSpawnConfig(command, args);
-  const child = spawn(spawnConfig.command, spawnConfig.args, {
-    cwd: options.cwd,
-    detached: options.detached ?? false,
-    shell: false,
-    stdio: options.stdio ?? 'inherit',
-    windowsHide: true,
-    windowsVerbatimArguments: spawnConfig.windowsVerbatimArguments,
-  });
+  let child;
+
+  try {
+    child = spawn(spawnConfig.command, spawnConfig.args, {
+      cwd: options.cwd,
+      detached: options.detached ?? false,
+      env: options.env ?? process.env,
+      shell: false,
+      stdio: options.stdio ?? 'inherit',
+      windowsHide: true,
+      windowsVerbatimArguments: spawnConfig.windowsVerbatimArguments,
+    });
+  } catch (error) {
+    return Promise.reject(error);
+  }
 
   return new Promise((resolve, reject) => {
-    child.once('error', reject);
-    child.once('exit', (code, signal) => {
+    const handleError = (error) => {
+      child.removeListener('exit', handleExit);
+      reject(error);
+    };
+
+    const handleExit = (code, signal) => {
+      child.removeListener('error', handleError);
       resolve({ code, signal });
-    });
+    };
+
+    child.once('error', handleError);
+    child.once('exit', handleExit);
   });
 }
 
 export function runParallel(commands) {
+  if (!Array.isArray(commands) || commands.length === 0) {
+    throw new Error('At least one command is required');
+  }
+
   const children = [];
   let isShuttingDown = false;
 
@@ -46,23 +54,38 @@ export function runParallel(commands) {
     }
 
     isShuttingDown = true;
-    await Promise.allSettled(children.map((child) => stopChildProcess(child)));
-    process.exit(exitCode);
+    const cleanupResults = await Promise.allSettled(
+      children.map((child) => stopChildProcess(child)),
+    );
+    const cleanupFailed = cleanupResults.some(
+      (result) => result.status === 'rejected',
+    );
+
+    process.exit(exitCode === 0 && cleanupFailed ? 1 : exitCode);
   };
 
   for (const command of commands) {
     console.log(`[${command.name}] Starting...`);
 
-    const spawnConfig = createSpawnConfig(command.command, command.args);
-    const child = spawn(spawnConfig.command, spawnConfig.args, {
-      cwd: command.cwd,
-      detached: process.platform !== 'win32',
-      env: command.env ?? process.env,
-      shell: false,
-      stdio: 'inherit',
-      windowsHide: true,
-      windowsVerbatimArguments: spawnConfig.windowsVerbatimArguments,
-    });
+    let child;
+
+    try {
+      const spawnConfig = createSpawnConfig(command.command, command.args);
+
+      child = spawn(spawnConfig.command, spawnConfig.args, {
+        cwd: command.cwd,
+        detached: process.platform !== 'win32',
+        env: command.env ?? process.env,
+        shell: false,
+        stdio: 'inherit',
+        windowsHide: true,
+        windowsVerbatimArguments: spawnConfig.windowsVerbatimArguments,
+      });
+    } catch (error) {
+      console.error(`[${command.name}] Failed to start: ${formatError(error)}`);
+      void shutdown(1);
+      break;
+    }
 
     children.push(child);
 
@@ -76,17 +99,7 @@ export function runParallel(commands) {
         return;
       }
 
-      const isInterrupted =
-        signal === 'SIGINT' ||
-        signal === 'SIGTERM' ||
-        code === 130 ||
-        code === 143;
-      const exitCode = isInterrupted ? 0 : (code ?? 1);
-
-      if (isInterrupted) {
-        void shutdown(0);
-        return;
-      }
+      const exitCode = getExitCode(code, signal);
 
       if (exitCode === 0) {
         console.log(`[${command.name}] Exited.`);
@@ -100,15 +113,15 @@ export function runParallel(commands) {
   }
 
   process.once('SIGINT', () => {
-    void shutdown(0);
+    void shutdown(130);
   });
 
   process.once('SIGTERM', () => {
-    void shutdown(0);
+    void shutdown(143);
   });
 }
 
-function createSpawnConfig(command, args) {
+function createSpawnConfig(command, args = []) {
   if (
     process.platform === 'win32' &&
     (command.endsWith('.cmd') || command.endsWith('.bat'))
@@ -123,6 +136,18 @@ function createSpawnConfig(command, args) {
   return { args, command };
 }
 
+function getExitCode(code, signal) {
+  if (signal === 'SIGINT' || code === 130) {
+    return 130;
+  }
+
+  if (signal === 'SIGTERM' || code === 143) {
+    return 143;
+  }
+
+  return code ?? 1;
+}
+
 function quoteCmdCommand(parts) {
   return parts.map(quoteCmdArgument).join(' ');
 }
@@ -131,85 +156,149 @@ function quoteCmdArgument(value) {
   return `"${String(value).replaceAll('"', '""')}"`;
 }
 
-function resolveNpmCliPath() {
-  if (process.platform !== 'win32') {
-    return null;
-  }
-
-  const candidates = [
-    process.env.npm_execpath,
-    join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js'),
-  ];
-
-  return candidates.find((candidate) => candidate && existsSync(candidate)) ?? null;
-}
-
-function createNpmSpawnConfig(resolvedNpmCliPath) {
-  if (process.platform !== 'win32') {
-    return {
-      argsPrefix: [],
-      command: 'npm',
-    };
-  }
-
-  if (resolvedNpmCliPath) {
-    return {
-      argsPrefix: [resolvedNpmCliPath],
-      command: process.execPath,
-    };
-  }
-
-  return {
-    argsPrefix: [],
-    command: 'npm.cmd',
-  };
-}
-
 async function stopChildProcess(child) {
+  if (!child.pid) {
+    return;
+  }
+
   if (process.platform === 'win32') {
-    await runCommand('taskkill.exe', [
+    const result = await runCommand('taskkill.exe', [
       '/pid',
       String(child.pid),
       '/t',
       '/f',
     ], {
       stdio: 'ignore',
-    }).catch(() => undefined);
+    });
+
+    await waitForExit(child, 3_000);
+
+    const exited = child.exitCode !== null || child.signalCode !== null;
+
+    if (result.code !== 0 && !exited) {
+      throw new Error(`taskkill failed with code ${result.code ?? 'unknown'}`);
+    }
+
+    if (!exited) {
+      throw new Error(`Process ${child.pid} did not exit after taskkill`);
+    }
 
     return;
   }
 
-  if (child.exitCode !== null || child.signalCode !== null) {
+  if (!isProcessGroupRunning(child.pid)) {
     return;
   }
 
   try {
     process.kill(-child.pid, 'SIGTERM');
-  } catch {
-    return;
+  } catch (error) {
+    if (isProcessMissingError(error)) {
+      return;
+    }
+
+    throw error;
   }
 
   await waitForExit(child, 3_000);
+  await waitForProcessGroupExit(child.pid, 3_000);
 
-  if (child.exitCode === null && child.signalCode === null) {
+  if (isProcessGroupRunning(child.pid)) {
     try {
       process.kill(-child.pid, 'SIGKILL');
-    } catch {
-      // Process already stopped.
+    } catch (error) {
+      if (!isProcessMissingError(error)) {
+        throw error;
+      }
+    }
+
+    await waitForExit(child, 2_000);
+    await waitForProcessGroupExit(child.pid, 2_000);
+
+    if (isProcessGroupRunning(child.pid)) {
+      throw new Error(`Process group ${child.pid} did not stop after SIGKILL`);
     }
   }
 }
 
+function isProcessGroupRunning(pid) {
+  try {
+    process.kill(-pid, 0);
+    return true;
+  } catch (error) {
+    if (isProcessMissingError(error)) {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
+async function waitForProcessGroupExit(pid, timeoutMs, intervalMs = 100) {
+  if (!Number.isFinite(timeoutMs) || timeoutMs < 0) {
+    throw new TypeError('timeoutMs must be a non-negative finite number');
+  }
+
+  if (!Number.isFinite(intervalMs) || intervalMs <= 0) {
+    throw new TypeError('intervalMs must be a positive finite number');
+  }
+
+  const startedAt = Date.now();
+
+  while (true) {
+    if (!isProcessGroupRunning(pid)) {
+      return true;
+    }
+
+    const remainingMs = timeoutMs - (Date.now() - startedAt);
+
+    if (remainingMs <= 0) {
+      return false;
+    }
+
+    await delay(Math.min(intervalMs, remainingMs));
+  }
+}
+
 function waitForExit(child, timeoutMs) {
+  if (!Number.isFinite(timeoutMs) || timeoutMs < 0) {
+    throw new TypeError('timeoutMs must be a non-negative finite number');
+  }
+
   if (child.exitCode !== null || child.signalCode !== null) {
     return Promise.resolve();
   }
 
-  return new Promise((resolve) => {
-    const timeout = setTimeout(resolve, timeoutMs);
-    child.once('exit', () => {
+  return new Promise((resolveWait) => {
+    const handleExit = () => {
       clearTimeout(timeout);
-      resolve();
-    });
+      resolveWait();
+    };
+
+    const timeout = setTimeout(() => {
+      child.removeListener('exit', handleExit);
+      resolveWait();
+    }, timeoutMs);
+
+    child.once('exit', handleExit);
   });
+}
+
+function delay(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function isProcessMissingError(error) {
+  return (
+    error !== null &&
+    typeof error === 'object' &&
+    'code' in error &&
+    error.code === 'ESRCH'
+  );
+}
+
+function formatError(error) {
+  return error instanceof Error ? error.message : String(error);
 }

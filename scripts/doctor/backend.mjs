@@ -1,4 +1,7 @@
-import { delay, formatError } from './utils.mjs';
+import {
+  checkBackendHealth,
+  waitForBackendHealth as waitForBackendHealthOperation,
+} from '../infrastructure/http/backend-health.mjs';
 
 export async function checkBackend({
   config,
@@ -11,6 +14,7 @@ export async function checkBackend({
 }) {
   report.addSection('Backend');
 
+  const expectedStatus = postgres.dependencyOk && minio.dependencyOk ? 200 : 503;
   let response = await fetchHealth({ config });
   let started = false;
 
@@ -30,8 +34,12 @@ export async function checkBackend({
     }
 
     started = true;
-    report.add('Backend', 'STARTED', 'Backend started temporarily');
-    response = await waitForBackendHealth(45_000, { config });
+    report.add(
+      'Backend',
+      'INFO',
+      'Backend process started; waiting for health endpoint',
+    );
+    response = await waitForBackendHealth({ config, expectedStatus });
   }
 
   if (!response.reachable) {
@@ -58,8 +66,6 @@ export async function checkBackend({
     return { ok: false };
   }
 
-  const expectedStatus = postgres.dependencyOk && minio.dependencyOk ? 200 : 503;
-
   if (response.status !== expectedStatus) {
     report.add(
       'Backend',
@@ -67,6 +73,10 @@ export async function checkBackend({
       `Health endpoint returned ${response.status}, expected ${expectedStatus}`,
     );
     return { ok: false };
+  }
+
+  if (started) {
+    report.add('Backend', 'STARTED', 'Backend started temporarily');
   }
 
   report.add('Backend', 'OK', 'Health endpoint');
@@ -107,42 +117,60 @@ export function addDependencyResult(report, label, expectedOk, actual) {
 }
 
 export async function fetchHealth({ config }) {
-  try {
-    const response = await fetch(`${config.backend.url}/health`, {
-      signal: AbortSignal.timeout(3_000),
-    });
-    const contentType = response.headers.get('content-type') ?? '';
-    const body = contentType.includes('application/json')
-      ? await response.json().catch(() => null)
-      : null;
-
-    return {
-      body,
-      reachable: true,
-      status: response.status,
-    };
-  } catch (error) {
-    return {
-      message: formatError(error),
-      reachable: false,
-    };
-  }
+  const result = await checkBackendHealth({ config });
+  return mapHealthResult(result);
 }
 
-export async function waitForBackendHealth(timeoutMs, { config }) {
-  const startedAt = Date.now();
-  let lastResponse = null;
+export async function waitForBackendHealth({
+  config,
+  expectedStatus,
+  timeoutMs = 45_000,
+}) {
+  let lastResult = null;
 
-  do {
-    const response = await fetchHealth({ config });
+  const result = await waitForBackendHealthOperation({
+    checkHealth: async () => {
+      const health = await checkBackendHealth({ config });
+      lastResult = health;
 
-    if (response.reachable) {
-      return response;
-    }
+      if (isExpectedHealthResult(health, expectedStatus)) {
+        return {
+          ...health,
+          ok: true,
+        };
+      }
 
-    lastResponse = response;
-    await delay(1_000);
-  } while (Date.now() - startedAt < timeoutMs);
+      return health;
+    },
+    timeoutMs,
+  });
 
-  return lastResponse ?? { message: 'Health endpoint did not become ready', reachable: false };
+  return mapHealthResult(lastResult ?? result);
+}
+
+function mapHealthResult(result) {
+  return {
+    body: result.details?.body,
+    code: result.code,
+    details: result.details,
+    message: result.details?.error ?? result.message,
+    reachable: isBackendReachable(result),
+    status: result.details?.status,
+  };
+}
+
+function isExpectedHealthResult(result, expectedStatus) {
+  if (result.ok) {
+    return true;
+  }
+
+  return (
+    expectedStatus === 503 &&
+    result.code === 'BACKEND_HEALTH_UNAVAILABLE' &&
+    result.details?.status === 503
+  );
+}
+
+function isBackendReachable(result) {
+  return Number.isInteger(result.details?.status);
 }

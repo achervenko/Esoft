@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "node ./scripts/dev.mjs",
     "doctor": "node ./scripts/doctor.mjs",
+    "setup": "node ./scripts/setup.mjs",
     "build": "npm run config:validate && npm run build:backend && npm run build:frontend",
     "build:backend": "npm run build --workspace backend",
     "build:frontend": "npm run build --workspace frontend",
@@ -20,12 +21,17 @@
     "test:backend": "npm run test --workspace backend -- --runInBand",
     "test:frontend": "npm run test --workspace frontend",
     "test:e2e": "npm run config:validate && npm run test:e2e --workspace backend -- --runInBand",
+    "test:scripts": "node ./scripts/test-scripts.mjs --all",
+    "test:scripts:integration": "node ./scripts/test-scripts.mjs --integration",
+    "test:scripts:unit": "node ./scripts/test-scripts.mjs --unit",
     "start": "node ./scripts/start.mjs",
     "check:encoding": "node ./tools/check-encoding.mjs",
     "check:encoding:strict": "node ./tools/check-encoding.mjs --strict",
     "config:validate": "node ./scripts/config/validate-config.mjs",
     "db:generate": "npm run db:generate --workspace backend",
     "db:migrate": "npm run db:migrate --workspace backend",
+    "db:migrate:deploy": "npm run db:migrate:deploy --workspace backend",
+    "db:migrate:status": "npm run db:migrate:status --workspace backend",
     "db:seed": "npm run db:seed --workspace backend"
   }
 }

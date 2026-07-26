@@ -1,37 +1,31 @@
-import { createRequire } from 'node:module';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'prisma/config';
 
-const requireConfigModule = createRequire(__filename);
+import { loadValidatedConfig } from '../scripts/infrastructure/config/validated-config.mjs';
 
-type ConfigCore = {
-  loadConfig(options?: {
-    applyToProcessEnv?: boolean;
-    overrideProcessEnv?: boolean;
-  }): {
-    config: {
-      database: {
-        url: string;
-      };
-    };
-  };
-};
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const projectRoot = resolve(__dirname, '..');
 
-const configCore = requireConfigModule(
-  resolve(__dirname, '../scripts/config/config-core.cjs'),
-) as ConfigCore;
-
-const { config } = configCore.loadConfig({
+const result = loadValidatedConfig({
   applyToProcessEnv: true,
   overrideProcessEnv: true,
+  projectRoot,
 });
+
+if (!result.ok) {
+  throw new Error(result.message);
+}
 
 export default defineConfig({
   schema: 'prisma/schema',
+
   migrations: {
     path: 'prisma/migrations',
+    seed: 'tsx prisma/seed.ts',
   },
+
   datasource: {
-    url: config.database.url,
+    url: result.details.config.database.url,
   },
 });

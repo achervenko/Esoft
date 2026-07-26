@@ -1,4 +1,7 @@
-import { delay, formatError } from './utils.mjs';
+import {
+  checkFrontendHttp,
+  waitForFrontendHttp,
+} from '../infrastructure/http/frontend-health.mjs';
 
 export async function checkFrontend({
   config,
@@ -10,6 +13,7 @@ export async function checkFrontend({
   report.addSection('Frontend');
 
   let response = await fetchFrontend({ config });
+  let started = false;
 
   if (!response.reachable) {
     const processStarted = await startManagedProcess(
@@ -26,8 +30,13 @@ export async function checkFrontend({
       return { ok: false };
     }
 
-    report.add('Frontend', 'STARTED', 'Frontend started temporarily');
-    response = await waitForFrontend(30_000, { config });
+    started = true;
+    report.add(
+      'Frontend',
+      'INFO',
+      'Frontend process started; waiting for HTTP endpoint',
+    );
+    response = await waitForFrontend({ config });
   }
 
   if (!response.reachable) {
@@ -36,59 +45,52 @@ export async function checkFrontend({
   }
 
   if (!response.ok) {
-    report.add('Frontend', 'ERROR', `HTTP status ${response.status}`);
+    if (response.code === 'FRONTEND_CONTENT_TYPE_INVALID') {
+      report.add(
+        'Frontend',
+        'ERROR',
+        `Content-Type is ${response.contentType || '<empty>'}, expected text/html`,
+      );
+    } else if (response.code === 'FRONTEND_HTTP_FAILED') {
+      report.add('Frontend', 'ERROR', `HTTP status ${response.status}`);
+    } else {
+      report.add('Frontend', 'ERROR', response.message);
+    }
+
     return { ok: false };
+  }
+
+  if (started) {
+    report.add('Frontend', 'STARTED', 'Frontend started temporarily');
   }
 
   report.add('Frontend', 'OK', 'HTML response');
-
-  if (!response.contentType.includes('text/html')) {
-    report.add(
-      'Frontend',
-      'ERROR',
-      `Content-Type is ${response.contentType || '<empty>'}, expected text/html`,
-    );
-    return { ok: false };
-  }
-
   report.add('Frontend', 'OK', 'Content-Type: text/html');
   return { ok: true };
 }
 
 export async function fetchFrontend({ config }) {
-  try {
-    const response = await fetch(config.frontend.url, {
-      signal: AbortSignal.timeout(3_000),
-    });
-
-    return {
-      contentType: response.headers.get('content-type') ?? '',
-      ok: response.ok,
-      reachable: true,
-      status: response.status,
-    };
-  } catch (error) {
-    return {
-      message: formatError(error),
-      reachable: false,
-    };
-  }
+  const result = await checkFrontendHttp({ config });
+  return mapFrontendResult(result);
 }
 
-export async function waitForFrontend(timeoutMs, { config }) {
-  const startedAt = Date.now();
-  let lastResponse = null;
+export async function waitForFrontend({ config, timeoutMs = 30_000 }) {
+  const result = await waitForFrontendHttp({
+    checkFrontend: () => checkFrontendHttp({ config }),
+    timeoutMs,
+  });
 
-  do {
-    const response = await fetchFrontend({ config });
+  return mapFrontendResult(result);
+}
 
-    if (response.reachable) {
-      return response;
-    }
-
-    lastResponse = response;
-    await delay(1_000);
-  } while (Date.now() - startedAt < timeoutMs);
-
-  return lastResponse ?? { message: 'HTTP endpoint did not become ready', reachable: false };
+function mapFrontendResult(result) {
+  return {
+    code: result.code,
+    contentType: result.details?.contentType ?? '',
+    details: result.details,
+    message: result.details?.error ?? result.message,
+    ok: result.ok,
+    reachable: Number.isInteger(result.details?.status),
+    status: result.details?.status,
+  };
 }

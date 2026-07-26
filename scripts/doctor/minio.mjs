@@ -1,6 +1,12 @@
 import { mkdir } from 'node:fs/promises';
 
-import { formatError, delay } from './utils.mjs';
+import { checkMinioBucket } from '../infrastructure/minio/bucket.mjs';
+import { createS3Client } from '../infrastructure/minio/client.mjs';
+import {
+  checkMinioReadiness,
+  waitForMinioReadiness,
+} from '../infrastructure/minio/readiness.mjs';
+import { checkMinioObjectRoundtrip as checkMinioObjectRoundtripOperation } from '../infrastructure/minio/object-roundtrip.mjs';
 
 export async function checkMinio({
   config,
@@ -13,11 +19,22 @@ export async function checkMinio({
   startManagedProcess,
 }) {
   report.addSection('MinIO');
-  await mkdir(config.minio.dataDir, { recursive: true });
 
   let ready = await checkMinioReady({ config });
+  let startedTemporarily = false;
 
   if (!ready.ok) {
+    try {
+      await mkdir(config.minio.dataDir, { recursive: true });
+    } catch (error) {
+      report.add(
+        'MinIO',
+        'ERROR',
+        `Unable to prepare data directory: ${formatError(error)}`,
+      );
+      return { dependencyOk: false, ok: false };
+    }
+
     const processStarted = await startManagedProcess('minio', config.minio.executable, [
       'server',
       config.minio.dataDir,
@@ -35,8 +52,9 @@ export async function checkMinio({
       return { dependencyOk: false, ok: false };
     }
 
-    report.add('MinIO', 'STARTED', 'MinIO started temporarily');
-    ready = await waitForMinio(30_000, { config });
+    startedTemporarily = true;
+    report.add('MinIO', 'INFO', 'MinIO process started; waiting for readiness');
+    ready = await waitForMinio({ config });
   }
 
   if (!ready.ok) {
@@ -44,130 +62,118 @@ export async function checkMinio({
     return { dependencyOk: false, ok: false };
   }
 
+  if (startedTemporarily) {
+    report.add('MinIO', 'STARTED', 'MinIO started temporarily');
+  }
+
   report.add('MinIO', 'OK', 'API ready');
 
-  const client = createS3Client({ config, S3Client });
+  let client;
+
   try {
-    try {
-      await client.send(new HeadBucketCommand({ Bucket: config.minio.bucket }));
+    client = createS3Client({ config, S3Client });
+  } catch (error) {
+    report.add(
+      'MinIO',
+      'ERROR',
+      `Unable to initialize MinIO client: ${formatError(error)}`,
+    );
+    return { dependencyOk: false, ok: false };
+  }
+
+  try {
+    const bucket = await checkMinioBucket({
+      bucket: config.minio.bucket,
+      client,
+      HeadBucketCommand,
+    });
+
+    if (bucket.ok) {
       report.add('MinIO', 'OK', 'Authentication');
       report.add('MinIO', 'OK', 'Bucket available');
-    } catch (error) {
-      report.add('MinIO', 'ERROR', formatError(error));
+    } else {
+      report.add('MinIO', 'ERROR', formatBucketFailure(bucket));
       return { dependencyOk: false, ok: false };
     }
 
-    try {
-      await checkMinioObjectRoundtrip(client, {
-        config,
-        DeleteObjectCommand,
-        GetObjectCommand,
-        PutObjectCommand,
-      });
+    const roundtrip = await checkMinioObjectRoundtripOperation(client, {
+      bucket: config.minio.bucket,
+      DeleteObjectCommand,
+      GetObjectCommand,
+      PutObjectCommand,
+    });
+
+    if (roundtrip.ok) {
       report.add('MinIO', 'OK', 'Test object write/read/delete');
       return { dependencyOk: true, ok: true };
-    } catch (error) {
-      report.add('MinIO', 'ERROR', formatError(error));
-      return { dependencyOk: true, ok: false };
     }
+
+    report.add('MinIO', 'ERROR', roundtrip.message);
+    return { dependencyOk: true, ok: false };
   } finally {
-    client.destroy();
+    try {
+      client.destroy();
+    } catch {
+      // Cleanup failure should not replace the check result.
+    }
   }
 }
 
-export function createS3Client({ config, S3Client }) {
-  return new S3Client({
-    credentials: {
-      accessKeyId: config.minio.accessKey,
-      secretAccessKey: config.minio.secretKey,
-    },
-    endpoint: config.minio.endpoint,
-    forcePathStyle: true,
-    region: config.minio.region,
-  });
-}
+export function createMinioProcessEnv(config, env = process.env) {
+  const processEnv = { ...env };
 
-export function createMinioProcessEnv(config) {
-  const {
-    MINIO_ACCESS_KEY,
-    MINIO_SECRET_KEY,
-    ...envWithoutDeprecatedMinioCredentials
-  } = process.env;
+  delete processEnv.MINIO_ACCESS_KEY;
+  delete processEnv.MINIO_SECRET_KEY;
 
   return {
-    ...envWithoutDeprecatedMinioCredentials,
+    ...processEnv,
     MINIO_ROOT_PASSWORD: config.minio.rootPassword,
     MINIO_ROOT_USER: config.minio.rootUser,
   };
 }
 
 export async function checkMinioReady({ config }) {
-  try {
-    const response = await fetch(config.minio.endpoint, {
-      signal: AbortSignal.timeout(3_000),
-    });
-
-    return response.status < 500
-      ? { ok: true }
-      : { message: `HTTP status ${response.status}`, ok: false };
-  } catch (error) {
-    return { message: formatError(error), ok: false };
-  }
+  const result = await checkMinioReadiness({ config });
+  return {
+    code: result.code,
+    details: result.details,
+    message:
+      result.details?.status !== undefined
+        ? `HTTP status ${result.details.status}`
+        : (result.details?.error ?? result.message),
+    ok: result.ok,
+  };
 }
 
-export async function waitForMinio(timeoutMs, { config }) {
-  const startedAt = Date.now();
-  let lastError = null;
+export async function waitForMinio({ config, timeoutMs = 30_000 }) {
+  const result = await waitForMinioReadiness({
+    checkReadiness: () => checkMinioReadiness({ config }),
+    timeoutMs,
+  });
 
-  do {
-    const ready = await checkMinioReady({ config });
-
-    if (ready.ok) {
-      return ready;
-    }
-
-    lastError = ready.message;
-    await delay(1_000);
-  } while (Date.now() - startedAt < timeoutMs);
-
-  return { message: lastError ?? 'API did not become ready', ok: false };
+  return {
+    code: result.code,
+    details: result.details,
+    message:
+      result.details?.status !== undefined
+        ? `HTTP status ${result.details.status}`
+        : (result.details?.error ?? result.message),
+    ok: result.ok,
+  };
 }
 
-export async function checkMinioObjectRoundtrip(
-  client,
-  { config, DeleteObjectCommand, GetObjectCommand, PutObjectCommand },
-) {
-  const key = `doctor/${Date.now()}-test.txt`;
-  const body = `esoft doctor ${Date.now()}`;
-
-  try {
-    await client.send(
-      new PutObjectCommand({
-        Body: body,
-        Bucket: config.minio.bucket,
-        Key: key,
-      }),
-    );
-
-    const object = await client.send(
-      new GetObjectCommand({
-        Bucket: config.minio.bucket,
-        Key: key,
-      }),
-    );
-    const received = await object.Body.transformToString();
-
-    if (received !== body) {
-      throw new Error('Test object content mismatch.');
-    }
-  } finally {
-    await client
-      .send(
-        new DeleteObjectCommand({
-          Bucket: config.minio.bucket,
-          Key: key,
-        }),
-      )
-      .catch(() => undefined);
+function formatBucketFailure(bucket) {
+  if (bucket.code === 'MINIO_AUTHENTICATION_FAILED') {
+    return 'Authentication failed';
   }
+
+  if (bucket.code === 'MINIO_ACCESS_DENIED') {
+    return 'Bucket access denied';
+  }
+
+  return bucket.message;
+}
+
+function formatError(error) {
+  return error instanceof Error ? error.message : String(error);
 }

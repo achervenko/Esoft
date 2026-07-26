@@ -2,7 +2,11 @@ import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { npmCommandName, npmScriptArgs } from '../process/run-parallel.mjs';
+import {
+  npmCommandName,
+  npmScriptArgs,
+} from '../infrastructure/commands/npm-command.mjs';
+import { loadValidatedConfig } from '../infrastructure/config/validated-config.mjs';
 import { checkBackend } from './backend.mjs';
 import { createCleanup } from './cleanup.mjs';
 import { checkFrontend } from './frontend.mjs';
@@ -14,28 +18,16 @@ import { formatError } from './utils.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, '../..');
-const backendRequire = createRequire(resolve(projectRoot, 'backend/package.json'));
-const configCore = createRequire(import.meta.url)('../config/config-core.cjs');
-
-const { Client: PgClient } = backendRequire('pg');
-const {
-  DeleteObjectCommand,
-  GetObjectCommand,
-  HeadBucketCommand,
-  PutObjectCommand,
-  S3Client,
-} = backendRequire('@aws-sdk/client-s3');
 
 export async function runDoctor() {
-  const npm = npmCommandName();
   const managedProcesses = [];
   const managedServices = [];
   const cleanupState = { started: false };
+  const initialEnv = snapshotProcessEnv();
   const report = createReport();
-  let config = null;
-  let env = null;
   let finalExitCode = 0;
   let interrupted = false;
+  let removeShutdownHandlers = () => {};
 
   const cleanupOnce = createCleanup({
     cleanupState,
@@ -51,6 +43,7 @@ export async function runDoctor() {
 
   const startProcess = (name, command, args, options = {}) =>
     startManagedProcess(name, command, args, {
+      cleanupState,
       isShuttingDown: () => cleanupState.started || interrupted,
       managedProcesses,
       projectRoot,
@@ -58,20 +51,36 @@ export async function runDoctor() {
       ...options,
     });
 
-  installShutdownHandlers({
+  const finalizeOnce = createFinalizer({
     cleanupOnce,
+    initialEnv,
     report,
+  });
+
+  removeShutdownHandlers = installShutdownHandlers({
+    finalizeOnce,
     setInterrupted: () => {
       interrupted = true;
     },
   });
 
   try {
-    ({ config, env } = await checkConfiguration({ report }));
+    const npm = npmCommandName();
+    const { config, doctorEnv } = await checkConfiguration({ report });
+    const {
+      DeleteObjectCommand,
+      GetObjectCommand,
+      HeadBucketCommand,
+      PgClient,
+      PutObjectCommand,
+      S3Client,
+    } = loadBackendDependencies();
 
     const postgres = await checkPostgres({
       config,
-      env,
+      cleanupState,
+      env: doctorEnv,
+      isShuttingDown: () => cleanupState.started || interrupted,
       managedServices,
       npm,
       PgClient,
@@ -114,78 +123,204 @@ export async function runDoctor() {
     report.add('Project', 'ERROR', formatError(error));
     finalExitCode = Math.max(finalExitCode, 1);
   } finally {
-    const cleanup = await cleanupOnce();
-
-    if (cleanup.cleanupErrors > 0) {
-      finalExitCode = 2;
-    } else if (report.errorCount > 0) {
-      finalExitCode = Math.max(finalExitCode, 1);
+    try {
+      finalExitCode = await finalizeOnce(finalExitCode);
+    } finally {
+      removeShutdownHandlers();
     }
-
-    report.add(
-      'Project',
-      cleanup.cleanupErrors === 0 ? 'OK' : 'ERROR',
-      `Initial state restored: ${cleanup.cleanupErrors === 0 ? 'yes' : 'no'}`,
-    );
-    report.print();
   }
 
-  return interrupted && finalExitCode === 0 ? 0 : finalExitCode;
+  return finalExitCode;
 }
 
 async function checkConfiguration({ report }) {
   report.addSection('Configuration');
 
-  const loadedEnvironment = configCore.loadEnvironment({
+  const result = loadValidatedConfig({
     applyToProcessEnv: true,
     overrideProcessEnv: true,
     projectRoot,
   });
+
+  if (result.code === 'CONFIG_ENV_FILE_MISSING') {
+    report.add('Configuration', 'ERROR', '.env file not found');
+    throw new Error(result.message);
+  }
+
   report.add('Configuration', 'OK', '.env found');
 
-  const validation = configCore.validateEnvironment(loadedEnvironment.env);
-  if (!validation.valid) {
-    for (const error of validation.errors) {
+  if (!result.ok) {
+    for (const error of result.details?.errors ?? []) {
       report.add('Configuration', 'ERROR', `${error.variable}: ${error.message}`);
     }
 
     throw new Error('Configuration is invalid.');
   }
 
-  for (const warning of validation.warnings) {
+  for (const warning of result.details.warnings) {
     report.add('Configuration', 'WARN', `${warning.variable}: ${warning.message}`);
   }
 
   report.add('Configuration', 'OK', 'Configuration valid');
 
   return {
-    config: configCore.buildConfig(loadedEnvironment.env),
-    env: loadedEnvironment.env,
+    config: result.details.config,
+    doctorEnv: {
+      POSTGRES_SERVICE_NAME: process.env.POSTGRES_SERVICE_NAME,
+    },
   };
 }
 
-function installShutdownHandlers({ cleanupOnce, report, setInterrupted }) {
-  const handleSignal = () => {
-    setInterrupted();
-    void cleanupOnce().then((cleanup) => {
-      process.exit(cleanup.cleanupErrors > 0 ? 2 : 0);
-    });
+function loadBackendDependencies() {
+  const backendRequire = createRequire(resolve(projectRoot, 'backend/package.json'));
+  const { Client: PgClient } = backendRequire('pg');
+  const {
+    DeleteObjectCommand,
+    GetObjectCommand,
+    HeadBucketCommand,
+    PutObjectCommand,
+    S3Client,
+  } = backendRequire('@aws-sdk/client-s3');
+
+  return {
+    DeleteObjectCommand,
+    GetObjectCommand,
+    HeadBucketCommand,
+    PgClient,
+    PutObjectCommand,
+    S3Client,
+  };
+}
+
+export function installShutdownHandlers({
+  finalizeOnce,
+  processImpl = process,
+  setInterrupted,
+}) {
+  let shutdownRequested = false;
+
+  const completeFinalization = (finalizePromise) => {
+    void finalizePromise.then(
+      (exitCode) => {
+        processImpl.exitCode = exitCode;
+      },
+      () => {
+        processImpl.exitCode = 2;
+      },
+    );
   };
 
-  process.once('SIGINT', handleSignal);
-  process.once('SIGTERM', handleSignal);
+  const beginShutdown = (exitCode, error = null) => {
+    if (shutdownRequested) {
+      return;
+    }
 
-  process.once('uncaughtException', (error) => {
-    report.add('Project', 'ERROR', formatError(error));
-    void cleanupOnce().then((cleanup) => {
-      process.exit(cleanup.cleanupErrors > 0 ? 2 : 1);
-    });
-  });
+    shutdownRequested = true;
+    setInterrupted();
+    completeFinalization(finalizeOnce(exitCode, error));
+  };
 
-  process.once('unhandledRejection', (reason) => {
-    report.add('Project', 'ERROR', formatError(reason));
-    void cleanupOnce().then((cleanup) => {
-      process.exit(cleanup.cleanupErrors > 0 ? 2 : 1);
+  const handleSignal = (signal) => {
+    beginShutdown(signal === 'SIGINT' ? 130 : 143);
+  };
+
+  const handleSigint = () => handleSignal('SIGINT');
+  const handleSigterm = () => handleSignal('SIGTERM');
+
+  const handleUncaughtException = (error) => {
+    beginShutdown(1, error);
+  };
+
+  const handleUnhandledRejection = (reason) => {
+    beginShutdown(1, reason);
+  };
+
+  processImpl.on('SIGINT', handleSigint);
+  processImpl.on('SIGTERM', handleSigterm);
+  processImpl.on('uncaughtException', handleUncaughtException);
+  processImpl.on('unhandledRejection', handleUnhandledRejection);
+
+  return () => {
+    processImpl.removeListener('SIGINT', handleSigint);
+    processImpl.removeListener('SIGTERM', handleSigterm);
+    processImpl.removeListener('uncaughtException', handleUncaughtException);
+    processImpl.removeListener('unhandledRejection', handleUnhandledRejection);
+  };
+}
+
+function createFinalizer({ cleanupOnce, initialEnv, report }) {
+  let finalizePromise = null;
+  let requestedExitCode = 0;
+
+  return function finalizeOnce(exitCode, error = null) {
+    requestedExitCode = Math.max(requestedExitCode, exitCode);
+
+    if (error) {
+      report.add('Project', 'ERROR', formatError(error));
+    }
+
+    finalizePromise ??= finalize({
+      cleanupOnce,
+      getRequestedExitCode: () => requestedExitCode,
+      initialEnv,
+      report,
     });
-  });
+
+    return finalizePromise;
+  };
+}
+
+async function finalize({
+  cleanupOnce,
+  getRequestedExitCode,
+  initialEnv,
+  report,
+}) {
+  let cleanupErrors = 0;
+
+  try {
+    const cleanup = await cleanupOnce();
+    cleanupErrors += cleanup.cleanupErrors;
+  } catch (error) {
+    cleanupErrors += 1;
+    report.add('Project', 'ERROR', `Cleanup failed: ${formatError(error)}`);
+  }
+
+  cleanupErrors += restoreProcessEnv(initialEnv);
+
+  const finalExitCode =
+    cleanupErrors > 0
+      ? 2
+      : Math.max(getRequestedExitCode(), report.errorCount > 0 ? 1 : 0);
+
+  report.add(
+    'Project',
+    cleanupErrors === 0 ? 'OK' : 'ERROR',
+    `Initial state restored: ${cleanupErrors === 0 ? 'yes' : 'no'}`,
+  );
+  report.print();
+
+  return finalExitCode;
+}
+
+function snapshotProcessEnv() {
+  return { ...process.env };
+}
+
+function restoreProcessEnv(snapshot) {
+  try {
+    for (const key of Object.keys(process.env)) {
+      if (!Object.hasOwn(snapshot, key)) {
+        delete process.env[key];
+      }
+    }
+
+    for (const [key, value] of Object.entries(snapshot)) {
+      process.env[key] = value;
+    }
+
+    return 0;
+  } catch {
+    return 1;
+  }
 }
