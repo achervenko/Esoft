@@ -3,8 +3,10 @@ import type {
   KeyboardEvent,
   RefObject,
 } from "react";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 
 type PdfPreviewSearchProps = {
+  isOpen: boolean;
   query: string;
   matchCount: number;
   activeMatchIndex: number;
@@ -15,10 +17,11 @@ type PdfPreviewSearchProps = {
   onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onPrevious: () => void;
   onNext: () => void;
-  onClear: () => void;
+  onClose: () => void;
 };
 
 export function PdfPreviewSearch({
+  isOpen,
   query,
   matchCount,
   activeMatchIndex,
@@ -29,15 +32,19 @@ export function PdfPreviewSearch({
   onKeyDown,
   onPrevious,
   onNext,
-  onClear,
+  onClose,
 }: PdfPreviewSearchProps) {
+  if (!isOpen) {
+    return null;
+  }
+
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     onQueryChange(event.target.value);
   };
 
-  const counter = (() => {
+  const getCounter = () => {
     if (isIndexLoading) {
-      return "Индексация...";
+      return "Загрузка...";
     }
 
     if (!query.trim()) {
@@ -45,28 +52,34 @@ export function PdfPreviewSearch({
     }
 
     if (matchCount === 0) {
-      return "Ничего не найдено";
+      return "0 / 0";
     }
 
     return `${activeMatchIndex + 1} / ${matchCount}`;
-  })();
+  };
 
   return (
-    <div className="pdf-preview-search">
+    <div
+      aria-label="Поиск по документу"
+      className="pdf-preview-search"
+      role="search"
+    >
       <input
-        aria-label="Поиск по документу"
+        aria-label="Введите текст для поиска"
+        autoComplete="off"
         className="pdf-preview-search-input"
         disabled={isDisabled}
         onChange={handleChange}
         onKeyDown={onKeyDown}
-        placeholder="Найти в документе"
+        placeholder="Найти"
         ref={inputRef}
-        type="search"
+        spellCheck={false}
+        type="text"
         value={query}
       />
 
       <span className="pdf-preview-search-counter">
-        {counter}
+        {getCounter()}
       </span>
 
       <button
@@ -74,9 +87,10 @@ export function PdfPreviewSearch({
         className="pdf-preview-search-button"
         disabled={matchCount === 0}
         onClick={onPrevious}
+        title="Предыдущее совпадение"
         type="button"
       >
-        ↑
+        <ChevronUp aria-hidden="true" size={17} strokeWidth={2} />
       </button>
 
       <button
@@ -84,19 +98,20 @@ export function PdfPreviewSearch({
         className="pdf-preview-search-button"
         disabled={matchCount === 0}
         onClick={onNext}
+        title="Следующее совпадение"
         type="button"
       >
-        ↓
+        <ChevronDown aria-hidden="true" size={17} strokeWidth={2} />
       </button>
 
       <button
-        aria-label="Очистить поиск"
-        className="pdf-preview-search-button"
-        disabled={!query}
-        onClick={onClear}
+        aria-label="Закрыть поиск"
+        className="pdf-preview-search-button pdf-preview-search-close"
+        onClick={onClose}
+        title="Закрыть"
         type="button"
       >
-        ×
+        <X aria-hidden="true" size={18} strokeWidth={2} />
       </button>
     </div>
   );

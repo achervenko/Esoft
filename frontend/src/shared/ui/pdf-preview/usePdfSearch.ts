@@ -1,29 +1,18 @@
 import {
   type KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 
+import type { PdfDocumentForViewer } from "./pdfPreview.types";
+
 export type PdfSearchMatch = {
   pageNumber: number;
   itemIndex: number;
   occurrenceIndex: number;
-};
-
-type PdfDocumentForSearch = {
-  numPages: number;
-  getPage: (pageNumber: number) => Promise<{
-    getTextContent: () => Promise<{
-      items: Array<
-        | {
-            str: string;
-          }
-        | Record<string, unknown>
-      >;
-    }>;
-  }>;
 };
 
 function escapeHtml(value: string) {
@@ -40,12 +29,14 @@ function escapeRegExp(value: string) {
 }
 
 export function usePdfSearch() {
+  const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [pageTextItems, setPageTextItems] = useState<string[][]>([]);
   const [activeMatchIndex, setActiveMatchIndex] = useState(-1);
   const [isIndexLoading, setIsIndexLoading] = useState(false);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const indexRequestId = useRef(0);
 
   const normalizedQuery = query.trim();
 
@@ -83,35 +74,60 @@ export function usePdfSearch() {
       ? matches[activeMatchIndex]
       : undefined;
 
-  useEffect(() => {
-    if (matches.length === 0) {
-      setActiveMatchIndex(-1);
-      return;
-    }
-
-    setActiveMatchIndex(0);
-  }, [normalizedQuery, matches.length]);
-
-  useEffect(() => {
-    const handleWindowKeyDown = (event: KeyboardEvent) => {
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.key.toLowerCase() === "f"
-      ) {
-        event.preventDefault();
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      }
-    };
-
-    window.addEventListener("keydown", handleWindowKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleWindowKeyDown);
-    };
+  const focusSearchInput = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    });
   }, []);
 
-  const goToPreviousMatch = () => {
+  useEffect(() => {
+    const handleFindShortcut = (event: KeyboardEvent) => {
+      const isFindShortcut =
+        (event.ctrlKey || event.metaKey) &&
+        (event.code === "KeyF" ||
+          event.key.toLowerCase() === "f" ||
+          event.key.toLowerCase() === "а");
+
+      if (!isFindShortcut) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+
+      setIsOpen(true);
+      focusSearchInput();
+    };
+
+    document.addEventListener(
+      "keydown",
+      handleFindShortcut,
+      true,
+    );
+
+    return () => {
+      document.removeEventListener(
+        "keydown",
+        handleFindShortcut,
+        true,
+      );
+    };
+  }, [focusSearchInput]);
+
+  const handleQueryChange = useCallback((value: string) => {
+    setQuery(value);
+    setActiveMatchIndex(value.trim() ? 0 : -1);
+  }, []);
+
+  const closeSearch = useCallback(() => {
+    setIsOpen(false);
+    setQuery("");
+    setActiveMatchIndex(-1);
+  }, []);
+
+  const goToPreviousMatch = useCallback(() => {
     if (matches.length === 0) {
       return;
     }
@@ -121,9 +137,9 @@ export function usePdfSearch() {
         ? matches.length - 1
         : currentIndex - 1,
     );
-  };
+  }, [matches.length]);
 
-  const goToNextMatch = () => {
+  const goToNextMatch = useCallback(() => {
     if (matches.length === 0) {
       return;
     }
@@ -133,130 +149,153 @@ export function usePdfSearch() {
         ? 0
         : currentIndex + 1,
     );
-  };
+  }, [matches.length]);
 
-  const clearSearch = () => {
+  const clearSearch = useCallback(() => {
     setQuery("");
     setActiveMatchIndex(-1);
-  };
+    inputRef.current?.focus();
+  }, []);
 
-  const resetSearch = () => {
+  const resetSearch = useCallback(() => {
+    indexRequestId.current += 1;
+
+    setIsOpen(false);
     setQuery("");
     setPageTextItems([]);
     setActiveMatchIndex(-1);
     setIsIndexLoading(false);
-  };
+  }, []);
 
-  const handleInputKeyDown = (
-    event: ReactKeyboardEvent<HTMLInputElement>,
-  ) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
+  const handleInputKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
 
-      if (event.shiftKey) {
-        goToPreviousMatch();
-      } else {
-        goToNextMatch();
+        if (event.shiftKey) {
+          goToPreviousMatch();
+        } else {
+          goToNextMatch();
+        }
+
+        return;
       }
-    }
 
-    if (event.key === "Escape") {
-      clearSearch();
-      inputRef.current?.blur();
-    }
-  };
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeSearch();
+      }
+    },
+    [
+      closeSearch,
+      goToNextMatch,
+      goToPreviousMatch,
+    ],
+  );
 
-  const indexDocument = async (
-    pdfDocument: PdfDocumentForSearch,
-  ) => {
-    setPageTextItems([]);
-    setActiveMatchIndex(-1);
-    setIsIndexLoading(true);
-
-    try {
-      const pages = await Promise.all(
-        Array.from(
-          { length: pdfDocument.numPages },
-          async (_, pageIndex) => {
-            const page = await pdfDocument.getPage(pageIndex + 1);
-            const textContent = await page.getTextContent();
-
-            return textContent.items.map((item) =>
-              "str" in item && typeof item.str === "string"
-                ? item.str
-                : "",
-            );
-          },
-        ),
-      );
-
-      setPageTextItems(pages);
-    } catch (error) {
-      console.error(
-        "Не удалось создать поисковый индекс PDF:",
-        error,
-      );
+  const indexDocument = useCallback(
+    async (pdfDocument: PdfDocumentForViewer) => {
+      const requestId = ++indexRequestId.current;
 
       setPageTextItems([]);
-    } finally {
-      setIsIndexLoading(false);
-    }
-  };
+      setIsIndexLoading(true);
 
-  const renderText = (
-    text: string,
-    pageNumber: number,
-    itemIndex: number,
-  ) => {
-    if (!normalizedQuery) {
-      return escapeHtml(text);
-    }
+      try {
+        const pages = await Promise.all(
+          Array.from(
+            { length: pdfDocument.numPages },
+            async (_, pageIndex) => {
+              const page = await pdfDocument.getPage(pageIndex + 1);
+              const textContent = await page.getTextContent();
 
-    const expression = new RegExp(
-      escapeRegExp(normalizedQuery),
-      "giu",
-    );
+              return textContent.items.map((item) =>
+                "str" in item && typeof item.str === "string"
+                  ? item.str
+                  : "",
+              );
+            },
+          ),
+        );
 
-    let result = "";
-    let lastIndex = 0;
-    let occurrenceIndex = 0;
+        if (requestId !== indexRequestId.current) {
+          return;
+        }
 
-    for (const match of text.matchAll(expression)) {
-      const matchIndex = match.index;
+        setPageTextItems(pages);
+      } catch (error) {
+        if (requestId !== indexRequestId.current) {
+          return;
+        }
 
-      if (matchIndex === undefined) {
-        continue;
+        console.error(
+          "Не удалось создать поисковый индекс PDF:",
+          error,
+        );
+
+        setPageTextItems([]);
+      } finally {
+        if (requestId === indexRequestId.current) {
+          setIsIndexLoading(false);
+        }
+      }
+    },
+    [],
+  );
+
+  const renderText = useCallback(
+    (
+      text: string,
+      pageNumber: number,
+      itemIndex: number,
+    ) => {
+      if (!normalizedQuery) {
+        return escapeHtml(text);
       }
 
-      result += escapeHtml(
-        text.slice(lastIndex, matchIndex),
+      const expression = new RegExp(
+        escapeRegExp(normalizedQuery),
+        "giu",
       );
 
-      const isActive =
-        activeMatch?.pageNumber === pageNumber &&
-        activeMatch.itemIndex === itemIndex &&
-        activeMatch.occurrenceIndex === occurrenceIndex;
+      let result = "";
+      let lastIndex = 0;
+      let occurrenceIndex = 0;
 
-      const className = isActive
-        ? "pdf-preview-search-match pdf-preview-search-match-active"
-        : "pdf-preview-search-match";
+      for (const match of text.matchAll(expression)) {
+        const matchIndex = match.index;
 
-      result += `<mark class="${className}">${escapeHtml(
-        match[0],
-      )}</mark>`;
+        if (matchIndex === undefined) {
+          continue;
+        }
 
-      lastIndex = matchIndex + match[0].length;
-      occurrenceIndex += 1;
-    }
+        result += escapeHtml(
+          text.slice(lastIndex, matchIndex),
+        );
 
-    result += escapeHtml(text.slice(lastIndex));
+        result += [
+          '<mark class="pdf-preview-search-match"',
+          ` data-page-number="${pageNumber}"`,
+          ` data-item-index="${itemIndex}"`,
+          ` data-occurrence-index="${occurrenceIndex}">`,
+          escapeHtml(match[0]),
+          "</mark>",
+        ].join("");
 
-    return result;
-  };
+        lastIndex = matchIndex + match[0].length;
+        occurrenceIndex += 1;
+      }
+
+      result += escapeHtml(text.slice(lastIndex));
+
+      return result;
+    },
+    [normalizedQuery],
+  );
 
   return {
+    isOpen,
     query,
-    setQuery,
+    setQuery: handleQueryChange,
     matches,
     activeMatch,
     activeMatchIndex,
@@ -265,6 +304,7 @@ export function usePdfSearch() {
     handleInputKeyDown,
     goToPreviousMatch,
     goToNextMatch,
+    closeSearch,
     clearSearch,
     resetSearch,
     indexDocument,
