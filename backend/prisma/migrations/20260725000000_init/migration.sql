@@ -389,6 +389,10 @@ CREATE TABLE "equipment" (
     CONSTRAINT "equipment_pkey" PRIMARY KEY ("id")
 );
 
+-- LinkSequenceToColumn
+ALTER SEQUENCE equipment_visible_id_seq
+    OWNED BY equipment.visible_id;
+
 -- CreateTable
 CREATE TABLE "search_index" (
     "id" BIGSERIAL NOT NULL,
