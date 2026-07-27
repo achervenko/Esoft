@@ -6,7 +6,9 @@ import "react-pdf/dist/Page/AnnotationLayer.css";
 
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
+import { PdfPreviewSearch } from "./PdfPreviewSearch";
 import { PdfPreviewToolbar } from "./PdfPreviewToolbar";
+import { usePdfSearch } from "./usePdfSearch";
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -34,6 +36,23 @@ export function PdfPreviewViewer({
   const documentScrollElement = useRef<HTMLDivElement | null>(null);
   const initialScaleApplied = useRef(false);
 
+  const {
+    query,
+    setQuery,
+    matches,
+    activeMatch,
+    activeMatchIndex,
+    isIndexLoading,
+    inputRef,
+    handleInputKeyDown,
+    goToPreviousMatch,
+    goToNextMatch,
+    clearSearch,
+    resetSearch,
+    indexDocument,
+    renderText,
+  } = usePdfSearch();
+
   useEffect(() => {
     initialScaleApplied.current = false;
     pageElements.current = [];
@@ -42,7 +61,41 @@ export function PdfPreviewViewer({
     setCurrentPage(1);
     setScale(1);
     setRotation(0);
+
+    resetSearch();
   }, [fileUrl]);
+
+  useEffect(() => {
+    if (!activeMatch) {
+      return;
+    }
+
+    setCurrentPage(activeMatch.pageNumber);
+
+    pageElements.current[
+      activeMatch.pageNumber - 1
+    ]?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      const activeElement =
+        documentScrollElement.current?.querySelector(
+          ".pdf-preview-search-match-active",
+        );
+
+      activeElement?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "center",
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, [activeMatch]);
 
   useEffect(() => {
     const scrollElement = documentScrollElement.current;
@@ -57,7 +110,8 @@ export function PdfPreviewViewer({
           .filter((entry) => entry.isIntersecting)
           .sort(
             (firstEntry, secondEntry) =>
-              secondEntry.intersectionRatio - firstEntry.intersectionRatio,
+              secondEntry.intersectionRatio -
+              firstEntry.intersectionRatio,
           )[0];
 
         if (!mostVisibleEntry) {
@@ -111,19 +165,25 @@ export function PdfPreviewViewer({
   };
 
   const handleZoomOut = () => {
-    setScale((currentScale) => Math.max(0.5, currentScale - 0.1));
+    setScale((currentScale) =>
+      Math.max(0.5, currentScale - 0.1),
+    );
   };
 
   const handleZoomIn = () => {
-    setScale((currentScale) => Math.min(3, currentScale + 0.1));
+    setScale((currentScale) =>
+      Math.min(3, currentScale + 0.1),
+    );
   };
 
   const handleScaleChange = (nextScale: number) => {
-  setScale(Math.min(3, Math.max(0.5, nextScale)));
+    setScale(Math.min(3, Math.max(0.5, nextScale)));
   };
 
   const handleRotate = () => {
-    setRotation((currentRotation) => (currentRotation + 90) % 360);
+    setRotation(
+      (currentRotation) => (currentRotation + 90) % 360,
+    );
   };
 
   return (
@@ -143,69 +203,103 @@ export function PdfPreviewViewer({
         scale={scale}
       />
 
-      <div className="pdf-preview-document-scroll" ref={documentScrollElement}>
+      <PdfPreviewSearch
+        activeMatchIndex={activeMatchIndex}
+        inputRef={inputRef}
+        isDisabled={numberOfPages === 0}
+        isIndexLoading={isIndexLoading}
+        matchCount={matches.length}
+        onClear={clearSearch}
+        onKeyDown={handleInputKeyDown}
+        onNext={goToNextMatch}
+        onPrevious={goToPreviousMatch}
+        onQueryChange={setQuery}
+        query={query}
+      />
+
+      <div
+        className="pdf-preview-document-scroll"
+        ref={documentScrollElement}
+      >
         <Document
           file={fileUrl}
           loading={
-            <div className="pdf-preview-state">Загрузка документа...</div>
+            <div className="pdf-preview-state">
+              Загрузка документа...
+            </div>
           }
-          onLoadSuccess={({ numPages }) => {
-            setNumberOfPages(numPages);
+          onLoadSuccess={async (pdfDocument) => {
+            setNumberOfPages(pdfDocument.numPages);
             setCurrentPage(1);
+
+            await indexDocument(pdfDocument);
           }}
         >
           <div className="pdf-preview-pages">
-            {Array.from({ length: numberOfPages }, (_, index) => {
-              const pageNumber = index + 1;
+            {Array.from(
+              { length: numberOfPages },
+              (_, index) => {
+                const pageNumber = index + 1;
 
-              return (
-                <div
-                  className="pdf-preview-page"
-                  data-page-number={pageNumber}
-                  key={pageNumber}
-                  ref={(element) => {
-                    pageElements.current[index] = element;
-                  }}
-                >
-                  <Page
-                    onLoadSuccess={
-                      pageNumber === 1
-                        ? (page) => {
-                            if (initialScaleApplied.current) {
-                              return;
+                return (
+                  <div
+                    className="pdf-preview-page"
+                    data-page-number={pageNumber}
+                    key={pageNumber}
+                    ref={(element) => {
+                      pageElements.current[index] = element;
+                    }}
+                  >
+                    <Page
+                      customTextRenderer={({ str, itemIndex }) =>
+                        renderText(str, pageNumber, itemIndex)
+                      }
+                      onLoadSuccess={
+                        pageNumber === 1
+                          ? (page) => {
+                              if (initialScaleApplied.current) {
+                                return;
+                              }
+
+                              const containerWidth =
+                                documentScrollElement.current
+                                  ?.clientWidth;
+
+                              if (!containerWidth) {
+                                return;
+                              }
+
+                              const viewport = page.getViewport({
+                                scale: 1,
+                              });
+
+                              const horizontalPadding = 32;
+                              const nextScale =
+                                (containerWidth -
+                                  horizontalPadding) /
+                                viewport.width;
+
+                              setScale(
+                                Math.min(
+                                  3,
+                                  Math.max(0.5, nextScale),
+                                ),
+                              );
+
+                              initialScaleApplied.current = true;
                             }
-
-                            const containerWidth =
-                              documentScrollElement.current?.clientWidth;
-
-                            if (!containerWidth) {
-                              return;
-                            }
-
-                            const viewport = page.getViewport({
-                              scale: 1,
-                            });
-
-                            const horizontalPadding = 32;
-                            const nextScale =
-                              (containerWidth - horizontalPadding) /
-                              viewport.width;
-
-                            setScale(Math.min(3, Math.max(0.5, nextScale)));
-
-                            initialScaleApplied.current = true;
-                          }
-                        : undefined
-                    }
-                    pageNumber={pageNumber}
-                    renderAnnotationLayer
-                    renderTextLayer
-                    rotate={rotation}
-                    scale={scale}
-                  />
-                </div>
-              );
-            })}
+                          : undefined
+                      }
+                      pageNumber={pageNumber}
+                      renderAnnotationLayer
+                      renderTextLayer
+                      rotate={rotation}
+                      scale={scale}
+                    />
+                  </div>
+                );
+              },
+            )}
           </div>
         </Document>
       </div>
