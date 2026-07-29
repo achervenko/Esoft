@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { loadRootConfig } from './config/root-environment';
 import { AppAuthModule } from './auth/auth.module';
+import { CalendarModule } from './calendar/calendar.module';
 import { ChecklistsModule } from './checklists/checklists.module';
 import { DictionariesAdminModule } from './dictionaries-admin/dictionaries-admin.module';
 import { EquipmentMaintenanceModule } from './equipment-events/equipment-maintenance.module';
@@ -23,6 +24,7 @@ loadRootConfig();
       isGlobal: true,
     }),
     AppAuthModule,
+    CalendarModule,
     ChecklistsModule,
     DictionariesAdminModule,
     EquipmentMaintenanceModule,

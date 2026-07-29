@@ -1,5 +1,29 @@
 import { EventExtensionCode } from '@prisma/client';
-import { parseUpdateCreatedEventDto } from './events-update.validation';
+import { EquipmentEventExtensionAdapter } from '../equipment-event-extension/equipment-event-extension.adapter';
+import { EquipmentEventExtensionCreate } from '../equipment-event-extension/equipment-event-extension.create';
+import { EquipmentEventExtensionQuery } from '../equipment-event-extension/equipment-event-extension.query';
+import { EquipmentEventExtensionUpdate } from '../equipment-event-extension/equipment-event-extension.update';
+import { EquipmentEventExtensionValidation } from '../equipment-event-extension/equipment-event-extension.validation';
+import { EventExtensionRegistry } from './event-extensions/event-extension.registry';
+import { parseUpdateCreatedEventDto as parseUpdateCreatedEventDtoBase } from './events-update.validation';
+
+const extensionRegistry = new EventExtensionRegistry([
+  createEquipmentEventExtensionAdapter(),
+]);
+const parseUpdateCreatedEventDto = (
+  dto: Parameters<typeof parseUpdateCreatedEventDtoBase>[0],
+) => parseUpdateCreatedEventDtoBase(dto, extensionRegistry);
+
+function createEquipmentEventExtensionAdapter(): EquipmentEventExtensionAdapter {
+  const validation = new EquipmentEventExtensionValidation();
+
+  return new EquipmentEventExtensionAdapter(
+    new EquipmentEventExtensionCreate({} as never),
+    new EquipmentEventExtensionUpdate({} as never),
+    new EquipmentEventExtensionQuery(validation),
+    validation,
+  );
+}
 
 describe('events update validation', () => {
   it('parses generic update payload', () => {
@@ -97,8 +121,8 @@ describe('events update validation', () => {
     ).toThrow('Тип расширения события нельзя изменить.');
   });
 
-  it('rejects unknown update extension fields', () => {
-    expect(() =>
+  it('keeps raw update extension payload for extension adapter validation', () => {
+    expect(
       parseUpdateCreatedEventDto({
         extension: {
           equipmentVisibleId: 1001,
@@ -106,7 +130,13 @@ describe('events update validation', () => {
         },
         version: 1,
       }),
-    ).toThrow('Расширение события содержит неподдерживаемое поле.');
+    ).toEqual({
+      extension: {
+        equipmentVisibleId: 1001,
+        unexpected: true,
+      },
+      version: 1,
+    });
   });
 
   it('rejects empty update payload except version', () => {

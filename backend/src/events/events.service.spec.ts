@@ -13,6 +13,12 @@ import {
   writeEquipmentEventExtensionCreatedAudit,
   writeEquipmentEventExtensionUpdatedAudit,
 } from '../equipment-event-extension/equipment-event-extension.audit';
+import { EquipmentEventExtensionAdapter } from '../equipment-event-extension/equipment-event-extension.adapter';
+import { EquipmentEventExtensionCreate } from '../equipment-event-extension/equipment-event-extension.create';
+import { EquipmentEventExtensionQuery } from '../equipment-event-extension/equipment-event-extension.query';
+import { EquipmentEventExtensionUpdate } from '../equipment-event-extension/equipment-event-extension.update';
+import { EquipmentEventExtensionValidation } from '../equipment-event-extension/equipment-event-extension.validation';
+import { EventExtensionRegistry } from './event-extensions/event-extension.registry';
 import type {
   CreateEventActor,
   CreateEventCommand,
@@ -87,10 +93,13 @@ describe('EventsService', () => {
     const updateService = {
       updateCreated,
     };
+    const extensionRegistry = new EventExtensionRegistry([
+      createEquipmentEventExtensionAdapter(equipmentExtensionService),
+    ]);
     const service = new EventsService(
       checklistCreator as never,
       eventsCreateService as never,
-      equipmentExtensionService as never,
+      extensionRegistry,
       lifecycleService as never,
       queryService as never,
       updateService as never,
@@ -106,6 +115,19 @@ describe('EventsService', () => {
       service,
       updateService,
     };
+  }
+
+  function createEquipmentEventExtensionAdapter(
+    equipmentExtensionService: unknown,
+  ): EquipmentEventExtensionAdapter {
+    const validation = new EquipmentEventExtensionValidation();
+
+    return new EquipmentEventExtensionAdapter(
+      new EquipmentEventExtensionCreate(equipmentExtensionService as never),
+      new EquipmentEventExtensionUpdate(equipmentExtensionService as never),
+      new EquipmentEventExtensionQuery(validation),
+      validation,
+    );
   }
 
   beforeEach(() => {
@@ -229,7 +251,7 @@ describe('EventsService', () => {
       title: 'Equipment event',
     });
     expect(options?.createExtension).toBeDefined();
-    await options?.createExtension?.({
+    const extensionContext = await options?.createExtension?.({
       eventId: 25,
       tx: tx as never,
     });
@@ -302,7 +324,7 @@ describe('EventsService', () => {
 
     const options = eventsCreateService.create.mock.calls[0]?.[2];
 
-    await options?.createExtension?.({
+    const extensionContext = await options?.createExtension?.({
       eventId: 25,
       tx: tx as never,
     });
@@ -315,6 +337,7 @@ describe('EventsService', () => {
       ],
       createdBy: 'user-1',
       eventId: 25,
+      extensionContext,
       tx: tx as never,
     });
 
@@ -411,6 +434,7 @@ describe('EventsService', () => {
         const options = await resolver?.({
           currentState: {
             currentChecklists: [],
+            extensionCode: EventExtensionCode.EQUIPMENT,
             currentNote: null,
             currentPlannedDate: new Date('2026-08-01T00:00:00.000Z'),
             currentResponsibleUserIds: ['user-1'],
@@ -481,6 +505,7 @@ describe('EventsService', () => {
         const options = await resolver?.({
           currentState: {
             currentChecklists: [],
+            extensionCode: EventExtensionCode.EQUIPMENT,
             currentNote: null,
             currentPlannedDate: new Date('2026-08-01T00:00:00.000Z'),
             currentResponsibleUserIds: ['user-1'],

@@ -1,9 +1,4 @@
-import { EventExtensionCode } from '@prisma/client';
-import {
-  toEquipmentEventExtensionDetailResponse,
-  toEquipmentEventExtensionListResponse,
-} from '../equipment-event-extension/equipment-event-extension.presenter';
-import { throwEventConflict } from './events.errors';
+import type { EventExtensionRegistry } from './event-extensions/event-extension.registry';
 import type {
   EventChecklistRecord,
   EventDetailRecord,
@@ -12,6 +7,7 @@ import type {
 
 export function toEventListResponse(
   event: EventListRecord,
+  extensionRegistry: EventExtensionRegistry,
   checklists: EventChecklistRecord[] = [],
 ) {
   return {
@@ -24,7 +20,7 @@ export function toEventListResponse(
     factDate: formatDate(event.factDate),
     note: event.note,
     plannedDate: formatDate(event.plannedDate),
-    extension: toEventListExtensionResponse(event),
+    extension: extensionRegistry.presentList(event.extensionCode, event),
     checklists: checklists.map(toChecklistResponse),
     responsibles: event.responsibles.map((item) => toUserResponse(item.user)),
   };
@@ -32,6 +28,7 @@ export function toEventListResponse(
 
 export function toEventDetailResponse(
   event: EventDetailRecord,
+  extensionRegistry: EventExtensionRegistry,
   checklists: EventChecklistRecord[] = [],
 ) {
   return {
@@ -44,72 +41,13 @@ export function toEventDetailResponse(
     factDate: formatDate(event.factDate),
     note: event.note,
     plannedDate: formatDate(event.plannedDate),
-    extension: toEventDetailExtensionResponse(event),
+    extension: extensionRegistry.presentDetail(event.extensionCode, event),
     checklists: checklists.map(toChecklistResponse),
     responsibles: event.responsibles.map((item) => toUserResponse(item.user)),
     originalPlannedDate: formatDate(event.originalPlannedDate),
     createdAt: event.createdAt.toISOString(),
     createdBy: toEmployeeResponse(event.createdByEmployee),
   };
-}
-
-function toEventListExtensionResponse(event: EventListRecord) {
-  switch (event.extensionCode) {
-    case null:
-      if (event.equipmentExtension) {
-        throwEventConflict(
-          'EVENT_EXTENSION_CONFLICT',
-          'Данные расширения события не соответствуют его типу.',
-        );
-      }
-
-      return null;
-
-    case EventExtensionCode.EQUIPMENT:
-      if (!event.equipmentExtension) {
-        throwEventConflict(
-          'EVENT_EXTENSION_CONFLICT',
-          'Расширение оборудования для события не найдено.',
-        );
-      }
-
-      return toEquipmentEventExtensionListResponse(event.equipmentExtension);
-  }
-
-  throwEventUnsupportedExtension();
-}
-
-function toEventDetailExtensionResponse(event: EventDetailRecord) {
-  switch (event.extensionCode) {
-    case null:
-      if (event.equipmentExtension) {
-        throwEventConflict(
-          'EVENT_EXTENSION_CONFLICT',
-          'Данные расширения события не соответствуют его типу.',
-        );
-      }
-
-      return null;
-
-    case EventExtensionCode.EQUIPMENT:
-      if (!event.equipmentExtension) {
-        throwEventConflict(
-          'EVENT_EXTENSION_CONFLICT',
-          'Расширение оборудования для события не найдено.',
-        );
-      }
-
-      return toEquipmentEventExtensionDetailResponse(event.equipmentExtension);
-  }
-
-  throwEventUnsupportedExtension();
-}
-
-function throwEventUnsupportedExtension(): never {
-  throwEventConflict(
-    'EVENT_EXTENSION_UNSUPPORTED',
-    'Тип расширения события не поддерживается.',
-  );
 }
 
 type EmployeeLike = {

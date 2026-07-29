@@ -1,15 +1,10 @@
 import { EventSource } from '@prisma/client';
-import type { EquipmentEventExtensionCreateInput } from '../equipment-event-extension/equipment-event-extension.command.types';
 import {
   parseChecklistAssignments,
   parseResponsibleUserIds,
 } from './events-checklist.validation';
 import { throwEventBadRequest } from './events.errors';
-import {
-  assertNoLegacyExtensionFields,
-  parseCreateExtension,
-  parseCreateExtensionCode,
-} from './events-extension.validation';
+import type { EventExtensionRegistry } from './event-extensions/event-extension.registry';
 import type { CreateEventCommand } from './events-create.types';
 import {
   parseOptionalNullableText,
@@ -19,17 +14,23 @@ import {
 import type { CreateEventDto } from './events.validation.types';
 
 export type CreateEventData = CreateEventCommand & {
-  extension?: EquipmentEventExtensionCreateInput;
+  extension?: unknown;
 };
 
 export function parseCreateEventDto(
   dto: CreateEventDto | undefined,
+  extensionRegistry: EventExtensionRegistry,
 ): CreateEventData {
   const body = dto ?? {};
 
-  assertNoLegacyExtensionFields(body);
-  const extensionCode = parseCreateExtensionCode(body.extensionCode);
-  const extension = parseCreateExtension(body.extension, extensionCode);
+  extensionRegistry.assertNoLegacyFields(body);
+  const extensionCode = extensionRegistry.parseCreateExtensionCode(
+    body.extensionCode,
+  );
+  const extension = extensionRegistry.parseCreateExtension(
+    body.extension,
+    extensionCode,
+  );
 
   const plannedDate = parseRequiredPlannedDate(body.plannedDate);
   const responsibleUserIds = parseResponsibleUserIds(body.responsibleUserIds);

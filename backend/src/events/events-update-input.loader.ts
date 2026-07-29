@@ -29,6 +29,7 @@ export class EventsUpdateInputLoader {
             sortOrder: true,
           },
         },
+        extensionCode: true,
         note: true,
         plannedDate: true,
         responsibles: {
@@ -62,6 +63,7 @@ export class EventsUpdateInputLoader {
 
     return {
       currentChecklists: event.checklists,
+      extensionCode: event.extensionCode,
       currentNote: event.note,
       currentPlannedDate: event.plannedDate,
       currentResponsibleUserIds: event.responsibles.map((item) => item.userId),

@@ -1,5 +1,29 @@
 import { EventExtensionCode, EventSource, EventStatus } from '@prisma/client';
-import { parseEventsListQueryDto } from './events-list.validation';
+import { EquipmentEventExtensionAdapter } from '../equipment-event-extension/equipment-event-extension.adapter';
+import { EquipmentEventExtensionCreate } from '../equipment-event-extension/equipment-event-extension.create';
+import { EquipmentEventExtensionQuery } from '../equipment-event-extension/equipment-event-extension.query';
+import { EquipmentEventExtensionUpdate } from '../equipment-event-extension/equipment-event-extension.update';
+import { EquipmentEventExtensionValidation } from '../equipment-event-extension/equipment-event-extension.validation';
+import { EventExtensionRegistry } from './event-extensions/event-extension.registry';
+import { parseEventsListQueryDto as parseEventsListQueryDtoBase } from './events-list.validation';
+
+const extensionRegistry = new EventExtensionRegistry([
+  createEquipmentEventExtensionAdapter(),
+]);
+const parseEventsListQueryDto = (
+  dto: Parameters<typeof parseEventsListQueryDtoBase>[0],
+) => parseEventsListQueryDtoBase(dto, extensionRegistry);
+
+function createEquipmentEventExtensionAdapter(): EquipmentEventExtensionAdapter {
+  const validation = new EquipmentEventExtensionValidation();
+
+  return new EquipmentEventExtensionAdapter(
+    new EquipmentEventExtensionCreate({} as never),
+    new EquipmentEventExtensionUpdate({} as never),
+    new EquipmentEventExtensionQuery(validation),
+    validation,
+  );
+}
 
 describe('events list validation', () => {
   it('uses default pagination without filters', () => {

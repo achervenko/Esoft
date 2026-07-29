@@ -23,6 +23,7 @@ import {
   parseStartEventDto,
 } from './events.validation';
 import { parseEventsListQueryDto } from './events-list.validation';
+import { EventExtensionRegistry } from './event-extensions/event-extension.registry';
 import type {
   CancelEventDto,
   CompleteEventDto,
@@ -34,7 +35,10 @@ import type {
 
 @Controller('api')
 export class EventsController {
-  constructor(private readonly eventsService: EventsService) {}
+  constructor(
+    private readonly eventsService: EventsService,
+    private readonly extensionRegistry: EventExtensionRegistry,
+  ) {}
 
   @Post('events')
   create(
@@ -43,7 +47,10 @@ export class EventsController {
   ): ReturnType<EventsService['create']> {
     assertCanManageEvents(session.user.role);
 
-    return this.eventsService.create(parseCreateEventDto(dto), session.user.id);
+    return this.eventsService.create(
+      parseCreateEventDto(dto, this.extensionRegistry),
+      session.user.id,
+    );
   }
 
   @Get('events')
@@ -53,7 +60,9 @@ export class EventsController {
   ): ReturnType<EventsService['findAll']> {
     assertCanViewEvents(session.user.role);
 
-    return this.eventsService.findAll(parseEventsListQueryDto(query));
+    return this.eventsService.findAll(
+      parseEventsListQueryDto(query, this.extensionRegistry),
+    );
   }
 
   @Get('events/responsible-users')
@@ -85,7 +94,7 @@ export class EventsController {
 
     return this.eventsService.updateCreated(
       id,
-      parseUpdateCreatedEventDto(dto),
+      parseUpdateCreatedEventDto(dto, this.extensionRegistry),
       session.user.id,
     );
   }

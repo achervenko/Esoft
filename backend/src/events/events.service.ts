@@ -1,18 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { EventExtensionCode } from '@prisma/client';
-import type { Prisma } from '@prisma/client';
-import type {
-  EquipmentEventExtensionCreateInput,
-  EquipmentEventExtensionUpdateInput,
-  PreparedEquipmentEventExtensionCreate,
-} from '../equipment-event-extension/equipment-event-extension.command.types';
-import {
-  type EquipmentEventExtensionAuditSnapshot,
-  getEquipmentEventExtensionAuditSnapshot,
-  writeEquipmentEventExtensionCreatedAudit,
-  writeEquipmentEventExtensionUpdatedAudit,
-} from '../equipment-event-extension/equipment-event-extension.audit';
-import { EquipmentEventExtensionService } from '../equipment-event-extension/equipment-event-extension.service';
+import type { EventExtensionCode } from '@prisma/client';
+import { EventExtensionRegistry } from './event-extensions/event-extension.registry';
 import { EventChecklistCreator } from './event-checklists/event-checklist.creator';
 import { EventsCreateService } from './events-create.service';
 import { EventsLifecycleService } from './events-lifecycle.service';
@@ -28,9 +16,9 @@ import type {
   StartEventData,
 } from './events-lifecycle.types';
 import type {
-  EventUpdateExtensionOptions,
   EventUpdateExtensionOptionsResolver,
 } from './events-update.types';
+import { throwEventBadRequest } from './events.errors';
 import type { CreateEventData } from './events-create.validation';
 import type { UpdateCreatedEventPayload } from './events-update.validation';
 
@@ -39,7 +27,7 @@ export class EventsService {
   constructor(
     private readonly checklistCreator: EventChecklistCreator,
     private readonly createService: EventsCreateService,
-    private readonly equipmentExtensionService: EquipmentEventExtensionService,
+    private readonly extensionRegistry: EventExtensionRegistry,
     private readonly lifecycleService: EventsLifecycleService,
     private readonly queryService: EventsQueryService,
     private readonly updateService: EventsUpdateService,
@@ -144,134 +132,56 @@ export class EventsService {
     data: CreateEventData,
     userId: string,
   ): EventCreateOptions {
-    if (data.extensionCode !== EventExtensionCode.EQUIPMENT) {
+    const createChecklists: EventCreateOptions['createChecklists'] = async ({
+      assignments,
+      createdBy,
+      eventId,
+      tx,
+    }) => {
+      await this.checklistCreator.createEventChecklists(tx, {
+        assignments,
+        createdBy,
+        eventId,
+      });
+    };
+
+    if (data.extensionCode === null) {
       return {
-        createChecklists: async ({ assignments, createdBy, eventId, tx }) => {
-          await this.checklistCreator.createEventChecklists(tx, {
-            assignments,
-            createdBy,
-            eventId,
-          });
-        },
+        createChecklists,
       };
     }
 
-    let preparedExtension: PreparedEquipmentEventExtensionCreate | null = null;
-    const extension = data.extension as EquipmentEventExtensionCreateInput;
-
-    return {
-      afterCreate: async ({ eventId, tx }) => {
-        const auditSnapshot = await getEquipmentEventExtensionAuditSnapshot(
-          tx,
-          eventId,
-        );
-
-        await writeEquipmentEventExtensionCreatedAudit(tx, {
-          event: auditSnapshot,
-          userId,
-        });
-      },
-      createChecklists: async ({ assignments, createdBy, eventId, tx }) => {
-        if (!preparedExtension) {
-          throw new Error('Equipment extension must be prepared first.');
-        }
-
-        await this.equipmentExtensionService.assertChecklistTemplatesAllowed(
-          tx,
-          preparedExtension.maintenanceSettingId,
-          assignments.map((assignment) => assignment.checklistTemplateId),
-        );
-        await this.checklistCreator.createEventChecklists(tx, {
-          assignments,
-          createdBy,
-          eventId,
-        });
-      },
-      createExtension: async ({ eventId, tx }) => {
-        preparedExtension = await this.equipmentExtensionService.prepareCreate(
-          tx,
-          extension,
-        );
-        await this.equipmentExtensionService.create(
-          tx,
-          eventId,
-          preparedExtension,
-        );
-      },
-    };
+    return this.extensionRegistry
+      .getAdapter(data.extensionCode)
+      .buildCreateOptions({
+        createChecklists,
+        extension: data.extension,
+        userId,
+      });
   }
 
   private buildUpdateExtensionOptionsResolver(
-    extension: EquipmentEventExtensionUpdateInput,
+    extension: Record<string, unknown>,
     userId?: string | null,
   ): EventUpdateExtensionOptionsResolver {
-    return async ({ eventId, tx }) => {
-      const preparedExtension =
-        await this.equipmentExtensionService.prepareUpdateCreated(
-          tx,
-          eventId,
-          extension,
-        );
-      const hasExtensionChanges =
-        preparedExtension.equipmentId !== undefined ||
-        preparedExtension.eventTypeId !== undefined ||
-        preparedExtension.maintenanceSetting !== undefined;
-      const extensionOptions: EventUpdateExtensionOptions = {
-        hasExtensionChanges,
-        requiresChecklistAssignments: hasExtensionChanges,
-        validateChecklists: ({ assignments, tx: validateTx }) =>
-          this.equipmentExtensionService.assertChecklistTemplatesAllowed(
-            validateTx,
-            preparedExtension.finalMaintenanceSettingId,
-            assignments.map((assignment) => assignment.checklistTemplateId),
-          ),
-      };
+    return async (params) => {
+      const adapter = this.getUpdateAdapter(params.currentState.extensionCode);
 
-      if (!hasExtensionChanges) {
-        return extensionOptions;
-      }
-
-      const oldAuditSnapshot = await getEquipmentEventExtensionAuditSnapshot(
-        tx,
-        eventId,
-      );
-
-      return {
-        ...extensionOptions,
-        afterUpdate: async ({ eventId: updatedEventId, tx: updateTx }) => {
-          await this.writeEquipmentUpdateAudit(updateTx, {
-            eventId: updatedEventId,
-            oldAuditSnapshot,
-            userId,
-          });
-        },
-        updateExtension: ({ eventId: updatedEventId, tx: updateTx }) =>
-          this.equipmentExtensionService.updateCreated(
-            updateTx,
-            updatedEventId,
-            preparedExtension,
-          ),
-      };
+      return adapter.buildUpdateOptionsResolver({
+        extension,
+        userId,
+      })(params);
     };
   }
 
-  private async writeEquipmentUpdateAudit(
-    tx: Prisma.TransactionClient,
-    params: {
-      eventId: number;
-      oldAuditSnapshot: EquipmentEventExtensionAuditSnapshot;
-      userId?: string | null;
-    },
-  ): Promise<void> {
-    const auditSnapshot = await getEquipmentEventExtensionAuditSnapshot(
-      tx,
-      params.eventId,
-    );
+  private getUpdateAdapter(extensionCode: EventExtensionCode | null) {
+    if (extensionCode === null) {
+      throwEventBadRequest(
+        'EVENT_EXTENSION_UNEXPECTED',
+        'Для события без типа расширения нельзя передавать данные расширения.',
+      );
+    }
 
-    await writeEquipmentEventExtensionUpdatedAudit(tx, {
-      newEvent: auditSnapshot,
-      oldEvent: params.oldAuditSnapshot,
-      userId: params.userId,
-    });
+    return this.extensionRegistry.getAdapter(extensionCode);
   }
 }

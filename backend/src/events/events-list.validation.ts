@@ -1,5 +1,6 @@
 import { EventExtensionCode, EventSource, EventStatus } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
+import type { EventExtensionRegistry } from './event-extensions/event-extension.registry';
 import { throwEventBadRequest } from './events.errors';
 import {
   parseRequiredDate,
@@ -9,6 +10,11 @@ import type { EventsListQueryDto } from './events.validation.types';
 
 const EVENTS_LIST_LIMIT_DEFAULT = 50;
 const EVENTS_LIST_LIMIT_MAX = 100;
+const EVENT_EXTENSION_CODE_VALUES = new Set<EventExtensionCode>(
+  Object.values(EventExtensionCode),
+);
+const EVENT_SOURCE_VALUES = new Set<EventSource>(Object.values(EventSource));
+const EVENT_STATUS_VALUES = new Set<EventStatus>(Object.values(EventStatus));
 
 export type ParsedEventsListQuery = {
   limit: number;
@@ -18,32 +24,23 @@ export type ParsedEventsListQuery = {
 
 export function parseEventsListQueryDto(
   dto: EventsListQueryDto | undefined,
+  extensionRegistry: EventExtensionRegistry,
 ): ParsedEventsListQuery {
   const body = dto ?? {};
   const where: Prisma.EventWhereInput = {};
   const status = parseOptionalEnumValue(
     body.status,
-    EventStatus,
+    EVENT_STATUS_VALUES,
     'EVENT_STATUS_INVALID',
     'Некорректный статус события.',
   );
   const source = parseOptionalEnumValue(
     body.source,
-    EventSource,
+    EVENT_SOURCE_VALUES,
     'EVENT_SOURCE_INVALID',
     'Некорректный источник события.',
   );
   const extensionCode = parseOptionalExtensionCode(body.extensionCode);
-  const equipmentVisibleId = parseOptionalQueryPositiveInteger(
-    body.equipmentVisibleId,
-    'EQUIPMENT_INVALID',
-    'Некорректный ID оборудования.',
-  );
-  const maintenanceTypeId = parseOptionalQueryPositiveInteger(
-    body.maintenanceTypeId,
-    'MAINTENANCE_TYPE_INVALID',
-    'Некорректный вид обслуживания.',
-  );
   const dateFrom = parseOptionalQueryDate(
     body.dateFrom,
     'DATE_FROM_INVALID',
@@ -80,26 +77,13 @@ export function parseEventsListQueryDto(
     where.extensionCode = extensionCode;
   }
 
-  if (equipmentVisibleId !== undefined || maintenanceTypeId !== undefined) {
-    if (extensionCode !== EventExtensionCode.EQUIPMENT) {
-      throwEventBadRequest(
-        'EVENT_EXTENSION_CODE_REQUIRED',
-        'Фильтры оборудования доступны только для событий оборудования.',
-      );
-    }
-
-    where.extensionCode = EventExtensionCode.EQUIPMENT;
-    where.equipmentExtension = {
-      is: {
-        ...(equipmentVisibleId !== undefined
-          ? { equipment: { visibleId: equipmentVisibleId } }
-          : {}),
-        ...(maintenanceTypeId !== undefined
-          ? { eventTypeId: maintenanceTypeId }
-          : {}),
-      },
-    };
-  }
+  Object.assign(
+    where,
+    extensionRegistry.buildListWhere({
+      extensionCode,
+      query: body,
+    }),
+  );
 
   if (dateFrom !== undefined || dateTo !== undefined) {
     where.plannedDate = {
@@ -125,7 +109,7 @@ export function parseEventsListQueryDto(
 
 function parseOptionalEnumValue<TValue extends string>(
   value: unknown,
-  enumObject: Record<string, TValue>,
+  enumValues: ReadonlySet<TValue>,
   code: string,
   message: string,
 ): TValue | undefined {
@@ -136,8 +120,6 @@ function parseOptionalEnumValue<TValue extends string>(
   if (typeof value !== 'string') {
     throwEventBadRequest(code, message);
   }
-
-  const enumValues = new Set(Object.values(enumObject));
 
   if (!enumValues.has(value as TValue)) {
     throwEventBadRequest(code, message);
@@ -159,7 +141,7 @@ function parseOptionalExtensionCode(
 
   return parseOptionalEnumValue(
     value,
-    EventExtensionCode,
+    EVENT_EXTENSION_CODE_VALUES,
     'EVENT_EXTENSION_CODE_INVALID',
     'Некорректный тип расширения события.',
   );
@@ -231,24 +213,6 @@ function parseOptionalOffset(value: unknown): number {
       'OFFSET_INVALID',
       'Некорректное смещение списка событий.',
     );
-  }
-
-  return parsedValue;
-}
-
-function parseOptionalQueryPositiveInteger(
-  value: unknown,
-  code: string,
-  message: string,
-): number | undefined {
-  if (value === undefined || value === null || value === '') {
-    return undefined;
-  }
-
-  const parsedValue = parseQueryInteger(value, code, message);
-
-  if (parsedValue <= 0) {
-    throwEventBadRequest(code, message);
   }
 
   return parsedValue;

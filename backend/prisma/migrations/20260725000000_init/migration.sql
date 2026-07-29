@@ -5,7 +5,10 @@ CREATE SCHEMA IF NOT EXISTS "public";
 CREATE TYPE "audit_action" AS ENUM ('CREATE', 'UPDATE', 'ARCHIVE', 'DELETE', 'STATUS_CHANGE', 'FILE_UPLOAD', 'FILE_DELETE', 'LOGIN', 'LOGOUT', 'USER_BLOCK', 'USER_PHOTO_DELETE', 'USER_PHOTO_UPLOAD', 'ROLE_CHANGE', 'SETUP_ADMIN_CREATED');
 
 -- CreateEnum
-CREATE TYPE "audit_module" AS ENUM ('equipment', 'events', 'users');
+CREATE TYPE "audit_module" AS ENUM ('calendar', 'equipment', 'events', 'users');
+
+-- CreateEnum
+CREATE TYPE "calendar_source" AS ENUM ('SYSTEM', 'IMPORT', 'MANUAL');
 
 -- CreateEnum
 CREATE TYPE "checklist_answer_type" AS ENUM ('BOOLEAN', 'INTEGER', 'DECIMAL', 'TEXT', 'DATE');
@@ -455,6 +458,60 @@ CREATE TABLE "user_photos" (
     CONSTRAINT "user_photos_pkey" PRIMARY KEY ("user_id")
 );
 
+-- CreateTable
+CREATE TABLE "calendar_days" (
+    "id" SERIAL NOT NULL,
+    "date" DATE NOT NULL,
+    "year" SMALLINT NOT NULL,
+    "quarter" SMALLINT NOT NULL,
+    "month" SMALLINT NOT NULL,
+    "week" SMALLINT NOT NULL,
+    "iso_week_year" SMALLINT NOT NULL,
+    "day" SMALLINT NOT NULL,
+    "day_of_week" SMALLINT NOT NULL,
+    "day_of_year" SMALLINT NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+
+    CONSTRAINT "calendar_days_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "chk_calendar_days_date_range" CHECK ("date" BETWEEN make_date(2000, 1, 1) AND make_date(2100, 12, 31)),
+    CONSTRAINT "chk_calendar_days_year_range" CHECK ("year" BETWEEN 2000 AND 2100),
+    CONSTRAINT "chk_calendar_days_year_matches_date" CHECK ("year" = EXTRACT(YEAR FROM "date")::SMALLINT),
+    CONSTRAINT "chk_calendar_days_quarter_range" CHECK ("quarter" BETWEEN 1 AND 4),
+    CONSTRAINT "chk_calendar_days_quarter_matches_date" CHECK ("quarter" = EXTRACT(QUARTER FROM "date")::SMALLINT),
+    CONSTRAINT "chk_calendar_days_month_range" CHECK ("month" BETWEEN 1 AND 12),
+    CONSTRAINT "chk_calendar_days_month_matches_date" CHECK ("month" = EXTRACT(MONTH FROM "date")::SMALLINT),
+    CONSTRAINT "chk_calendar_days_week_range" CHECK ("week" BETWEEN 1 AND 53),
+    CONSTRAINT "chk_calendar_days_week_matches_date" CHECK ("week" = EXTRACT(WEEK FROM "date")::SMALLINT),
+    CONSTRAINT "chk_calendar_days_iso_week_year_range" CHECK ("iso_week_year" BETWEEN 1999 AND 2100),
+    CONSTRAINT "chk_calendar_days_iso_week_year_matches_date" CHECK ("iso_week_year" = EXTRACT(ISOYEAR FROM "date")::SMALLINT),
+    CONSTRAINT "chk_calendar_days_day_range" CHECK ("day" BETWEEN 1 AND 31),
+    CONSTRAINT "chk_calendar_days_day_matches_date" CHECK ("day" = EXTRACT(DAY FROM "date")::SMALLINT),
+    CONSTRAINT "chk_calendar_days_day_of_week_range" CHECK ("day_of_week" BETWEEN 1 AND 7),
+    CONSTRAINT "chk_calendar_days_day_of_week_iso" CHECK ("day_of_week" = EXTRACT(ISODOW FROM "date")::SMALLINT),
+    CONSTRAINT "chk_calendar_days_day_of_year_range" CHECK ("day_of_year" BETWEEN 1 AND 366),
+    CONSTRAINT "chk_calendar_days_day_of_year_matches_date" CHECK ("day_of_year" = EXTRACT(DOY FROM "date")::SMALLINT)
+);
+
+-- CreateTable
+CREATE TABLE "calendar_workdays" (
+    "calendar_day_id" INTEGER NOT NULL,
+    "is_working_day" BOOLEAN NOT NULL DEFAULT true,
+    "is_holiday" BOOLEAN NOT NULL DEFAULT false,
+    "is_preholiday" BOOLEAN NOT NULL DEFAULT false,
+    "holiday_name" VARCHAR(160),
+    "working_hours" DECIMAL(4,2) NOT NULL DEFAULT 8.00,
+    "source" "calendar_source" NOT NULL DEFAULT 'SYSTEM',
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
+
+    CONSTRAINT "calendar_workdays_pkey" PRIMARY KEY ("calendar_day_id"),
+    CONSTRAINT "chk_calendar_workdays_working_hours_range" CHECK ("working_hours" >= 0 AND "working_hours" <= 24),
+    CONSTRAINT "chk_calendar_workdays_working_day_hours" CHECK ("is_working_day" = false OR "working_hours" > 0),
+    CONSTRAINT "chk_calendar_workdays_non_working_day_hours" CHECK ("is_working_day" = true OR "working_hours" = 0),
+    CONSTRAINT "chk_calendar_workdays_holiday_name_not_blank" CHECK ("holiday_name" IS NULL OR length(btrim("holiday_name")) > 0)
+);
+
 -- CreateIndex
 CREATE INDEX "idx_audit_log_created_at" ON "audit_log"("created_at" DESC);
 
@@ -692,6 +749,24 @@ CREATE UNIQUE INDEX "uq_storage_files_bucket_object_key" ON "storage_files"("buc
 -- CreateIndex
 CREATE INDEX "idx_user_photos_uploaded_by_user_id" ON "user_photos"("uploaded_by_user_id");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "uq_calendar_days_date" ON "calendar_days"("date");
+
+-- CreateIndex
+CREATE INDEX "idx_calendar_days_year" ON "calendar_days"("year");
+
+-- CreateIndex
+CREATE INDEX "idx_calendar_days_year_month" ON "calendar_days"("year", "month");
+
+-- CreateIndex
+CREATE INDEX "idx_calendar_days_iso_week" ON "calendar_days"("iso_week_year", "week");
+
+-- CreateIndex
+CREATE INDEX "idx_calendar_workdays_is_working_day" ON "calendar_workdays"("is_working_day");
+
+-- CreateIndex
+CREATE INDEX "idx_calendar_workdays_is_holiday" ON "calendar_workdays"("is_holiday");
+
 -- AddForeignKey
 ALTER TABLE "audit_log" ADD CONSTRAINT "fk_audit_log_user" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -841,6 +916,9 @@ ALTER TABLE "user_photos" ADD CONSTRAINT "user_photos_user_id_fkey" FOREIGN KEY 
 
 -- AddForeignKey
 ALTER TABLE "user_photos" ADD CONSTRAINT "user_photos_uploaded_by_user_id_fkey" FOREIGN KEY ("uploaded_by_user_id") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "calendar_workdays" ADD CONSTRAINT "calendar_workdays_calendar_day_id_fkey" FOREIGN KEY ("calendar_day_id") REFERENCES "calendar_days"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 
 -- Manual PostgreSQL objects

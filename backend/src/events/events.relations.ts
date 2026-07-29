@@ -1,8 +1,6 @@
 import { ChecklistStatus, Prisma } from '@prisma/client';
-import {
-  equipmentEventExtensionDetailSelect,
-  equipmentEventExtensionListSelect,
-} from '../equipment-event-extension/equipment-event-extension.relations';
+import type { EventExtensionPresenterRecord } from './event-extensions/event-extension.adapter';
+import type { EventExtensionRegistry } from './event-extensions/event-extension.registry';
 
 const employeeResponseSelect = {
   firstName: true,
@@ -38,10 +36,7 @@ const responsiblesResponseSelect = {
   },
 } satisfies Prisma.EventResponsibleFindManyArgs;
 
-export const eventListSelect = {
-  equipmentExtension: {
-    select: equipmentEventExtensionListSelect,
-  },
+const eventListBaseSelect = {
   extensionCode: true,
   factDate: true,
   id: true,
@@ -54,13 +49,10 @@ export const eventListSelect = {
   version: true,
 } satisfies Prisma.EventSelect;
 
-export const eventDetailSelect = {
+const eventDetailBaseSelect = {
   createdAt: true,
   createdByEmployee: {
     select: employeeResponseSelect,
-  },
-  equipmentExtension: {
-    select: equipmentEventExtensionDetailSelect,
   },
   extensionCode: true,
   factDate: true,
@@ -75,13 +67,33 @@ export const eventDetailSelect = {
   version: true,
 } satisfies Prisma.EventSelect;
 
-export type EventListRecord = Prisma.EventGetPayload<{
-  select: typeof eventListSelect;
-}>;
+export function buildEventListSelect(
+  extensionRegistry: EventExtensionRegistry,
+): Prisma.EventSelect {
+  return {
+    ...eventListBaseSelect,
+    ...extensionRegistry.getListSelect(),
+  };
+}
 
-export type EventDetailRecord = Prisma.EventGetPayload<{
-  select: typeof eventDetailSelect;
-}>;
+export function buildEventDetailSelect(
+  extensionRegistry: EventExtensionRegistry,
+): Prisma.EventSelect {
+  return {
+    ...eventDetailBaseSelect,
+    ...extensionRegistry.getDetailSelect(),
+  };
+}
+
+export type EventListRecord = EventExtensionPresenterRecord &
+  Prisma.EventGetPayload<{
+    select: typeof eventListBaseSelect;
+  }>;
+
+export type EventDetailRecord = EventExtensionPresenterRecord &
+  Prisma.EventGetPayload<{
+    select: typeof eventDetailBaseSelect;
+  }>;
 
 export type EventChecklistRecord = {
   assignedUser: {

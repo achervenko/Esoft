@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import type { EventExtensionCode, Prisma } from '@prisma/client';
 import type {
   CurrentEventChecklistState,
   EventChecklistAssignment,
@@ -15,6 +15,7 @@ export type UpdateCreatedEventData = {
 
 export type CurrentCreatedEventState = {
   currentChecklists: CurrentEventChecklistState[];
+  extensionCode: EventExtensionCode | null;
   currentNote: string | null;
   currentPlannedDate: Date;
   currentResponsibleUserIds: string[];

@@ -149,6 +149,55 @@ describe('EventsCreateService', () => {
     });
   });
 
+  it('passes extension context to checklist and after-create callbacks', async () => {
+    const { service } = createService();
+    const tx = createTx();
+    const extensionContext = { maintenanceSettingId: 50 };
+    const afterCreate = jest.fn();
+    const createChecklists = jest.fn();
+    const createExtension = jest.fn().mockResolvedValue(extensionContext);
+
+    await service.createInTransaction(
+      tx as never,
+      createCommand({
+        checklistAssignments: [
+          {
+            assignedUserId: 'user-1',
+            checklistTemplateId: 10,
+          },
+        ],
+        extensionCode: EventExtensionCode.EQUIPMENT,
+      }),
+      {
+        kind: 'user',
+        userId: 'user-1',
+      },
+      {
+        afterCreate,
+        createChecklists,
+        createExtension,
+      },
+    );
+
+    expect(createChecklists).toHaveBeenCalledWith({
+      assignments: [
+        {
+          assignedUserId: 'user-1',
+          checklistTemplateId: 10,
+        },
+      ],
+      createdBy: 'user-1',
+      eventId: 10,
+      extensionContext,
+      tx,
+    });
+    expect(afterCreate).toHaveBeenCalledWith({
+      eventId: 10,
+      extensionContext,
+      tx,
+    });
+  });
+
   it('rejects extension callback for standalone event', async () => {
     const { accessAssertions, service } = createService();
     const tx = createTx();
@@ -411,8 +460,11 @@ describe('EventsCreateService', () => {
     const { service } = createService();
     const tx = createTx();
     const calls: string[] = [];
+    const extensionContext = { maintenanceSettingId: 50 };
     const createExtension = jest.fn().mockImplementation(() => {
       calls.push('extension');
+
+      return extensionContext;
     });
     const createChecklists = jest.fn().mockImplementation(() => {
       calls.push('checklists');
@@ -449,6 +501,7 @@ describe('EventsCreateService', () => {
       ],
       createdBy: 'user-1',
       eventId: 10,
+      extensionContext,
       tx,
     });
   });

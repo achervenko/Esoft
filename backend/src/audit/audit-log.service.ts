@@ -7,6 +7,7 @@ import {
 } from '@prisma/client';
 import { DATABASE_DATE_TIME_ZONE } from '../application/business-date';
 import { PrismaService } from '../prisma/prisma.service';
+import type { WriteAuditParams } from './audit.types';
 
 type AuditFieldLine = {
   label: string;
@@ -19,22 +20,6 @@ type EquipmentUpdateAuditLine = {
   oldValue: unknown;
 };
 
-type AuditFieldChange = {
-  fieldName: string;
-  newValue: unknown;
-  oldValue?: unknown;
-};
-
-type WriteAuditParams = {
-  action: AuditAction;
-  entityId?: number | null;
-  entityType: string;
-  fields: AuditFieldChange[];
-  module: AuditModule;
-  tx?: Prisma.TransactionClient;
-  userId?: string | null;
-};
-
 @Injectable()
 export class AuditLogService {
   constructor(private readonly prisma: PrismaService) {}
@@ -43,7 +28,7 @@ export class AuditLogService {
     equipmentId: number,
     userId: string | null | undefined,
     tx: Prisma.TransactionClient,
-  ) {
+  ): Promise<void> {
     const equipment = await tx.equipment.findUnique({
       where: { id: equipmentId },
       include: {
@@ -122,7 +107,7 @@ export class AuditLogService {
     lines: EquipmentUpdateAuditLine[];
     tx: Prisma.TransactionClient;
     userId?: string | null;
-  }) {
+  }): Promise<void> {
     await this.writeFieldChanges({
       action: AuditAction.UPDATE,
       entityId: params.equipmentId,
@@ -138,7 +123,7 @@ export class AuditLogService {
     });
   }
 
-  async writeFieldChanges(params: WriteAuditParams) {
+  async writeFieldChanges(params: WriteAuditParams): Promise<void> {
     if (params.fields.length === 0) {
       return;
     }
@@ -149,6 +134,7 @@ export class AuditLogService {
       data: params.fields.map((field) => ({
         action: params.action,
         entityId: params.entityId ?? null,
+        entityStringId: params.entityStringId ?? null,
         entityType: params.entityType,
         fieldName: field.fieldName,
         module: params.module,
@@ -162,7 +148,7 @@ export class AuditLogService {
     });
   }
 
-  private formatDate(value: Date | null) {
+  private formatDate(value: Date | null): string | null {
     if (!value) {
       return null;
     }
@@ -172,7 +158,7 @@ export class AuditLogService {
     }).format(value);
   }
 
-  private formatValue(value: unknown) {
+  private formatValue(value: unknown): string {
     if (value === null || value === undefined || value === '') {
       return 'не указано';
     }
@@ -194,7 +180,7 @@ export class AuditLogService {
     return serialized ?? Object.prototype.toString.call(value);
   }
 
-  private getStatusLabel(status: EquipmentStatus) {
+  private getStatusLabel(status: EquipmentStatus): string {
     const statusLabels: Record<EquipmentStatus, string> = {
       [EquipmentStatus.ACTIVE]: 'В эксплуатации',
       [EquipmentStatus.RESERVE]: 'Резерв',

@@ -77,11 +77,14 @@ URL проходят строгую проверку:
 
 `role-permissions.ts` не является Better Auth access control. Это отдельный слой бизнес-авторизации для backend:
 
+- разрешения описываются декларативно в `ROLE_PERMISSIONS`;
 - `assertAdmin()` — управление учётными записями;
 - `assertCanViewUserProfile()` — свой профиль или admin;
 - `assertCanEditEquipment()` — редактирование оборудования;
 - `assertCanManageFiles()` — работа с файлами;
 - `assertCanManageEquipmentEvents()` — события оборудования;
+- `assertCanManageEvents()` / `assertCanViewEvents()` — события;
+- `assertCanAccessCalendar()` — административный доступ к календарю;
 - `assertCanManageChecklists()` — чек-листы.
 
 Не смешивать этот файл с `better-auth-access.ts`: Better Auth permissions и бизнес-права NestJS живут отдельно.

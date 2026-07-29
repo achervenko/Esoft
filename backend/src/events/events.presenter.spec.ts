@@ -5,7 +5,39 @@ import {
   EventSource,
   EventStatus,
 } from '@prisma/client';
-import { toEventDetailResponse, toEventListResponse } from './events.presenter';
+import { EquipmentEventExtensionAdapter } from '../equipment-event-extension/equipment-event-extension.adapter';
+import { EquipmentEventExtensionCreate } from '../equipment-event-extension/equipment-event-extension.create';
+import { EquipmentEventExtensionQuery } from '../equipment-event-extension/equipment-event-extension.query';
+import { EquipmentEventExtensionUpdate } from '../equipment-event-extension/equipment-event-extension.update';
+import { EquipmentEventExtensionValidation } from '../equipment-event-extension/equipment-event-extension.validation';
+import { EventExtensionRegistry } from './event-extensions/event-extension.registry';
+import {
+  toEventDetailResponse as toEventDetailResponseBase,
+  toEventListResponse as toEventListResponseBase,
+} from './events.presenter';
+
+const extensionRegistry = new EventExtensionRegistry([
+  createEquipmentEventExtensionAdapter(),
+]);
+const toEventListResponse = (
+  event: Parameters<typeof toEventListResponseBase>[0],
+  checklists?: Parameters<typeof toEventListResponseBase>[2],
+) => toEventListResponseBase(event, extensionRegistry, checklists);
+const toEventDetailResponse = (
+  event: Parameters<typeof toEventDetailResponseBase>[0],
+  checklists?: Parameters<typeof toEventDetailResponseBase>[2],
+) => toEventDetailResponseBase(event, extensionRegistry, checklists);
+
+function createEquipmentEventExtensionAdapter(): EquipmentEventExtensionAdapter {
+  const validation = new EquipmentEventExtensionValidation();
+
+  return new EquipmentEventExtensionAdapter(
+    new EquipmentEventExtensionCreate({} as never),
+    new EquipmentEventExtensionUpdate({} as never),
+    new EquipmentEventExtensionQuery(validation),
+    validation,
+  );
+}
 
 describe('events presenter', () => {
   it('presents standalone event without extension', () => {
@@ -108,7 +140,7 @@ describe('events presenter', () => {
   });
 
   it('rejects relation without extension code', () => {
-    try {
+    const action = () =>
       toEventListResponse({
         equipmentExtension: {
           equipment: {
@@ -139,14 +171,15 @@ describe('events presenter', () => {
         title: 'Broken event',
         version: 1,
       });
-      throw new Error('Expected exception');
-    } catch (error) {
-      expect(error).toBeInstanceOf(ConflictException);
-      expect((error as ConflictException).getResponse()).toEqual({
-        code: 'EVENT_EXTENSION_CONFLICT',
-        message: 'Данные расширения события не соответствуют его типу.',
-      });
-    }
+
+    expect(action).toThrow(ConflictException);
+
+    const error = readThrownError(action);
+
+    expect((error as ConflictException).getResponse()).toEqual({
+      code: 'EVENT_EXTENSION_CONFLICT',
+      message: 'Данные расширения события не соответствуют его типу.',
+    });
   });
 
   it('rejects equipment extension code without relation', () => {
@@ -167,3 +200,15 @@ describe('events presenter', () => {
     ).toThrow('Расширение оборудования для события не найдено.');
   });
 });
+
+function readThrownError(action: () => unknown): Error {
+  try {
+    action();
+  } catch (error) {
+    expect(error).toBeInstanceOf(Error);
+
+    return error as Error;
+  }
+
+  throw new Error('Expected exception');
+}

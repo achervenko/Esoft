@@ -29,19 +29,21 @@ export type ResolvedCreateEventActor = {
   userId: string;
 };
 
-export type EventCreateOptions = {
+export type EventCreateOptions<TExtensionContext = unknown> = {
   afterCreate?: (params: {
     eventId: number;
+    extensionContext: TExtensionContext;
     tx: Prisma.TransactionClient;
   }) => Promise<void>;
   createChecklists?: (params: {
     assignments: EventChecklistAssignment[];
     createdBy: string;
     eventId: number;
+    extensionContext: TExtensionContext;
     tx: Prisma.TransactionClient;
   }) => Promise<void>;
   createExtension?: (params: {
     eventId: number;
     tx: Prisma.TransactionClient;
-  }) => Promise<void>;
+  }) => Promise<TExtensionContext>;
 };

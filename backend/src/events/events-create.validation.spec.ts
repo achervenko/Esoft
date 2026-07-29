@@ -1,9 +1,32 @@
 import { EventExtensionCode, EventSource } from '@prisma/client';
-import { parseCreateEventDto } from './events-create.validation';
+import { EquipmentEventExtensionAdapter } from '../equipment-event-extension/equipment-event-extension.adapter';
+import { EquipmentEventExtensionCreate } from '../equipment-event-extension/equipment-event-extension.create';
+import { EquipmentEventExtensionQuery } from '../equipment-event-extension/equipment-event-extension.query';
+import { EquipmentEventExtensionUpdate } from '../equipment-event-extension/equipment-event-extension.update';
+import { EquipmentEventExtensionValidation } from '../equipment-event-extension/equipment-event-extension.validation';
+import { EventExtensionRegistry } from './event-extensions/event-extension.registry';
+import { parseCreateEventDto as parseCreateEventDtoBase } from './events-create.validation';
 
 type ExceptionWithResponse = {
   getResponse: () => unknown;
 };
+
+const extensionRegistry = new EventExtensionRegistry([
+  createEquipmentEventExtensionAdapter(),
+]);
+const parseCreateEventDto = (dto: Parameters<typeof parseCreateEventDtoBase>[0]) =>
+  parseCreateEventDtoBase(dto, extensionRegistry);
+
+function createEquipmentEventExtensionAdapter(): EquipmentEventExtensionAdapter {
+  const validation = new EquipmentEventExtensionValidation();
+
+  return new EquipmentEventExtensionAdapter(
+    new EquipmentEventExtensionCreate({} as never),
+    new EquipmentEventExtensionUpdate({} as never),
+    new EquipmentEventExtensionQuery(validation),
+    validation,
+  );
+}
 
 describe('events create validation', () => {
   it('parses generic create payload', () => {

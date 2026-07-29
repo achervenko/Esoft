@@ -1,0 +1,47 @@
+enum CalendarSource {
+  SYSTEM
+  IMPORT
+  MANUAL
+
+  @@map("calendar_source")
+}
+
+model CalendarDay {
+  id          Int      @id @default(autoincrement())
+  date        DateTime @unique(map: "uq_calendar_days_date") @db.Date
+  year        Int      @db.SmallInt
+  quarter     Int      @db.SmallInt
+  month       Int      @db.SmallInt
+  week        Int      @db.SmallInt
+  isoWeekYear Int      @map("iso_week_year") @db.SmallInt
+  day         Int      @db.SmallInt
+  dayOfWeek   Int      @map("day_of_week") @db.SmallInt
+  dayOfYear   Int      @map("day_of_year") @db.SmallInt
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  workday CalendarWorkday?
+
+  @@index([year], map: "idx_calendar_days_year")
+  @@index([year, month], map: "idx_calendar_days_year_month")
+  @@index([isoWeekYear, week], map: "idx_calendar_days_iso_week")
+  @@map("calendar_days")
+}
+
+model CalendarWorkday {
+  calendarDayId Int            @id @map("calendar_day_id")
+  isWorkingDay  Boolean        @default(true) @map("is_working_day")
+  isHoliday     Boolean        @default(false) @map("is_holiday")
+  isPreholiday  Boolean        @default(false) @map("is_preholiday")
+  holidayName   String?        @map("holiday_name") @db.VarChar(160)
+  workingHours  Decimal        @default(8.00) @map("working_hours") @db.Decimal(4, 2)
+  source        CalendarSource @default(SYSTEM)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  calendarDay CalendarDay @relation(fields: [calendarDayId], references: [id], onDelete: Restrict)
+
+  @@index([isWorkingDay], map: "idx_calendar_workdays_is_working_day")
+  @@index([isHoliday], map: "idx_calendar_workdays_is_holiday")
+  @@map("calendar_workdays")
+}

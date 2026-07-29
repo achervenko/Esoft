@@ -1,14 +1,12 @@
-import type { EquipmentEventExtensionUpdateInput } from '../equipment-event-extension/equipment-event-extension.command.types';
 import {
   parseChecklistAssignments,
   parseResponsibleUserIds,
 } from './events-checklist.validation';
 import { throwEventBadRequest } from './events.errors';
 import {
-  assertNoLegacyExtensionFields,
   assertNoUpdateExtensionCode,
-  parseUpdateExtension,
 } from './events-extension.validation';
+import type { EventExtensionRegistry } from './event-extensions/event-extension.registry';
 import type { UpdateCreatedEventData } from './events-update.types';
 import {
   parseOptionalNonEmptyString,
@@ -19,17 +17,21 @@ import {
 import type { UpdateCreatedEventDto } from './events.validation.types';
 
 export type UpdateCreatedEventPayload = UpdateCreatedEventData & {
-  extension?: EquipmentEventExtensionUpdateInput;
+  extension?: Record<string, unknown>;
 };
 
 export function parseUpdateCreatedEventDto(
   dto: UpdateCreatedEventDto | undefined,
+  extensionRegistry: EventExtensionRegistry,
 ): UpdateCreatedEventPayload {
   const body = dto ?? {};
 
-  assertNoLegacyExtensionFields(body);
+  extensionRegistry.assertNoLegacyFields(body);
   assertNoUpdateExtensionCode(body.extensionCode);
-  const extension = parseUpdateExtension(body.extension);
+  const extension =
+    body.extension === undefined
+      ? undefined
+      : parseRawUpdateExtension(body.extension);
 
   const responsibleUserIds =
     body.responsibleUserIds === undefined
@@ -81,7 +83,7 @@ export function parseUpdateCreatedEventDto(
 
 function assertUpdateIsNotEmpty(
   data: UpdateCreatedEventData,
-  extension: EquipmentEventExtensionUpdateInput | undefined,
+  extension: Record<string, unknown> | undefined,
 ): void {
   if (
     data.checklistAssignments === undefined &&
@@ -96,4 +98,15 @@ function assertUpdateIsNotEmpty(
       'Укажите данные для изменения события.',
     );
   }
+}
+
+function parseRawUpdateExtension(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throwEventBadRequest(
+      'EVENT_EXTENSION_INVALID',
+      'Некорректные данные расширения события.',
+    );
+  }
+
+  return value as Record<string, unknown>;
 }

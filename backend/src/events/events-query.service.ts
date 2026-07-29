@@ -2,12 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { checklistProgressGroupedByChecklistSql } from '../checklists/checklist-work/checklist-work-progress.sql';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventExtensionRegistry } from './event-extensions/event-extension.registry';
 import { throwEventNotFound } from './events.errors';
 import { toEventDetailResponse, toEventListResponse } from './events.presenter';
 import {
   type EventChecklistRecord,
-  eventDetailSelect,
-  eventListSelect,
+  type EventDetailRecord,
+  type EventListRecord,
+  buildEventDetailSelect,
+  buildEventListSelect,
 } from './events.relations';
 
 export type EventsListRecordsQuery = {
@@ -19,13 +22,20 @@ export type EventsListRecordsQuery = {
 
 @Injectable()
 export class EventsQueryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly extensionRegistry: EventExtensionRegistry,
+  ) {}
 
   async findAll(query: EventsListRecordsQuery = {}) {
     const { checklistsByEventId, events } = await this.findListRecords(query);
 
     return events.map((event) =>
-      toEventListResponse(event, checklistsByEventId.get(event.id)),
+      toEventListResponse(
+        event,
+        this.extensionRegistry,
+        checklistsByEventId.get(event.id),
+      ),
     );
   }
 
@@ -38,6 +48,7 @@ export class EventsQueryService {
 
     return toEventDetailResponse(
       record.event,
+      this.extensionRegistry,
       record.checklistsByEventId.get(record.event.id),
     );
   }
@@ -104,13 +115,13 @@ export class EventsQueryService {
   }
 
   async findListRecords(query: EventsListRecordsQuery = {}) {
-    const events = await this.prisma.event.findMany({
+    const events = (await this.prisma.event.findMany({
       where: query.where,
-      select: eventListSelect,
+      select: buildEventListSelect(this.extensionRegistry),
       orderBy: query.orderBy ?? defaultEventOrderBy(),
       skip: query.offset,
       take: query.limit,
-    });
+    })) as unknown as EventListRecord[];
 
     const checklistsByEventId = await this.loadChecklistsByEventId(
       events.map((event) => event.id),
@@ -120,10 +131,10 @@ export class EventsQueryService {
   }
 
   async findDetailRecord(where: Prisma.EventWhereInput) {
-    const event = await this.prisma.event.findFirst({
+    const event = (await this.prisma.event.findFirst({
       where,
-      select: eventDetailSelect,
-    });
+      select: buildEventDetailSelect(this.extensionRegistry),
+    })) as unknown as EventDetailRecord | null;
 
     if (!event) {
       return null;

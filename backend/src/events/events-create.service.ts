@@ -62,7 +62,7 @@ export class EventsCreateService {
       },
     });
 
-    await options.createExtension?.({
+    const extensionContext = await options.createExtension?.({
       eventId: event.id,
       tx,
     });
@@ -81,6 +81,7 @@ export class EventsCreateService {
         assignments: command.checklistAssignments,
         createdBy: creationActor.userId,
         eventId: event.id,
+        extensionContext,
         tx,
       });
     }
@@ -92,6 +93,7 @@ export class EventsCreateService {
     });
     await options.afterCreate?.({
       eventId: event.id,
+      extensionContext,
       tx,
     });
 

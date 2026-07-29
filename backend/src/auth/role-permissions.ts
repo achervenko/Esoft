@@ -1,39 +1,38 @@
 import { ForbiddenException } from '@nestjs/common';
 
-const rolesAllowedToManageFiles = new Set([
-  'admin',
-  'chief_engineer',
-  'engineer',
-]);
+const ROLE_PERMISSIONS = {
+  calendar: {
+    access: ['admin'],
+  },
+  checklists: {
+    manage: ['admin', 'chief_engineer'],
+  },
+  equipment: {
+    edit: ['admin', 'chief_engineer', 'engineer'],
+  },
+  equipmentEvents: {
+    manage: ['admin', 'chief_engineer'],
+  },
+  events: {
+    manage: ['admin', 'chief_engineer'],
+    view: ['admin', 'chief_engineer', 'engineer'],
+  },
+  files: {
+    manage: ['admin', 'chief_engineer', 'engineer'],
+  },
+  users: {
+    manage: ['admin'],
+  },
+} as const;
 
-const rolesAllowedToEditEquipment = new Set([
-  'admin',
-  'chief_engineer',
-  'engineer',
-]);
-
-const rolesAllowedToManageEquipmentEvents = new Set([
-  'admin',
-  'chief_engineer',
-]);
-
-const rolesAllowedToManageEvents = new Set(['admin', 'chief_engineer']);
-
-const rolesAllowedToViewEvents = new Set([
-  'admin',
-  'chief_engineer',
-  'engineer',
-]);
-
-const rolesAllowedToManageChecklists = new Set(['admin', 'chief_engineer']);
+type PermissionRoles = readonly string[];
 
 export function assertCanManageFiles(role: unknown) {
-  if (!isKnownRole(role, rolesAllowedToManageFiles)) {
-    throw new ForbiddenException({
-      code: 'FORBIDDEN',
-      message: 'Недостаточно прав для работы с файлами.',
-    });
-  }
+  assertPermission(
+    role,
+    ROLE_PERMISSIONS.files.manage,
+    'Недостаточно прав для работы с файлами.',
+  );
 }
 
 export function assertCanViewUserProfile(params: {
@@ -43,71 +42,87 @@ export function assertCanViewUserProfile(params: {
 }) {
   if (
     params.currentUserId === params.requestedUserId ||
-    params.role === 'admin'
+    isKnownRole(params.role, ROLE_PERMISSIONS.users.manage)
   ) {
     return;
   }
 
-  throw new ForbiddenException({
-    code: 'FORBIDDEN',
-    message: 'Недостаточно прав для просмотра профиля пользователя.',
-  });
+  throwForbidden('Недостаточно прав для просмотра профиля пользователя.');
 }
 
 export function assertAdmin(role: unknown) {
-  if (role !== 'admin') {
-    throw new ForbiddenException({
-      code: 'FORBIDDEN',
-      message: 'Недостаточно прав для управления учётными записями.',
-    });
-  }
+  assertPermission(
+    role,
+    ROLE_PERMISSIONS.users.manage,
+    'Недостаточно прав для управления учётными записями.',
+  );
 }
 
 export function assertCanEditEquipment(role: unknown) {
-  if (!isKnownRole(role, rolesAllowedToEditEquipment)) {
-    throw new ForbiddenException({
-      code: 'FORBIDDEN',
-      message: 'Недостаточно прав для редактирования оборудования.',
-    });
-  }
+  assertPermission(
+    role,
+    ROLE_PERMISSIONS.equipment.edit,
+    'Недостаточно прав для редактирования оборудования.',
+  );
 }
 
 export function assertCanManageEquipmentEvents(role: unknown) {
-  if (!isKnownRole(role, rolesAllowedToManageEquipmentEvents)) {
-    throw new ForbiddenException({
-      code: 'FORBIDDEN',
-      message: 'Недостаточно прав для управления событиями оборудования.',
-    });
-  }
+  assertPermission(
+    role,
+    ROLE_PERMISSIONS.equipmentEvents.manage,
+    'Недостаточно прав для управления событиями оборудования.',
+  );
 }
 
 export function assertCanManageEvents(role: unknown) {
-  if (!isKnownRole(role, rolesAllowedToManageEvents)) {
-    throw new ForbiddenException({
-      code: 'FORBIDDEN',
-      message: 'Недостаточно прав для управления событиями.',
-    });
-  }
+  assertPermission(
+    role,
+    ROLE_PERMISSIONS.events.manage,
+    'Недостаточно прав для управления событиями.',
+  );
 }
 
 export function assertCanViewEvents(role: unknown) {
-  if (!isKnownRole(role, rolesAllowedToViewEvents)) {
-    throw new ForbiddenException({
-      code: 'FORBIDDEN',
-      message: 'Недостаточно прав для просмотра событий.',
-    });
-  }
+  assertPermission(
+    role,
+    ROLE_PERMISSIONS.events.view,
+    'Недостаточно прав для просмотра событий.',
+  );
+}
+
+export function assertCanAccessCalendar(role: unknown) {
+  assertPermission(
+    role,
+    ROLE_PERMISSIONS.calendar.access,
+    'Недостаточно прав для работы с календарем.',
+  );
 }
 
 export function assertCanManageChecklists(role: unknown) {
-  if (!isKnownRole(role, rolesAllowedToManageChecklists)) {
-    throw new ForbiddenException({
-      code: 'FORBIDDEN',
-      message: 'Недостаточно прав для управления чек-листами.',
-    });
+  assertPermission(
+    role,
+    ROLE_PERMISSIONS.checklists.manage,
+    'Недостаточно прав для управления чек-листами.',
+  );
+}
+
+function assertPermission(
+  role: unknown,
+  allowedRoles: PermissionRoles,
+  message: string,
+) {
+  if (!isKnownRole(role, allowedRoles)) {
+    throwForbidden(message);
   }
 }
 
-function isKnownRole(role: unknown, allowedRoles: ReadonlySet<string>) {
-  return typeof role === 'string' && allowedRoles.has(role);
+function throwForbidden(message: string): never {
+  throw new ForbiddenException({
+    code: 'FORBIDDEN',
+    message,
+  });
+}
+
+function isKnownRole(role: unknown, allowedRoles: PermissionRoles) {
+  return typeof role === 'string' && allowedRoles.includes(role);
 }

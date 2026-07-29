@@ -12,12 +12,10 @@ export type CancelEventDto = {
 };
 
 export type CreateEventDto = {
+  [key: string]: unknown;
   checklistAssignments?: unknown;
-  equipmentId?: unknown;
-  equipmentVisibleId?: unknown;
   extension?: unknown;
   extensionCode?: unknown;
-  maintenanceTypeId?: unknown;
   note?: unknown;
   plannedDate?: unknown;
   responsibleUserIds?: unknown;
@@ -25,12 +23,11 @@ export type CreateEventDto = {
 };
 
 export type EventsListQueryDto = {
+  [key: string]: unknown;
   dateFrom?: unknown;
   dateTo?: unknown;
-  equipmentVisibleId?: unknown;
   extensionCode?: unknown;
   limit?: unknown;
-  maintenanceTypeId?: unknown;
   offset?: unknown;
   responsibleUserId?: unknown;
   source?: unknown;
@@ -38,12 +35,10 @@ export type EventsListQueryDto = {
 };
 
 export type UpdateCreatedEventDto = {
+  [key: string]: unknown;
   checklistAssignments?: unknown;
-  equipmentId?: unknown;
-  equipmentVisibleId?: unknown;
   extension?: unknown;
   extensionCode?: unknown;
-  maintenanceTypeId?: unknown;
   note?: unknown;
   plannedDate?: unknown;
   responsibleUserIds?: unknown;

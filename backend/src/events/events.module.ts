@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ChecklistsModule } from '../checklists/checklists.module';
 import { EquipmentEventExtensionModule } from '../equipment-event-extension/equipment-event-extension.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { EventExtensionRegistry } from './event-extensions/event-extension.registry';
 import { EventChecklistCreator } from './event-checklists/event-checklist.creator';
 import { EventsAccessAssertions } from './events-access.assertions';
 import { EventsCreateService } from './events-create.service';
@@ -18,6 +19,7 @@ import { EventsUpdateService } from './events-update.service';
   controllers: [EventsController],
   providers: [
     EventChecklistCreator,
+    EventExtensionRegistry,
     EventsAccessAssertions,
     EventsCreateService,
     EventsLifecycleRepository,

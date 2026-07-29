@@ -4,6 +4,12 @@ import {
   EventSource,
   EventStatus,
 } from '@prisma/client';
+import { EquipmentEventExtensionAdapter } from '../equipment-event-extension/equipment-event-extension.adapter';
+import { EquipmentEventExtensionCreate } from '../equipment-event-extension/equipment-event-extension.create';
+import { EquipmentEventExtensionQuery } from '../equipment-event-extension/equipment-event-extension.query';
+import { EquipmentEventExtensionUpdate } from '../equipment-event-extension/equipment-event-extension.update';
+import { EquipmentEventExtensionValidation } from '../equipment-event-extension/equipment-event-extension.validation';
+import { EventExtensionRegistry } from './event-extensions/event-extension.registry';
 import { EventsQueryService } from './events-query.service';
 
 describe('EventsQueryService', () => {
@@ -44,9 +50,23 @@ describe('EventsQueryService', () => {
         findMany: jest.fn().mockResolvedValue([]),
       },
     };
-    const service = new EventsQueryService(prisma as never);
+    const extensionRegistry = new EventExtensionRegistry([
+      createEquipmentEventExtensionAdapter(),
+    ]);
+    const service = new EventsQueryService(prisma as never, extensionRegistry);
 
     return { prisma, service };
+  }
+
+  function createEquipmentEventExtensionAdapter(): EquipmentEventExtensionAdapter {
+    const validation = new EquipmentEventExtensionValidation();
+
+    return new EquipmentEventExtensionAdapter(
+      new EquipmentEventExtensionCreate({} as never),
+      new EquipmentEventExtensionUpdate({} as never),
+      new EquipmentEventExtensionQuery(validation),
+      validation,
+    );
   }
 
   it('passes safe list query to Prisma', async () => {

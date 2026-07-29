@@ -18,6 +18,7 @@ enum AuditAction {
 }
 
 enum AuditModule {
+  CALENDAR  @map("calendar")
   EQUIPMENT @map("equipment")
   EVENTS    @map("events")
   USERS     @map("users")

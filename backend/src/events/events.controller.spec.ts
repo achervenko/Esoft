@@ -3,6 +3,12 @@ jest.mock('@thallesp/nestjs-better-auth', () => ({
 }));
 
 import { EventsController } from './events.controller';
+import { EquipmentEventExtensionAdapter } from '../equipment-event-extension/equipment-event-extension.adapter';
+import { EquipmentEventExtensionCreate } from '../equipment-event-extension/equipment-event-extension.create';
+import { EquipmentEventExtensionQuery } from '../equipment-event-extension/equipment-event-extension.query';
+import { EquipmentEventExtensionUpdate } from '../equipment-event-extension/equipment-event-extension.update';
+import { EquipmentEventExtensionValidation } from '../equipment-event-extension/equipment-event-extension.validation';
+import { EventExtensionRegistry } from './event-extensions/event-extension.registry';
 
 type ErrorResponse = {
   code: string;
@@ -27,7 +33,13 @@ describe('EventsController', () => {
       start: jest.fn().mockResolvedValue({ id: 1 }),
       updateCreated: jest.fn().mockResolvedValue({ id: 1 }),
     };
-    const controller = new EventsController(eventsService as never);
+    const extensionRegistry = new EventExtensionRegistry([
+      createEquipmentEventExtensionAdapter(),
+    ]);
+    const controller = new EventsController(
+      eventsService as never,
+      extensionRegistry,
+    );
     const session = {
       user: {
         id: 'user-1',
@@ -36,6 +48,17 @@ describe('EventsController', () => {
     };
 
     return { controller, eventsService, session };
+  }
+
+  function createEquipmentEventExtensionAdapter(): EquipmentEventExtensionAdapter {
+    const validation = new EquipmentEventExtensionValidation();
+
+    return new EquipmentEventExtensionAdapter(
+      new EquipmentEventExtensionCreate({} as never),
+      new EquipmentEventExtensionUpdate({} as never),
+      new EquipmentEventExtensionQuery(validation),
+      validation,
+    );
   }
 
   it('creates generic event through public endpoint', async () => {
@@ -68,12 +91,12 @@ describe('EventsController', () => {
     );
   });
 
-  it('rejects create before parser for user without event management permission', () => {
+  it('rejects create before parser for user without event management permission', async () => {
     const { controller, eventsService, session } = createController();
 
     session.user.role = 'engineer';
 
-    expectThrownResponse(
+    await expectThrownResponse(
       () =>
         controller.create(
           {
@@ -89,10 +112,10 @@ describe('EventsController', () => {
     expect(eventsService.create).not.toHaveBeenCalled();
   });
 
-  it('rejects invalid create payload before calling service', () => {
+  it('rejects invalid create payload before calling service', async () => {
     const { controller, eventsService, session } = createController();
 
-    expectThrownResponse(
+    await expectThrownResponse(
       () =>
         controller.create(
           {
@@ -147,10 +170,10 @@ describe('EventsController', () => {
     );
   });
 
-  it('rejects legacy create extension fields before calling service', () => {
+  it('rejects legacy create extension fields before calling service', async () => {
     const { controller, eventsService, session } = createController();
 
-    expectThrownResponse(
+    await expectThrownResponse(
       () =>
         controller.create(
           {
@@ -258,22 +281,22 @@ describe('EventsController', () => {
     expect(eventsService.findOne).toHaveBeenCalledWith(1);
   });
 
-  it('rejects generic event list for user without view permission', () => {
+  it('rejects generic event list for user without view permission', async () => {
     const { controller, eventsService, session } = createController();
 
     session.user.role = 'operator';
 
-    expectThrownResponse(() => controller.findAll({}, session as never), {
+    await expectThrownResponse(() => controller.findAll({}, session as never), {
       code: 'FORBIDDEN',
       message: 'Недостаточно прав для просмотра событий.',
     });
     expect(eventsService.findAll).not.toHaveBeenCalled();
   });
 
-  it('rejects invalid list query before calling service', () => {
+  it('rejects invalid list query before calling service', async () => {
     const { controller, eventsService, session } = createController();
 
-    expectThrownResponse(
+    await expectThrownResponse(
       () =>
         controller.findAll(
           {
@@ -311,12 +334,12 @@ describe('EventsController', () => {
     expect(eventsService.findResponsibleUsers).toHaveBeenCalledTimes(1);
   });
 
-  it('rejects responsible users for user without event management permission', () => {
+  it('rejects responsible users for user without event management permission', async () => {
     const { controller, eventsService, session } = createController();
 
     session.user.role = 'engineer';
 
-    expectThrownResponse(
+    await expectThrownResponse(
       () => controller.findResponsibleUsers(session as never),
       {
         code: 'FORBIDDEN',
@@ -326,12 +349,12 @@ describe('EventsController', () => {
     expect(eventsService.findResponsibleUsers).not.toHaveBeenCalled();
   });
 
-  it('rejects generic event detail for user without view permission', () => {
+  it('rejects generic event detail for user without view permission', async () => {
     const { controller, eventsService, session } = createController();
 
     session.user.role = 'operator';
 
-    expectThrownResponse(() => controller.findOne(1, session as never), {
+    await expectThrownResponse(() => controller.findOne(1, session as never), {
       code: 'FORBIDDEN',
       message: 'Недостаточно прав для просмотра событий.',
     });
@@ -392,12 +415,12 @@ describe('EventsController', () => {
     );
   });
 
-  it('rejects user without event management permission', () => {
+  it('rejects user without event management permission', async () => {
     const { controller, eventsService, session } = createController();
 
     session.user.role = 'engineer';
 
-    expectThrownResponse(
+    await expectThrownResponse(
       () =>
         controller.updateCreated(
           1,
@@ -432,10 +455,10 @@ describe('EventsController', () => {
     },
   ])(
     'rejects equipment extension field $fieldName before calling service',
-    ({ dto }) => {
+    async ({ dto }) => {
       const { controller, eventsService, session } = createController();
 
-      expectThrownResponse(
+      await expectThrownResponse(
         () => controller.updateCreated(1, dto, session as never),
         {
           code: 'EVENT_EXTENSION_FIELDS_UNSUPPORTED',
@@ -447,10 +470,10 @@ describe('EventsController', () => {
     },
   );
 
-  it('rejects invalid payload before calling service', () => {
+  it('rejects invalid payload before calling service', async () => {
     const { controller, eventsService, session } = createController();
 
-    expectThrownResponse(
+    await expectThrownResponse(
       () =>
         controller.updateCreated(
           1,
@@ -507,12 +530,12 @@ describe('EventsController', () => {
     },
   );
 
-  it('rejects lifecycle endpoint for user without event management permission', () => {
+  it('rejects lifecycle endpoint for user without event management permission', async () => {
     const { controller, eventsService, session } = createController();
 
     session.user.role = 'engineer';
 
-    expectThrownResponse(
+    await expectThrownResponse(
       () => controller.start(1, { version: 2 }, session as never),
       {
         code: 'FORBIDDEN',
@@ -522,20 +545,20 @@ describe('EventsController', () => {
     expect(eventsService.start).not.toHaveBeenCalled();
   });
 
-  it('rejects lifecycle endpoint without version before calling service', () => {
+  it('rejects lifecycle endpoint without version before calling service', async () => {
     const { controller, eventsService, session } = createController();
 
-    expectThrownResponse(() => controller.cancel(1, {}, session as never), {
+    await expectThrownResponse(() => controller.cancel(1, {}, session as never), {
       code: 'VERSION_REQUIRED',
       message: 'Укажите версию события.',
     });
     expect(eventsService.cancel).not.toHaveBeenCalled();
   });
 
-  it('rejects complete with invalid fact date before calling service', () => {
+  it('rejects complete with invalid fact date before calling service', async () => {
     const { controller, eventsService, session } = createController();
 
-    expectThrownResponse(
+    await expectThrownResponse(
       () =>
         controller.complete(
           1,
@@ -553,10 +576,10 @@ describe('EventsController', () => {
     expect(eventsService.complete).not.toHaveBeenCalled();
   });
 
-  it('rejects lifecycle endpoint without body before calling service', () => {
+  it('rejects lifecycle endpoint without body before calling service', async () => {
     const { controller, eventsService, session } = createController();
 
-    expectThrownResponse(
+    await expectThrownResponse(
       () => controller.start(1, undefined, session as never),
       {
         code: 'VERSION_REQUIRED',
@@ -567,12 +590,12 @@ describe('EventsController', () => {
   });
 });
 
-function expectThrownResponse(
-  action: () => unknown,
+async function expectThrownResponse(
+  action: () => unknown | Promise<unknown>,
   expectedResponse: ErrorResponse,
-): void {
+): Promise<void> {
   try {
-    action();
+    await action();
     throw new Error('Expected exception');
   } catch (error) {
     expect(error).toBeInstanceOf(Error);

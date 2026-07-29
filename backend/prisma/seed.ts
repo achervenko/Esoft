@@ -1,14 +1,19 @@
 import { PrismaClient } from '@prisma/client';
 
 import { createPrismaClientOptions } from '../src/prisma/prisma-client-options';
+import { seedCalendar } from './seed/calendar';
 import { seedCountries } from './seed/countries';
+
+const seeders = [seedCountries, seedCalendar];
 
 async function runSeed() {
   const prisma = new PrismaClient(createPrismaClientOptions());
   let seedError: unknown = null;
 
   try {
-    await seedCountries(prisma);
+    for (const seeder of seeders) {
+      await seeder(prisma);
+    }
   } catch (error) {
     seedError = error;
   }
