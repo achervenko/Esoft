@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import type { EquipmentEventItem } from "../../../shared/api/equipment-events/equipment-events.types";
+import type { EquipmentEventItem } from "../equipment-events.types";
 import type { MaintenanceSetting } from "../../../shared/api/maintenance/maintenance.types";
 import { getBusinessTodayDateString } from "../../../shared/lib/business-date";
 import type {
@@ -42,10 +42,12 @@ export function useEquipmentEventForm({
   const [responsibleUserIds, setResponsibleUserIds] = useState(
     event?.responsibles.map((user) => user.id) ?? [],
   );
-  const [checklistTemplateIdsByResponsible, setChecklistTemplateIdsByResponsible] =
-    useState<Record<string, string>>(
-      event ? getChecklistTemplateIdsByResponsible(event.checklists) : {},
-    );
+  const [
+    checklistTemplateIdsByResponsible,
+    setChecklistTemplateIdsByResponsible,
+  ] = useState<Record<string, string>>(
+    event ? getChecklistTemplateIdsByResponsible(event.checklists) : {},
+  );
   const [error, setError] = useState<string | null>(null);
 
   const {

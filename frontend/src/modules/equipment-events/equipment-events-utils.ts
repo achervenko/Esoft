@@ -3,7 +3,7 @@ import type {
   EquipmentEventChecklistStatus,
   EquipmentEventSource,
   EquipmentEventStatus,
-} from "../../shared/api/equipment-events/equipment-events.types";
+} from "./equipment-events.types";
 import type { MaintenanceExecutionType } from "../../shared/api/maintenance/maintenance.types";
 
 export const equipmentEventStatusLabels: Record<EquipmentEventStatus, string> =
@@ -58,7 +58,10 @@ export function formatDateValue(date: string | null) {
 export function formatEventResponsibles(
   responsibles: Array<{ fullName: string }>,
 ) {
-  return responsibles.map((employee) => employee.fullName).join(", ") || "Не указаны";
+  return (
+    responsibles.map((employee) => employee.fullName).join(", ") ||
+    "Не указаны"
+  );
 }
 
 export function formatChecklistProgress(progress: {
@@ -68,7 +71,9 @@ export function formatChecklistProgress(progress: {
   return `${progress.answered} из ${progress.total}`;
 }
 
-export function formatChecklistCompletionSummary(checklists: EquipmentEventChecklist[]) {
+export function formatChecklistCompletionSummary(
+  checklists: EquipmentEventChecklist[],
+) {
   if (checklists.length === 0) {
     return "Чек-листы не назначены";
   }

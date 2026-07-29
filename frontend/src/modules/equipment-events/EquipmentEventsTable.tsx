@@ -1,4 +1,4 @@
-import type { EquipmentEventItem } from "../../shared/api/equipment-events/equipment-events.types";
+import type { EquipmentEventItem } from "./equipment-events.types";
 import { DataTable, type DataTableColumn } from "../../shared/ui/DataTable";
 import {
   equipmentEventExecutionTypeLabels,
@@ -81,30 +81,28 @@ const columns = (
   {
     key: "actions",
     label: "",
-    render: (event) => {
-      return (
-        <div className="equipment-events-actions">
-          <button onClick={() => handlers.onOpen(event)} type="button">
-            Открыть
+    render: (event) => (
+      <div className="equipment-events-actions">
+        <button onClick={() => handlers.onOpen(event)} type="button">
+          Открыть
+        </button>
+        {canEditEvents && event.status === "CREATED" ? (
+          <button onClick={() => handlers.onEdit(event)} type="button">
+            Изменить
           </button>
-          {canEditEvents && event.status === "CREATED" ? (
-            <button onClick={() => handlers.onEdit(event)} type="button">
-              Изменить
-            </button>
-          ) : null}
-          {canManageEvents &&
-          (event.status === "CREATED" || event.status === "IN_PROGRESS") ? (
-            <button
-              className="equipment-events-danger-button"
-              onClick={() => handlers.onCancel(event)}
-              type="button"
-            >
-              Отменить
-            </button>
-          ) : null}
-        </div>
-      );
-    },
+        ) : null}
+        {canManageEvents &&
+        (event.status === "CREATED" || event.status === "IN_PROGRESS") ? (
+          <button
+            className="equipment-events-danger-button"
+            onClick={() => handlers.onCancel(event)}
+            type="button"
+          >
+            Отменить
+          </button>
+        ) : null}
+      </div>
+    ),
   },
 ];
 

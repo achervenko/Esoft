@@ -1,4 +1,4 @@
-import type { EquipmentEventDetail } from "../../shared/api/equipment-events/equipment-events.types";
+import type { EquipmentEventDetail } from "./equipment-events.types";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import {
   equipmentEventChecklistStatusLabels,
@@ -15,7 +15,10 @@ type EquipmentEventDetailModalProps = {
   onClose: () => void;
 };
 
-export function EquipmentEventDetailModal({ event, onClose }: EquipmentEventDetailModalProps) {
+export function EquipmentEventDetailModal({
+  event,
+  onClose,
+}: EquipmentEventDetailModalProps) {
   return (
     <AdminModal onClose={onClose} title="Событие оборудования">
       <div className="equipment-event-detail">
@@ -63,8 +66,10 @@ export function EquipmentEventDetailModal({ event, onClose }: EquipmentEventDeta
                 <ul className="equipment-event-detail-checklists">
                   {event.checklists.map((checklist) => (
                     <li key={checklist.id}>
-                      <strong>{checklist.assignedUser.fullName}</strong>: {" "}
-                      {checklist.templateName}, {equipmentEventChecklistStatusLabels[checklist.status]}, {formatChecklistProgress(checklist.progress)}
+                      <strong>{checklist.assignedUser.fullName}</strong>:{" "}
+                      {checklist.templateName},{" "}
+                      {equipmentEventChecklistStatusLabels[checklist.status]},{" "}
+                      {formatChecklistProgress(checklist.progress)}
                     </li>
                   ))}
                 </ul>

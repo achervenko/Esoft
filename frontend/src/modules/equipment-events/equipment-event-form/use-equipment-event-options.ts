@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { EquipmentEventItem } from "../../../shared/api/equipment-events/equipment-events.types";
+import type { EquipmentEventItem } from "../equipment-events.types";
 import type { MaintenanceSetting } from "../../../shared/api/maintenance/maintenance.types";
 import type {
   EquipmentEventFormMode,

@@ -1,4 +1,4 @@
-import type { EquipmentEventChecklistAssignment } from "../../shared/api/equipment-events/equipment-events.types";
+import type { EquipmentEventChecklistAssignment } from "./equipment-events.types";
 
 export function validateMaintenanceType(maintenanceTypeId: number) {
   if (!Number.isSafeInteger(maintenanceTypeId) || maintenanceTypeId <= 0) {

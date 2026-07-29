@@ -1,4 +1,4 @@
-import type { EquipmentEventItem } from "../../shared/api/equipment-events/equipment-events.types";
+import type { EquipmentEventItem } from "./equipment-events.types";
 import type { ChecklistTemplateListItem } from "../../shared/api/checklists";
 import type { MaintenanceSetting } from "../../shared/api/maintenance/maintenance.types";
 import { AdminModal } from "../../shared/ui/AdminModal";
@@ -17,25 +17,25 @@ export type { EquipmentEventFormPayload } from "./equipment-event-form.types";
 type EquipmentEventFormModalProps = {
   error?: string | null;
   checklistTemplates: ChecklistTemplateListItem[];
-  users: ResponsibleUserOption[];
   event?: EquipmentEventItem | null;
   isSaving: boolean;
   maintenanceSettings: MaintenanceSetting[];
   mode: EquipmentEventFormMode;
   onClose: () => void;
   onSubmit: (payload: EquipmentEventFormPayload) => void;
+  users: ResponsibleUserOption[];
 };
 
 export function EquipmentEventFormModal({
   error: serverError = null,
   checklistTemplates,
-  users,
   event = null,
   isSaving,
   maintenanceSettings,
   mode,
   onClose,
   onSubmit,
+  users,
 }: EquipmentEventFormModalProps) {
   const form = useEquipmentEventForm({
     event,

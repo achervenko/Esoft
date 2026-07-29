@@ -3,7 +3,7 @@ import type {
   EquipmentEventChecklistAssignment,
   EquipmentEventItem,
   UpdateCreatedEquipmentEventPayload,
-} from "../../shared/api/equipment-events/equipment-events.types";
+} from "./equipment-events.types";
 
 export function normalizeIds(ids: string[]) {
   return [...new Set(ids)].sort((left, right) => left.localeCompare(right));
@@ -26,7 +26,10 @@ export function getChecklistTemplateIdsByResponsible(
 ): Record<string, string> {
   return Object.fromEntries(
     [...checklists]
-      .sort((left, right) => left.sortOrder - right.sortOrder || left.id - right.id)
+      .sort(
+        (left, right) =>
+          left.sortOrder - right.sortOrder || left.id - right.id,
+      )
       .map((checklist) => [
         checklist.assignedUserId,
         String(checklist.checklistTemplateId),
@@ -46,7 +49,9 @@ export function buildUpdatePayload(params: {
   const updatePayload: UpdateCreatedEquipmentEventPayload = {
     version: params.event.version,
   };
-  const currentResponsibleUserIds = params.event.responsibles.map((user) => user.id);
+  const currentResponsibleUserIds = params.event.responsibles.map(
+    (user) => user.id,
+  );
   const hasResponsibleSetChange =
     normalizeIds(params.responsibleUserIds).join(",") !==
     normalizeIds(currentResponsibleUserIds).join(",");
@@ -79,7 +84,10 @@ export function buildUpdatePayload(params: {
     hasResponsibleSetChange ||
     hasEquipmentChange ||
     hasMaintenanceTypeChange ||
-    hasChecklistAssignmentsChange(params.event.checklists, params.checklistAssignments)
+    hasChecklistAssignmentsChange(
+      params.event.checklists,
+      params.checklistAssignments,
+    )
   ) {
     updatePayload.checklistAssignments = params.checklistAssignments;
   }
@@ -95,19 +103,16 @@ function hasChecklistAssignmentsChange(
     return true;
   }
 
-  const currentAssignments = [...currentChecklists]
-    .sort((left, right) => left.sortOrder - right.sortOrder || left.id - right.id)
-    .map((checklist) => ({
-      assignedUserId: checklist.assignedUserId,
-      checklistTemplateId: checklist.checklistTemplateId,
-    }));
+  const currentTemplateIdByUserId = new Map(
+    currentChecklists.map((checklist) => [
+      checklist.assignedUserId,
+      checklist.checklistTemplateId,
+    ]),
+  );
 
-  return currentAssignments.some((currentAssignment, index) => {
-    const nextAssignment = nextAssignments[index];
-
-    return (
-      currentAssignment.assignedUserId !== nextAssignment.assignedUserId ||
-      currentAssignment.checklistTemplateId !== nextAssignment.checklistTemplateId
-    );
-  });
+  return nextAssignments.some(
+    (assignment) =>
+      currentTemplateIdByUserId.get(assignment.assignedUserId) !==
+      assignment.checklistTemplateId,
+  );
 }

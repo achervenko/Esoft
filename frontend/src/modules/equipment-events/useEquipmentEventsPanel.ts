@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { EquipmentStatus } from "../../shared/api/equipment/equipment.types";
-import type { EquipmentEventItem } from "../../shared/api/equipment-events/equipment-events.types";
+import type { EquipmentEventItem } from "./equipment-events.types";
 import { useNotifications } from "../../shared/ui/notifications";
 import type { EquipmentEventFormPayload } from "./equipment-event-form.types";
 import { useEquipmentEventActions } from "./useEquipmentEventActions";
@@ -47,7 +47,7 @@ export function useEquipmentEventsPanel({
     createEvent,
     refreshError,
     updateEvent,
-  } = useEquipmentEventActions({ reloadEvents, visibleId });
+  } = useEquipmentEventActions({ reloadEvents });
   const {
     closeDetail,
     detailEvent,

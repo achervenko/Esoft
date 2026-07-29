@@ -1,4 +1,4 @@
-import type { EquipmentEventItem } from "../../shared/api/equipment-events/equipment-events.types";
+import type { EquipmentEventItem } from "./equipment-events.types";
 import { EquipmentEventsTable } from "./EquipmentEventsTable";
 
 type EquipmentEventsPanelStateProps = {

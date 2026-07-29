@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  getEquipmentEvent,
-  getEquipmentEvents,
-} from "../../shared/api/equipment-events/equipment-events.api";
-import type { EquipmentEventItem } from "../../shared/api/equipment-events/equipment-events.types";
+import { getEvent, getEvents } from "../../shared/api/events/events.api";
+import type { EquipmentEventItem } from "./equipment-events.types";
 import { getApiErrorMessage } from "../../shared/api/api-error";
+import {
+  assertEquipmentEventDetail,
+  assertEquipmentEventItem,
+  toEquipmentEventDetail,
+  toEquipmentEventItem,
+} from "./equipment-events.mappers";
 
 export function useEquipmentEventsList(visibleId: number) {
   const [events, setEvents] = useState<EquipmentEventItem[]>([]);
@@ -14,7 +17,7 @@ export function useEquipmentEventsList(visibleId: number) {
   const detailRequestIdRef = useRef(0);
 
   const reloadEvents = useCallback(async () => {
-    const eventItems = await getEquipmentEvents(visibleId, { limit: 100 });
+    const eventItems = await loadEquipmentEvents(visibleId);
     setEvents(eventItems);
     return eventItems;
   }, [visibleId]);
@@ -27,7 +30,10 @@ export function useEquipmentEventsList(visibleId: number) {
     setError(null);
 
     try {
-      const eventDetail = await getEquipmentEvent(eventId);
+      const event = await getEvent(eventId);
+
+      assertEquipmentEventDetail(event);
+      const eventDetail = toEquipmentEventDetail(event);
 
       if (detailRequestIdRef.current !== requestId) {
         return null;
@@ -54,7 +60,7 @@ export function useEquipmentEventsList(visibleId: number) {
     setIsLoading(true);
     setError(null);
 
-    getEquipmentEvents(visibleId, { limit: 100 })
+    loadEquipmentEvents(visibleId)
       .then((eventItems) => {
         if (isMounted) {
           setEvents(eventItems);
@@ -85,4 +91,18 @@ export function useEquipmentEventsList(visibleId: number) {
     loadEventDetail,
     reloadEvents,
   };
+}
+
+async function loadEquipmentEvents(visibleId: number) {
+  const events = await getEvents({
+    equipmentVisibleId: visibleId,
+    extensionCode: "EQUIPMENT",
+    limit: 100,
+  });
+
+  return events.map((event) => {
+    assertEquipmentEventItem(event);
+
+    return toEquipmentEventItem(event);
+  });
 }

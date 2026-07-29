@@ -1,7 +1,7 @@
 import type {
   EquipmentEventChecklistAssignment,
   UpdateCreatedEquipmentEventPayload,
-} from "../../shared/api/equipment-events/equipment-events.types";
+} from "./equipment-events.types";
 
 export type EquipmentEventFormMode = "create" | "edit";
 

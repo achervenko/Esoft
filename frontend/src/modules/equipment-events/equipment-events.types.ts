@@ -1,6 +1,4 @@
 import type {
-  EquipmentEvent as GenericEquipmentEvent,
-  EquipmentEventDetail as GenericEquipmentEventDetail,
   EventChecklist,
   EventChecklistAssignment,
   EventChecklistStatus,
@@ -10,8 +8,8 @@ import type {
   EventResponsibleUsersResponse,
   EventSource,
   EventStatus,
-} from "../events/events.types";
-import type { MaintenanceExecutionType } from "../maintenance/maintenance.types";
+} from "../../shared/api/events/events.types";
+import type { MaintenanceExecutionType } from "../../shared/api/maintenance/maintenance.types";
 
 export type EquipmentEventStatus = EventStatus;
 
@@ -67,17 +65,6 @@ export type EquipmentEventDetail = EquipmentEventItem & {
   originalPlannedDate: string | null;
 };
 
-export type EquipmentEventsQuery = {
-  dateFrom?: string;
-  dateTo?: string;
-  equipmentVisibleId?: number;
-  limit?: number;
-  maintenanceTypeId?: number;
-  offset?: number;
-  responsibleUserId?: string;
-  status?: EquipmentEventStatus;
-};
-
 export type CreateManualEquipmentEventPayload = {
   checklistAssignments: EquipmentEventChecklistAssignment[];
   equipmentVisibleId: number;
@@ -104,7 +91,3 @@ export type EquipmentEventResponsibleUser = EventResponsibleUser;
 
 export type EquipmentEventResponsibleUsersResponse =
   EventResponsibleUsersResponse;
-
-export type GenericEquipmentEventItem = GenericEquipmentEvent;
-
-export type { GenericEquipmentEventDetail };

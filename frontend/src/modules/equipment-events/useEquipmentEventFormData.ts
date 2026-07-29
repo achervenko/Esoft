@@ -3,9 +3,7 @@ import {
   getChecklistTemplates,
   type ChecklistTemplateListItem,
 } from "../../shared/api/checklists";
-import {
-  getEquipmentEventResponsibleUsers,
-} from "../../shared/api/equipment-events/equipment-events.api";
+import { getEventResponsibleUsers } from "../../shared/api/events/events.api";
 import { getApiErrorMessage } from "../../shared/api/api-error";
 import { getMaintenanceSettings } from "../../shared/api/maintenance/maintenance.api";
 import type { MaintenanceSetting } from "../../shared/api/maintenance/maintenance.types";
@@ -43,9 +41,11 @@ export function useEquipmentEventFormData(
           responsibleUsersResponse,
         ] = await Promise.all([
           enabled ? getMaintenanceSettings(visibleId) : Promise.resolve(null),
-          getChecklistTemplates({ limit: 200, state: "ACTIVE" }),
           enabled
-            ? getEquipmentEventResponsibleUsers()
+            ? getChecklistTemplates({ limit: 200, state: "ACTIVE" })
+            : Promise.resolve(null),
+          enabled
+            ? getEventResponsibleUsers()
             : Promise.resolve(null),
         ]);
 
@@ -54,7 +54,7 @@ export function useEquipmentEventFormData(
           latestReloadIdRef.current === reloadId
         ) {
           setMaintenanceSettings(settingsResponse?.settings ?? []);
-          setChecklistTemplates(checklistTemplatesResponse.items);
+          setChecklistTemplates(checklistTemplatesResponse?.items ?? []);
           setResponsibleUsers(
             (responsibleUsersResponse?.users ?? []).map((user) => ({
               id: user.userId,

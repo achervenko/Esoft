@@ -1,4 +1,4 @@
-import type { EquipmentEventItem } from "../../../shared/api/equipment-events/equipment-events.types";
+import type { EquipmentEventItem } from "../equipment-events.types";
 import type {
   EquipmentEventFormMode,
   EquipmentEventFormPayload,
@@ -67,12 +67,18 @@ export function prepareEquipmentEventFormSubmit(
 
   const normalizedNote = params.note.trim() || null;
 
-  if (params.mode === "edit" && params.event) {
+  if (params.mode === "edit") {
+    const event = params.event;
+
+    if (!event) {
+      return { error: "Не удалось определить редактируемое событие." };
+    }
+
     const updatePayload = buildUpdatePayload({
       checklistAssignments,
       equipmentVisibleId:
-        params.equipmentVisibleId ?? params.event.equipment.visibleId,
-      event: params.event,
+        params.equipmentVisibleId ?? event.equipment.visibleId,
+      event,
       maintenanceTypeId: parsedMaintenanceTypeId,
       note: normalizedNote,
       plannedDate: params.plannedDate,

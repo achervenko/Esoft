@@ -1,7 +1,7 @@
 import type {
   EquipmentEventDetail,
   EquipmentEventItem,
-} from "../../shared/api/equipment-events/equipment-events.types";
+} from "./equipment-events.types";
 
 export type EquipmentEventsPanelActiveForm =
   | { mode: "create"; event?: null }

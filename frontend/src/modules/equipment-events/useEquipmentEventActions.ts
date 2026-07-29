@@ -1,14 +1,18 @@
 import { useCallback, useRef, useState } from "react";
 import {
-  cancelEquipmentEvent,
-  createManualEquipmentEvent,
-  updateCreatedEquipmentEvent,
-} from "../../shared/api/equipment-events/equipment-events.api";
+  cancelEvent as cancelGenericEvent,
+  createEvent as createGenericEvent,
+  updateCreatedEvent,
+} from "../../shared/api/events/events.api";
 import type {
   CreateManualEquipmentEventPayload,
   UpdateCreatedEquipmentEventPayload,
-} from "../../shared/api/equipment-events/equipment-events.types";
+} from "./equipment-events.types";
 import { getApiErrorMessage } from "../../shared/api/api-error";
+import {
+  assertEquipmentEventDetail,
+  buildEquipmentEventTitle,
+} from "./equipment-events.mappers";
 
 export type EquipmentEventAction =
   | "create"
@@ -18,12 +22,10 @@ export type EquipmentEventAction =
 
 type UseEquipmentEventActionsOptions = {
   reloadEvents: () => Promise<unknown>;
-  visibleId: number;
 };
 
 export function useEquipmentEventActions({
   reloadEvents,
-  visibleId,
 }: UseEquipmentEventActionsOptions) {
   const activeActionRef = useRef<EquipmentEventAction>(null);
   const [activeAction, setActiveAction] = useState<EquipmentEventAction>(null);
@@ -78,19 +80,60 @@ export function useEquipmentEventActions({
 
   const createEvent = useCallback(
     (payload: CreateManualEquipmentEventPayload) =>
-      runAction("create", () => createManualEquipmentEvent(visibleId, payload)),
-    [runAction, visibleId],
+      runAction("create", async () => {
+        const event = await createGenericEvent({
+          checklistAssignments: payload.checklistAssignments,
+          extension: {
+            equipmentVisibleId: payload.equipmentVisibleId,
+            maintenanceTypeId: payload.maintenanceTypeId,
+          },
+          extensionCode: "EQUIPMENT",
+          note: payload.note,
+          plannedDate: payload.plannedDate,
+          responsibleUserIds: payload.responsibleUserIds,
+          title:
+            payload.title ??
+            buildEquipmentEventTitle(payload.equipmentVisibleId),
+        });
+
+        assertEquipmentEventDetail(event);
+      }),
+    [runAction],
   );
 
   const updateEvent = useCallback(
     (eventId: number, payload: UpdateCreatedEquipmentEventPayload) =>
-      runAction("edit", () => updateCreatedEquipmentEvent(eventId, payload)),
+      runAction("edit", async () => {
+        const { equipmentVisibleId, maintenanceTypeId, ...eventPayload } =
+          payload;
+        const extension =
+          equipmentVisibleId !== undefined || maintenanceTypeId !== undefined
+            ? {
+                ...(equipmentVisibleId !== undefined
+                  ? { equipmentVisibleId }
+                  : {}),
+                ...(maintenanceTypeId !== undefined
+                  ? { maintenanceTypeId }
+                  : {}),
+              }
+            : undefined;
+        const event = await updateCreatedEvent(eventId, {
+          ...eventPayload,
+          ...(extension ? { extension } : {}),
+        });
+
+        assertEquipmentEventDetail(event);
+      }),
     [runAction],
   );
 
   const cancelEvent = useCallback(
     (eventId: number, version: number) =>
-      runAction("cancel", () => cancelEquipmentEvent(eventId, version)),
+      runAction("cancel", async () => {
+        const event = await cancelGenericEvent(eventId, { version });
+
+        assertEquipmentEventDetail(event);
+      }),
     [runAction],
   );
 

@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import type { EquipmentEventItem } from "../../shared/api/equipment-events/equipment-events.types";
+import type { EquipmentEventItem } from "./equipment-events.types";
 import type { EquipmentEventsPanelModalState } from "./equipment-events-panel.types";
 
 type UseEquipmentEventDetailParams = {
