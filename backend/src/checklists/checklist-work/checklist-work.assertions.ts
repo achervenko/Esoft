@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ChecklistStatus, EquipmentEventStatus } from '@prisma/client';
+import { ChecklistStatus, EventStatus } from '@prisma/client';
 import {
   throwChecklistBadRequest,
   throwChecklistConflict,
@@ -18,8 +18,8 @@ export class ChecklistWorkAssertions {
     }
   }
 
-  assertEventInProgress(status: EquipmentEventStatus) {
-    if (status !== EquipmentEventStatus.IN_PROGRESS) {
+  assertEventInProgress(status: EventStatus) {
+    if (status !== EventStatus.IN_PROGRESS) {
       throwChecklistConflict(
         'CHECKLIST_EVENT_NOT_IN_PROGRESS',
         'Событие чек-листа не находится в работе.',
@@ -27,11 +27,8 @@ export class ChecklistWorkAssertions {
     }
   }
 
-  assertEventCanBeStarted(status: EquipmentEventStatus) {
-    if (
-      status !== EquipmentEventStatus.CREATED &&
-      status !== EquipmentEventStatus.IN_PROGRESS
-    ) {
+  assertEventCanBeStarted(status: EventStatus) {
+    if (status !== EventStatus.CREATED && status !== EventStatus.IN_PROGRESS) {
       throwChecklistConflict(
         'CHECKLIST_EVENT_STATUS_CONFLICT',
         'Событие в текущем статусе нельзя начать через чек-лист.',

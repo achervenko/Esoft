@@ -17,6 +17,14 @@ const rolesAllowedToManageEquipmentEvents = new Set([
   'chief_engineer',
 ]);
 
+const rolesAllowedToManageEvents = new Set(['admin', 'chief_engineer']);
+
+const rolesAllowedToViewEvents = new Set([
+  'admin',
+  'chief_engineer',
+  'engineer',
+]);
+
 const rolesAllowedToManageChecklists = new Set(['admin', 'chief_engineer']);
 
 export function assertCanManageFiles(role: unknown) {
@@ -69,6 +77,24 @@ export function assertCanManageEquipmentEvents(role: unknown) {
     throw new ForbiddenException({
       code: 'FORBIDDEN',
       message: 'Недостаточно прав для управления событиями оборудования.',
+    });
+  }
+}
+
+export function assertCanManageEvents(role: unknown) {
+  if (!isKnownRole(role, rolesAllowedToManageEvents)) {
+    throw new ForbiddenException({
+      code: 'FORBIDDEN',
+      message: 'Недостаточно прав для управления событиями.',
+    });
+  }
+}
+
+export function assertCanViewEvents(role: unknown) {
+  if (!isKnownRole(role, rolesAllowedToViewEvents)) {
+    throw new ForbiddenException({
+      code: 'FORBIDDEN',
+      message: 'Недостаточно прав для просмотра событий.',
     });
   }
 }

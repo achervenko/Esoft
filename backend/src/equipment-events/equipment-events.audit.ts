@@ -1,8 +1,8 @@
 import {
   AuditAction,
   AuditModule,
-  EquipmentEventSource,
-  EquipmentEventStatus,
+  EventExtensionCode,
+  EventStatus,
   Prisma,
 } from '@prisma/client';
 import { throwEquipmentEventNotFound } from './equipment-events.errors';
@@ -15,22 +15,15 @@ export type EquipmentEventAuditSnapshot = {
   eventTypeId: number;
   eventTypeName: string;
   executionType: string;
-  factDate: Date | null;
   id: number;
-  maintenanceSettingId: number | null;
-  note: string | null;
-  originalPlannedDate: Date | null;
-  plannedDate: Date | null;
-  responsibles: string[];
-  source: EquipmentEventSource;
-  status: EquipmentEventStatus;
+  maintenanceSettingId: number;
 };
 
 export async function getEquipmentEventAuditSnapshot(
   tx: Prisma.TransactionClient,
   id: number,
 ): Promise<EquipmentEventAuditSnapshot> {
-  const event = await tx.equipmentEvent.findUnique({
+  const event = await tx.event.findUnique({
     where: { id },
     select: equipmentEventAuditSelect,
   });
@@ -42,24 +35,25 @@ export async function getEquipmentEventAuditSnapshot(
     );
   }
 
+  if (
+    event.extensionCode !== EventExtensionCode.EQUIPMENT ||
+    !event.equipmentExtension
+  ) {
+    throwEquipmentEventNotFound(
+      'EVENT_EXTENSION_NOT_FOUND',
+      'Расширение оборудования для события не найдено.',
+    );
+  }
+
   return {
-    equipmentName: event.equipment.name,
-    equipmentVisibleId: event.equipment.visibleId,
-    eventTypeCode: event.eventType.code,
-    eventTypeId: event.eventType.id,
-    eventTypeName: event.eventType.name,
-    executionType: event.executionType,
-    factDate: event.factDate,
+    equipmentName: event.equipmentExtension.equipment.name,
+    equipmentVisibleId: event.equipmentExtension.equipment.visibleId,
+    eventTypeCode: event.equipmentExtension.eventType.code,
+    eventTypeId: event.equipmentExtension.eventType.id,
+    eventTypeName: event.equipmentExtension.eventType.name,
+    executionType: event.equipmentExtension.executionType,
     id: event.id,
-    maintenanceSettingId: event.maintenanceSettingId,
-    note: event.note,
-    originalPlannedDate: event.originalPlannedDate,
-    plannedDate: event.plannedDate,
-    responsibles: event.responsibles
-      .map((item) => responsibleUserLabel(item.user))
-      .sort((left, right) => left.localeCompare(right)),
-    source: event.source,
-    status: event.status,
+    maintenanceSettingId: event.equipmentExtension.maintenanceSettingId,
   };
 }
 
@@ -69,7 +63,7 @@ export async function writeEquipmentEventCreatedAudit(
     event: EquipmentEventAuditSnapshot;
     userId?: string | null;
   },
-) {
+): Promise<void> {
   await tx.auditLog.createMany({
     data: [
       auditLine(params, 'Оборудование', equipmentLabel(params.event)),
@@ -77,20 +71,9 @@ export async function writeEquipmentEventCreatedAudit(
       auditLine(
         params,
         'Настройка обслуживания',
-        formatNullableId(params.event.maintenanceSettingId),
+        formatId(params.event.maintenanceSettingId),
       ),
       auditLine(params, 'Способ выполнения', params.event.executionType),
-      auditLine(params, 'Основание события', params.event.source),
-      auditLine(params, 'Статус', params.event.status),
-      auditLine(params, 'Фактическая дата', formatDate(params.event.factDate)),
-      auditLine(params, 'Плановая дата', formatDate(params.event.plannedDate)),
-      auditLine(
-        params,
-        'Первоначальная плановая дата',
-        formatDate(params.event.originalPlannedDate),
-      ),
-      auditLine(params, 'Ответственные', responsibleList(params.event)),
-      auditLine(params, 'Комментарий', formatNullableText(params.event.note)),
     ],
   });
 }
@@ -98,12 +81,14 @@ export async function writeEquipmentEventCreatedAudit(
 export async function writeEquipmentEventStatusAudit(
   tx: Prisma.TransactionClient,
   params: {
-    event: EquipmentEventAuditSnapshot;
-    newStatus: EquipmentEventStatus;
-    oldStatus: EquipmentEventStatus;
+    event: {
+      id: number;
+    };
+    newStatus: EventStatus;
+    oldStatus: EventStatus;
     userId?: string | null;
   },
-) {
+): Promise<void> {
   await tx.auditLog.create({
     data: {
       action: AuditAction.STATUS_CHANGE,
@@ -125,7 +110,7 @@ export async function writeEquipmentEventUpdatedAudit(
     oldEvent: EquipmentEventAuditSnapshot;
     userId?: string | null;
   },
-) {
+): Promise<void> {
   const lines = buildUpdateLines(params);
 
   if (lines.length === 0) {
@@ -153,33 +138,13 @@ function buildUpdateLines(params: {
     },
     {
       fieldName: 'Настройка обслуживания',
-      newValue: formatNullableId(params.newEvent.maintenanceSettingId),
-      oldValue: formatNullableId(params.oldEvent.maintenanceSettingId),
+      newValue: formatId(params.newEvent.maintenanceSettingId),
+      oldValue: formatId(params.oldEvent.maintenanceSettingId),
     },
     {
       fieldName: 'Способ выполнения',
       newValue: params.newEvent.executionType,
       oldValue: params.oldEvent.executionType,
-    },
-    {
-      fieldName: 'Фактическая дата',
-      newValue: formatDate(params.newEvent.factDate),
-      oldValue: formatDate(params.oldEvent.factDate),
-    },
-    {
-      fieldName: 'Плановая дата',
-      newValue: formatDate(params.newEvent.plannedDate),
-      oldValue: formatDate(params.oldEvent.plannedDate),
-    },
-    {
-      fieldName: 'Ответственные',
-      newValue: responsibleList(params.newEvent),
-      oldValue: responsibleList(params.oldEvent),
-    },
-    {
-      fieldName: 'Комментарий',
-      newValue: formatNullableText(params.newEvent.note),
-      oldValue: formatNullableText(params.oldEvent.note),
     },
   ];
 
@@ -225,39 +190,6 @@ function eventTypeLabel(event: EquipmentEventAuditSnapshot) {
   return `${event.eventTypeName} [${event.eventTypeCode}] #${event.eventTypeId}`;
 }
 
-function responsibleUserLabel(user: {
-  employeeUser: {
-    employee: {
-      firstName: string;
-      lastName: string;
-      middleName: string | null;
-    };
-  } | null;
-  id: string;
-  name: string;
-}) {
-  const employee = user.employeeUser?.employee;
-  const fullName = employee
-    ? [employee.lastName, employee.firstName, employee.middleName]
-        .filter(Boolean)
-        .join(' ')
-    : user.name;
-
-  return `${fullName} #${user.id}`;
-}
-
-function responsibleList(event: EquipmentEventAuditSnapshot) {
-  return event.responsibles.join(', ') || 'не указано';
-}
-
-function formatDate(value: Date | null) {
-  return value?.toISOString().slice(0, 10) ?? 'не указано';
-}
-
-function formatNullableId(value: number | null) {
-  return value === null ? 'не указано' : `#${value}`;
-}
-
-function formatNullableText(value: string | null) {
-  return value ?? 'не указано';
+function formatId(value: number) {
+  return `#${value}`;
 }

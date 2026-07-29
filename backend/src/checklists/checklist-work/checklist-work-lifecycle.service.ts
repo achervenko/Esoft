@@ -3,16 +3,16 @@ import {
   AuditAction,
   ChecklistResult,
   ChecklistStatus,
-  EquipmentEventStatus,
+  EventStatus,
   Prisma,
 } from '@prisma/client';
 import { getBusinessTodayDate } from '../../application/business-date';
-import { PrismaService } from '../../prisma/prisma.service';
 import {
-  getEquipmentEventAuditSnapshot,
-  writeEquipmentEventStatusAudit,
-  writeEquipmentEventUpdatedAudit,
-} from '../../equipment-events/equipment-events.audit';
+  getEventAuditSnapshot,
+  writeEventStatusAudit,
+  writeEventUpdatedAudit,
+} from '../../events/events.audit';
+import { PrismaService } from '../../prisma/prisma.service';
 import { writeChecklistAudit } from '../checklist-common/checklists.audit';
 import { throwChecklistConflict } from '../checklist-common/checklists.errors';
 import { ChecklistWorkAssertions } from './checklist-work.assertions';
@@ -23,7 +23,7 @@ import type {
   ChecklistVersionInput,
 } from './checklist-work.types';
 
-const EVENT_CHECKLIST_ENTITY_TYPE = 'equipment_event_checklist';
+const EVENT_CHECKLIST_ENTITY_TYPE = 'event_checklist';
 
 @Injectable()
 export class ChecklistWorkLifecycleService {
@@ -53,16 +53,10 @@ export class ChecklistWorkLifecycleService {
       );
       this.assertions.assertEventCanBeStarted(event.eventStatus);
 
-      if (event.eventStatus === EquipmentEventStatus.CREATED) {
+      if (event.eventStatus === EventStatus.CREATED) {
         const [eventChecklists, responsibleUserIds] = await Promise.all([
-          this.mutationRepository.lockEventChecklists(
-            tx,
-            checklist.equipmentEventId,
-          ),
-          this.mutationRepository.loadResponsibleUserIds(
-            tx,
-            checklist.equipmentEventId,
-          ),
+          this.mutationRepository.lockEventChecklists(tx, checklist.eventId),
+          this.mutationRepository.loadResponsibleUserIds(tx, checklist.eventId),
         ]);
 
         this.assertions.assertStartAssignments({
@@ -70,13 +64,13 @@ export class ChecklistWorkLifecycleService {
           responsibleUserIds,
         });
 
-        const updateEventResult = await tx.equipmentEvent.updateMany({
+        const updateEventResult = await tx.event.updateMany({
           where: {
-            id: checklist.equipmentEventId,
-            status: EquipmentEventStatus.CREATED,
+            id: checklist.eventId,
+            status: EventStatus.CREATED,
           },
           data: {
-            status: EquipmentEventStatus.IN_PROGRESS,
+            status: EventStatus.IN_PROGRESS,
             version: {
               increment: 1,
             },
@@ -100,13 +94,13 @@ export class ChecklistWorkLifecycleService {
           WHERE id = ${id}
         `;
 
-        const auditSnapshot = await getEquipmentEventAuditSnapshot(
+        const auditSnapshot = await getEventAuditSnapshot(
           tx,
-          checklist.equipmentEventId,
+          checklist.eventId,
         );
-        await writeEquipmentEventStatusAudit(tx, {
+        await writeEventStatusAudit(tx, {
           event: auditSnapshot,
-          newStatus: EquipmentEventStatus.IN_PROGRESS,
+          newStatus: EventStatus.IN_PROGRESS,
           oldStatus: event.eventStatus,
           userId: actorUserId,
         });
@@ -182,7 +176,7 @@ export class ChecklistWorkLifecycleService {
 
       const eventChecklists = await this.mutationRepository.lockEventChecklists(
         tx,
-        checklist.equipmentEventId,
+        checklist.eventId,
       );
 
       if (
@@ -192,20 +186,20 @@ export class ChecklistWorkLifecycleService {
             eventChecklist.status === ChecklistStatus.COMPLETED,
         )
       ) {
-        const previousAuditSnapshot = await getEquipmentEventAuditSnapshot(
+        const previousAuditSnapshot = await getEventAuditSnapshot(
           tx,
-          checklist.equipmentEventId,
+          checklist.eventId,
         );
         const nextFactDate = event.factDate ?? getBusinessTodayDate();
 
-        const updateEventResult = await tx.equipmentEvent.updateMany({
+        const updateEventResult = await tx.event.updateMany({
           where: {
-            id: checklist.equipmentEventId,
-            status: EquipmentEventStatus.IN_PROGRESS,
+            id: checklist.eventId,
+            status: EventStatus.IN_PROGRESS,
           },
           data: {
             factDate: nextFactDate,
-            status: EquipmentEventStatus.COMPLETED,
+            status: EventStatus.COMPLETED,
             version: {
               increment: 1,
             },
@@ -219,13 +213,13 @@ export class ChecklistWorkLifecycleService {
           );
         }
 
-        const auditSnapshot = await getEquipmentEventAuditSnapshot(
+        const auditSnapshot = await getEventAuditSnapshot(
           tx,
-          checklist.equipmentEventId,
+          checklist.eventId,
         );
-        await writeEquipmentEventStatusAudit(tx, {
+        await writeEventStatusAudit(tx, {
           event: auditSnapshot,
-          newStatus: EquipmentEventStatus.COMPLETED,
+          newStatus: EventStatus.COMPLETED,
           oldStatus: event.eventStatus,
           userId: actorUserId,
         });
@@ -234,7 +228,7 @@ export class ChecklistWorkLifecycleService {
           previousAuditSnapshot.factDate?.toISOString() !==
           auditSnapshot.factDate?.toISOString()
         ) {
-          await writeEquipmentEventUpdatedAudit(tx, {
+          await writeEventUpdatedAudit(tx, {
             newEvent: auditSnapshot,
             oldEvent: previousAuditSnapshot,
             userId: actorUserId,

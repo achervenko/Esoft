@@ -5,7 +5,7 @@ CREATE SCHEMA IF NOT EXISTS "public";
 CREATE TYPE "audit_action" AS ENUM ('CREATE', 'UPDATE', 'ARCHIVE', 'DELETE', 'STATUS_CHANGE', 'FILE_UPLOAD', 'FILE_DELETE', 'LOGIN', 'LOGOUT', 'USER_BLOCK', 'USER_PHOTO_DELETE', 'USER_PHOTO_UPLOAD', 'ROLE_CHANGE', 'SETUP_ADMIN_CREATED');
 
 -- CreateEnum
-CREATE TYPE "audit_module" AS ENUM ('equipment', 'users');
+CREATE TYPE "audit_module" AS ENUM ('equipment', 'events', 'users');
 
 -- CreateEnum
 CREATE TYPE "checklist_answer_type" AS ENUM ('BOOLEAN', 'INTEGER', 'DECIMAL', 'TEXT', 'DATE');
@@ -20,10 +20,13 @@ CREATE TYPE "checklist_result" AS ENUM ('PASSED', 'FAILED', 'WITH_REMARKS');
 CREATE TYPE "equipment_maintenance_execution_type" AS ENUM ('INTERNAL', 'EXTERNAL');
 
 -- CreateEnum
-CREATE TYPE "equipment_event_source" AS ENUM ('MANUAL', 'PLANNED');
+CREATE TYPE "event_extension_code" AS ENUM ('EQUIPMENT');
 
 -- CreateEnum
-CREATE TYPE "equipment_event_status" AS ENUM ('DRAFT', 'CREATED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED');
+CREATE TYPE "event_source" AS ENUM ('MANUAL', 'PLANNED');
+
+-- CreateEnum
+CREATE TYPE "event_status" AS ENUM ('CREATED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED');
 
 -- CreateEnum
 CREATE TYPE "equipment_status" AS ENUM ('active', 'reserve', 'repair', 'maintenance', 'written_off');
@@ -197,8 +200,7 @@ CREATE TABLE "checklist_template_questions" (
 -- CreateTable
 CREATE TABLE "checklists" (
     "id" SERIAL NOT NULL,
-    "equipment_event_id" INTEGER NOT NULL,
-    "equipment_id" INTEGER NOT NULL,
+    "event_id" INTEGER NOT NULL,
     "checklist_template_id" INTEGER NOT NULL,
     "assigned_user_id" TEXT NOT NULL,
     "sort_order" INTEGER NOT NULL,
@@ -337,31 +339,41 @@ CREATE TABLE "employee_users" (
 );
 
 -- CreateTable
-CREATE TABLE "equipment_events" (
+CREATE TABLE "events" (
     "id" SERIAL NOT NULL,
-    "equipment_id" INTEGER NOT NULL,
-    "event_type_id" INTEGER NOT NULL,
-    "maintenance_setting_id" INTEGER,
-    "execution_type" "equipment_maintenance_execution_type" NOT NULL,
-    "source" "equipment_event_source" NOT NULL,
-    "status" "equipment_event_status" NOT NULL DEFAULT 'CREATED',
-    "original_planned_date" DATE,
-    "planned_date" DATE,
-    "fact_date" DATE,
+    "title" TEXT NOT NULL,
     "note" TEXT,
+    "extension_code" "event_extension_code",
+    "source" "event_source" NOT NULL,
+    "status" "event_status" NOT NULL DEFAULT 'CREATED',
+    "original_planned_date" DATE,
+    "planned_date" DATE NOT NULL,
+    "fact_date" DATE,
     "created_by_employee_id" INTEGER NOT NULL,
     "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ(6) NOT NULL,
     "version" INTEGER NOT NULL DEFAULT 1,
 
-    CONSTRAINT "equipment_events_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "events_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "equipment_event_responsibles" (
-    "equipment_event_id" INTEGER NOT NULL,
+CREATE TABLE "event_responsibles" (
+    "event_id" INTEGER NOT NULL,
     "user_id" TEXT NOT NULL,
 
-    CONSTRAINT "pk_equipment_event_responsibles" PRIMARY KEY ("equipment_event_id","user_id")
+    CONSTRAINT "pk_event_responsibles" PRIMARY KEY ("event_id","user_id")
+);
+
+-- CreateTable
+CREATE TABLE "equipment_event_extensions" (
+    "event_id" INTEGER NOT NULL,
+    "equipment_id" INTEGER NOT NULL,
+    "event_type_id" INTEGER NOT NULL,
+    "maintenance_setting_id" INTEGER NOT NULL,
+    "execution_type" "equipment_maintenance_execution_type" NOT NULL,
+
+    CONSTRAINT "equipment_event_extensions_pkey" PRIMARY KEY ("event_id")
 );
 
 -- CreateSequence
@@ -531,25 +543,19 @@ CREATE UNIQUE INDEX "uq_checklist_template_questions_question" ON "checklist_tem
 CREATE UNIQUE INDEX "uq_checklist_template_questions_sort" ON "checklist_template_questions"("checklist_template_module_id", "sort_order");
 
 -- CreateIndex
-CREATE INDEX "idx_checklists_event_id" ON "checklists"("equipment_event_id");
-
--- CreateIndex
-CREATE INDEX "idx_checklists_equipment_id" ON "checklists"("equipment_id");
-
--- CreateIndex
 CREATE INDEX "idx_checklists_template_id" ON "checklists"("checklist_template_id");
-
--- CreateIndex
-CREATE INDEX "idx_checklists_assigned_user_id" ON "checklists"("assigned_user_id");
 
 -- CreateIndex
 CREATE INDEX "idx_checklists_status" ON "checklists"("status");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "uq_checklists_event_assigned_user" ON "checklists"("equipment_event_id", "assigned_user_id");
+CREATE INDEX "idx_checklists_assigned_user_status" ON "checklists"("assigned_user_id", "status");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "uq_checklists_event_sort" ON "checklists"("equipment_event_id", "sort_order");
+CREATE UNIQUE INDEX "uq_checklists_event_assigned_user" ON "checklists"("event_id", "assigned_user_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "uq_checklists_event_sort" ON "checklists"("event_id", "sort_order");
 
 -- CreateIndex
 CREATE INDEX "idx_checklist_details_checklist_id" ON "checklist_details"("checklist_id");
@@ -609,25 +615,28 @@ CREATE UNIQUE INDEX "uq_employee_users_user" ON "employee_users"("user_id");
 CREATE INDEX "idx_employee_users_employee_id" ON "employee_users"("employee_id");
 
 -- CreateIndex
-CREATE INDEX "idx_equipment_events_equipment_id" ON "equipment_events"("equipment_id");
+CREATE INDEX "idx_events_planned_date" ON "events"("planned_date");
 
 -- CreateIndex
-CREATE INDEX "idx_equipment_events_event_type_id" ON "equipment_events"("event_type_id");
+CREATE INDEX "idx_events_status_planned_date" ON "events"("status", "planned_date");
 
 -- CreateIndex
-CREATE INDEX "idx_equipment_events_status" ON "equipment_events"("status");
+CREATE INDEX "idx_events_extension_code" ON "events"("extension_code");
 
 -- CreateIndex
-CREATE INDEX "idx_equipment_events_planned_date" ON "equipment_events"("planned_date");
+CREATE INDEX "idx_events_created_by_employee_id" ON "events"("created_by_employee_id");
 
 -- CreateIndex
-CREATE INDEX "idx_equipment_events_fact_date" ON "equipment_events"("fact_date");
+CREATE INDEX "idx_event_responsibles_user_event" ON "event_responsibles"("user_id", "event_id");
 
 -- CreateIndex
-CREATE INDEX "idx_equipment_events_maintenance_setting_id" ON "equipment_events"("maintenance_setting_id");
+CREATE INDEX "idx_equipment_event_extensions_equipment_type" ON "equipment_event_extensions"("equipment_id", "event_type_id");
 
 -- CreateIndex
-CREATE INDEX "idx_event_responsibles_user_id" ON "equipment_event_responsibles"("user_id");
+CREATE INDEX "idx_equipment_event_extensions_event_type" ON "equipment_event_extensions"("event_type_id");
+
+-- CreateIndex
+CREATE INDEX "idx_equipment_event_extensions_maintenance_setting" ON "equipment_event_extensions"("maintenance_setting_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "equipment_visible_id_key" ON "equipment"("visible_id");
@@ -735,10 +744,7 @@ ALTER TABLE "checklist_template_questions" ADD CONSTRAINT "checklist_template_qu
 ALTER TABLE "checklist_template_questions" ADD CONSTRAINT "checklist_template_questions_checklist_question_id_fkey" FOREIGN KEY ("checklist_question_id") REFERENCES "checklist_questions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "checklists" ADD CONSTRAINT "checklists_equipment_event_id_fkey" FOREIGN KEY ("equipment_event_id") REFERENCES "equipment_events"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "checklists" ADD CONSTRAINT "checklists_equipment_id_fkey" FOREIGN KEY ("equipment_id") REFERENCES "equipment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "checklists" ADD CONSTRAINT "checklists_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "events"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "checklists" ADD CONSTRAINT "checklists_checklist_template_id_fkey" FOREIGN KEY ("checklist_template_id") REFERENCES "checklist_templates"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -795,22 +801,25 @@ ALTER TABLE "employee_users" ADD CONSTRAINT "employee_users_employee_id_fkey" FO
 ALTER TABLE "employee_users" ADD CONSTRAINT "employee_users_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "equipment_events" ADD CONSTRAINT "equipment_events_equipment_id_fkey" FOREIGN KEY ("equipment_id") REFERENCES "equipment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "events" ADD CONSTRAINT "events_created_by_employee_id_fkey" FOREIGN KEY ("created_by_employee_id") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "equipment_events" ADD CONSTRAINT "equipment_events_event_type_id_fkey" FOREIGN KEY ("event_type_id") REFERENCES "equipment_event_types"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "event_responsibles" ADD CONSTRAINT "event_responsibles_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "equipment_events" ADD CONSTRAINT "equipment_events_maintenance_setting_id_fkey" FOREIGN KEY ("maintenance_setting_id") REFERENCES "equipment_maintenance_settings"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "event_responsibles" ADD CONSTRAINT "event_responsibles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "equipment_events" ADD CONSTRAINT "equipment_events_created_by_employee_id_fkey" FOREIGN KEY ("created_by_employee_id") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "equipment_event_extensions" ADD CONSTRAINT "equipment_event_extensions_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "equipment_event_responsibles" ADD CONSTRAINT "equipment_event_responsibles_equipment_event_id_fkey" FOREIGN KEY ("equipment_event_id") REFERENCES "equipment_events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "equipment_event_extensions" ADD CONSTRAINT "equipment_event_extensions_equipment_id_fkey" FOREIGN KEY ("equipment_id") REFERENCES "equipment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "equipment_event_responsibles" ADD CONSTRAINT "equipment_event_responsibles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "equipment_event_extensions" ADD CONSTRAINT "equipment_event_extensions_event_type_id_fkey" FOREIGN KEY ("event_type_id") REFERENCES "equipment_event_types"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "equipment_event_extensions" ADD CONSTRAINT "equipment_event_extensions_maintenance_setting_id_fkey" FOREIGN KEY ("maintenance_setting_id") REFERENCES "equipment_maintenance_settings"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "equipment" ADD CONSTRAINT "equipment_model_id_fkey" FOREIGN KEY ("model_id") REFERENCES "equipment_models"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

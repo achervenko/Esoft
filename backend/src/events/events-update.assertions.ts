@@ -1,23 +1,17 @@
-import {
-  throwEquipmentEventBadRequest,
-  throwEquipmentEventConflict,
-} from './equipment-events.errors';
-import {
-  type EquipmentEventChecklistAssignment,
-  type UpdateCreatedEquipmentEventData,
-} from './equipment-events.validation';
-import {
-  type CurrentChecklistAssignment,
-  type UpdateCreatedEventChangeInput,
-} from './equipment-events-update.types';
-import { normalizeStringIds } from './equipment-events-update.utils';
+import { throwEventBadRequest, throwEventConflict } from './events.errors';
+import type { EventChecklistAssignment } from './event-checklists/event-checklists.types';
+import type {
+  CurrentCreatedEventState,
+  UpdateCreatedEventData,
+} from './events-update.types';
+import { normalizeStringIds } from './events-update.utils';
 
 export function assertVersionMatches(
   currentVersion: number,
   expectedVersion: number,
-) {
+): void {
   if (currentVersion !== expectedVersion) {
-    throwEquipmentEventConflict(
+    throwEventConflict(
       'EVENT_VERSION_CONFLICT',
       'Событие уже изменено другим запросом. Обновите данные и повторите действие.',
     );
@@ -25,16 +19,19 @@ export function assertVersionMatches(
 }
 
 export function hasCreatedEventChanges(
-  updateInput: UpdateCreatedEventChangeInput,
-  data: UpdateCreatedEquipmentEventData,
-  hasChecklistAssignmentChanges: boolean,
-) {
+  updateInput: CurrentCreatedEventState,
+  data: UpdateCreatedEventData,
+  options: {
+    hasChecklistAssignmentChanges: boolean;
+    hasExtensionChanges: boolean;
+  },
+): boolean {
   return (
-    updateInput.equipmentId !== undefined ||
-    updateInput.eventTypeId !== undefined ||
-    hasChecklistAssignmentChanges ||
+    options.hasExtensionChanges ||
+    options.hasChecklistAssignmentChanges ||
     hasNoteChange(updateInput.currentNote, data.note) ||
     hasPlannedDateChange(updateInput.currentPlannedDate, data.plannedDate) ||
+    hasTitleChange(updateInput.currentTitle, data.title) ||
     hasResponsibleUsersChange(
       updateInput.currentResponsibleUserIds,
       data.responsibleUserIds,
@@ -45,7 +42,7 @@ export function hasCreatedEventChanges(
 export function hasResponsibleUsersChange(
   currentIds: string[],
   nextIds?: string[],
-) {
+): boolean {
   if (!nextIds) {
     return false;
   }
@@ -57,9 +54,9 @@ export function hasResponsibleUsersChange(
 }
 
 export function hasChecklistAssignmentsChange(
-  currentAssignments: CurrentChecklistAssignment[],
-  nextAssignments?: EquipmentEventChecklistAssignment[],
-) {
+  currentAssignments: EventChecklistAssignment[],
+  nextAssignments?: EventChecklistAssignment[],
+): boolean {
   if (!nextAssignments) {
     return false;
   }
@@ -80,16 +77,16 @@ export function hasChecklistAssignmentsChange(
 }
 
 export function assertChecklistAssignmentsMatchResponsibles(
-  assignments: EquipmentEventChecklistAssignment[],
+  assignments: EventChecklistAssignment[],
   responsibleUserIds: string[],
-) {
+): void {
   const responsibleUserIdSet = new Set(responsibleUserIds);
 
   if (
     responsibleUserIdSet.size === 0 ||
     assignments.length !== responsibleUserIdSet.size
   ) {
-    throwEquipmentEventBadRequest(
+    throwEventBadRequest(
       'CHECKLIST_ASSIGNMENTS_REQUIRED',
       'Назначения чек-листов должны полностью покрывать всех ответственных.',
     );
@@ -99,14 +96,14 @@ export function assertChecklistAssignmentsMatchResponsibles(
 
   for (const assignment of assignments) {
     if (!responsibleUserIdSet.has(assignment.assignedUserId)) {
-      throwEquipmentEventBadRequest(
+      throwEventBadRequest(
         'CHECKLIST_ASSIGNED_USER_NOT_RESPONSIBLE',
         'Исполнитель чек-листа должен быть ответственным за событие.',
       );
     }
 
     if (assignedUserIds.has(assignment.assignedUserId)) {
-      throwEquipmentEventBadRequest(
+      throwEventBadRequest(
         'CHECKLIST_ASSIGNEE_DUPLICATE',
         'Ответственному можно назначить только один чек-лист.',
       );
@@ -116,14 +113,21 @@ export function assertChecklistAssignmentsMatchResponsibles(
   }
 }
 
-function hasPlannedDateChange(currentValue: Date | null, nextValue?: Date) {
+function hasPlannedDateChange(currentValue: Date, nextValue?: Date): boolean {
   if (!nextValue) {
     return false;
   }
 
-  return currentValue?.getTime() !== nextValue.getTime();
+  return currentValue.getTime() !== nextValue.getTime();
 }
 
-function hasNoteChange(currentValue: string | null, nextValue?: string | null) {
+function hasNoteChange(
+  currentValue: string | null,
+  nextValue?: string | null,
+): boolean {
+  return nextValue !== undefined && currentValue !== nextValue;
+}
+
+function hasTitleChange(currentValue: string, nextValue?: string): boolean {
   return nextValue !== undefined && currentValue !== nextValue;
 }

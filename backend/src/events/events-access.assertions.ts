@@ -1,18 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import {
-  throwEquipmentEventBadRequest,
-  throwEquipmentEventForbidden,
-} from './equipment-events.errors';
+import { throwEventBadRequest, throwEventForbidden } from './events.errors';
 
 @Injectable()
-export class EquipmentEventAccessAssertions {
+export class EventsAccessAssertions {
   async getCurrentEmployeeId(
     tx: Prisma.TransactionClient,
     userId?: string | null,
-  ) {
+  ): Promise<number> {
     if (!userId) {
-      throwEquipmentEventForbidden(
+      throwEventForbidden(
         'SESSION_REQUIRED',
         'Сессия пользователя не найдена.',
       );
@@ -38,21 +35,18 @@ export class EquipmentEventAccessAssertions {
     const employeeUser = employeeUsers[0];
 
     if (!employeeUser) {
-      throwEquipmentEventForbidden(
+      throwEventForbidden(
         'USER_EMPLOYEE_NOT_FOUND',
         'К учётной записи не привязан сотрудник.',
       );
     }
 
     if (employeeUser.user_is_banned) {
-      throwEquipmentEventForbidden(
-        'USER_INACTIVE',
-        'Учётная запись отключена.',
-      );
+      throwEventForbidden('USER_INACTIVE', 'Учётная запись отключена.');
     }
 
     if (!employeeUser.employee_is_active) {
-      throwEquipmentEventForbidden(
+      throwEventForbidden(
         'USER_EMPLOYEE_INACTIVE',
         'Привязанный сотрудник отключён.',
       );
@@ -61,26 +55,14 @@ export class EquipmentEventAccessAssertions {
     return employeeUser.employee_id;
   }
 
-  assertAssignedResponsible(
-    responsibles: Array<{ userId: string }>,
-    userId?: string | null,
-  ) {
-    if (!userId || !responsibles.some((item) => item.userId === userId)) {
-      throwEquipmentEventForbidden(
-        'EVENT_RESPONSIBLE_REQUIRED',
-        'Только назначенный ответственный может выполнить это действие.',
-      );
-    }
-  }
-
   async assertResponsibleUsersExist(
     tx: Prisma.TransactionClient,
     userIds: string[],
-  ) {
+  ): Promise<void> {
     const uniqueUserIds = [...new Set(userIds)];
 
     if (uniqueUserIds.length === 0) {
-      throwEquipmentEventBadRequest(
+      throwEventBadRequest(
         'RESPONSIBLES_REQUIRED',
         'У события должен быть хотя бы один ответственный.',
       );
@@ -98,7 +80,7 @@ export class EquipmentEventAccessAssertions {
     `;
 
     if (users.length !== uniqueUserIds.length) {
-      throwEquipmentEventBadRequest(
+      throwEventBadRequest(
         'RESPONSIBLE_USER_INACTIVE',
         'Один или несколько ответственных не найдены или отключены.',
       );

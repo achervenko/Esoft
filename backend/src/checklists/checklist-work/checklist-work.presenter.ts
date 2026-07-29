@@ -68,18 +68,24 @@ function presentChecklistListItem(row: ChecklistListRow) {
       id: row.eventId,
       status: row.eventStatus,
       plannedDate: formatDate(row.eventPlannedDate),
-      maintenanceType: {
-        id: row.maintenanceTypeId,
-        name: row.maintenanceTypeName,
-      },
+      maintenanceType:
+        row.maintenanceTypeId === null
+          ? null
+          : {
+              id: row.maintenanceTypeId,
+              name: row.maintenanceTypeName,
+            },
     },
-    equipment: {
-      visibleId: row.equipmentVisibleId,
-      name: row.equipmentName,
-      model: {
-        name: row.equipmentModelName,
-      },
-    },
+    equipment:
+      row.equipmentVisibleId === null
+        ? null
+        : {
+            visibleId: row.equipmentVisibleId,
+            name: row.equipmentName,
+            model: {
+              name: row.equipmentModelName,
+            },
+          },
     progress: presentProgress(row),
   };
 }

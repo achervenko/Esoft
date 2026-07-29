@@ -1,10 +1,9 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '../prisma/prisma.module';
 import { ChecklistsModule } from '../checklists/checklists.module';
-import { EquipmentEventAccessAssertions } from './equipment-event-access.assertions';
-import { EquipmentEventChecklistAssertions } from './equipment-event-checklist.assertions';
+import { EquipmentEventExtensionModule } from '../equipment-event-extension/equipment-event-extension.module';
+import { EventsModule } from '../events/events.module';
+import { PrismaModule } from '../prisma/prisma.module';
 import { EquipmentEventChecklistCreator } from './equipment-event-checklist.creator';
-import { EquipmentEventInputLoader } from './equipment-event-input.loader';
 import { EquipmentEventStateAssertions } from './equipment-event-state.assertions';
 import { EquipmentEventsController } from './equipment-events.controller';
 import { EquipmentEventsCreator } from './equipment-events.creator';
@@ -19,17 +18,19 @@ import { MaintenanceTypesController } from './maintenance-types/maintenance-type
 import { MaintenanceTypesService } from './maintenance-types/maintenance-types.service';
 
 @Module({
-  imports: [PrismaModule, ChecklistsModule],
+  imports: [
+    PrismaModule,
+    ChecklistsModule,
+    EquipmentEventExtensionModule,
+    EventsModule,
+  ],
   controllers: [
     EquipmentEventsController,
     MaintenanceSettingsController,
     MaintenanceTypesController,
   ],
   providers: [
-    EquipmentEventAccessAssertions,
-    EquipmentEventChecklistAssertions,
     EquipmentEventChecklistCreator,
-    EquipmentEventInputLoader,
     EquipmentEventStateAssertions,
     EquipmentEventsCreator,
     EquipmentEventsLifecycleService,

@@ -136,8 +136,7 @@ model ChecklistTemplateQuestion {
 
 model Checklist {
   id                  Int               @id @default(autoincrement())
-  equipmentEventId    Int               @map("equipment_event_id")
-  equipmentId         Int               @map("equipment_id")
+  eventId             Int               @map("event_id")
   checklistTemplateId Int               @map("checklist_template_id")
   assignedUserId      String            @map("assigned_user_id")
   sortOrder           Int               @map("sort_order")
@@ -158,8 +157,7 @@ model Checklist {
   createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy           String            @map("created_by")
   version             Int               @default(1)
-  equipmentEvent      EquipmentEvent    @relation(fields: [equipmentEventId], references: [id], onDelete: Restrict)
-  equipment           Equipment         @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
+  event               Event             @relation(fields: [eventId], references: [id], onDelete: Restrict)
   checklistTemplate   ChecklistTemplate @relation(fields: [checklistTemplateId], references: [id], onDelete: Restrict)
   assignedUser        User              @relation("ChecklistAssignedUser", fields: [assignedUserId], references: [id], onDelete: Restrict)
   createdByUser       User              @relation("ChecklistCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
@@ -169,12 +167,10 @@ model Checklist {
   invalidatedByUser   User?             @relation("ChecklistInvalidatedBy", fields: [invalidatedBy], references: [id], onDelete: Restrict)
   details             ChecklistDetail[]
 
-  @@unique([equipmentEventId, assignedUserId], map: "uq_checklists_event_assigned_user")
-  @@unique([equipmentEventId, sortOrder], map: "uq_checklists_event_sort")
-  @@index([equipmentEventId], map: "idx_checklists_event_id")
-  @@index([equipmentId], map: "idx_checklists_equipment_id")
+  @@unique([eventId, assignedUserId], map: "uq_checklists_event_assigned_user")
+  @@unique([eventId, sortOrder], map: "uq_checklists_event_sort")
+  @@index([assignedUserId, status], map: "idx_checklists_assigned_user_status")
   @@index([checklistTemplateId], map: "idx_checklists_template_id")
-  @@index([assignedUserId], map: "idx_checklists_assigned_user_id")
   @@index([status], map: "idx_checklists_status")
   @@map("checklists")
 }

@@ -2,6 +2,7 @@ import { throwEquipmentEventBadRequest } from './equipment-events.errors';
 import {
   parseChecklistAssignments,
   parseOptionalNullableText,
+  parseOptionalNonEmptyString,
   parseOptionalPositiveInteger,
   parsePositiveInteger,
   parseRequiredDate,
@@ -57,6 +58,11 @@ export function parseUpdateCreatedEventDto(
         ? undefined
         : parseOptionalNullableText(body.note, 'NOTE_INVALID'),
     responsibleUserIds,
+    title: parseOptionalNonEmptyString(
+      body.title,
+      'TITLE_INVALID',
+      'Некорректное название события.',
+    ),
     version: parsePositiveInteger(
       body.version,
       'VERSION_REQUIRED',
@@ -70,7 +76,8 @@ export function parseUpdateCreatedEventDto(
     data.checklistAssignments === undefined &&
     data.note === undefined &&
     data.plannedDate === undefined &&
-    data.responsibleUserIds === undefined
+    data.responsibleUserIds === undefined &&
+    data.title === undefined
   ) {
     throwEquipmentEventBadRequest(
       'UPDATE_EMPTY',

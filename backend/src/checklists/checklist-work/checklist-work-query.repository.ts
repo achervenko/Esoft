@@ -55,13 +55,15 @@ export class ChecklistWorkQueryRepository {
             COALESCE(progress."requiredTotal", 0)::bigint AS "requiredTotal",
             COALESCE(progress."requiredAnswered", 0)::bigint AS "requiredAnswered"
           FROM checklists checklist
-          JOIN equipment_events event
-            ON event.id = checklist.equipment_event_id
-          JOIN equipment_event_types event_type
-            ON event_type.id = event.event_type_id
-          JOIN equipment
-            ON equipment.id = event.equipment_id
-          JOIN equipment_models equipment_model
+          JOIN events event
+            ON event.id = checklist.event_id
+          LEFT JOIN equipment_event_extensions event_extension
+            ON event_extension.event_id = event.id
+          LEFT JOIN equipment_event_types event_type
+            ON event_type.id = event_extension.event_type_id
+          LEFT JOIN equipment
+            ON equipment.id = event_extension.equipment_id
+          LEFT JOIN equipment_models equipment_model
             ON equipment_model.id = equipment.model_id
           JOIN checklist_templates template
             ON template.id = checklist.checklist_template_id
@@ -94,10 +96,12 @@ export class ChecklistWorkQueryRepository {
             tx.$queryRaw<Array<{ total: bigint }>>`
         SELECT COUNT(*)::bigint AS total
         FROM checklists checklist
-        JOIN equipment_events event
-          ON event.id = checklist.equipment_event_id
-        JOIN equipment
-          ON equipment.id = event.equipment_id
+        JOIN events event
+          ON event.id = checklist.event_id
+        LEFT JOIN equipment_event_extensions event_extension
+          ON event_extension.event_id = event.id
+        LEFT JOIN equipment
+          ON equipment.id = event_extension.equipment_id
         WHERE checklist.assigned_user_id = ${params.userId}
           AND checklist.status = ANY(ARRAY[${Prisma.join(
             params.query.statuses ?? [
@@ -128,10 +132,12 @@ export class ChecklistWorkQueryRepository {
             WHERE checklist.status = ${ChecklistStatus.COMPLETED}
           )::bigint AS completed
         FROM checklists checklist
-        JOIN equipment_events event
-          ON event.id = checklist.equipment_event_id
-        JOIN equipment
-          ON equipment.id = event.equipment_id
+        JOIN events event
+          ON event.id = checklist.event_id
+        LEFT JOIN equipment_event_extensions event_extension
+          ON event_extension.event_id = event.id
+        LEFT JOIN equipment
+          ON equipment.id = event_extension.equipment_id
         WHERE checklist.assigned_user_id = ${params.userId}
           AND (${params.query.equipmentVisibleId ?? null}::int IS NULL OR equipment.visible_id = ${params.query.equipmentVisibleId ?? null})
           AND (${params.query.eventId ?? null}::int IS NULL OR event.id = ${params.query.eventId ?? null})
@@ -233,13 +239,15 @@ export class ChecklistWorkQueryRepository {
         COALESCE(progress."requiredAnswered", 0)::bigint AS "requiredAnswered",
         COALESCE(responsibles.user_ids, ARRAY[]::text[]) AS "responsibleUserIds"
       FROM checklists checklist
-      JOIN equipment_events event
-        ON event.id = checklist.equipment_event_id
-      JOIN equipment_event_types event_type
-        ON event_type.id = event.event_type_id
-      JOIN equipment
-        ON equipment.id = event.equipment_id
-      JOIN equipment_models equipment_model
+      JOIN events event
+        ON event.id = checklist.event_id
+      LEFT JOIN equipment_event_extensions event_extension
+        ON event_extension.event_id = event.id
+      LEFT JOIN equipment_event_types event_type
+        ON event_type.id = event_extension.event_type_id
+      LEFT JOIN equipment
+        ON equipment.id = event_extension.equipment_id
+      LEFT JOIN equipment_models equipment_model
         ON equipment_model.id = equipment.model_id
       JOIN checklist_templates template
         ON template.id = checklist.checklist_template_id
@@ -255,12 +263,12 @@ export class ChecklistWorkQueryRepository {
         ON progress.checklist_id = checklist.id
       LEFT JOIN (
         SELECT
-          equipment_event_id,
+          event_id,
           array_agg(user_id ORDER BY user_id) AS user_ids
-        FROM equipment_event_responsibles
-        GROUP BY equipment_event_id
+        FROM event_responsibles
+        GROUP BY event_id
       ) responsibles
-        ON responsibles.equipment_event_id = event.id
+        ON responsibles.event_id = event.id
     `;
   }
 }

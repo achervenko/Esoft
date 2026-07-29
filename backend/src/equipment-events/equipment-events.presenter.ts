@@ -1,76 +1,66 @@
 import type {
   EquipmentEventChecklistRecord,
-  EquipmentEventDetailRecord,
-  EquipmentEventListRecord,
+  EquipmentEventDetailRecordWithExtension,
+  EquipmentEventListRecordWithExtension,
 } from './equipment-events.relations';
+import {
+  toEquipmentEventExtensionDetailResponse,
+  toEquipmentEventExtensionListResponse,
+} from '../equipment-event-extension/equipment-event-extension.presenter';
 
 export function toEquipmentEventListResponse(
-  event: EquipmentEventListRecord,
+  event: EquipmentEventListRecordWithExtension,
   checklists: EquipmentEventChecklistRecord[] = [],
 ) {
+  const extension = toEquipmentEventExtensionListResponse(
+    event.equipmentExtension,
+  );
+
   return {
     id: event.id,
+    title: event.title,
+    extensionCode: event.extensionCode,
     source: event.source,
     status: event.status,
     version: event.version,
-    maintenanceSettingId: event.maintenanceSettingId,
-    executionType: event.executionType,
     factDate: formatDate(event.factDate),
     note: event.note,
     plannedDate: formatDate(event.plannedDate),
-    equipment: {
-      id: event.equipment.id,
-      visibleId: event.equipment.visibleId,
-      name: event.equipment.name,
-      model: {
-        id: event.equipment.model.id,
-        name: event.equipment.model.name,
-      },
-    },
-    maintenanceType: {
-      id: event.eventType.id,
-      name: event.eventType.name,
-      code: event.eventType.code,
-    },
+    extension,
+    maintenanceSettingId: extension.maintenanceSettingId,
+    executionType: extension.executionType,
+    equipment: extension.equipment,
+    maintenanceType: extension.maintenanceType,
     checklists: checklists.map(toChecklistResponse),
     responsibles: event.responsibles.map((item) => toUserResponse(item.user)),
   };
 }
 
 export function toEquipmentEventDetailResponse(
-  event: EquipmentEventDetailRecord,
+  event: EquipmentEventDetailRecordWithExtension,
   checklists: EquipmentEventChecklistRecord[] = [],
 ) {
+  const extension = toEquipmentEventExtensionDetailResponse(
+    event.equipmentExtension,
+  );
+
   return {
     id: event.id,
+    title: event.title,
+    extensionCode: event.extensionCode,
     source: event.source,
     status: event.status,
     version: event.version,
-    maintenanceSettingId: event.maintenanceSettingId,
-    executionType: event.executionType,
+    maintenanceSettingId: extension.maintenanceSettingId,
+    executionType: extension.executionType,
     originalPlannedDate: formatDate(event.originalPlannedDate),
     plannedDate: formatDate(event.plannedDate),
     factDate: formatDate(event.factDate),
     note: event.note,
     createdAt: event.createdAt.toISOString(),
-    equipment: {
-      id: event.equipment.id,
-      visibleId: event.equipment.visibleId,
-      name: event.equipment.name,
-      model: {
-        id: event.equipment.model.id,
-        name: event.equipment.model.name,
-        manufacturer: {
-          id: event.equipment.model.manufacturer.id,
-          name: event.equipment.model.manufacturer.name,
-        },
-      },
-    },
-    maintenanceType: {
-      id: event.eventType.id,
-      name: event.eventType.name,
-      code: event.eventType.code,
-    },
+    extension,
+    equipment: extension.equipment,
+    maintenanceType: extension.maintenanceType,
     createdBy: toEmployeeResponse(event.createdByEmployee),
     checklists: checklists.map(toChecklistResponse),
     responsibles: event.responsibles.map((item) => toUserResponse(item.user)),

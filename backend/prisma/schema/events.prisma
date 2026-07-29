@@ -1,0 +1,77 @@
+enum EventExtensionCode {
+  EQUIPMENT
+
+  @@map("event_extension_code")
+}
+
+enum EventSource {
+  MANUAL
+  PLANNED
+
+  @@map("event_source")
+}
+
+enum EventStatus {
+  CREATED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+
+  @@map("event_status")
+}
+
+model Event {
+  id                  Int                 @id @default(autoincrement())
+  title               String
+  note                String?
+  extensionCode       EventExtensionCode? @map("extension_code")
+  source              EventSource
+  status              EventStatus         @default(CREATED)
+  originalPlannedDate DateTime?           @map("original_planned_date") @db.Date
+  plannedDate         DateTime            @map("planned_date") @db.Date
+  factDate            DateTime?           @map("fact_date") @db.Date
+  createdByEmployeeId Int                 @map("created_by_employee_id")
+  createdAt           DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version             Int                 @default(1)
+
+  createdByEmployee  Employee                 @relation("EventCreatedBy", fields: [createdByEmployeeId], references: [id], onDelete: Restrict)
+  responsibles       EventResponsible[]
+  equipmentExtension EquipmentEventExtension?
+  checklists         Checklist[]
+
+  @@index([plannedDate], map: "idx_events_planned_date")
+  @@index([status, plannedDate], map: "idx_events_status_planned_date")
+  @@index([extensionCode], map: "idx_events_extension_code")
+  @@index([createdByEmployeeId], map: "idx_events_created_by_employee_id")
+  @@map("events")
+}
+
+model EventResponsible {
+  eventId Int    @map("event_id")
+  userId  String @map("user_id")
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user    User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([eventId, userId], map: "pk_event_responsibles")
+  @@index([userId, eventId], map: "idx_event_responsibles_user_event")
+  @@map("event_responsibles")
+}
+
+model EquipmentEventExtension {
+  eventId              Int                               @id @map("event_id")
+  equipmentId          Int                               @map("equipment_id")
+  eventTypeId          Int                               @map("event_type_id")
+  maintenanceSettingId Int                               @map("maintenance_setting_id")
+  executionType        EquipmentMaintenanceExecutionType @map("execution_type")
+
+  event              Event                       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  equipment          Equipment                   @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
+  eventType          EquipmentEventType          @relation(fields: [eventTypeId], references: [id], onDelete: Restrict)
+  maintenanceSetting EquipmentMaintenanceSetting @relation(fields: [maintenanceSettingId], references: [id], onDelete: Restrict)
+
+  @@index([equipmentId, eventTypeId], map: "idx_equipment_event_extensions_equipment_type")
+  @@index([eventTypeId], map: "idx_equipment_event_extensions_event_type")
+  @@index([maintenanceSettingId], map: "idx_equipment_event_extensions_maintenance_setting")
+  @@map("equipment_event_extensions")
+}

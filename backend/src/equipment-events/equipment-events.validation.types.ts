@@ -1,4 +1,4 @@
-import { EquipmentEventStatus } from '@prisma/client';
+import { EventStatus } from '@prisma/client';
 
 export type CreateManualEquipmentEventDto = {
   checklistAssignments?: unknown;
@@ -6,6 +6,7 @@ export type CreateManualEquipmentEventDto = {
   note?: unknown;
   plannedDate?: unknown;
   responsibleUserIds?: unknown;
+  title?: unknown;
 };
 
 export type CompleteEquipmentEventDto = {
@@ -19,6 +20,7 @@ export type UpdateCreatedEquipmentEventDto = {
   note?: unknown;
   plannedDate?: unknown;
   responsibleUserIds?: unknown;
+  title?: unknown;
   version?: unknown;
 };
 
@@ -40,6 +42,7 @@ export type CreateManualEquipmentEventData = {
   note: string | null;
   plannedDate: Date;
   responsibleUserIds: string[];
+  title: string;
 };
 
 export type EquipmentEventChecklistAssignment = {
@@ -58,6 +61,7 @@ export type UpdateCreatedEquipmentEventData = {
   note?: string | null;
   plannedDate?: Date;
   responsibleUserIds?: string[];
+  title?: string;
   version: number;
 };
 
@@ -69,5 +73,5 @@ export type EquipmentEventsQuery = {
   maintenanceTypeId?: number;
   offset: number;
   responsibleUserId?: string;
-  status?: EquipmentEventStatus;
+  status?: EventStatus;
 };

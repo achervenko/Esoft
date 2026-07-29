@@ -1,34 +1,33 @@
 import { Prisma } from '@prisma/client';
-import { EquipmentEventChecklistCreator } from './equipment-event-checklist.creator';
-import { throwEquipmentEventConflict } from './equipment-events.errors';
-import { type EquipmentEventChecklistAssignment } from './equipment-events.validation';
-import { type CurrentChecklistState } from './equipment-events-update.types';
+import { throwEventConflict } from '../events.errors';
+import type {
+  CurrentEventChecklistState,
+  EventChecklistAssignment,
+} from './event-checklists.types';
+
+export type EventChecklistCreatorLike = {
+  createEventChecklists(
+    tx: Prisma.TransactionClient,
+    params: {
+      assignments: EventChecklistAssignment[];
+      createdBy: string;
+      eventId: number;
+      temporarySortOrders?: number[];
+      validateFullResponsibleCoverage?: boolean;
+    },
+  ): Promise<Array<{ assignedUserId: string; id: number }>>;
+};
 
 export async function syncEventChecklists(
   tx: Prisma.TransactionClient,
-  checklistCreator: EquipmentEventChecklistCreator,
+  checklistCreator: EventChecklistCreatorLike,
   params: {
-    assignments: EquipmentEventChecklistAssignment[];
-    currentChecklists: CurrentChecklistState[];
-    equipmentChanged: boolean;
+    assignments: EventChecklistAssignment[];
+    currentChecklists: CurrentEventChecklistState[];
     eventId: number;
     userId: string;
   },
 ) {
-  if (params.equipmentChanged) {
-    await tx.checklist.deleteMany({
-      where: { equipmentEventId: params.eventId },
-    });
-
-    await checklistCreator.createEventChecklists(tx, {
-      assignments: params.assignments,
-      createdBy: params.userId,
-      eventId: params.eventId,
-    });
-
-    return;
-  }
-
   const currentByAssignedUserId = new Map(
     params.currentChecklists.map((checklist) => [
       checklist.assignedUserId,
@@ -37,7 +36,7 @@ export async function syncEventChecklists(
   );
   const survivorIds: number[] = [];
   const deleteIds: number[] = [];
-  const createAssignments: EquipmentEventChecklistAssignment[] = [];
+  const createAssignments: EventChecklistAssignment[] = [];
 
   for (const currentChecklist of params.currentChecklists) {
     const nextAssignment = params.assignments.find(
@@ -71,16 +70,28 @@ export async function syncEventChecklists(
   let temporarySortOrder = -1;
 
   for (const checklistId of survivorIds) {
-    await tx.checklist.update({
+    const updateResult = await tx.checklist.updateMany({
       data: { sortOrder: temporarySortOrder },
-      where: { id: checklistId },
+      where: {
+        eventId: params.eventId,
+        id: checklistId,
+      },
     });
+
+    if (updateResult.count !== 1) {
+      throwEventConflict(
+        'CHECKLIST_SYNC_CONFLICT',
+        'Не удалось синхронизировать чек-листы события.',
+      );
+    }
+
     temporarySortOrder -= 1;
   }
 
   if (deleteIds.length > 0) {
     await tx.checklist.deleteMany({
       where: {
+        eventId: params.eventId,
         id: { in: deleteIds },
       },
     });
@@ -105,7 +116,7 @@ export async function syncEventChecklists(
   const finalChecklists = await tx.checklist.findMany({
     orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
     select: { assignedUserId: true, id: true },
-    where: { equipmentEventId: params.eventId },
+    where: { eventId: params.eventId },
   });
   const finalChecklistIdByAssignedUserId = new Map(
     finalChecklists.map((checklist) => [
@@ -120,15 +131,25 @@ export async function syncEventChecklists(
     );
 
     if (!checklistId) {
-      throwEquipmentEventConflict(
-        'CHECKLIST_ASSIGNMENT_TEMPLATE_INVALID',
+      throwEventConflict(
+        'CHECKLIST_SYNC_CONFLICT',
         'Не удалось синхронизировать чек-листы события.',
       );
     }
 
-    await tx.checklist.update({
+    const updateResult = await tx.checklist.updateMany({
       data: { sortOrder: index + 1 },
-      where: { id: checklistId },
+      where: {
+        eventId: params.eventId,
+        id: checklistId,
+      },
     });
+
+    if (updateResult.count !== 1) {
+      throwEventConflict(
+        'CHECKLIST_SYNC_CONFLICT',
+        'Не удалось синхронизировать чек-листы события.',
+      );
+    }
   }
 }

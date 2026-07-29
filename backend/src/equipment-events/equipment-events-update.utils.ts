@@ -1,6 +1,6 @@
 import { throwEquipmentEventBadRequest } from './equipment-events.errors';
 
-export function requireUserId(userId?: string | null) {
+export function requireUserId(userId?: string | null): string {
   if (!userId) {
     throwEquipmentEventBadRequest(
       'SESSION_REQUIRED',
@@ -9,8 +9,4 @@ export function requireUserId(userId?: string | null) {
   }
 
   return userId;
-}
-
-export function normalizeStringIds(ids: string[]) {
-  return [...new Set(ids)].sort((left, right) => left.localeCompare(right));
 }

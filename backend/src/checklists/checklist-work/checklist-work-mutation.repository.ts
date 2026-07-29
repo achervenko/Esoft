@@ -16,7 +16,7 @@ export class ChecklistWorkMutationRepository {
 
   async findChecklistEventId(checklistId: number) {
     const [row] = await this.prisma.$queryRaw<Array<{ eventId: number }>>`
-      SELECT equipment_event_id AS "eventId"
+      SELECT event_id AS "eventId"
       FROM checklists
       WHERE id = ${checklistId}
     `;
@@ -40,7 +40,7 @@ export class ChecklistWorkMutationRepository {
     const event = await this.lockEvent(tx, eventId);
     const checklist = await this.lockChecklist(tx, checklistId);
 
-    if (checklist.equipmentEventId !== event.eventId) {
+    if (checklist.eventId !== event.eventId) {
       throwChecklistMissingAfterLock();
     }
 
@@ -53,7 +53,7 @@ export class ChecklistWorkMutationRepository {
         id AS "eventId",
         status AS "eventStatus",
         fact_date AS "factDate"
-      FROM equipment_events
+      FROM events
       WHERE id = ${eventId}
       FOR UPDATE
     `.then((rows) => {
@@ -77,7 +77,7 @@ export class ChecklistWorkMutationRepository {
         assigned_user_id AS "assignedUserId",
         status
       FROM checklists
-      WHERE equipment_event_id = ${eventId}
+      WHERE event_id = ${eventId}
       ORDER BY id
       FOR UPDATE
     `;
@@ -86,8 +86,8 @@ export class ChecklistWorkMutationRepository {
   async loadResponsibleUserIds(tx: Prisma.TransactionClient, eventId: number) {
     const rows = await tx.$queryRaw<Array<{ userId: string }>>`
       SELECT user_id AS "userId"
-      FROM equipment_event_responsibles
-      WHERE equipment_event_id = ${eventId}
+      FROM event_responsibles
+      WHERE event_id = ${eventId}
       ORDER BY user_id
     `;
 
@@ -106,7 +106,7 @@ export class ChecklistWorkMutationRepository {
     >`
       SELECT id, status
       FROM checklists
-      WHERE equipment_event_id = ${eventId}
+      WHERE event_id = ${eventId}
         AND status IN ('CREATED', 'IN_PROGRESS')
       ORDER BY id
       FOR UPDATE
@@ -161,7 +161,7 @@ export class ChecklistWorkMutationRepository {
     checklistId: number,
   ) {
     const [row] = await tx.$queryRaw<Array<{ eventId: number }>>`
-      SELECT equipment_event_id AS "eventId"
+      SELECT event_id AS "eventId"
       FROM checklists
       WHERE id = ${checklistId}
     `;
@@ -173,7 +173,7 @@ export class ChecklistWorkMutationRepository {
     return tx.$queryRaw<LockedChecklist[]>`
       SELECT
         id,
-        equipment_event_id AS "equipmentEventId",
+        event_id AS "eventId",
         assigned_user_id AS "assignedUserId",
         result,
         status,

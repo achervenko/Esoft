@@ -1,193 +1,51 @@
-import { ChecklistStatus, Prisma } from '@prisma/client';
-
-const employeeResponseSelect = {
-  firstName: true,
-  id: true,
-  lastName: true,
-  middleName: true,
-  position: true,
-} satisfies Prisma.EmployeeSelect;
-
-const responsiblesOrderBy = [
-  { user: { employeeUser: { employee: { lastName: 'asc' } } } },
-  { user: { employeeUser: { employee: { firstName: 'asc' } } } },
-  { user: { name: 'asc' } },
-] satisfies Prisma.EquipmentEventResponsibleOrderByWithRelationInput[];
-
-const equipmentListSelect = {
-  id: true,
-  model: {
-    select: {
-      id: true,
-      name: true,
-    },
-  },
-  name: true,
-  visibleId: true,
-} satisfies Prisma.EquipmentSelect;
-
-const equipmentDetailSelect = {
-  id: true,
-  model: {
-    select: {
-      id: true,
-      manufacturer: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-      name: true,
-    },
-  },
-  name: true,
-  visibleId: true,
-} satisfies Prisma.EquipmentSelect;
-
-const eventTypeResponseSelect = {
-  code: true,
-  id: true,
-  name: true,
-} satisfies Prisma.EquipmentEventTypeSelect;
-
-const responsiblesResponseSelect = {
-  orderBy: responsiblesOrderBy,
-  select: {
-    user: {
-      select: {
-        employeeUser: {
-          select: {
-            employee: {
-              select: employeeResponseSelect,
-            },
-          },
-        },
-        id: true,
-        name: true,
-        role: true,
-      },
-    },
-  },
-} satisfies Prisma.EquipmentEventResponsibleFindManyArgs;
-
-export const equipmentEventListSelect = {
-  equipment: {
-    select: equipmentListSelect,
-  },
-  eventType: {
-    select: eventTypeResponseSelect,
-  },
-  executionType: true,
-  factDate: true,
-  id: true,
-  maintenanceSettingId: true,
-  note: true,
-  plannedDate: true,
-  responsibles: responsiblesResponseSelect,
-  source: true,
-  status: true,
-  version: true,
-} satisfies Prisma.EquipmentEventSelect;
-
-export const equipmentEventDetailSelect = {
-  createdAt: true,
-  createdByEmployee: {
-    select: employeeResponseSelect,
-  },
-  equipment: {
-    select: equipmentDetailSelect,
-  },
-  eventType: {
-    select: eventTypeResponseSelect,
-  },
-  executionType: true,
-  factDate: true,
-  id: true,
-  maintenanceSettingId: true,
-  note: true,
-  originalPlannedDate: true,
-  plannedDate: true,
-  responsibles: responsiblesResponseSelect,
-  source: true,
-  status: true,
-  version: true,
-} satisfies Prisma.EquipmentEventSelect;
+import { EventExtensionCode, Prisma } from '@prisma/client';
+import type {
+  EventChecklistRecord,
+  EventDetailRecord,
+  EventListRecord,
+} from '../events/events.relations';
 
 export const equipmentEventAuditSelect = {
-  equipment: {
+  equipmentExtension: {
     select: {
-      name: true,
-      visibleId: true,
-    },
-  },
-  eventType: {
-    select: {
-      code: true,
-      id: true,
-      name: true,
-    },
-  },
-  executionType: true,
-  factDate: true,
-  id: true,
-  maintenanceSettingId: true,
-  note: true,
-  originalPlannedDate: true,
-  plannedDate: true,
-  responsibles: {
-    orderBy: responsiblesOrderBy,
-    select: {
-      user: {
+      equipment: {
         select: {
-          employeeUser: {
-            select: {
-              employee: {
-                select: {
-                  firstName: true,
-                  lastName: true,
-                  middleName: true,
-                },
-              },
-            },
-          },
+          name: true,
+          visibleId: true,
+        },
+      },
+      eventType: {
+        select: {
+          code: true,
           id: true,
           name: true,
         },
       },
+      executionType: true,
+      maintenanceSettingId: true,
     },
   },
-  source: true,
-  status: true,
-} satisfies Prisma.EquipmentEventSelect;
+  extensionCode: true,
+  id: true,
+} satisfies Prisma.EventSelect;
 
-export type EquipmentEventListRecord = Prisma.EquipmentEventGetPayload<{
-  select: typeof equipmentEventListSelect;
-}>;
+export type EquipmentEventListRecord = EventListRecord;
 
-export type EquipmentEventDetailRecord = Prisma.EquipmentEventGetPayload<{
-  select: typeof equipmentEventDetailSelect;
-}>;
+export type EquipmentEventDetailRecord = EventDetailRecord;
 
-export type EquipmentEventAuditRecord = Prisma.EquipmentEventGetPayload<{
-  select: typeof equipmentEventAuditSelect;
-}>;
+export type EquipmentEventChecklistRecord = EventChecklistRecord;
 
-export type EquipmentEventChecklistRecord = {
-  assignedUser: {
-    fullName: string;
-    id: string;
-    position: string;
-  };
-  assignedUserId: string;
-  checklistTemplateId: number;
-  id: number;
-  progress: {
-    answered: number;
-    requiredAnswered: number;
-    requiredTotal: number;
-    total: number;
-  };
-  sortOrder: number;
-  status: ChecklistStatus;
-  templateName: string;
+export type EquipmentEventListRecordWithExtension = EquipmentEventListRecord & {
+  extensionCode: typeof EventExtensionCode.EQUIPMENT;
+  equipmentExtension: NonNullable<
+    EquipmentEventListRecord['equipmentExtension']
+  >;
 };
+
+export type EquipmentEventDetailRecordWithExtension =
+  EquipmentEventDetailRecord & {
+    extensionCode: typeof EventExtensionCode.EQUIPMENT;
+    equipmentExtension: NonNullable<
+      EquipmentEventDetailRecord['equipmentExtension']
+    >;
+  };

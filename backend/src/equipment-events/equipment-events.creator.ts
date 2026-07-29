@@ -1,21 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import {
-  EquipmentEventSource,
-  EquipmentEventStatus,
-  Prisma,
-} from '@prisma/client';
+import { EventExtensionCode, EventSource } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
+import { EquipmentEventExtensionService } from '../equipment-event-extension/equipment-event-extension.service';
+import { EventsCreateService } from '../events/events-create.service';
+import type {
+  CreateEventActor,
+  CreateEventCommand,
+} from '../events/events-create.types';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   getEquipmentEventAuditSnapshot,
   writeEquipmentEventCreatedAudit,
 } from './equipment-events.audit';
-import { EquipmentEventAccessAssertions } from './equipment-event-access.assertions';
 import { EquipmentEventChecklistCreator } from './equipment-event-checklist.creator';
-import { EquipmentEventInputLoader } from './equipment-event-input.loader';
-import {
-  throwEquipmentEventBadRequest,
-  throwEquipmentEventForbidden,
-} from './equipment-events.errors';
 import { type EquipmentEventChecklistAssignment } from './equipment-events.validation';
 
 export type CreateManualEquipmentEventCommand = {
@@ -26,6 +23,7 @@ export type CreateManualEquipmentEventCommand = {
   note: string | null;
   plannedDate: Date;
   responsibleUserIds: string[];
+  title: string;
 };
 
 export type CreatePlannedEquipmentEventCommand = {
@@ -36,35 +34,27 @@ export type CreatePlannedEquipmentEventCommand = {
   originalPlannedDate: Date;
   plannedDate: Date;
   responsibleUserIds: string[];
+  title: string;
 };
 
 export type CreateEquipmentEventCommand =
   CreateManualEquipmentEventCommand | CreatePlannedEquipmentEventCommand;
 
-export type CreateEquipmentEventActor =
-  | {
-      kind: 'user';
-      userId?: string | null;
-    }
-  | {
-      employeeId: number;
-      kind: 'system';
-      userId: string;
-    };
+export type CreateEquipmentEventActor = CreateEventActor;
 
 @Injectable()
 export class EquipmentEventsCreator {
   constructor(
-    private readonly accessAssertions: EquipmentEventAccessAssertions,
     private readonly checklistCreator: EquipmentEventChecklistCreator,
-    private readonly inputLoader: EquipmentEventInputLoader,
+    private readonly equipmentExtensionService: EquipmentEventExtensionService,
+    private readonly eventsCreateService: EventsCreateService,
     private readonly prisma: PrismaService,
   ) {}
 
   create(
     command: CreateEquipmentEventCommand,
     actor: CreateEquipmentEventActor,
-  ) {
+  ): Promise<number> {
     return this.prisma.$transaction((tx) =>
       this.createInTransaction(tx, command, actor),
     );
@@ -74,133 +64,78 @@ export class EquipmentEventsCreator {
     tx: Prisma.TransactionClient,
     command: CreateEquipmentEventCommand,
     actor: CreateEquipmentEventActor,
-  ) {
-    const creationActor = await this.resolveCreationActor(tx, actor);
-    const responsibleUserIds = [...new Set(command.responsibleUserIds)];
+  ): Promise<number> {
     const maintenanceTypeId =
       command.kind === 'manual'
         ? command.maintenanceTypeId
         : command.eventTypeId;
 
-    const { equipment, maintenanceSetting } =
-      await this.inputLoader.loadValidEventCreationInput(tx, {
+    const preparedExtension =
+      await this.equipmentExtensionService.prepareCreate(tx, {
         equipmentVisibleId: command.equipmentVisibleId,
         maintenanceTypeId,
-        responsibleUserIds,
       });
 
-    const event = await tx.equipmentEvent.create({
-      data: this.toCreateData(command, {
-        createdByEmployeeId: creationActor.employeeId,
-        equipmentId: equipment.id,
-        executionType: maintenanceSetting.executionType,
-        maintenanceSettingId: maintenanceSetting.id,
-      }),
-    });
+    const eventId = await this.eventsCreateService.createInTransaction(
+      tx,
+      this.toCreateEventCommand(command),
+      actor,
+      {
+        createChecklists: async ({
+          assignments,
+          createdBy,
+          eventId,
+          tx: callbackTx,
+        }) => {
+          await this.checklistCreator.createEventChecklists(callbackTx, {
+            assignments,
+            createdBy,
+            eventId,
+          });
+        },
+        createExtension: ({ eventId, tx: callbackTx }) =>
+          this.equipmentExtensionService.create(
+            callbackTx,
+            eventId,
+            preparedExtension,
+          ),
+      },
+    );
 
-    await tx.equipmentEventResponsible.createMany({
-      data: responsibleUserIds.map((responsibleUserId) => ({
-        equipmentEventId: event.id,
-        userId: responsibleUserId,
-      })),
-    });
-
-    await this.checklistCreator.createEventChecklists(tx, {
-      assignments: command.checklistAssignments,
-      createdBy: creationActor.userId,
-      eventId: event.id,
-    });
-
-    const auditSnapshot = await getEquipmentEventAuditSnapshot(tx, event.id);
+    const auditSnapshot = await getEquipmentEventAuditSnapshot(tx, eventId);
     await writeEquipmentEventCreatedAudit(tx, {
       event: auditSnapshot,
-      userId: creationActor.auditUserId,
+      userId: actor.kind === 'user' ? actor.userId : null,
     });
 
-    return event.id;
+    return eventId;
   }
 
-  private toCreateData(
+  private toCreateEventCommand(
     command: CreateEquipmentEventCommand,
-    common: {
-      createdByEmployeeId: number;
-      equipmentId: number;
-      executionType: Prisma.EquipmentEventUncheckedCreateInput['executionType'];
-      maintenanceSettingId: number;
-    },
-  ): Prisma.EquipmentEventUncheckedCreateInput {
+  ): CreateEventCommand {
     if (command.kind === 'manual') {
       return {
-        ...common,
-        eventTypeId: command.maintenanceTypeId,
-        factDate: null,
+        checklistAssignments: command.checklistAssignments,
+        extensionCode: EventExtensionCode.EQUIPMENT,
         note: command.note,
         originalPlannedDate: command.plannedDate,
         plannedDate: command.plannedDate,
-        source: EquipmentEventSource.MANUAL,
-        status: EquipmentEventStatus.CREATED,
+        responsibleUserIds: command.responsibleUserIds,
+        source: EventSource.MANUAL,
+        title: command.title,
       };
     }
 
     return {
-      ...common,
-      eventTypeId: command.eventTypeId,
-      factDate: null,
+      checklistAssignments: command.checklistAssignments,
+      extensionCode: EventExtensionCode.EQUIPMENT,
+      note: null,
       originalPlannedDate: command.originalPlannedDate,
       plannedDate: command.plannedDate,
-      source: EquipmentEventSource.PLANNED,
-      status: EquipmentEventStatus.CREATED,
+      responsibleUserIds: command.responsibleUserIds,
+      source: EventSource.PLANNED,
+      title: command.title,
     };
-  }
-
-  private async resolveCreationActor(
-    tx: Prisma.TransactionClient,
-    actor: CreateEquipmentEventActor,
-  ) {
-    if (actor.kind === 'system') {
-      await this.assertSystemActorIsValid(tx, actor);
-
-      return {
-        auditUserId: null,
-        employeeId: actor.employeeId,
-        userId: actor.userId,
-      };
-    }
-
-    if (!actor.userId) {
-      throwEquipmentEventForbidden(
-        'SESSION_REQUIRED',
-        'Сессия пользователя не найдена.',
-      );
-    }
-
-    const userId = actor.userId;
-    const employeeId = await this.accessAssertions.getCurrentEmployeeId(
-      tx,
-      userId,
-    );
-
-    return {
-      auditUserId: userId,
-      employeeId,
-      userId,
-    };
-  }
-
-  private async assertSystemActorIsValid(
-    tx: Prisma.TransactionClient,
-    actor: Extract<CreateEquipmentEventActor, { kind: 'system' }>,
-  ) {
-    const employeeId = await this.accessAssertions.getCurrentEmployeeId(
-      tx,
-      actor.userId,
-    );
-
-    if (employeeId !== actor.employeeId) {
-      throwEquipmentEventBadRequest(
-        'SYSTEM_ACTOR_EMPLOYEE_MISMATCH',
-        'Технический пользователь не связан с указанным сотрудником.',
-      );
-    }
   }
 }

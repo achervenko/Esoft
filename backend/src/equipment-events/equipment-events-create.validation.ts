@@ -4,6 +4,7 @@ import {
   parsePositiveInteger,
   parseRequiredDate,
   parseRequiredFactDate,
+  parseRequiredNonEmptyString,
   parseResponsibleUserIds,
 } from './equipment-events-validation.utils';
 import {
@@ -42,6 +43,11 @@ export function parseCreateManualEventDto(
       'Укажите плановую дату события.',
     ),
     responsibleUserIds,
+    title: parseRequiredNonEmptyString(
+      body.title,
+      'TITLE_REQUIRED',
+      'Укажите название события.',
+    ),
   };
 }
 

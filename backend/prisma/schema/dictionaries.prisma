@@ -1,7 +1,7 @@
 model Manufacturer {
-  id        Int              @id @default(autoincrement())
-  name      String           @unique @db.VarChar(128)
-  models    EquipmentModel[]
+  id     Int              @id @default(autoincrement())
+  name   String           @unique @db.VarChar(128)
+  models EquipmentModel[]
 
   @@map("manufacturers")
 }
@@ -23,7 +23,7 @@ model EquipmentEventType {
   name                String                        @unique(map: "uq_equipment_event_types_name") @db.VarChar(64)
   code                String                        @unique(map: "uq_equipment_event_types_code") @db.VarChar(32)
   isActive            Boolean                       @default(true) @map("is_active")
-  events              EquipmentEvent[]
+  eventExtensions     EquipmentEventExtension[]
   maintenanceSettings EquipmentMaintenanceSetting[]
 
   @@map("equipment_event_types")
@@ -49,10 +49,10 @@ model EquipmentMaintenanceSetting {
   createdAt                  DateTime                          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                  DateTime                          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  equipmentModel           EquipmentModel     @relation(fields: [equipmentModelId], references: [id], onDelete: Restrict)
-  maintenanceType          EquipmentEventType @relation(fields: [maintenanceTypeId], references: [id], onDelete: Restrict)
-  defaultChecklistTemplate ChecklistTemplate? @relation("ChecklistTemplateDefaultForMaintenanceSettings", fields: [defaultChecklistTemplateId], references: [id], onDelete: Restrict, map: "fk_equipment_maintenance_settings_default_template")
-  events                   EquipmentEvent[]
+  equipmentModel           EquipmentModel            @relation(fields: [equipmentModelId], references: [id], onDelete: Restrict)
+  maintenanceType          EquipmentEventType        @relation(fields: [maintenanceTypeId], references: [id], onDelete: Restrict)
+  defaultChecklistTemplate ChecklistTemplate?        @relation("ChecklistTemplateDefaultForMaintenanceSettings", fields: [defaultChecklistTemplateId], references: [id], onDelete: Restrict, map: "fk_equipment_maintenance_settings_default_template")
+  eventExtensions          EquipmentEventExtension[]
 
   @@unique([equipmentModelId, maintenanceTypeId], map: "uq_equipment_maintenance_settings_model_type")
   @@index([maintenanceTypeId], map: "idx_equipment_maintenance_settings_type_id")

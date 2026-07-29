@@ -2,19 +2,19 @@ import {
   ChecklistAnswerType,
   ChecklistResult,
   ChecklistStatus,
-  EquipmentEventStatus,
+  EventStatus,
   Prisma,
 } from '@prisma/client';
 
 export type LockedChecklistEvent = {
   eventId: number;
-  eventStatus: EquipmentEventStatus;
+  eventStatus: EventStatus;
   factDate: Date | null;
 };
 
 export type LockedChecklist = {
   assignedUserId: string;
-  equipmentEventId: number;
+  eventId: number;
   id: number;
   result: ChecklistResult | null;
   status: ChecklistStatus;
@@ -33,15 +33,15 @@ export type ChecklistListRow = {
   assignedUserId: string;
   assignedUserPosition: string;
   checklistTemplateId: number;
-  equipmentModelName: string;
-  equipmentName: string;
-  equipmentVisibleId: number;
+  equipmentModelName: string | null;
+  equipmentName: string | null;
+  equipmentVisibleId: number | null;
   eventId: number;
   eventPlannedDate: Date | null;
-  eventStatus: EquipmentEventStatus;
+  eventStatus: EventStatus;
   id: number;
-  maintenanceTypeId: number;
-  maintenanceTypeName: string;
+  maintenanceTypeId: number | null;
+  maintenanceTypeName: string | null;
   requiredAnswered: bigint;
   requiredTotal: bigint;
   result: ChecklistResult | null;

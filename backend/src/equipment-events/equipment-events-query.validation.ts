@@ -1,4 +1,4 @@
-import { EquipmentEventStatus } from '@prisma/client';
+import { EventStatus } from '@prisma/client';
 import { throwEquipmentEventBadRequest } from './equipment-events.errors';
 import {
   parseIntegerValue,
@@ -95,7 +95,7 @@ export function parseOptionalStatus(value: unknown) {
 
   if (
     typeof value !== 'string' ||
-    !(Object.values(EquipmentEventStatus) as string[]).includes(value)
+    !(Object.values(EventStatus) as string[]).includes(value)
   ) {
     throwEquipmentEventBadRequest(
       'STATUS_INVALID',
@@ -103,5 +103,5 @@ export function parseOptionalStatus(value: unknown) {
     );
   }
 
-  return value as EquipmentEventStatus;
+  return value as EventStatus;
 }

@@ -8,6 +8,7 @@ import {
   type EquipmentEventsQuery,
   type UpdateCreatedEquipmentEventData,
 } from './equipment-events.validation';
+import { requireUserId } from './equipment-events-update.utils';
 
 @Injectable()
 export class EquipmentEventsService {
@@ -18,22 +19,27 @@ export class EquipmentEventsService {
     private readonly updateService: EquipmentEventsUpdateService,
   ) {}
 
-  findAll(query: EquipmentEventsQuery) {
+  findAll(
+    query: EquipmentEventsQuery,
+  ): ReturnType<EquipmentEventsQueryService['findAll']> {
     return this.queryService.findAll(query);
   }
 
-  findOne(id: number) {
+  findOne(id: number): ReturnType<EquipmentEventsQueryService['findOne']> {
     return this.queryService.findOne(id);
   }
 
-  findResponsibleUsers() {
+  findResponsibleUsers(): ReturnType<
+    EquipmentEventsQueryService['findResponsibleUsers']
+  > {
     return this.queryService.findResponsibleUsers();
   }
 
   async createManual(
     data: CreateManualEquipmentEventData,
     userId?: string | null,
-  ) {
+  ): Promise<Awaited<ReturnType<EquipmentEventsQueryService['findOne']>>> {
+    const actorUserId = requireUserId(userId);
     const createdEventId = await this.creator.create(
       {
         kind: 'manual',
@@ -43,8 +49,9 @@ export class EquipmentEventsService {
         note: data.note,
         plannedDate: data.plannedDate,
         responsibleUserIds: data.responsibleUserIds,
+        title: data.title,
       },
-      { kind: 'user', userId },
+      { kind: 'user', userId: actorUserId },
     );
 
     return this.queryService.findOne(createdEventId);
@@ -54,11 +61,14 @@ export class EquipmentEventsService {
     id: number,
     data: UpdateCreatedEquipmentEventData,
     userId?: string | null,
-  ) {
+  ): ReturnType<EquipmentEventsUpdateService['updateCreated']> {
     return this.updateService.updateCreated(id, data, userId);
   }
 
-  cancel(id: number, userId?: string | null) {
+  cancel(
+    id: number,
+    userId?: string | null,
+  ): ReturnType<EquipmentEventsLifecycleService['cancel']> {
     return this.lifecycleService.cancel(id, userId);
   }
 }

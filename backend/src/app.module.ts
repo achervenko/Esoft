@@ -6,6 +6,7 @@ import { ChecklistsModule } from './checklists/checklists.module';
 import { DictionariesAdminModule } from './dictionaries-admin/dictionaries-admin.module';
 import { EquipmentEventsModule } from './equipment-events/equipment-events.module';
 import { EquipmentModule } from './equipment/equipment.module';
+import { EventsModule } from './events/events.module';
 import { HealthModule } from './health/health.module';
 import { SearchModule } from './search/search.module';
 import { SetupModule } from './setup/setup.module';
@@ -26,6 +27,7 @@ loadRootConfig();
     DictionariesAdminModule,
     EquipmentEventsModule,
     EquipmentModule,
+    EventsModule,
     HealthModule,
     SearchModule,
     SetupModule,
