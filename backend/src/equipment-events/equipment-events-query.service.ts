@@ -5,7 +5,6 @@ import type {
   EventDetailRecord,
   EventListRecord,
 } from '../events/events.relations';
-import { PrismaService } from '../prisma/prisma.service';
 import { throwEquipmentEventNotFound } from './equipment-events.errors';
 import {
   toEquipmentEventDetailResponse,
@@ -19,10 +18,7 @@ import { type EquipmentEventsQuery } from './equipment-events.validation';
 
 @Injectable()
 export class EquipmentEventsQueryService {
-  constructor(
-    private readonly eventsQueryService: EventsQueryService,
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly eventsQueryService: EventsQueryService) {}
 
   async findAll(query: EquipmentEventsQuery) {
     const equipmentExtensionWhere: Prisma.EquipmentEventExtensionWhereInput = {
@@ -106,64 +102,7 @@ export class EquipmentEventsQueryService {
   }
 
   async findResponsibleUsers() {
-    const users = await this.prisma.user.findMany({
-      orderBy: [
-        { employeeUser: { employee: { lastName: 'asc' } } },
-        { employeeUser: { employee: { firstName: 'asc' } } },
-        { name: 'asc' },
-      ],
-      select: {
-        employeeUser: {
-          select: {
-            employee: {
-              select: {
-                firstName: true,
-                lastName: true,
-                middleName: true,
-                position: true,
-              },
-            },
-          },
-        },
-        id: true,
-        role: true,
-      },
-      where: {
-        employeeUser: {
-          is: {
-            employee: {
-              isActive: true,
-            },
-          },
-        },
-        OR: [{ banned: false }, { banned: null }],
-      },
-    });
-
-    return {
-      users: users.flatMap((user) => {
-        const employee = user.employeeUser?.employee;
-
-        if (!employee) {
-          return [];
-        }
-
-        return [
-          {
-            fullName: [
-              employee.lastName,
-              employee.firstName,
-              employee.middleName,
-            ]
-              .filter(Boolean)
-              .join(' '),
-            position: employee.position,
-            role: user.role,
-            userId: user.id,
-          },
-        ];
-      }),
-    };
+    return this.eventsQueryService.findResponsibleUsers();
   }
 }
 

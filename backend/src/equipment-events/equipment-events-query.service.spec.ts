@@ -13,19 +13,14 @@ describe('EquipmentEventsQueryService', () => {
     const eventsQueryService = {
       findDetailRecord: jest.fn(),
       findListRecords: jest.fn(),
-    };
-    const prisma = {
-      user: {
-        findMany: jest.fn(),
-      },
+      findResponsibleUsers: jest.fn().mockResolvedValue({
+        users: [],
+      }),
     };
 
     return {
       eventsQueryService,
-      service: new EquipmentEventsQueryService(
-        eventsQueryService as never,
-        prisma as never,
-      ),
+      service: new EquipmentEventsQueryService(eventsQueryService as never),
     };
   }
 
@@ -184,5 +179,15 @@ describe('EquipmentEventsQueryService', () => {
         code: 'EVENT_NOT_FOUND',
       },
     });
+  });
+
+  it('delegates responsible users to generic query service', async () => {
+    const { eventsQueryService, service } = createService();
+
+    await expect(service.findResponsibleUsers()).resolves.toEqual({
+      users: [],
+    });
+
+    expect(eventsQueryService.findResponsibleUsers).toHaveBeenCalledTimes(1);
   });
 });

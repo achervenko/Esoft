@@ -15,6 +15,7 @@ export type CreateEventDto = {
   checklistAssignments?: unknown;
   equipmentId?: unknown;
   equipmentVisibleId?: unknown;
+  extension?: unknown;
   extensionCode?: unknown;
   maintenanceTypeId?: unknown;
   note?: unknown;
@@ -26,8 +27,10 @@ export type CreateEventDto = {
 export type EventsListQueryDto = {
   dateFrom?: unknown;
   dateTo?: unknown;
+  equipmentVisibleId?: unknown;
   extensionCode?: unknown;
   limit?: unknown;
+  maintenanceTypeId?: unknown;
   offset?: unknown;
   responsibleUserId?: unknown;
   source?: unknown;
@@ -38,6 +41,7 @@ export type UpdateCreatedEventDto = {
   checklistAssignments?: unknown;
   equipmentId?: unknown;
   equipmentVisibleId?: unknown;
+  extension?: unknown;
   extensionCode?: unknown;
   maintenanceTypeId?: unknown;
   note?: unknown;

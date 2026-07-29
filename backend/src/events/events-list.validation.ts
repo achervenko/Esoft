@@ -34,6 +34,16 @@ export function parseEventsListQueryDto(
     'Некорректный источник события.',
   );
   const extensionCode = parseOptionalExtensionCode(body.extensionCode);
+  const equipmentVisibleId = parseOptionalQueryPositiveInteger(
+    body.equipmentVisibleId,
+    'EQUIPMENT_INVALID',
+    'Некорректный ID оборудования.',
+  );
+  const maintenanceTypeId = parseOptionalQueryPositiveInteger(
+    body.maintenanceTypeId,
+    'MAINTENANCE_TYPE_INVALID',
+    'Некорректный вид обслуживания.',
+  );
   const dateFrom = parseOptionalQueryDate(
     body.dateFrom,
     'DATE_FROM_INVALID',
@@ -70,10 +80,31 @@ export function parseEventsListQueryDto(
     where.extensionCode = extensionCode;
   }
 
+  if (equipmentVisibleId !== undefined || maintenanceTypeId !== undefined) {
+    if (extensionCode !== EventExtensionCode.EQUIPMENT) {
+      throwEventBadRequest(
+        'EVENT_EXTENSION_CODE_REQUIRED',
+        'Фильтры оборудования доступны только для событий оборудования.',
+      );
+    }
+
+    where.extensionCode = EventExtensionCode.EQUIPMENT;
+    where.equipmentExtension = {
+      is: {
+        ...(equipmentVisibleId !== undefined
+          ? { equipment: { visibleId: equipmentVisibleId } }
+          : {}),
+        ...(maintenanceTypeId !== undefined
+          ? { eventTypeId: maintenanceTypeId }
+          : {}),
+      },
+    };
+  }
+
   if (dateFrom !== undefined || dateTo !== undefined) {
     where.plannedDate = {
       ...(dateFrom !== undefined ? { gte: dateFrom } : {}),
-      ...(dateTo !== undefined ? { lte: dateTo } : {}),
+      ...(dateTo !== undefined ? { lt: addUtcDays(dateTo, 1) } : {}),
     };
   }
 
@@ -146,6 +177,14 @@ function parseOptionalQueryDate(
   return parseRequiredDate(value, code, message);
 }
 
+function addUtcDays(value: Date, days: number): Date {
+  const result = new Date(value);
+
+  result.setUTCDate(result.getUTCDate() + days);
+
+  return result;
+}
+
 function parseOptionalQueryString(
   value: unknown,
   code: string,
@@ -192,6 +231,24 @@ function parseOptionalOffset(value: unknown): number {
       'OFFSET_INVALID',
       'Некорректное смещение списка событий.',
     );
+  }
+
+  return parsedValue;
+}
+
+function parseOptionalQueryPositiveInteger(
+  value: unknown,
+  code: string,
+  message: string,
+): number | undefined {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  const parsedValue = parseQueryInteger(value, code, message);
+
+  if (parsedValue <= 0) {
+    throwEventBadRequest(code, message);
   }
 
   return parsedValue;

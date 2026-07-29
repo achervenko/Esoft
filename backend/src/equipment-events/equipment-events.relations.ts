@@ -1,33 +1,9 @@
-import { EventExtensionCode, Prisma } from '@prisma/client';
+import { EventExtensionCode } from '@prisma/client';
 import type {
   EventChecklistRecord,
   EventDetailRecord,
   EventListRecord,
 } from '../events/events.relations';
-
-export const equipmentEventAuditSelect = {
-  equipmentExtension: {
-    select: {
-      equipment: {
-        select: {
-          name: true,
-          visibleId: true,
-        },
-      },
-      eventType: {
-        select: {
-          code: true,
-          id: true,
-          name: true,
-        },
-      },
-      executionType: true,
-      maintenanceSettingId: true,
-    },
-  },
-  extensionCode: true,
-  id: true,
-} satisfies Prisma.EventSelect;
 
 export type EquipmentEventListRecord = EventListRecord;
 

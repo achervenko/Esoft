@@ -29,7 +29,7 @@ describe('events list validation', () => {
         extensionCode: EventExtensionCode.EQUIPMENT,
         plannedDate: {
           gte: new Date('2026-08-01T00:00:00.000Z'),
-          lte: new Date('2026-08-31T00:00:00.000Z'),
+          lt: new Date('2026-09-01T00:00:00.000Z'),
         },
         responsibles: {
           some: {
@@ -40,6 +40,105 @@ describe('events list validation', () => {
         status: EventStatus.CREATED,
       },
     });
+  });
+
+  it('treats dateTo as inclusive day boundary', () => {
+    expect(
+      parseEventsListQueryDto({
+        dateTo: '2026-08-01',
+      }),
+    ).toEqual({
+      limit: 50,
+      offset: 0,
+      where: {
+        plannedDate: {
+          lt: new Date('2026-08-02T00:00:00.000Z'),
+        },
+      },
+    });
+  });
+
+  it('parses equipment list filters through extension relation', () => {
+    expect(
+      parseEventsListQueryDto({
+        equipmentVisibleId: '1001',
+        extensionCode: EventExtensionCode.EQUIPMENT,
+        maintenanceTypeId: '10',
+      }),
+    ).toEqual({
+      limit: 50,
+      offset: 0,
+      where: {
+        equipmentExtension: {
+          is: {
+            equipment: {
+              visibleId: 1001,
+            },
+            eventTypeId: 10,
+          },
+        },
+        extensionCode: EventExtensionCode.EQUIPMENT,
+      },
+    });
+  });
+
+  it.each([
+    {
+      label: 'equipment',
+      query: {
+        equipmentVisibleId: '1001',
+        extensionCode: EventExtensionCode.EQUIPMENT,
+      },
+      where: {
+        equipmentExtension: {
+          is: {
+            equipment: {
+              visibleId: 1001,
+            },
+          },
+        },
+        extensionCode: EventExtensionCode.EQUIPMENT,
+      },
+    },
+    {
+      label: 'maintenance type',
+      query: {
+        extensionCode: EventExtensionCode.EQUIPMENT,
+        maintenanceTypeId: '10',
+      },
+      where: {
+        equipmentExtension: {
+          is: {
+            eventTypeId: 10,
+          },
+        },
+        extensionCode: EventExtensionCode.EQUIPMENT,
+      },
+    },
+  ])('parses $label list filter separately', ({ query, where }) => {
+    expect(parseEventsListQueryDto(query)).toEqual({
+      limit: 50,
+      offset: 0,
+      where,
+    });
+  });
+
+  it.each([
+    {
+      label: 'missing extension code',
+      query: { equipmentVisibleId: '1001' },
+    },
+    {
+      label: 'standalone extension code',
+      query: {
+        equipmentVisibleId: '1001',
+        extensionCode: 'NONE',
+      },
+    },
+  ])('rejects equipment filters with $label', ({ query }) => {
+    expect(() => parseEventsListQueryDto(query)).toThrow(
+      'Фильтры оборудования доступны только для событий оборудования.',
+    );
   });
 
   it.each([
@@ -73,6 +172,20 @@ describe('events list validation', () => {
     {
       expectedMessage: 'Некорректный тип расширения события.',
       query: { extensionCode: 'UNKNOWN' },
+    },
+    {
+      expectedMessage: 'Некорректный ID оборудования.',
+      query: {
+        equipmentVisibleId: '0',
+        extensionCode: EventExtensionCode.EQUIPMENT,
+      },
+    },
+    {
+      expectedMessage: 'Некорректный вид обслуживания.',
+      query: {
+        extensionCode: EventExtensionCode.EQUIPMENT,
+        maintenanceTypeId: '1.5',
+      },
     },
     {
       expectedMessage: 'Некорректная дата начала периода.',
@@ -116,12 +229,20 @@ describe('events list validation', () => {
       query: { limit: '01' },
     },
     {
+      expectedMessage: 'Некорректный лимит списка событий.',
+      query: { limit: String(Number.MAX_SAFE_INTEGER + 1) },
+    },
+    {
       expectedMessage: 'Некорректное смещение списка событий.',
       query: { offset: '1.5' },
     },
     {
       expectedMessage: 'Некорректное смещение списка событий.',
       query: { offset: '01' },
+    },
+    {
+      expectedMessage: 'Некорректное смещение списка событий.',
+      query: { offset: String(Number.MAX_SAFE_INTEGER + 1) },
     },
   ])('rejects invalid pagination query %#', ({ expectedMessage, query }) => {
     expect(() => parseEventsListQueryDto(query)).toThrow(expectedMessage);

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ChecklistsModule } from '../checklists/checklists.module';
+import { EquipmentEventExtensionModule } from '../equipment-event-extension/equipment-event-extension.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { EventChecklistCreator } from './event-checklists/event-checklist.creator';
 import { EventsAccessAssertions } from './events-access.assertions';
@@ -13,7 +14,7 @@ import { EventsUpdateInputLoader } from './events-update-input.loader';
 import { EventsUpdateService } from './events-update.service';
 
 @Module({
-  imports: [PrismaModule, ChecklistsModule],
+  imports: [PrismaModule, ChecklistsModule, EquipmentEventExtensionModule],
   controllers: [EventsController],
   providers: [
     EventChecklistCreator,

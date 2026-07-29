@@ -21,6 +21,9 @@ describe('EventsController', () => {
       create: jest.fn().mockResolvedValue({ id: 1 }),
       findAll: jest.fn().mockResolvedValue([{ id: 1 }]),
       findOne: jest.fn().mockResolvedValue({ id: 1 }),
+      findResponsibleUsers: jest.fn().mockResolvedValue({
+        users: [],
+      }),
       start: jest.fn().mockResolvedValue({ id: 1 }),
       updateCreated: jest.fn().mockResolvedValue({ id: 1 }),
     };
@@ -106,14 +109,52 @@ describe('EventsController', () => {
     expect(eventsService.create).not.toHaveBeenCalled();
   });
 
-  it('rejects create extension fields before calling service', () => {
+  it('creates equipment event through public generic endpoint', async () => {
+    const { controller, eventsService, session } = createController();
+
+    await expect(
+      controller.create(
+        {
+          extension: {
+            equipmentVisibleId: 1001,
+            maintenanceTypeId: 10,
+          },
+          extensionCode: 'EQUIPMENT',
+          plannedDate: '2026-08-01',
+          responsibleUserIds: ['user-1'],
+          title: ' Equipment event ',
+        },
+        session as never,
+      ),
+    ).resolves.toEqual({ id: 1 });
+
+    expect(eventsService.create).toHaveBeenCalledWith(
+      {
+        checklistAssignments: [],
+        extension: {
+          equipmentVisibleId: 1001,
+          maintenanceTypeId: 10,
+        },
+        extensionCode: 'EQUIPMENT',
+        note: null,
+        originalPlannedDate: new Date('2026-08-01T00:00:00.000Z'),
+        plannedDate: new Date('2026-08-01T00:00:00.000Z'),
+        responsibleUserIds: ['user-1'],
+        source: 'MANUAL',
+        title: 'Equipment event',
+      },
+      'user-1',
+    );
+  });
+
+  it('rejects legacy create extension fields before calling service', () => {
     const { controller, eventsService, session } = createController();
 
     expectThrownResponse(
       () =>
         controller.create(
           {
-            extensionCode: 'EQUIPMENT',
+            equipmentVisibleId: 1001,
             plannedDate: '2026-08-01',
             responsibleUserIds: ['user-1'],
             title: 'Standalone event',
@@ -162,6 +203,37 @@ describe('EventsController', () => {
         },
         source: 'MANUAL',
         status: 'CREATED',
+      },
+    });
+  });
+
+  it('loads equipment-filtered event list through public endpoint', async () => {
+    const { controller, eventsService, session } = createController();
+
+    await expect(
+      controller.findAll(
+        {
+          equipmentVisibleId: '1001',
+          extensionCode: 'EQUIPMENT',
+          maintenanceTypeId: '10',
+        },
+        session as never,
+      ),
+    ).resolves.toEqual([{ id: 1 }]);
+
+    expect(eventsService.findAll).toHaveBeenCalledWith({
+      limit: 50,
+      offset: 0,
+      where: {
+        equipmentExtension: {
+          is: {
+            equipment: {
+              visibleId: 1001,
+            },
+            eventTypeId: 10,
+          },
+        },
+        extensionCode: 'EQUIPMENT',
       },
     });
   });
@@ -227,6 +299,33 @@ describe('EventsController', () => {
     expect(eventsService.findOne).toHaveBeenCalledWith(1);
   });
 
+  it('loads responsible users through public generic endpoint', async () => {
+    const { controller, eventsService, session } = createController();
+
+    await expect(
+      controller.findResponsibleUsers(session as never),
+    ).resolves.toEqual({
+      users: [],
+    });
+
+    expect(eventsService.findResponsibleUsers).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects responsible users for user without event management permission', () => {
+    const { controller, eventsService, session } = createController();
+
+    session.user.role = 'engineer';
+
+    expectThrownResponse(
+      () => controller.findResponsibleUsers(session as never),
+      {
+        code: 'FORBIDDEN',
+        message: 'Недостаточно прав для управления событиями.',
+      },
+    );
+    expect(eventsService.findResponsibleUsers).not.toHaveBeenCalled();
+  });
+
   it('rejects generic event detail for user without view permission', () => {
     const { controller, eventsService, session } = createController();
 
@@ -259,6 +358,34 @@ describe('EventsController', () => {
       {
         plannedDate: new Date('2026-08-01T00:00:00.000Z'),
         title: 'Updated event',
+        version: 2,
+      },
+      'user-1',
+    );
+  });
+
+  it('updates equipment extension through generic endpoint', async () => {
+    const { controller, eventsService, session } = createController();
+
+    await expect(
+      controller.updateCreated(
+        1,
+        {
+          extension: {
+            equipmentVisibleId: 1002,
+          },
+          version: 2,
+        },
+        session as never,
+      ),
+    ).resolves.toEqual({ id: 1 });
+
+    expect(eventsService.updateCreated).toHaveBeenCalledWith(
+      1,
+      {
+        extension: {
+          equipmentVisibleId: 1002,
+        },
         version: 2,
       },
       'user-1',

@@ -15,12 +15,12 @@ import {
   assertCanViewEvents,
 } from '../auth/role-permissions';
 import { EventsService } from './events.service';
+import { parseCreateEventDto } from './events-create.validation';
+import { parseUpdateCreatedEventDto } from './events-update.validation';
 import {
   parseCancelEventDto,
   parseCompleteEventDto,
-  parseCreateEventDto,
   parseStartEventDto,
-  parseUpdateCreatedEventDto,
 } from './events.validation';
 import { parseEventsListQueryDto } from './events-list.validation';
 import type {
@@ -54,6 +54,15 @@ export class EventsController {
     assertCanViewEvents(session.user.role);
 
     return this.eventsService.findAll(parseEventsListQueryDto(query));
+  }
+
+  @Get('events/responsible-users')
+  findResponsibleUsers(
+    @Session() session: UserSession<Auth>,
+  ): ReturnType<EventsService['findResponsibleUsers']> {
+    assertCanManageEvents(session.user.role);
+
+    return this.eventsService.findResponsibleUsers();
   }
 
   @Get('events/:id')

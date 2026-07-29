@@ -90,6 +90,10 @@ export class EventsCreateService {
       event: auditSnapshot,
       userId: creationActor.auditUserId,
     });
+    await options.afterCreate?.({
+      eventId: event.id,
+      tx,
+    });
 
     return event.id;
   }

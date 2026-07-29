@@ -28,6 +28,10 @@ export type UpdateCreatedEventResult = {
 };
 
 export type EventUpdateExtensionOptions = {
+  afterUpdate?: (params: {
+    eventId: number;
+    tx: Prisma.TransactionClient;
+  }) => Promise<void>;
   hasExtensionChanges?: boolean;
   requiresChecklistAssignments?: boolean;
   updateExtension?: (params: {

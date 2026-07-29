@@ -39,9 +39,17 @@ export class EventsUpdateService {
     id: number,
     data: UpdateCreatedEventData,
     userId?: string | null,
+    resolveExtensionOptions?: EventUpdateExtensionOptionsResolver,
   ): Promise<UpdateCreatedEventResult> {
     return this.prisma.$transaction((tx) =>
-      this.updateCreatedInTransaction(tx, checklistCreator, id, data, userId),
+      this.updateCreatedInTransaction(
+        tx,
+        checklistCreator,
+        id,
+        data,
+        userId,
+        resolveExtensionOptions,
+      ),
     );
   }
 
@@ -189,6 +197,10 @@ export class EventsUpdateService {
       newEvent: auditSnapshot,
       oldEvent: oldAuditSnapshot,
       userId,
+    });
+    await extensionOptions.afterUpdate?.({
+      eventId: id,
+      tx,
     });
 
     return {

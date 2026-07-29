@@ -30,6 +30,10 @@ export type ResolvedCreateEventActor = {
 };
 
 export type EventCreateOptions = {
+  afterCreate?: (params: {
+    eventId: number;
+    tx: Prisma.TransactionClient;
+  }) => Promise<void>;
   createChecklists?: (params: {
     assignments: EventChecklistAssignment[];
     createdBy: string;

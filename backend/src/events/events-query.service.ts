@@ -42,6 +42,67 @@ export class EventsQueryService {
     );
   }
 
+  async findResponsibleUsers() {
+    const users = await this.prisma.user.findMany({
+      orderBy: [
+        { employeeUser: { employee: { lastName: 'asc' } } },
+        { employeeUser: { employee: { firstName: 'asc' } } },
+        { name: 'asc' },
+      ],
+      select: {
+        employeeUser: {
+          select: {
+            employee: {
+              select: {
+                firstName: true,
+                lastName: true,
+                middleName: true,
+                position: true,
+              },
+            },
+          },
+        },
+        id: true,
+        role: true,
+      },
+      where: {
+        employeeUser: {
+          is: {
+            employee: {
+              isActive: true,
+            },
+          },
+        },
+        OR: [{ banned: false }, { banned: null }],
+      },
+    });
+
+    return {
+      users: users.flatMap((user) => {
+        const employee = user.employeeUser?.employee;
+
+        if (!employee) {
+          return [];
+        }
+
+        return [
+          {
+            fullName: [
+              employee.lastName,
+              employee.firstName,
+              employee.middleName,
+            ]
+              .filter(Boolean)
+              .join(' '),
+            position: employee.position,
+            role: user.role,
+            userId: user.id,
+          },
+        ];
+      }),
+    };
+  }
+
   async findListRecords(query: EventsListRecordsQuery = {}) {
     const events = await this.prisma.event.findMany({
       where: query.where,
