@@ -1,45 +1,29 @@
+import type {
+  EquipmentEvent as GenericEquipmentEvent,
+  EquipmentEventDetail as GenericEquipmentEventDetail,
+  EventChecklist,
+  EventChecklistAssignment,
+  EventChecklistStatus,
+  EventCreator,
+  EventResponsible,
+  EventResponsibleUser,
+  EventResponsibleUsersResponse,
+  EventSource,
+  EventStatus,
+} from "../events/events.types";
 import type { MaintenanceExecutionType } from "../maintenance/maintenance.types";
 
-export type EquipmentEventStatus =
-  "CREATED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+export type EquipmentEventStatus = EventStatus;
 
-export type EquipmentEventSource = "MANUAL" | "PLANNED";
+export type EquipmentEventSource = EventSource;
 
-export type EquipmentEventChecklistStatus =
-  "CREATED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED" | "INVALIDATED";
+export type EquipmentEventChecklistStatus = EventChecklistStatus;
 
-export type EquipmentEventResponsible = {
-  fullName: string;
-  id: string;
-  position: string;
-  role: string | null;
-};
+export type EquipmentEventResponsible = EventResponsible;
 
-export type EquipmentEventCreator = {
-  fullName: string;
-  id: number;
-  position: string;
-};
+export type EquipmentEventCreator = EventCreator;
 
-export type EquipmentEventChecklist = {
-  assignedUser: {
-    fullName: string;
-    id: string;
-    position: string;
-  };
-  assignedUserId: string;
-  checklistTemplateId: number;
-  id: number;
-  progress: {
-    answered: number;
-    requiredAnswered: number;
-    requiredTotal: number;
-    total: number;
-  };
-  sortOrder: number;
-  status: EquipmentEventChecklistStatus;
-  templateName: string;
-};
+export type EquipmentEventChecklist = EventChecklist;
 
 export type EquipmentEventItem = {
   checklists: EquipmentEventChecklist[];
@@ -55,7 +39,7 @@ export type EquipmentEventItem = {
   executionType: MaintenanceExecutionType;
   factDate: string | null;
   id: number;
-  maintenanceSettingId: number | null;
+  maintenanceSettingId: number;
   maintenanceType: {
     code: string;
     id: number;
@@ -101,12 +85,10 @@ export type CreateManualEquipmentEventPayload = {
   note?: string | null;
   plannedDate: string;
   responsibleUserIds: string[];
+  title?: string;
 };
 
-export type EquipmentEventChecklistAssignment = {
-  assignedUserId: string;
-  checklistTemplateId: number;
-};
+export type EquipmentEventChecklistAssignment = EventChecklistAssignment;
 
 export type UpdateCreatedEquipmentEventPayload = {
   checklistAssignments?: EquipmentEventChecklistAssignment[];
@@ -118,13 +100,11 @@ export type UpdateCreatedEquipmentEventPayload = {
   version: number;
 };
 
-export type EquipmentEventResponsibleUser = {
-  fullName: string;
-  position: string;
-  role: string | null;
-  userId: string;
-};
+export type EquipmentEventResponsibleUser = EventResponsibleUser;
 
-export type EquipmentEventResponsibleUsersResponse = {
-  users: EquipmentEventResponsibleUser[];
-};
+export type EquipmentEventResponsibleUsersResponse =
+  EventResponsibleUsersResponse;
+
+export type GenericEquipmentEventItem = GenericEquipmentEvent;
+
+export type { GenericEquipmentEventDetail };

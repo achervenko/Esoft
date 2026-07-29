@@ -70,7 +70,8 @@ export function useEquipmentEventsPanel({
     clearActionError,
   });
 
-  const topLevelActionError = !activeForm && !cancelCandidate ? actionError : null;
+  const topLevelActionError =
+    !activeForm && !cancelCandidate ? actionError : null;
   const isWrittenOff = equipmentStatus === "WRITTEN_OFF";
   const canEditEvents =
     canManageEvents &&
@@ -194,7 +195,7 @@ export function useEquipmentEventsPanel({
       return;
     }
 
-    if (await cancelEvent(cancelCandidate.id)) {
+    if (await cancelEvent(cancelCandidate.id, cancelCandidate.version)) {
       clearCancel();
     }
   };

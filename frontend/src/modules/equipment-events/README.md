@@ -37,7 +37,10 @@
 - `canManageEvents` — внешний признак, что пользователю вообще доступны управляющие сценарии модуля;
 - `canEditEvents` — производный флаг для формы события. Он становится `true`, только если:
   - `canManageEvents === true`;
-  - справочные данные формы успешно загружены;
+  - оборудование не находится в статусе `WRITTEN_OFF`;
+  - список событий не загружается;
+  - никакое другое действие с событием не выполняется;
+  - справочные данные формы не загружаются;
   - нет ошибки загрузки form data;
   - в списке доступных ответственных есть хотя бы один пользователь.
 
@@ -214,17 +217,17 @@ Edit отправляет тот же полный набор в локальн�
 
 Используются:
 
-- `GET /api/equipment-events`
-- `GET /api/equipment-events/:id`
-- `POST /api/equipment/:visibleId/events/manual`
-- `PATCH /api/equipment-events/:id`
-- `POST /api/equipment-events/:id/cancel`
-- `GET /api/equipment-events/responsible-users`
+- `GET /api/events?extensionCode=EQUIPMENT&equipmentVisibleId=<id>`
+- `GET /api/events/:id`
+- `POST /api/events`
+- `PATCH /api/events/:id`
+- `POST /api/events/:id/cancel`
+- `GET /api/events/responsible-users`
 
 Во frontend событий больше не используются:
 
-- `POST /api/equipment-events/:id/start`
-- `POST /api/equipment-events/:id/complete`
+- `POST /api/events/:id/start`
+- `POST /api/events/:id/complete`
 
 ## Важные ограничения
 

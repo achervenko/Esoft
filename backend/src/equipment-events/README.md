@@ -1,16 +1,20 @@
-# Equipment Events Module
+# Equipment Maintenance Module
 
 ## Назначение
 
-Модуль управляет событиями обслуживания оборудования и связанными экземплярами чек-листов.
+Модуль содержит справочники и настройки обслуживания оборудования.
+Публичное управление событиями оборудования выполняется через универсальный
+`EventsModule` и расширение `equipment-event-extension`.
 
 Актуальная модель:
 
 - событие создаёт `admin` или `chief_engineer`;
 - при создании события для каждого ответственного создаётся отдельный `Checklist`;
-- событие не запускается и не завершается отдельным пользовательским endpoint;
-- старт первого чек-листа автоматически переводит событие в `IN_PROGRESS`;
-- завершение последнего чек-листа автоматически переводит событие в `COMPLETED`;
+- в базовом пользовательском сценарии событие не запускается и не завершается вручную:
+  старт первого чек-листа автоматически переводит событие в `IN_PROGRESS`,
+  а завершение последнего чек-листа — в `COMPLETED`;
+- универсальный `EventsModule` при этом сохраняет lifecycle endpoints для
+  административных и системных сценариев;
 - отмена события переводит активные чек-листы в `CANCELLED`.
 
 ## Права
@@ -24,30 +28,25 @@
 
 Текущий публичный доступ к событиям устроен так:
 
-- `GET /api/equipment-events` и `GET /api/equipment-events/:id` доступны любому авторизованному пользователю;
-- `GET /api/equipment-events/responsible-users`, `POST /api/equipment/:visibleId/events/manual`, `PATCH /api/equipment-events/:id` и `POST /api/equipment-events/:id/cancel` доступны только ролям управления через `assertCanManageEquipmentEvents`.
+- чтение и управление событиями выполняется через `GET /api/events`, `GET /api/events/:id`, `POST /api/events`, `PATCH /api/events/:id` и lifecycle endpoints `EventsModule`;
+- события оборудования выбираются через `extensionCode=EQUIPMENT`;
+- справочники обслуживания продолжают использовать свои текущие endpoints.
 
-Обычный пользователь не управляет событием напрямую и работает только через назначенный ему чек-лист, но при этом может читать список и карточку событий через текущий публичный API.
+Пользователь с правом просмотра событий может читать список и карточку событий.
+Обычный исполнитель работает с назначенными ему чек-листами через `/api/checklists`.
 
 ## Публичные endpoints событий
 
 ```text
-GET   /api/equipment-events
-GET   /api/equipment-events/:id
-GET   /api/equipment-events/responsible-users
-POST  /api/equipment/:visibleId/events/manual
-PATCH /api/equipment-events/:id
-POST  /api/equipment-events/:id/cancel
+GET   /api/events?extensionCode=EQUIPMENT
+GET   /api/events/:id
+GET   /api/events/responsible-users
+POST  /api/events
+PATCH /api/events/:id
+POST  /api/events/:id/start
+POST  /api/events/:id/complete
+POST  /api/events/:id/cancel
 ```
-
-Маршруты:
-
-```text
-POST /api/equipment-events/:id/start
-POST /api/equipment-events/:id/complete
-```
-
-полностью отсутствуют в публичном API.
 
 ## Публичные endpoints пользовательских чек-листов
 
@@ -137,7 +136,8 @@ CREATED / IN_PROGRESS
 }
 ```
 
-Прогресс рассчитывается по `checklist_details` и не дублируется в `equipment_events`.
+Прогресс рассчитывается по `checklist_details` и не хранится отдельным полем
+в записи события.
 
 ## Формат ответа пользовательского чек-листа
 
@@ -177,10 +177,11 @@ CREATED / IN_PROGRESS
 
 ## Основные backend-компоненты
 
-- `equipment-events.controller.ts` — административный API событий;
-- `equipment-events.creator.ts` — создание события и экземпляров чек-листов;
-- `equipment-events-update.service.ts` — редактирование события в `CREATED`;
-- `equipment-events-lifecycle.service.ts` — отмена события;
+- `events/*` — общий API, lifecycle, create/update/query событий;
+- `equipment-event-extension/*` — equipment-specific подготовка, persistence, presenter и audit;
+- `equipment-maintenance.module.ts` — модуль справочников и настроек обслуживания;
+- `maintenance-settings/*` — настройки обслуживания оборудования;
+- `maintenance-types/*` — виды обслуживания оборудования;
 - `checklist-work.controller.ts` — пользовательский API чек-листов;
 - `checklist-work-lifecycle.service.ts` — автозапуск и автозавершение события через lifecycle чек-листа;
 - `checklist-work-answers.service.ts` — промежуточное сохранение ответов.

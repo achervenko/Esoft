@@ -89,8 +89,8 @@ export function useEquipmentEventActions({
   );
 
   const cancelEvent = useCallback(
-    (eventId: number) =>
-      runAction("cancel", () => cancelEquipmentEvent(eventId)),
+    (eventId: number, version: number) =>
+      runAction("cancel", () => cancelEquipmentEvent(eventId, version)),
     [runAction],
   );
 

@@ -21,15 +21,15 @@ import type {
 import type { EventsUpdateService } from './events-update.service';
 import { EventsService } from './events.service';
 
-const getEquipmentEventAuditSnapshotMock =
+const getEquipmentEventExtensionAuditSnapshotMock =
   getEquipmentEventExtensionAuditSnapshot as jest.MockedFunction<
     typeof getEquipmentEventExtensionAuditSnapshot
   >;
-const writeEquipmentEventCreatedAuditMock =
+const writeEquipmentEventExtensionCreatedAuditMock =
   writeEquipmentEventExtensionCreatedAudit as jest.MockedFunction<
     typeof writeEquipmentEventExtensionCreatedAudit
   >;
-const writeEquipmentEventUpdatedAuditMock =
+const writeEquipmentEventExtensionUpdatedAuditMock =
   writeEquipmentEventExtensionUpdatedAudit as jest.MockedFunction<
     typeof writeEquipmentEventExtensionUpdatedAudit
   >;
@@ -110,7 +110,7 @@ describe('EventsService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    getEquipmentEventAuditSnapshotMock.mockResolvedValue({
+    getEquipmentEventExtensionAuditSnapshotMock.mockResolvedValue({
       equipmentName: 'Pump',
       equipmentVisibleId: 1001,
       eventTypeCode: 'MAINTENANCE',
@@ -249,19 +249,22 @@ describe('EventsService', () => {
       eventId: 25,
       tx: tx as never,
     });
-    expect(writeEquipmentEventCreatedAuditMock).toHaveBeenCalledWith(tx, {
-      event: {
-        equipmentName: 'Pump',
-        equipmentVisibleId: 1001,
-        eventTypeCode: 'MAINTENANCE',
-        eventTypeId: 10,
-        eventTypeName: 'Maintenance',
-        executionType: 'INTERNAL',
-        id: 25,
-        maintenanceSettingId: 50,
+    expect(writeEquipmentEventExtensionCreatedAuditMock).toHaveBeenCalledWith(
+      tx,
+      {
+        event: {
+          equipmentName: 'Pump',
+          equipmentVisibleId: 1001,
+          eventTypeCode: 'MAINTENANCE',
+          eventTypeId: 10,
+          eventTypeName: 'Maintenance',
+          executionType: 'INTERNAL',
+          id: 25,
+          maintenanceSettingId: 50,
+        },
+        userId: 'user-1',
       },
-      userId: 'user-1',
-    });
+    );
     expect(queryService.findOne).toHaveBeenCalledWith(25);
   });
 
@@ -466,7 +469,7 @@ describe('EventsService', () => {
       },
     );
     expect(equipmentExtensionService.updateCreated).toHaveBeenCalled();
-    expect(writeEquipmentEventUpdatedAuditMock).toHaveBeenCalled();
+    expect(writeEquipmentEventExtensionUpdatedAuditMock).toHaveBeenCalled();
     expect(queryService.findOne).toHaveBeenCalledWith(1);
   });
 
@@ -513,8 +516,8 @@ describe('EventsService', () => {
     );
 
     expect(equipmentExtensionService.prepareUpdateCreated).toHaveBeenCalled();
-    expect(getEquipmentEventAuditSnapshotMock).not.toHaveBeenCalled();
-    expect(writeEquipmentEventUpdatedAuditMock).not.toHaveBeenCalled();
+    expect(getEquipmentEventExtensionAuditSnapshotMock).not.toHaveBeenCalled();
+    expect(writeEquipmentEventExtensionUpdatedAuditMock).not.toHaveBeenCalled();
   });
 
   it('returns detail response after no-op update result', async () => {

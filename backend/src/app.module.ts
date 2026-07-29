@@ -4,7 +4,7 @@ import { loadRootConfig } from './config/root-environment';
 import { AppAuthModule } from './auth/auth.module';
 import { ChecklistsModule } from './checklists/checklists.module';
 import { DictionariesAdminModule } from './dictionaries-admin/dictionaries-admin.module';
-import { EquipmentEventsModule } from './equipment-events/equipment-events.module';
+import { EquipmentMaintenanceModule } from './equipment-events/equipment-maintenance.module';
 import { EquipmentModule } from './equipment/equipment.module';
 import { EventsModule } from './events/events.module';
 import { HealthModule } from './health/health.module';
@@ -25,7 +25,7 @@ loadRootConfig();
     AppAuthModule,
     ChecklistsModule,
     DictionariesAdminModule,
-    EquipmentEventsModule,
+    EquipmentMaintenanceModule,
     EquipmentModule,
     EventsModule,
     HealthModule,

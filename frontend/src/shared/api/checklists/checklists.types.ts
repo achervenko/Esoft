@@ -1,4 +1,4 @@
-import type { EquipmentEventStatus } from "../equipment-events/equipment-events.types";
+import type { EventStatus } from "../events/events.types";
 
 export type ChecklistAnswerType =
   "BOOLEAN" | "INTEGER" | "DECIMAL" | "TEXT" | "DATE";
@@ -174,7 +174,7 @@ export type ChecklistWorkListItem = {
       name: string;
     };
     plannedDate: string | null;
-    status: EquipmentEventStatus;
+    status: EventStatus;
   };
   id: number;
   progress: ChecklistWorkProgress;
