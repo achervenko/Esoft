@@ -11,11 +11,10 @@ import {
 import { throwCalendarBadRequest } from './calendar.errors';
 import { isWorkingHoursValidForWorkday } from './calendar.workday-rules';
 import type { CalendarDayQueryDto } from './dto/calendar-day-query.dto';
+import type { CalendarEngineQueryDto } from './dto/calendar-engine-query.dto';
 import type { CalendarRangeQueryDto } from './dto/calendar-range-query.dto';
 import type { CalendarWorkdayUpdateDto } from './dto/calendar-workday-update.dto';
-import type {
-  CalendarWorkdayUpdate,
-} from './calendar.types';
+import type { CalendarWorkdayUpdate } from './calendar.types';
 
 export function parseCalendarDayQuery(
   query: CalendarDayQueryDto | undefined,
@@ -32,19 +31,18 @@ export function parseCalendarRangeQuery(
   );
   const dateTo = parseRequiredCalendarDate(query?.dateTo, 'DATE_TO_REQUIRED');
 
-  if (dateFrom > dateTo) {
-    throwCalendarBadRequest(
-      'DATE_RANGE_INVALID',
-      'Дата начала периода не может быть позже даты окончания.',
-    );
-  }
+  validateCalendarRange(dateFrom, dateTo);
 
-  if (daysBetween(dateFrom, dateTo) + 1 > CALENDAR_RANGE_LIMIT_DAYS) {
-    throwCalendarBadRequest(
-      'DATE_RANGE_TOO_LONG',
-      `Диапазон календаря не должен превышать ${CALENDAR_RANGE_LIMIT_DAYS} дней.`,
-    );
-  }
+  return { dateFrom, dateTo };
+}
+
+export function parseCalendarEngineQuery(
+  query: CalendarEngineQueryDto | undefined,
+): { dateFrom: Date; dateTo: Date } {
+  const dateFrom = parseRequiredCalendarDate(query?.from, 'DATE_FROM_REQUIRED');
+  const dateTo = parseRequiredCalendarDate(query?.to, 'DATE_TO_REQUIRED');
+
+  validateCalendarRange(dateFrom, dateTo);
 
   return { dateFrom, dateTo };
 }
@@ -135,6 +133,22 @@ function parseRequiredCalendarDate(value: unknown, requiredCode: string): Date {
   }
 
   return date;
+}
+
+function validateCalendarRange(dateFrom: Date, dateTo: Date): void {
+  if (dateFrom > dateTo) {
+    throwCalendarBadRequest(
+      'DATE_RANGE_INVALID',
+      'Дата начала периода не может быть позже даты окончания.',
+    );
+  }
+
+  if (daysBetween(dateFrom, dateTo) + 1 > CALENDAR_RANGE_LIMIT_DAYS) {
+    throwCalendarBadRequest(
+      'DATE_RANGE_TOO_LONG',
+      `Диапазон календаря не должен превышать ${CALENDAR_RANGE_LIMIT_DAYS} дней.`,
+    );
+  }
 }
 
 function parseBoolean(value: unknown, code: string, message: string): boolean {

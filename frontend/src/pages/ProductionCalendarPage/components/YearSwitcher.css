@@ -1,0 +1,49 @@
+.production-calendar-year-switcher {
+  height: 42px;
+  display: inline-grid;
+  grid-template-columns: 42px minmax(92px, auto) 42px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.production-calendar-year-switcher button {
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: #ffffff;
+  color: #3f4652;
+  cursor: pointer;
+}
+
+.production-calendar-year-switcher button:hover {
+  background: #f4f6f8;
+}
+
+.production-calendar-year-switcher button:disabled {
+  color: #b8c0cc;
+  cursor: not-allowed;
+}
+
+.production-calendar-year-switcher button:disabled:hover {
+  background: #ffffff;
+}
+
+.production-calendar-year-switcher span {
+  min-width: 92px;
+  border-inline: 1px solid #eef0f3;
+  color: #15171c;
+  font-size: 15px;
+  font-weight: 850;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .production-calendar-year-switcher {
+    width: 100%;
+  }
+}

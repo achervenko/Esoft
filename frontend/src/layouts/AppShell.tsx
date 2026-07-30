@@ -10,6 +10,7 @@ import { EquipmentPage } from "../pages/EquipmentPage";
 import { EquipmentViewPage } from "../pages/EquipmentViewPage";
 import { MyChecklistsPage, MyChecklistViewPage } from "../pages/my-checklists";
 import { ProfilePage } from "../pages/ProfilePage";
+import { ProductionCalendarPage } from "../pages/ProductionCalendarPage";
 import { SearchPage } from "../pages/SearchPage";
 import { UsersPage } from "../pages/UsersPage";
 import type {
@@ -84,6 +85,9 @@ export function AppShell({
         ) : null}
         {appRoute.kind === "search" ? <SearchPage /> : null}
         {appRoute.kind === "profile" ? <ProfilePage user={user} /> : null}
+        {appRoute.kind === "production-calendar" ? (
+          <ProductionCalendarPage userRole={user?.role ?? null} />
+        ) : null}
         {appRoute.kind === "equipment-create" ? (
           <EquipmentCreatePage userRole={user?.role ?? null} />
         ) : null}

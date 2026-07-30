@@ -1,0 +1,40 @@
+.production-calendar-page {
+  animation: workspace-page-enter 140ms ease-out both;
+}
+
+.production-calendar-header {
+  align-items: center;
+}
+
+.production-calendar-card {
+  overflow: visible;
+}
+
+.production-calendar-year-grid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(236px, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 1320px) {
+  .production-calendar-year-grid {
+    grid-template-columns: repeat(3, minmax(226px, 1fr));
+  }
+}
+
+@media (max-width: 1040px) {
+  .production-calendar-year-grid {
+    grid-template-columns: repeat(2, minmax(226px, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .production-calendar-header {
+    align-items: stretch;
+  }
+
+  .production-calendar-year-grid {
+    grid-template-columns: 1fr;
+  }
+}

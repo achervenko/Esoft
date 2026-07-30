@@ -25,10 +25,30 @@
   font-weight: 600;
 }
 
-.login-form .app-checkbox {
+.login-form .login-remember-checkbox {
   align-items: center;
   align-self: flex-start;
+  display: inline-flex;
   flex-direction: row;
+  gap: 8px;
+  color: #2d3440;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.login-form .login-remember-checkbox [data-part='label'] {
+  display: inline;
+  color: inherit;
+  font: inherit;
+}
+
+.login-form .login-remember-checkbox [data-part='control'] {
+  border-color: #b9b0b0;
+}
+
+.login-form .login-remember-checkbox [data-part='control'][data-state='checked'] {
+  border-color: #111111;
+  background: #111111;
 }
 
 .login-form input[type='text'],

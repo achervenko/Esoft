@@ -90,6 +90,10 @@ export function assertCanViewEvents(role: unknown) {
   );
 }
 
+export function canViewEvents(role: unknown) {
+  return isKnownRole(role, ROLE_PERMISSIONS.events.view);
+}
+
 export function assertCanAccessCalendar(role: unknown) {
   assertPermission(
     role,

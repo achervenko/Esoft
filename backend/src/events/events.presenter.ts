@@ -26,6 +26,8 @@ export function toEventListResponse(
   };
 }
 
+export type EventListResponse = ReturnType<typeof toEventListResponse>;
+
 export function toEventDetailResponse(
   event: EventDetailRecord,
   extensionRegistry: EventExtensionRegistry,

@@ -33,6 +33,7 @@ type AppRouteBase =
       checklistId: number;
       fallbackTab: ReturnType<typeof getActiveTab>;
     }
+  | { kind: "production-calendar" }
   | { kind: "profile" }
   | { kind: "search" }
   | { kind: "users" };
@@ -144,6 +145,10 @@ export function resolveAppRoute(route: string): AppRoute {
 
   if (route === "#/profile") {
     return { kind: "profile" };
+  }
+
+  if (route === "#/production-calendar") {
+    return { kind: "production-calendar" };
   }
 
   if (route === "#/search" || route.startsWith("#/search?")) {

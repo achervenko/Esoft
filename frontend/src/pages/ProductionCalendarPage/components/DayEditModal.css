@@ -1,0 +1,128 @@
+.production-calendar-edit-modal {
+  width: min(600px, calc(100vw - 48px));
+}
+
+.production-calendar-edit-form textarea {
+  min-height: 104px;
+  resize: vertical;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #15171c;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.production-calendar-edit-form textarea:focus {
+  border-color: #111111;
+  outline: 2px solid rgba(17, 17, 17, 0.12);
+  outline-offset: 0;
+}
+
+.production-calendar-edit-date {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #eef0f3;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcfd;
+}
+
+.production-calendar-edit-date svg {
+  color: #3f4652;
+}
+
+.production-calendar-edit-date div {
+  display: grid;
+  gap: 3px;
+}
+
+.production-calendar-edit-date strong {
+  color: #15171c;
+  font-size: 16px;
+  font-weight: 850;
+}
+
+.production-calendar-type-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.production-calendar-type-dot.working {
+  border: 1px solid #bec5d0;
+  background: #ffffff;
+}
+
+.production-calendar-type-dot.weekend {
+  background: #cbd5e1;
+}
+
+.production-calendar-type-dot.holiday {
+  background: #ef4444;
+}
+
+.production-calendar-type-dot.shortened {
+  background: #f59e0b;
+}
+
+.production-calendar-type-field {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.production-calendar-type-field legend {
+  margin: 0;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.production-calendar-type-field > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.production-calendar-type-field button {
+  min-height: 52px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  padding: 10px;
+  background: #ffffff;
+  color: #15171c;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.production-calendar-type-field button.active {
+  border-color: #111111;
+  box-shadow: 0 0 0 2px rgba(17, 17, 17, 0.08);
+}
+
+.production-calendar-type-field button > span:last-child {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.production-calendar-edit-actions {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 760px) {
+  .production-calendar-type-field > div {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,4 +1,13 @@
-import { BookCheck, BookOpen, ClipboardList, Factory, Gauge, Search, Users } from "lucide-react";
+import {
+  BookCheck,
+  BookOpen,
+  CalendarDays,
+  ClipboardList,
+  Factory,
+  Gauge,
+  Search,
+  Users,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type SidebarItem = {
@@ -63,6 +72,12 @@ export const sidebarSections: SidebarSection[] = [
         href: "#/dictionaries",
         icon: BookOpen,
         label: "Справочники",
+        roles: ["admin"],
+      },
+      {
+        href: "#/production-calendar",
+        icon: CalendarDays,
+        label: "Календарь",
         roles: ["admin"],
       },
     ],

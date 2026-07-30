@@ -1,7 +1,7 @@
+import { Checkbox } from '@chakra-ui/react';
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { authClient } from '../../lib/auth-client';
-import { Checkbox } from '../../shared/ui/Checkbox';
 import './LoginForm.css';
 
 type LoginMode = 'username' | 'email';
@@ -25,7 +25,6 @@ export function LoginForm({
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loginMode = useMemo<LoginMode>(
@@ -35,7 +34,6 @@ export function LoginForm({
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setMessage(null);
     setError(null);
 
     const cleanLogin = login.trim();
@@ -66,7 +64,6 @@ export function LoginForm({
         return;
       }
 
-      setMessage('Вход выполнен.');
       onSuccessfulLogin();
       await onAuthenticated();
     } catch {
@@ -118,14 +115,19 @@ export function LoginForm({
             </div>
           </label>
 
-          <Checkbox
+          <Checkbox.Root
             checked={remember}
-            label="Запомнить вход"
-            onChange={setRemember}
-          />
+            className="login-remember-checkbox"
+            onCheckedChange={(details) =>
+              setRemember(details.checked === true)
+            }
+          >
+            <Checkbox.HiddenInput />
+            <Checkbox.Control />
+            <Checkbox.Label>Запомнить вход</Checkbox.Label>
+          </Checkbox.Root>
 
           {error && <p className="form-message error">{error}</p>}
-          {message && <p className="form-message success">{message}</p>}
 
           <button className="submit-button" disabled={isSubmitting} type="submit">
             {isSubmitting ? 'Выполняется вход...' : 'Войти'}

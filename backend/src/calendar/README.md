@@ -53,11 +53,15 @@ Checklists
 - seed-инициализация календаря;
 - `CalendarRepository`;
 - `CalendarService`;
+- `Calendar Engine`;
+- `ProductionCalendarProvider`;
+- `EquipmentEventsProvider`;
+- read-only endpoint готового календарного представления;
 - минимальный REST API;
 - проверка целостности календаря.
 
-События, импорт производственного календаря, планирование, уведомления,
-drag and drop и frontend в текущий слайс не входят.
+Импорт производственного календаря, планирование, уведомления, drag and drop и
+frontend в текущий слайс не входят.
 
 ## Модель данных
 
@@ -195,19 +199,32 @@ MANUAL
 - `CalendarWorkdayWriterService` — изменение производственного дня, применение
   бизнес-правил, выполнение обновления в транзакции и запись аудита через общий
   `AuditLogService`.
+- `CalendarEngineService` — read-only ядро формирования готовой календарной
+  модели из набора провайдеров.
+- `CalendarSourceResolver` — выбирает доступные календарные источники для
+  текущего пользователя.
+- `ProductionCalendarProvider` — поставщик дней производственного календаря для
+  Engine.
+- `EquipmentEventsProvider` — поставщик событий оборудования для Engine.
 - `CalendarController` — минимальный REST API.
 
 ## API
 
 ```text
+GET   /api/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD
 GET   /api/calendar/day?date=YYYY-MM-DD
 GET   /api/calendar/range?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD
 PATCH /api/calendar/workday
 ```
 
-На текущем этапе все endpoints календаря доступны только администраторам,
-потому что отдельный read-only режим производственного календаря ещё не
-реализован.
+`GET /api/calendar` — read-only endpoint `Calendar Engine`. Он возвращает
+готовую календарную модель для фронтенда. Доступ получают пользователи, у
+которых есть право просмотра хотя бы одного календарного источника. На первом
+этапе это роли с правом просмотра событий.
+
+Административные endpoints производственного календаря
+`/api/calendar/day`, `/api/calendar/range`, `/api/calendar/workday` доступны
+только администраторам.
 
 `GET /api/calendar/day` возвращает один день календаря.
 
@@ -233,6 +250,233 @@ PATCH /api/calendar/workday
 Если день переводится в нерабочий без явного `workingHours`, сервис выставляет
 `0`. Если день переводится в рабочий с текущих `0` часов без явного
 `workingHours`, сервис использует значение константы `DEFAULT_WORKING_HOURS`.
+
+## Calendar Engine
+
+`Calendar Engine` формирует read-only календарное представление для клиентов.
+Он не хранит собственные данные и не является источником правды. Данные
+остаются во владении модулей-источников:
+
+- производственный календарь владеет календарными днями;
+- `Events` владеет событиями;
+- будущий модуль планирования будет владеть правилами планирования.
+
+Engine отвечает только за:
+
+- получение периода;
+- вызов доступных `CalendarProvider`;
+- объединение результатов;
+- проверку уникальности слоёв;
+- возврат готового DTO.
+
+Engine не должен:
+
+- знать роли пользователей;
+- проверять права;
+- знать конкретные модули через условия вида `if (equipment)`;
+- создавать или изменять события;
+- изменять производственный календарь;
+- хранить состояние календаря.
+
+Все решения о том, какие источники доступны пользователю, принимает
+`CalendarSourceResolver`.
+
+### Поток запроса
+
+```text
+GET /api/calendar
+      │
+      ▼
+CalendarController
+      │
+      ├── CalendarSourceResolver
+      │       └── выбирает Provider'ы
+      │
+      ▼
+CalendarEngineService
+      │
+      ├── ProductionCalendarProvider
+      └── EquipmentEventsProvider
+```
+
+`CalendarController` сначала получает список provider'ов через resolver, затем
+валидирует период и передаёт всё в Engine.
+
+### Период
+
+Endpoint принимает:
+
+```http
+GET /api/calendar?from=2027-01-01&to=2027-01-31
+```
+
+Правила:
+
+- `from` и `to` обязательны;
+- формат дат — `YYYY-MM-DD`;
+- `from <= to`;
+- даты должны лежать в диапазоне `CALENDAR_START_DATE` - `CALENDAR_END_DATE`;
+- длина периода не должна превышать `CALENDAR_RANGE_LIMIT_DAYS`.
+
+### DTO
+
+```ts
+type CalendarDto = {
+  days: CalendarDayDto[];
+  layers: CalendarLayerDto[];
+};
+```
+
+`days` содержит готовые дни производственного календаря:
+
+```ts
+enum CalendarDayType {
+  HOLIDAY = 'HOLIDAY',
+  SHORTENED = 'SHORTENED',
+  WEEKEND = 'WEEKEND',
+  WORKING = 'WORKING',
+}
+
+type CalendarDayDto = {
+  comment: string | null;
+  date: string;
+  isManual: boolean;
+  type: CalendarDayType;
+};
+```
+
+`layers` содержит календарные слои. Слой отвечает за то, что отображается, а
+источник item — за то, из какого модуля пришёл элемент.
+
+```ts
+enum CalendarLayerCode {
+  EVENTS = 'EVENTS',
+  PLANNING_RULES = 'PLANNING_RULES',
+}
+
+enum CalendarItemSource {
+  EQUIPMENT = 'EQUIPMENT',
+  MACHINES = 'MACHINES',
+  PLANNING_RULES = 'PLANNING_RULES',
+}
+
+type CalendarLayerDto = {
+  code: CalendarLayerCode;
+  items: CalendarLayerItemDto[];
+  title: string;
+};
+
+type CalendarLayerItemDto = {
+  details?: unknown;
+  displayDate: string;
+  factDate?: string | null;
+  id: string;
+  isOverdue?: boolean;
+  overdueDays?: number;
+  plannedDate?: string | null;
+  source: CalendarItemSource;
+  status?: string;
+  title: string;
+};
+```
+
+`CalendarLayerDto.code` должен быть уникален в пределах одного `CalendarDto`.
+Если два provider'а вернут слой с одинаковым `code`, Engine вернёт ошибку
+`CALENDAR_LAYER_DUPLICATE`.
+
+### CalendarProvider
+
+Каждый источник реализует единый контракт:
+
+```ts
+interface CalendarProvider {
+  getCalendarData(period: CalendarPeriod): Promise<CalendarProviderResult>;
+}
+```
+
+Provider получает уже проверенный период и должен сразу запрашивать только
+нужные данные. Запрещается загружать весь год или все события, а затем
+фильтровать их в памяти.
+
+Provider может вернуть:
+
+- только `days`;
+- только `layers`;
+- оба поля;
+- пустой объект, если данных нет.
+
+### ProductionCalendarProvider
+
+`ProductionCalendarProvider` использует `CalendarService.getRange()` и
+преобразует внутреннюю модель производственного календаря в UI-тип дня.
+
+Правила маппинга:
+
+- `isHoliday = true` -> `HOLIDAY`;
+- `isPreholiday = true` -> `SHORTENED`;
+- `isWorkingDay = true` -> `WORKING`;
+- иначе `WEEKEND`.
+
+`isManual = source !== SYSTEM`.
+
+`comment = holidayName`.
+
+### EquipmentEventsProvider
+
+`EquipmentEventsProvider` использует read-only слой `EventsQueryService`.
+
+Provider возвращает один слой:
+
+```text
+code = EVENTS
+title = События
+```
+
+Каждый элемент события оборудования получает:
+
+```text
+source = EQUIPMENT
+```
+
+Событие отображается по `displayDate`:
+
+```text
+displayDate = factDate ?? plannedDate
+```
+
+Фильтрация по периоду выполняется на уровне запроса именно по этому правилу:
+
+- события с `factDate` выбираются по `factDate`;
+- события без `factDate` выбираются по `plannedDate`.
+
+Provider обязательно передаёт в DTO обе даты:
+
+- `plannedDate`;
+- `factDate`.
+
+Если обе даты отсутствуют, provider возвращает ошибку
+`CALENDAR_EVENT_DATE_MISSING`.
+
+### Просрочка
+
+Просрочку рассчитывает backend, а не frontend.
+
+Правила:
+
+- если `factDate != null`, событие считается выполненным и `isOverdue = false`;
+- если `factDate == null` и `plannedDate < today`, `isOverdue = true`;
+- если `plannedDate >= today`, `isOverdue = false`;
+- `overdueDays` считается календарными днями от `plannedDate` до текущей даты.
+
+Frontend должен только отображать готовые признаки `isOverdue` и `overdueDays`.
+
+### Расширение Engine
+
+Новые источники подключаются добавлением нового `CalendarProvider` и обновлением
+`CalendarSourceResolver`.
+
+`CalendarEngineService` при этом изменяться не должен. Он работает только с
+интерфейсом provider'а и не содержит знаний о конкретных модулях.
 
 ## Целостность
 

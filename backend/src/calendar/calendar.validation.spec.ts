@@ -1,9 +1,11 @@
 import {
+  parseCalendarEngineQuery,
   parseCalendarRangeQuery,
   parseCalendarWorkdayUpdateDto,
 } from './calendar.validation';
 import {
   CALENDAR_END_DATE,
+  CALENDAR_RANGE_LIMIT_DAYS,
   CALENDAR_START_DATE,
   CALENDAR_START,
 } from './calendar.constants';
@@ -19,6 +21,18 @@ type ExceptionWithResponse = {
 };
 
 describe('calendar validation', () => {
+  it('parses valid calendar engine query', () => {
+    expect(
+      parseCalendarEngineQuery({
+        from: '2026-12-31',
+        to: '2027-01-01',
+      }),
+    ).toEqual({
+      dateFrom: new Date('2026-12-31T00:00:00.000Z'),
+      dateTo: new Date('2027-01-01T00:00:00.000Z'),
+    });
+  });
+
   it('parses valid calendar range', () => {
     expect(
       parseCalendarRangeQuery({
@@ -56,6 +70,25 @@ describe('calendar validation', () => {
     ).toEqual({
       code: 'DATE_RANGE_INVALID',
       message: 'Дата начала периода не может быть позже даты окончания.',
+    });
+  });
+
+  it('rejects calendar engine range longer than allowed', () => {
+    expect(
+      getThrownResponse(() =>
+        parseCalendarEngineQuery({
+          from: '2026-01-01',
+          to: formatCalendarDate(
+            addUtcDays(
+              new Date('2026-01-01T00:00:00.000Z'),
+              CALENDAR_RANGE_LIMIT_DAYS,
+            ),
+          ),
+        }),
+      ),
+    ).toEqual({
+      code: 'DATE_RANGE_TOO_LONG',
+      message: `Диапазон календаря не должен превышать ${CALENDAR_RANGE_LIMIT_DAYS} дней.`,
     });
   });
 
