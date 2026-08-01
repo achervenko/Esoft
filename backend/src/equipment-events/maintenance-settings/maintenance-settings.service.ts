@@ -66,7 +66,7 @@ export class MaintenanceSettingsService {
         );
 
         const maintenanceTypes = await tx.equipmentEventType.findMany({
-          orderBy: [{ name: 'asc' }, { id: 'asc' }],
+          orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }, { id: 'asc' }],
           select: maintenanceSettingsMaintenanceTypeSelect,
           where: {
             id:

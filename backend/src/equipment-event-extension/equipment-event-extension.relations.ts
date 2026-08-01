@@ -9,6 +9,19 @@ const equipmentListSelect = {
     },
   },
   name: true,
+  serialNumber: true,
+  section: {
+    select: {
+      id: true,
+      name: true,
+      workshop: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  },
   visibleId: true,
 } satisfies Prisma.EquipmentSelect;
 
@@ -27,6 +40,7 @@ const equipmentDetailSelect = {
     },
   },
   name: true,
+  serialNumber: true,
   visibleId: true,
 } satisfies Prisma.EquipmentSelect;
 

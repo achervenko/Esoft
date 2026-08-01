@@ -4,14 +4,16 @@ import { daysBetween } from '../calendar.date';
 import { throwCalendarConflict } from '../calendar.errors';
 import { EventsQueryService } from '../../events/events-query.service';
 import type { EventListResponse } from '../../events/events.presenter';
+import type { EquipmentEventExtensionListResponse } from '../../equipment-event-extension/equipment-event-extension.presenter.types';
 import {
-  CalendarItemSource,
-  CalendarLayerCode,
   type CalendarLayerItemDto,
   type CalendarPeriod,
   type CalendarProvider,
   type CalendarProviderResult,
 } from './calendar-engine.types';
+
+export const EQUIPMENT_EVENTS_CALENDAR_LAYER_CODE = 'EVENTS';
+export const EQUIPMENT_CALENDAR_ITEM_SOURCE = 'EQUIPMENT';
 
 @Injectable()
 export class EquipmentEventsProvider implements CalendarProvider {
@@ -32,7 +34,7 @@ export class EquipmentEventsProvider implements CalendarProvider {
     return {
       layers: [
         {
-          code: CalendarLayerCode.EVENTS,
+          code: EQUIPMENT_EVENTS_CALENDAR_LAYER_CODE,
           items: events.map((event) =>
             toCalendarEventItem(event, period.today),
           ),
@@ -78,19 +80,53 @@ function toCalendarEventItem(
   }
 
   const overdue = calculateOverdue(event, today);
+  const extension = castEquipmentExtension(event.extension);
 
   return {
-    details: event.extension,
+    badge: extension.maintenanceType.name,
+    details: extension,
     displayDate,
     factDate: event.factDate,
+    icon: 'tool',
     id: String(event.id),
     isOverdue: overdue.isOverdue,
+    navigation: {
+      params: {
+        equipmentVisibleId: extension.equipment.visibleId,
+        eventId: event.id,
+      },
+      type: 'equipment-event',
+    },
     overdueDays: overdue.overdueDays,
     plannedDate: event.plannedDate,
-    source: CalendarItemSource.EQUIPMENT,
+    source: EQUIPMENT_CALENDAR_ITEM_SOURCE,
     status: event.status,
-    title: event.title,
+    subtitle: formatCalendarEventSubtitle(extension.equipment),
+    title: formatCalendarEventTitle(extension.equipment),
   };
+}
+
+function formatCalendarEventTitle(
+  equipment: EquipmentEventExtensionListResponse['equipment'],
+) {
+  return `${equipment.name} ID ${equipment.visibleId}`;
+}
+
+function formatCalendarEventSubtitle(
+  equipment: EquipmentEventExtensionListResponse['equipment'],
+) {
+  return [
+    equipment.location,
+    equipment.serialNumber ? `Зав. № ${equipment.serialNumber}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function castEquipmentExtension(
+  extension: EventListResponse['extension'],
+): EquipmentEventExtensionListResponse {
+  return extension as EquipmentEventExtensionListResponse;
 }
 
 function calculateOverdue(

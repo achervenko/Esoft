@@ -1,4 +1,5 @@
 import { Sidebar } from "../modules/sidebar";
+import { CalendarPage } from "../pages/CalendarPage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { ChecklistAdminPage } from "../pages/ChecklistAdminPage";
 import { ChecklistTemplateEditorPage } from "../pages/ChecklistTemplateEditorPage";
@@ -51,6 +52,12 @@ export function AppShell({
 
       <section className="app-workspace" aria-label="Рабочая область">
         {appRoute.kind === "dashboard" ? <DashboardPage /> : null}
+        {appRoute.kind === "calendar" ? (
+          <CalendarPage
+            initialDate={appRoute.date}
+            userRole={user?.role ?? null}
+          />
+        ) : null}
         {appRoute.kind === "checklist-admin" ? (
           <ChecklistAdminPage userRole={user?.role ?? null} />
         ) : null}
@@ -101,6 +108,7 @@ export function AppShell({
         ) : null}
         {appRoute.kind === "equipment-view" ? (
           <EquipmentViewPage
+            eventId={appRoute.eventId}
             initialTab={appRoute.initialTab}
             returnTo={appRoute.returnTo}
             userRole={user?.role ?? null}

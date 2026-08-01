@@ -14,6 +14,8 @@ type EquipmentEventsPanelModalsProps = {
   actionError: string | null;
   activeAction: EquipmentEventAction;
   checklistTemplates: ChecklistTemplateListItem[];
+  detailError: string | null;
+  isDetailLoading: boolean;
   maintenanceSettings: MaintenanceSetting[];
   modalState: EquipmentEventsPanelModalState;
   onCancel: () => Promise<void>;
@@ -28,6 +30,8 @@ export function EquipmentEventsPanelModals({
   actionError,
   activeAction,
   checklistTemplates,
+  detailError,
+  isDetailLoading,
   maintenanceSettings,
   modalState,
   onCancel,
@@ -68,9 +72,11 @@ export function EquipmentEventsPanelModals({
         />
       ) : null}
 
-      {modalState.detailEvent ? (
+      {modalState.isDetailOpen ? (
         <EquipmentEventDetailModal
+          error={detailError}
           event={modalState.detailEvent}
+          isLoading={isDetailLoading}
           onClose={onCloseDetail}
         />
       ) : null}

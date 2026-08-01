@@ -15,7 +15,10 @@ export function toEquipmentEventExtensionListResponse(
     code: EventExtensionCode.EQUIPMENT,
     maintenanceSettingId: extension.maintenanceSettingId,
     executionType: extension.executionType,
-    equipment: extension.equipment,
+    equipment: {
+      ...extension.equipment,
+      location: formatEquipmentLocation(extension.equipment.section),
+    },
     maintenanceType: toMaintenanceTypeResponse(extension),
   };
 }
@@ -41,4 +44,10 @@ function toMaintenanceTypeResponse(
     name: extension.eventType.name,
     code: extension.eventType.code,
   };
+}
+
+function formatEquipmentLocation(
+  section: EquipmentEventExtensionListRecord['equipment']['section'],
+) {
+  return [section.workshop.name, section.name].filter(Boolean).join(' / ');
 }

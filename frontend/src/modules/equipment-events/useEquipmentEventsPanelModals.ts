@@ -56,7 +56,10 @@ export function useEquipmentEventsPanelModals({
     setCancelCandidate(null);
   }, []);
 
-  const modalState: Omit<EquipmentEventsPanelModalState, "detailEvent"> = {
+  const modalState: Omit<
+    EquipmentEventsPanelModalState,
+    "detailEvent" | "isDetailOpen"
+  > = {
     activeForm,
     cancelCandidate,
   };

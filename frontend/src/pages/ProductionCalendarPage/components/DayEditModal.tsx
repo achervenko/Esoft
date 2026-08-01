@@ -1,5 +1,5 @@
 import { CalendarDays, RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AdminModal } from "../../../shared/ui/AdminModal";
 import { DAY_TYPE_LABELS, DAY_TYPES } from "../model/constants";
 import { formatLongDate } from "../model/calendar.utils";
@@ -8,13 +8,15 @@ import "./DayEditModal.css";
 
 type DayEditModalProps = {
   day: CalendarDayState;
+  isSaving: boolean;
   onClose: () => void;
-  onReset: (day: CalendarDayState) => void;
-  onSave: (day: CalendarDayState, draft: CalendarDayDraft) => void;
+  onReset: (day: CalendarDayState) => Promise<void>;
+  onSave: (day: CalendarDayState, draft: CalendarDayDraft) => Promise<void>;
 };
 
 export function DayEditModal({
   day,
+  isSaving,
   onClose,
   onReset,
   onSave,
@@ -24,9 +26,17 @@ export function DayEditModal({
     type: day.type,
   });
 
+  useEffect(() => {
+    setDraft({
+      comment: day.comment,
+      type: day.type,
+    });
+  }, [day]);
+
   return (
     <AdminModal
       className="production-calendar-edit-modal"
+      isCloseDisabled={isSaving}
       onClose={onClose}
       title="Редактирование"
     >
@@ -34,7 +44,7 @@ export function DayEditModal({
         className="admin-form production-calendar-edit-form"
         onSubmit={(event) => {
           event.preventDefault();
-          onSave(day, draft);
+          void onSave(day, draft);
         }}
       >
         <section className="production-calendar-edit-date">
@@ -51,6 +61,7 @@ export function DayEditModal({
               <button
                 aria-pressed={draft.type === type}
                 className={draft.type === type ? "active" : undefined}
+                disabled={isSaving}
                 key={type}
                 onClick={() => setDraft((current) => ({ ...current, type }))}
                 type="button"
@@ -66,6 +77,7 @@ export function DayEditModal({
           Комментарий
           <textarea
             autoFocus
+            disabled={isSaving}
             maxLength={220}
             onChange={(event) =>
               setDraft((current) => ({
@@ -80,17 +92,25 @@ export function DayEditModal({
         <div className="admin-form-actions production-calendar-edit-actions">
           <button
             className="admin-secondary-button"
-            onClick={() => onReset(day)}
+            disabled={isSaving}
+            onClick={() => {
+              void onReset(day);
+            }}
             type="button"
           >
             <RotateCcw size={17} />
             Вернуть по умолчанию
           </button>
-          <button className="admin-secondary-button" onClick={onClose} type="button">
+          <button
+            className="admin-secondary-button"
+            disabled={isSaving}
+            onClick={onClose}
+            type="button"
+          >
             Отмена
           </button>
-          <button className="admin-primary-button" type="submit">
-            Сохранить
+          <button className="admin-primary-button" disabled={isSaving} type="submit">
+            {isSaving ? "Сохранение..." : "Сохранить"}
           </button>
         </div>
       </form>

@@ -7,6 +7,8 @@ import {
   formatDateValue,
   formatEventResponsibles,
 } from "./equipment-events-utils";
+import "./EquipmentEventResponsibles.css";
+import "./EquipmentEventStatus.css";
 
 type EquipmentEventsTableProps = {
   canEditEvents: boolean;

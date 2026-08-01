@@ -10,7 +10,7 @@ export function buildHashRoute(
   );
 
   Object.entries(params).forEach(([key, value]) => {
-    if (value) {
+    if (value !== null && value !== undefined) {
       searchParams.set(key, value);
     }
   });

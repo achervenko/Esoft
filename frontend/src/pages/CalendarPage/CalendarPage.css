@@ -1,0 +1,131 @@
+.calendar-page {
+  display: grid;
+  gap: 18px;
+}
+
+.calendar-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.calendar-page-header h1 {
+  margin: 0;
+  color: #15171c;
+  font-size: 30px;
+  line-height: 1.2;
+  font-weight: 850;
+}
+
+.calendar-page-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.calendar-month-switcher {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.calendar-month-switcher button {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: #3f4652;
+  cursor: pointer;
+}
+
+.calendar-month-switcher button:hover {
+  background: #f4f6f8;
+  color: #15171c;
+}
+
+.calendar-month-switcher span {
+  min-width: 132px;
+  border-right: 1px solid #eef0f3;
+  border-left: 1px solid #eef0f3;
+  color: #15171c;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.calendar-month-card {
+  --calendar-grid-height: clamp(390px, calc(100dvh - 354px), 760px);
+
+  display: grid;
+  gap: 10px;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 14px;
+  background: #ffffff;
+  transform-origin: center top;
+}
+
+.calendar-weekdays,
+.calendar-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.calendar-weekdays {
+  gap: 8px;
+}
+
+.calendar-weekdays span {
+  min-width: 0;
+  color: #6b7280;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.calendar-month-grid {
+  height: var(--calendar-grid-height);
+  overflow: hidden;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  grid-auto-rows: minmax(0, 1fr);
+  transform-origin: center top;
+  will-change: opacity, transform;
+}
+
+@media (max-width: 760px) {
+  .calendar-page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .calendar-page-toolbar,
+  .calendar-month-switcher {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .calendar-month-switcher span {
+    flex: 1;
+  }
+
+  .calendar-month-card {
+    --calendar-grid-height: clamp(390px, calc(100dvh - 300px), 612px);
+
+    padding: 10px;
+  }
+
+  .calendar-weekdays {
+    gap: 4px;
+  }
+}

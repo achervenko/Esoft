@@ -23,9 +23,11 @@ model EquipmentEventType {
   name                String                        @unique(map: "uq_equipment_event_types_name") @db.VarChar(64)
   code                String                        @unique(map: "uq_equipment_event_types_code") @db.VarChar(32)
   isActive            Boolean                       @default(true) @map("is_active")
+  sortOrder           Int                           @default(0) @map("sort_order")
   eventExtensions     EquipmentEventExtension[]
   maintenanceSettings EquipmentMaintenanceSetting[]
 
+  @@index([sortOrder], map: "idx_equipment_event_types_sort_order")
   @@map("equipment_event_types")
 }
 

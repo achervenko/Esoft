@@ -1,4 +1,5 @@
 import type { ResponsibleUserOption } from "./equipment-event-form.types";
+import "./EquipmentEventResponsibles.css";
 
 type EquipmentEventResponsibleFieldsProps = {
   onToggle: (responsibleUserId: string) => void;

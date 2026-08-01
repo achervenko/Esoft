@@ -1,0 +1,102 @@
+.equipment-event-form textarea {
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #15171c;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.equipment-event-form textarea:focus {
+  border-color: #111111;
+  outline: 2px solid rgba(17, 17, 17, 0.12);
+  outline-offset: 0;
+}
+
+.admin-modal.equipment-event-form-modal {
+  max-height: calc(100dvh - 24px);
+}
+
+.admin-modal.equipment-event-form-modal .equipment-event-form {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 0;
+}
+
+.admin-modal.equipment-event-form-modal .admin-form-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin: 0 -18px;
+  padding: 14px 18px 18px;
+  background: linear-gradient(
+    to top,
+    rgba(255, 255, 255, 1) 72%,
+    rgba(255, 255, 255, 0.94) 100%
+  );
+  border-top: 1px solid #eef0f3;
+}
+
+.equipment-event-checklist-assignment {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 248px;
+  gap: 14px;
+  align-items: center;
+}
+
+.equipment-event-checklist-assignment__responsible {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #15171c;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.equipment-event-checklist-assignment__select {
+  width: 248px;
+  min-width: 0;
+  justify-self: end;
+}
+
+.equipment-event-checklist-assignment__select .select-dropdown-field {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+}
+
+.equipment-event-checklist-assignment__select .select-dropdown-trigger {
+  min-height: 36px;
+  gap: 10px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.equipment-event-checklist-assignment__select .select-dropdown-trigger svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 720px) {
+  .admin-modal.equipment-event-form-modal {
+    max-height: calc(100dvh - 16px);
+  }
+
+  .equipment-event-checklist-assignment {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .equipment-event-checklist-assignment__select {
+    width: 100%;
+  }
+}

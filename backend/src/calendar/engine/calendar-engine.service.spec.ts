@@ -1,8 +1,6 @@
 import { CalendarEngineService } from './calendar-engine.service';
 import {
   CalendarDayType,
-  CalendarItemSource,
-  CalendarLayerCode,
   type CalendarPeriod,
   type CalendarProvider,
 } from './calendar-engine.types';
@@ -77,12 +75,12 @@ describe('CalendarEngineService', () => {
     const eventsProvider = provider({
       layers: [
         {
-          code: CalendarLayerCode.EVENTS,
+          code: 'EVENTS',
           items: [
             {
               displayDate: '2026-08-03',
               id: '1',
-              source: CalendarItemSource.EQUIPMENT,
+              source: 'EQUIPMENT',
               title: 'ТО',
             },
           ],
@@ -108,12 +106,12 @@ describe('CalendarEngineService', () => {
       ],
       layers: [
         {
-          code: CalendarLayerCode.EVENTS,
+          code: 'EVENTS',
           items: [
             {
               displayDate: '2026-08-03',
               id: '1',
-              source: CalendarItemSource.EQUIPMENT,
+              source: 'EQUIPMENT',
               title: 'ТО',
             },
           ],
@@ -126,10 +124,10 @@ describe('CalendarEngineService', () => {
   it('rejects duplicate layer codes', async () => {
     const service = new CalendarEngineService();
     const firstProvider = provider({
-      layers: [{ code: CalendarLayerCode.EVENTS, items: [], title: 'События' }],
+      layers: [{ code: 'EVENTS', items: [], title: 'События' }],
     });
     const secondProvider = provider({
-      layers: [{ code: CalendarLayerCode.EVENTS, items: [], title: 'Events' }],
+      layers: [{ code: 'EVENTS', items: [], title: 'Events' }],
     });
 
     await expect(

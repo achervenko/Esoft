@@ -1,9 +1,11 @@
 import { Pencil } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { MouseEvent } from "react";
 import type {
   EquipmentCard,
   EquipmentHistoryItem,
 } from "../../shared/api/equipment/equipment.types";
+import { setHashRoute } from "../../lib/hash-router";
 import { buildHashRoute } from "../../shared/lib/hash-navigation";
 import { EquipmentDocumentsPanel } from "../equipment-documents";
 import { EquipmentEventsPanel } from "../equipment-events";
@@ -25,6 +27,7 @@ type EquipmentCardViewProps = {
   canManageEquipmentEvents?: boolean;
   canManageMaintenanceSettings?: boolean;
   equipment: EquipmentCard;
+  eventId?: number | null;
   history: EquipmentHistoryItem[];
   historyError?: string | null;
   initialTab?: EquipmentViewTab;
@@ -38,6 +41,7 @@ export function EquipmentCardView({
   canManageEquipmentEvents = false,
   canManageMaintenanceSettings = false,
   equipment,
+  eventId = null,
   history,
   historyError = null,
   initialTab = "details",
@@ -71,9 +75,7 @@ export function EquipmentCardView({
       tab: tab === "details" ? null : tab,
     });
 
-    if (window.location.hash !== hashRoute) {
-      window.location.hash = hashRoute;
-    }
+    setHashRoute(hashRoute);
   };
 
   useEffect(() => {
@@ -94,6 +96,10 @@ export function EquipmentCardView({
             className="equipment-card-edit-button"
             href={editHref}
             onClick={(event) => {
+              if (shouldUseNativeLinkNavigation(event)) {
+                return;
+              }
+
               event.preventDefault();
               navigateWithViewTransition(editHref);
             }}
@@ -153,6 +159,7 @@ export function EquipmentCardView({
           <EquipmentEventsPanel
             canManageEvents={canManageEquipmentEvents}
             equipmentStatus={equipment.status}
+            initialEventId={eventId}
             visibleId={equipment.visibleId}
           />
         </section>
@@ -166,5 +173,16 @@ export function EquipmentCardView({
         />
       ) : null}
     </article>
+  );
+}
+
+function shouldUseNativeLinkNavigation(event: MouseEvent<HTMLAnchorElement>) {
+  return (
+    event.defaultPrevented ||
+    event.button !== 0 ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.shiftKey
   );
 }

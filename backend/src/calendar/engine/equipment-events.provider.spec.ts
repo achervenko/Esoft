@@ -1,6 +1,9 @@
 import { EventExtensionCode, EventSource, EventStatus } from '@prisma/client';
-import { EquipmentEventsProvider } from './equipment-events.provider';
-import { CalendarItemSource, CalendarLayerCode } from './calendar-engine.types';
+import {
+  EQUIPMENT_CALENDAR_ITEM_SOURCE,
+  EQUIPMENT_EVENTS_CALENDAR_LAYER_CODE,
+  EquipmentEventsProvider,
+} from './equipment-events.provider';
 
 describe('EquipmentEventsProvider', () => {
   function createProvider() {
@@ -77,16 +80,23 @@ describe('EquipmentEventsProvider', () => {
     ).resolves.toEqual({
       layers: [
         {
-          code: CalendarLayerCode.EVENTS,
+          code: EQUIPMENT_EVENTS_CALENDAR_LAYER_CODE,
           items: [
             expect.objectContaining({
               displayDate: '2026-08-01',
               id: '2',
               isOverdue: true,
+              navigation: {
+                params: {
+                  equipmentVisibleId: 1001,
+                  eventId: 2,
+                },
+                type: 'equipment-event',
+              },
               overdueDays: 3,
               plannedDate: '2026-08-01',
-              source: CalendarItemSource.EQUIPMENT,
-              title: 'Просроченное ТО',
+              source: EQUIPMENT_CALENDAR_ITEM_SOURCE,
+              title: 'Компрессор ID 1001',
             }),
             expect.objectContaining({
               displayDate: '2026-08-03',
@@ -95,8 +105,8 @@ describe('EquipmentEventsProvider', () => {
               isOverdue: false,
               overdueDays: 0,
               plannedDate: '2026-08-01',
-              source: CalendarItemSource.EQUIPMENT,
-              title: 'Выполненное ТО',
+              source: EQUIPMENT_CALENDAR_ITEM_SOURCE,
+              title: 'Компрессор ID 1001',
             }),
           ],
           title: 'События',
@@ -199,7 +209,13 @@ function eventResponse(overrides = {}) {
     extension: {
       code: EventExtensionCode.EQUIPMENT,
       equipment: {
+        location: 'Цех 1',
+        name: 'Компрессор',
+        serialNumber: 'SN-1001',
         visibleId: 1001,
+      },
+      maintenanceType: {
+        name: 'ТО-1',
       },
     },
     extensionCode: EventExtensionCode.EQUIPMENT,

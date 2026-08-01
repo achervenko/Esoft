@@ -12,6 +12,7 @@ export type MaintenanceType = {
   id: number;
   isActive?: boolean;
   name: string;
+  sortOrder?: number;
 };
 
 export type MaintenanceSettingDefaultChecklistTemplate = {
@@ -28,6 +29,7 @@ export type MaintenanceSetting = {
     id: number;
     isActive: boolean;
     name: string;
+    sortOrder: number;
   };
   periodicity: MaintenancePeriodicity | null;
 };

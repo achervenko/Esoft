@@ -1,0 +1,58 @@
+.equipment-event-responsibles {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.equipment-event-responsibles legend {
+  padding: 0 4px;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.equipment-event-responsibles > div {
+  width: 100%;
+  min-width: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  display: grid;
+  gap: 8px;
+}
+
+.equipment-event-responsibles label:not(.select-dropdown-field) {
+  min-height: 34px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 8px;
+  align-items: center;
+  color: #15171c;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.equipment-event-responsibles input {
+  width: 16px;
+  height: 16px;
+}
+
+.equipment-event-responsibles small {
+  grid-column: 2;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.equipment-event-responsibles-list {
+  min-width: 220px;
+  display: grid;
+  gap: 4px;
+  white-space: normal;
+}
+
+.equipment-event-responsibles-list span {
+  overflow-wrap: anywhere;
+}

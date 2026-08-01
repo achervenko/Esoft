@@ -274,6 +274,7 @@ CREATE TABLE "equipment_event_types" (
     "name" VARCHAR(64) NOT NULL,
     "code" VARCHAR(32) NOT NULL,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "sort_order" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "equipment_event_types_pkey" PRIMARY KEY ("id")
 );
@@ -640,6 +641,9 @@ CREATE UNIQUE INDEX "uq_equipment_event_types_name" ON "equipment_event_types"("
 
 -- CreateIndex
 CREATE UNIQUE INDEX "uq_equipment_event_types_code" ON "equipment_event_types"("code");
+
+-- CreateIndex
+CREATE INDEX "idx_equipment_event_types_sort_order" ON "equipment_event_types"("sort_order");
 
 -- CreateIndex
 CREATE INDEX "idx_equipment_maintenance_settings_type_id" ON "equipment_maintenance_settings"("maintenance_type_id");

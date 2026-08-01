@@ -1,4 +1,4 @@
-import { parseEquipmentViewTab } from "../modules/equipment-card";
+import { parseEquipmentViewTab } from "../modules/equipment-card/equipment-card-tabs";
 import { getActiveTab } from "../pages/my-checklists/my-checklists.utils";
 import {
   getHashRouteParam,
@@ -9,6 +9,7 @@ type EquipmentEditTab = "details" | "documents";
 
 type AppRouteBase =
   | { kind: "dashboard" }
+  | { date: string | null; kind: "calendar" }
   | { kind: "checklist-admin" }
   | { kind: "checklist-template-create"; copyFromTemplateId: number | null }
   | { kind: "checklist-template-view"; templateId: number }
@@ -23,6 +24,7 @@ type AppRouteBase =
     }
   | {
       kind: "equipment-view";
+      eventId: number | null;
       initialTab: ReturnType<typeof parseEquipmentViewTab>;
       returnTo: string;
       visibleId: number;
@@ -61,6 +63,13 @@ function parsePositiveParamId(value: string | null) {
 export function resolveAppRoute(route: string): AppRoute {
   if (route === "#/dashboard") {
     return { kind: "dashboard" };
+  }
+
+  if (route === "#/calendar" || route.startsWith("#/calendar?")) {
+    return {
+      date: getHashRouteParam(route, "date"),
+      kind: "calendar",
+    };
   }
 
   if (route === "#/checklist-admin" || route.startsWith("#/checklist-admin?")) {
@@ -120,6 +129,7 @@ export function resolveAppRoute(route: string): AppRoute {
 
   if (equipmentViewId !== null) {
     return {
+      eventId: parsePositiveParamId(getHashRouteParam(route, "eventId")),
       kind: "equipment-view",
       initialTab: parseEquipmentViewTab(getHashRouteParam(route, "tab")),
       returnTo: getSafeReturnTo(getHashRouteParam(route, "returnTo")),

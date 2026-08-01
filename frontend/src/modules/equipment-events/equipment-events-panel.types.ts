@@ -11,4 +11,5 @@ export type EquipmentEventsPanelModalState = {
   activeForm: EquipmentEventsPanelActiveForm | null;
   cancelCandidate: EquipmentEventItem | null;
   detailEvent: EquipmentEventDetail | null;
+  isDetailOpen: boolean;
 };

@@ -8,7 +8,7 @@ type AdminModalProps = {
   className?: string;
   isCloseDisabled?: boolean;
   onClose: () => void;
-  title: string;
+  title: ReactNode;
 };
 
 export function AdminModal({

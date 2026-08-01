@@ -10,17 +10,20 @@ import "./EquipmentEventsPanel.css";
 type EquipmentEventsPanelProps = {
   canManageEvents: boolean;
   equipmentStatus: EquipmentStatus;
+  initialEventId?: number | null;
   visibleId: number;
 };
 
 export function EquipmentEventsPanel({
   canManageEvents,
   equipmentStatus,
+  initialEventId = null,
   visibleId,
 }: EquipmentEventsPanelProps) {
   const panel = useEquipmentEventsPanel({
     canManageEvents,
     equipmentStatus,
+    initialEventId,
     visibleId,
   });
 
@@ -33,10 +36,6 @@ export function EquipmentEventsPanel({
       {panel.refreshError ? (
         <Notice tone="error">{panel.refreshError}</Notice>
       ) : null}
-      {panel.isDetailLoading ? (
-        <Notice tone="info">Загрузка события...</Notice>
-      ) : null}
-
       <section className="admin-card equipment-events-card">
         <EquipmentEventsPanelHeader
           canManageEvents={canManageEvents}
@@ -64,8 +63,10 @@ export function EquipmentEventsPanel({
         actionError={panel.actionError}
         activeAction={panel.activeAction}
         checklistTemplates={panel.checklistTemplates}
+        detailError={panel.detailError}
         maintenanceSettings={panel.maintenanceSettings}
         modalState={panel.modalState}
+        isDetailLoading={panel.isDetailLoading}
         onCancel={panel.handleCancel}
         onCloseCancel={panel.closeCancel}
         onCloseDetail={panel.closeDetail}

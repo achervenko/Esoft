@@ -12,22 +12,25 @@ import { useEquipmentEventsPanelModals } from "./useEquipmentEventsPanelModals";
 type UseEquipmentEventsPanelParams = {
   canManageEvents: boolean;
   equipmentStatus: EquipmentStatus;
+  initialEventId?: number | null;
   visibleId: number;
 };
 
 export function useEquipmentEventsPanel({
   canManageEvents,
   equipmentStatus,
+  initialEventId = null,
   visibleId,
 }: UseEquipmentEventsPanelParams) {
   const { notifyError } = useNotifications();
   const notifiedErrorsRef = useRef(new Set<string>());
 
   const {
+    detailError,
     events,
-    error,
     isDetailLoading,
     isLoading,
+    listError,
     loadEventDetail,
     reloadEvents,
   } = useEquipmentEventsList(visibleId);
@@ -52,8 +55,10 @@ export function useEquipmentEventsPanel({
     closeDetail,
     detailEvent,
     handleOpenDetail,
+    isDetailOpen,
+    openDetailById,
     resetDetail,
-  } = useEquipmentEventDetail({ loadEventDetail });
+  } = useEquipmentEventDetail({ initialEventId, loadEventDetail });
   const {
     activeForm,
     cancelCandidate,
@@ -100,19 +105,21 @@ export function useEquipmentEventsPanel({
   useEffect(() => {
     clearActionError();
     resetModals();
-    resetDetail();
+    if (initialEventId === null) {
+      resetDetail();
+    }
     notifiedErrorsRef.current.clear();
-  }, [clearActionError, resetDetail, resetModals, visibleId]);
+  }, [clearActionError, initialEventId, resetDetail, resetModals, visibleId]);
 
   useEffect(() => {
     notifyEquipmentEventsError(
       "list",
       "Не удалось загрузить события оборудования",
-      error,
+      listError,
       notifiedErrorsRef.current,
       notifyError,
     );
-  }, [error, notifyError]);
+  }, [listError, notifyError]);
 
   useEffect(() => {
     notifyEquipmentEventsError(
@@ -143,6 +150,12 @@ export function useEquipmentEventsPanel({
       notifyError,
     );
   }, [notifyError, refreshError]);
+
+  useEffect(() => {
+    if (initialEventId !== null) {
+      void openDetailById(initialEventId);
+    }
+  }, [initialEventId, openDetailById]);
 
   const openCreateForm = () => {
     openForm({ mode: "create" });
@@ -214,15 +227,17 @@ export function useEquipmentEventsPanel({
     handleFormSubmit,
     handleOpenDetail,
     isCreateDisabled,
+    detailError,
     isDetailLoading,
     isFormDataLoading,
     isLoading,
-    listError: error,
+    listError,
     maintenanceSettings,
     checklistTemplates,
     modalState: {
       ...modalState,
       detailEvent,
+      isDetailOpen,
     },
     openCreateForm,
     refreshError,

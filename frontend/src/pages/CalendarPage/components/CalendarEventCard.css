@@ -1,0 +1,128 @@
+.calendar-event-card {
+  width: 100%;
+  min-height: 82px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #eef0f3;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #ffffff;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.calendar-event-card:hover,
+.calendar-event-card:focus-visible {
+  border-color: #cfd6df;
+  box-shadow: 0 6px 18px rgba(20, 25, 36, 0.08);
+}
+
+.calendar-event-card-icon {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #2563eb;
+}
+
+.calendar-event-card-body {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.calendar-event-card-title-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.calendar-event-card-title-row strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #15171c;
+  font-size: 14px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-event-type-badge {
+  max-width: 180px;
+  min-height: 24px;
+  flex: 0 1 auto;
+  overflow: hidden;
+  border: 1px solid #d7dce3;
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: #f4f6f8;
+  color: #3f4652;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-event-card-meta {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.calendar-event-card-meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-event-card-meta span + span {
+  position: relative;
+  padding-left: 10px;
+}
+
+.calendar-event-card-meta span + span::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: #c4cad3;
+  content: "";
+  transform: translateY(-50%);
+}
+
+@media (max-width: 760px) {
+  .calendar-event-card {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .calendar-event-card-title-row,
+  .calendar-event-card-meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .calendar-event-card-meta span + span {
+    padding-left: 0;
+  }
+
+  .calendar-event-card-meta span + span::before {
+    display: none;
+  }
+}

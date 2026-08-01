@@ -11,6 +11,7 @@ import type {
   ResponsibleUserOption,
 } from "./equipment-event-form.types";
 import { useEquipmentEventForm } from "./useEquipmentEventForm";
+import "./EquipmentEventForm.css";
 
 export type { EquipmentEventFormPayload } from "./equipment-event-form.types";
 
@@ -74,6 +75,7 @@ export function EquipmentEventFormModal({
             onChange={(inputEvent) =>
               form.setPlannedDate(inputEvent.target.value)
             }
+            required
             type="date"
             value={form.plannedDate}
           />

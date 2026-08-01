@@ -11,6 +11,7 @@ export const maintenanceSettingsMaintenanceTypeSelect = {
   id: true,
   isActive: true,
   name: true,
+  sortOrder: true,
 } satisfies Prisma.EquipmentEventTypeSelect;
 
 export const maintenanceSettingSelect = {

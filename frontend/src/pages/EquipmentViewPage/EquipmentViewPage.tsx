@@ -1,9 +1,11 @@
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { MouseEvent } from "react";
 import {
   EquipmentCardView,
   type EquipmentViewTab,
 } from "../../modules/equipment-card";
+import { setHashRoute } from "../../lib/hash-router";
 import {
   canEditEquipment,
   canManageEquipmentEvents,
@@ -23,6 +25,7 @@ import { useNotifications } from "../../shared/ui/notifications";
 import "./EquipmentViewPage.css";
 
 type EquipmentViewPageProps = {
+  eventId?: number | null;
   initialTab?: EquipmentViewTab;
   returnTo: string;
   userRole: string | null;
@@ -30,6 +33,7 @@ type EquipmentViewPageProps = {
 };
 
 export function EquipmentViewPage({
+  eventId = null,
   initialTab = "details",
   returnTo,
   userRole,
@@ -125,9 +129,18 @@ export function EquipmentViewPage({
     };
   }, [activeTab, hasLoadedHistory, notifyError, visibleId]);
 
+  const handleBackClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (shouldUseNativeLinkNavigation(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    setHashRoute(returnTo);
+  };
+
   return (
     <div className="equipment-view-page">
-      <a className="equipment-back-link" href={returnTo}>
+      <a className="equipment-back-link" href={returnTo} onClick={handleBackClick}>
         <ArrowLeft aria-hidden="true" size={18} />
         <span>Назад</span>
       </a>
@@ -140,6 +153,7 @@ export function EquipmentViewPage({
           canManageEquipmentEvents={canManageEquipmentEvents(userRole)}
           canManageMaintenanceSettings={canManageMaintenanceSettings(userRole)}
           equipment={equipment}
+          eventId={eventId}
           history={history}
           historyError={historyError}
           initialTab={initialTab}
@@ -149,5 +163,16 @@ export function EquipmentViewPage({
         />
       ) : null}
     </div>
+  );
+}
+
+function shouldUseNativeLinkNavigation(event: MouseEvent<HTMLAnchorElement>) {
+  return (
+    event.defaultPrevented ||
+    event.button !== 0 ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.shiftKey
   );
 }

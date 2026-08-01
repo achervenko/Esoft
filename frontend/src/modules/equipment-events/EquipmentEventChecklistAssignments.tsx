@@ -4,6 +4,8 @@ import {
 } from "../../shared/ui/SelectDropdown";
 import type { ChecklistTemplateListItem } from "../../shared/api/checklists";
 import type { ResponsibleUserOption } from "./equipment-event-form.types";
+import "./EquipmentEventForm.css";
+import "./EquipmentEventResponsibles.css";
 
 type EquipmentEventChecklistAssignmentsProps = {
   checklistTemplateIdByResponsible: Record<string, string>;

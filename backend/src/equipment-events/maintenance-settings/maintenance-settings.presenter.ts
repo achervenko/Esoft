@@ -26,6 +26,7 @@ export function presentAvailableMaintenanceTypes(
     maintenanceTypes: maintenanceTypes.map((maintenanceType) => ({
       id: maintenanceType.id,
       name: maintenanceType.name,
+      sortOrder: maintenanceType.sortOrder,
     })),
   };
 }
@@ -39,6 +40,7 @@ function presentMaintenanceSetting(setting: MaintenanceSettingRecord) {
       id: setting.maintenanceType.id,
       isActive: setting.maintenanceType.isActive,
       name: setting.maintenanceType.name,
+      sortOrder: setting.maintenanceType.sortOrder,
     },
     periodicity: presentPeriodicity(setting),
   };

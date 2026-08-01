@@ -37,6 +37,12 @@ export const sidebarSections: SidebarSection[] = [
         label: "Оборудование",
       },
       {
+        href: "#/calendar",
+        icon: CalendarDays,
+        label: "Календарь",
+        roles: ["admin", "chief_engineer", "engineer"],
+      },
+      {
         href: "#/search",
         icon: Search,
         label: "Поиск",
@@ -77,7 +83,7 @@ export const sidebarSections: SidebarSection[] = [
       {
         href: "#/production-calendar",
         icon: CalendarDays,
-        label: "Календарь",
+        label: "Производственный",
         roles: ["admin"],
       },
     ],

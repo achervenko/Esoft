@@ -5,16 +5,14 @@ export enum CalendarDayType {
   WORKING = 'WORKING',
 }
 
-export enum CalendarItemSource {
-  EQUIPMENT = 'EQUIPMENT',
-  MACHINES = 'MACHINES',
-  PLANNING_RULES = 'PLANNING_RULES',
-}
+export type CalendarItemSource = string;
 
-export enum CalendarLayerCode {
-  EVENTS = 'EVENTS',
-  PLANNING_RULES = 'PLANNING_RULES',
-}
+export type CalendarLayerCode = string;
+
+export type CalendarNavigationDto = {
+  params?: Record<string, boolean | number | string | null>;
+  type: string;
+};
 
 export type CalendarDayDto = {
   comment: string | null;
@@ -24,15 +22,20 @@ export type CalendarDayDto = {
 };
 
 export type CalendarLayerItemDto = {
+  badge?: string | null;
+  description?: string | null;
   details?: unknown;
   displayDate: string;
   factDate?: string | null;
+  icon?: string | null;
   id: string;
   isOverdue?: boolean;
+  navigation?: CalendarNavigationDto | null;
   overdueDays?: number;
   plannedDate?: string | null;
   source: CalendarItemSource;
   status?: string;
+  subtitle?: string | null;
   title: string;
 };
 

@@ -1,7 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppShell } from './layouts/AppShell';
 import { authClient } from './lib/auth-client';
-import { DEFAULT_AUTH_ROUTE, LOGIN_ROUTE, SETUP_ROUTE, getHashRoute, isLoginRoute, isSetupRoute, setHashRoute } from './lib/hash-router';
+import {
+  DEFAULT_AUTH_ROUTE,
+  LOGIN_ROUTE,
+  SETUP_ROUTE,
+  getHashRoute,
+  isLoginRoute,
+  isSetupRoute,
+  setHashRoute,
+  subscribeHashRouteNavigation,
+} from './lib/hash-router';
 import { LoginPage } from './pages/LoginPage';
 import { SetupPage } from './pages/SetupPage';
 import {
@@ -13,25 +22,39 @@ import { getSetupStatus } from './shared/api/setup';
 import { markCurrentHashHistoryEntry } from './shared/lib/hash-history-marker';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [isCheckingSetup, setIsCheckingSetup] = useState(true);
-  const [route, setRoute] = useState(getHashRoute);
+  const [route, setRouteState] = useState(getHashRoute);
+  const routeRef = useRef(route);
   const [setupError, setSetupError] = useState<string | null>(null);
   const [setupRequired, setSetupRequired] = useState(false);
   const [user, setUser] = useState<SessionUser | null>(null);
+  const isAuthenticated = Boolean(user);
+
+  const updateRoute = useCallback((nextRoute: string) => {
+    if (routeRef.current === nextRoute) {
+      return;
+    }
+
+    routeRef.current = nextRoute;
+    setRouteState(nextRoute);
+  }, []);
 
   useEffect(() => {
     const handleHashChange = () => {
       markCurrentHashHistoryEntry();
-      setRoute(getHashRoute());
+      updateRoute(getHashRoute());
     };
+    const unsubscribeNavigation = subscribeHashRouteNavigation(updateRoute);
 
     window.addEventListener('hashchange', handleHashChange);
     handleHashChange();
 
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+    return () => {
+      unsubscribeNavigation();
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, [updateRoute]);
 
   useEffect(() => {
     let isMounted = true;
@@ -69,13 +92,11 @@ function App() {
     getAuthenticatedUser()
       .then((sessionUser) => {
         if (isMounted) {
-          setIsAuthenticated(Boolean(sessionUser));
           setUser(sessionUser);
         }
       })
       .catch(() => {
         if (isMounted) {
-          setIsAuthenticated(false);
           setUser(null);
         }
       })
@@ -129,24 +150,34 @@ function App() {
   ]);
 
   const handleLogout = async () => {
-    await authClient.signOut();
-    setIsAuthenticated(false);
-    setUser(null);
-    setHashRoute(LOGIN_ROUTE);
+    try {
+      await authClient.signOut();
+    } finally {
+      setUser(null);
+      setHashRoute(LOGIN_ROUTE);
+    }
   };
 
   const handleAuthenticated = async () => {
-    const sessionUser = await waitForAuthenticatedUser();
+    try {
+      const sessionUser = await waitForAuthenticatedUser();
 
-    setIsAuthenticated(true);
-    setUser(sessionUser);
-    setHashRoute(DEFAULT_AUTH_ROUTE);
+      setUser(sessionUser);
+      setHashRoute(DEFAULT_AUTH_ROUTE);
+    } catch (error) {
+      setUser(null);
+      throw error;
+    }
   };
 
   const refreshAuthenticatedUser = async () => {
-    const sessionUser = await getAuthenticatedUser();
-    setUser(sessionUser);
-    setIsAuthenticated(Boolean(sessionUser));
+    try {
+      const sessionUser = await getAuthenticatedUser();
+
+      setUser(sessionUser);
+    } catch {
+      // Refresh is a background update; keep the current session UI on failure.
+    }
   };
 
   const handleSetupCompleted = useCallback(() => {

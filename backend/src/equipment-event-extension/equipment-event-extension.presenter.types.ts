@@ -20,7 +20,9 @@ type EquipmentEventExtensionBaseResponse = {
 
 export type EquipmentEventExtensionListResponse =
   EquipmentEventExtensionBaseResponse & {
-    equipment: EquipmentEventExtensionListRecord['equipment'];
+    equipment: EquipmentEventExtensionListRecord['equipment'] & {
+      location: string;
+    };
   };
 
 export type EquipmentEventExtensionDetailResponse =

@@ -38,7 +38,17 @@ export function ProductionCalendarPage({
         />
       </header>
 
-      <section className="admin-card production-calendar-card">
+      {calendar.error ? <Notice tone="error">{calendar.error}</Notice> : null}
+
+      <section
+        aria-busy={calendar.isLoading}
+        className={[
+          "admin-card production-calendar-card",
+          calendar.isLoading ? "loading" : null,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <div className="production-calendar-year-grid">
           {calendar.months.map((month) => (
             <MonthCalendar
@@ -53,6 +63,7 @@ export function ProductionCalendarPage({
       {calendar.selectedDay ? (
         <DayEditModal
           day={calendar.selectedDay}
+          isSaving={calendar.isSaving}
           onClose={calendar.closeSelectedDay}
           onReset={calendar.resetDay}
           onSave={calendar.saveDay}

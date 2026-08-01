@@ -17,12 +17,13 @@ export class MaintenanceTypesService {
 
   async getTypes(includeInactive: boolean) {
     const maintenanceTypes = await this.prisma.equipmentEventType.findMany({
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }, { id: 'asc' }],
       select: {
         code: true,
         id: true,
         isActive: true,
         name: true,
+        sortOrder: true,
       },
       where: includeInactive ? undefined : { isActive: true },
     });
@@ -196,6 +197,7 @@ const maintenanceTypeSelect = {
   id: true,
   isActive: true,
   name: true,
+  sortOrder: true,
 } as const;
 
 function formatAuditValue(value: unknown) {

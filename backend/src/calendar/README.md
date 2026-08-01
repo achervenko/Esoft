@@ -349,16 +349,14 @@ type CalendarDayDto = {
 источник item — за то, из какого модуля пришёл элемент.
 
 ```ts
-enum CalendarLayerCode {
-  EVENTS = 'EVENTS',
-  PLANNING_RULES = 'PLANNING_RULES',
-}
+type CalendarLayerCode = string;
 
-enum CalendarItemSource {
-  EQUIPMENT = 'EQUIPMENT',
-  MACHINES = 'MACHINES',
-  PLANNING_RULES = 'PLANNING_RULES',
-}
+type CalendarItemSource = string;
+
+type CalendarNavigationDto = {
+  params?: Record<string, boolean | number | string | null>;
+  type: string;
+};
 
 type CalendarLayerDto = {
   code: CalendarLayerCode;
@@ -367,15 +365,20 @@ type CalendarLayerDto = {
 };
 
 type CalendarLayerItemDto = {
+  badge?: string | null;
+  description?: string | null;
   details?: unknown;
   displayDate: string;
   factDate?: string | null;
+  icon?: string | null;
   id: string;
   isOverdue?: boolean;
+  navigation?: CalendarNavigationDto | null;
   overdueDays?: number;
   plannedDate?: string | null;
   source: CalendarItemSource;
   status?: string;
+  subtitle?: string | null;
   title: string;
 };
 ```

@@ -13,13 +13,21 @@ export function useEquipmentEventsList(visibleId: number) {
   const [events, setEvents] = useState<EquipmentEventItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
   const detailRequestIdRef = useRef(0);
 
   const reloadEvents = useCallback(async () => {
-    const eventItems = await loadEquipmentEvents(visibleId);
-    setEvents(eventItems);
-    return eventItems;
+    setListError(null);
+
+    try {
+      const eventItems = await loadEquipmentEvents(visibleId);
+      setEvents(eventItems);
+      return eventItems;
+    } catch (requestError) {
+      setListError(getApiErrorMessage(requestError));
+      throw requestError;
+    }
   }, [visibleId]);
 
   const loadEventDetail = useCallback(async (eventId: number) => {
@@ -27,7 +35,7 @@ export function useEquipmentEventsList(visibleId: number) {
     detailRequestIdRef.current = requestId;
 
     setIsDetailLoading(true);
-    setError(null);
+    setDetailError(null);
 
     try {
       const event = await getEvent(eventId);
@@ -42,7 +50,7 @@ export function useEquipmentEventsList(visibleId: number) {
       return eventDetail;
     } catch (requestError) {
       if (detailRequestIdRef.current === requestId) {
-        setError(getApiErrorMessage(requestError));
+        setDetailError(getApiErrorMessage(requestError));
       }
 
       return null;
@@ -58,7 +66,7 @@ export function useEquipmentEventsList(visibleId: number) {
 
     setEvents([]);
     setIsLoading(true);
-    setError(null);
+    setListError(null);
 
     loadEquipmentEvents(visibleId)
       .then((eventItems) => {
@@ -68,7 +76,7 @@ export function useEquipmentEventsList(visibleId: number) {
       })
       .catch((requestError) => {
         if (isMounted) {
-          setError(getApiErrorMessage(requestError));
+          setListError(getApiErrorMessage(requestError));
         }
       })
       .finally(() => {
@@ -84,10 +92,11 @@ export function useEquipmentEventsList(visibleId: number) {
   }, [visibleId]);
 
   return {
+    detailError,
     events,
-    error,
     isDetailLoading,
     isLoading,
+    listError,
     loadEventDetail,
     reloadEvents,
   };

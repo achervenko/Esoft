@@ -3,33 +3,44 @@ import type { EquipmentEventItem } from "./equipment-events.types";
 import type { EquipmentEventsPanelModalState } from "./equipment-events-panel.types";
 
 type UseEquipmentEventDetailParams = {
+  initialEventId?: number | null;
   loadEventDetail: (
     eventId: number,
   ) => Promise<EquipmentEventsPanelModalState["detailEvent"]>;
 };
 
 export function useEquipmentEventDetail({
+  initialEventId = null,
   loadEventDetail,
 }: UseEquipmentEventDetailParams) {
   const [detailEvent, setDetailEvent] =
     useState<EquipmentEventsPanelModalState["detailEvent"]>(null);
-  const latestDetailEventIdRef = useRef<number | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(
+    () => initialEventId !== null,
+  );
+  const latestDetailEventIdRef = useRef<number | null>(initialEventId);
 
-  const handleOpenDetail = useCallback(async (event: EquipmentEventItem) => {
-    latestDetailEventIdRef.current = event.id;
+  const openDetailById = useCallback(async (eventId: number) => {
+    latestDetailEventIdRef.current = eventId;
+    setIsDetailOpen(true);
     setDetailEvent(null);
 
-    const eventDetail = await loadEventDetail(event.id);
+    const eventDetail = await loadEventDetail(eventId);
 
     if (
-      latestDetailEventIdRef.current === event.id &&
-      eventDetail?.id === event.id
+      latestDetailEventIdRef.current === eventId &&
+      eventDetail?.id === eventId
     ) {
       setDetailEvent(eventDetail);
     }
   }, [loadEventDetail]);
 
+  const handleOpenDetail = useCallback((event: EquipmentEventItem) => {
+    return openDetailById(event.id);
+  }, [openDetailById]);
+
   const resetDetail = useCallback(() => {
+    setIsDetailOpen(false);
     setDetailEvent(null);
     latestDetailEventIdRef.current = null;
   }, []);
@@ -38,6 +49,8 @@ export function useEquipmentEventDetail({
     closeDetail: resetDetail,
     detailEvent,
     handleOpenDetail,
+    isDetailOpen,
+    openDetailById,
     resetDetail,
   };
 }
