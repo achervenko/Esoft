@@ -1,15 +1,14 @@
-import './DashboardPage.css';
+import "./DashboardPage.css";
+import { EquipmentProgressDashboard } from "../../modules/equipment-progress-dashboard";
 
 export function DashboardPage() {
   return (
     <div className="dashboard-page">
       <header className="dashboard-page-header">
-        <h1>Уведомления</h1>
+        <h1>Панель</h1>
       </header>
 
-      <section className="dashboard-empty-state" aria-label="Уведомления">
-        <p>Пока нет уведомлений.</p>
-      </section>
+      <EquipmentProgressDashboard />
     </div>
   );
 }

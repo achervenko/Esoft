@@ -1,0 +1,365 @@
+.equipment-progress-dashboard {
+  display: grid;
+  gap: 18px;
+}
+
+.equipment-progress-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.05fr) repeat(2, minmax(220px, 0.8fr));
+  grid-template-areas:
+    "main stats dynamics"
+    "main forecast dynamics";
+  align-items: stretch;
+  gap: 18px;
+}
+
+.equipment-progress-card {
+  min-width: 0;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 18px;
+  background: #ffffff;
+}
+
+.equipment-progress-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: #15171c;
+}
+
+.equipment-progress-card-heading span {
+  color: #374151;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.equipment-progress-card-heading strong {
+  color: #15171c;
+  font-size: 15px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.equipment-progress-card-main {
+  grid-area: main;
+  display: grid;
+  align-content: start;
+}
+
+.equipment-progress-stats-card {
+  grid-area: stats;
+}
+
+.equipment-progress-dynamics-card {
+  grid-area: dynamics;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.equipment-progress-forecast-card {
+  grid-area: forecast;
+}
+
+.equipment-progress-gauge {
+  position: relative;
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+}
+
+.equipment-progress-gauge svg {
+  width: min(100%, 375px);
+  overflow: visible;
+}
+
+.equipment-progress-gauge-track,
+.equipment-progress-gauge-value {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 10;
+}
+
+.equipment-progress-gauge-track {
+  opacity: 0.18;
+  stroke: url("#equipment-progress-gauge-gradient");
+}
+
+.equipment-progress-gauge-value {
+  stroke: url("#equipment-progress-gauge-gradient");
+}
+
+.equipment-progress-gauge-needle {
+  stroke: #111827;
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+.equipment-progress-gauge-center {
+  fill: #111827;
+}
+
+.equipment-progress-gauge strong {
+  position: absolute;
+  top: 146px;
+  color: #15171c;
+  font-size: 38px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.equipment-progress-summary,
+.equipment-progress-forecast {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.equipment-progress-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.equipment-progress-summary div {
+  min-width: 0;
+  border: 1px solid #eef0f3;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.equipment-progress-summary dt {
+  margin: 0 0 4px;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.equipment-progress-summary dd {
+  margin: 0;
+  color: #15171c;
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.equipment-progress-forecast div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+}
+
+.equipment-progress-forecast div + div {
+  border-top: 1px solid #eef0f3;
+}
+
+.equipment-progress-forecast dt {
+  margin: 0;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.equipment-progress-forecast dd {
+  margin: 0;
+  color: #15171c;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.equipment-progress-stats-card {
+  display: grid;
+  align-content: center;
+  gap: 0;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.equipment-progress-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 0;
+  background: transparent;
+}
+
+.equipment-progress-stat + .equipment-progress-stat {
+  border-top: 1px solid #eef0f3;
+}
+
+.equipment-progress-stat div {
+  display: contents;
+}
+
+.equipment-progress-stat span {
+  min-width: 0;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.equipment-progress-stat strong {
+  display: block;
+  color: #15171c;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.equipment-progress-bars {
+  height: 270px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+}
+
+.equipment-progress-bar-item {
+  min-width: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: 1fr auto auto;
+  align-items: end;
+  justify-items: center;
+  gap: 6px;
+}
+
+.equipment-progress-bar {
+  width: 100%;
+  max-width: 28px;
+  border-radius: 6px 6px 2px 2px;
+  background: #111827;
+}
+
+.equipment-progress-bar-item strong {
+  color: #15171c;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.equipment-progress-bar-item small {
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.equipment-progress-incomplete-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.equipment-progress-incomplete-card .equipment-progress-card-heading {
+  margin: 0;
+  border-bottom: 1px solid #eef0f3;
+  padding: 16px 18px;
+}
+
+.equipment-progress-incomplete-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.equipment-progress-incomplete-list li + li {
+  border-top: 1px solid #eef0f3;
+}
+
+.equipment-progress-incomplete-list a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 18px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.equipment-progress-incomplete-list a:hover {
+  background: #f8fafc;
+}
+
+.equipment-progress-incomplete-list strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #15171c;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.equipment-progress-incomplete-list span {
+  display: block;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.equipment-progress-incomplete-list svg {
+  flex: 0 0 auto;
+  color: #6b7280;
+}
+
+.equipment-progress-empty,
+.equipment-progress-dashboard-state {
+  margin: 0;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 22px;
+  background: #ffffff;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.equipment-progress-empty {
+  border: 0;
+  border-radius: 0;
+}
+
+.equipment-progress-dashboard-state.error {
+  color: #b42318;
+}
+
+@media (max-width: 1120px) {
+  .equipment-progress-dashboard-grid {
+    grid-template-areas:
+      "main dynamics"
+      "stats forecast";
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .equipment-progress-card-main {
+    grid-area: main;
+  }
+}
+
+@media (max-width: 760px) {
+  .equipment-progress-dashboard-grid {
+    grid-template-areas:
+      "main"
+      "stats"
+      "dynamics"
+      "forecast";
+  }
+
+  .equipment-progress-dashboard-grid,
+  .equipment-progress-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .equipment-progress-card {
+    padding: 14px;
+  }
+
+  .equipment-progress-incomplete-card {
+    padding: 0;
+  }
+
+  .equipment-progress-bars {
+    gap: 5px;
+  }
+}

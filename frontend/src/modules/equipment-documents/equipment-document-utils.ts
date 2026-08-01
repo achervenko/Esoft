@@ -28,14 +28,14 @@ function getFileWord(count: number) {
   const mod100 = count % 100;
 
   if (mod10 === 1 && mod100 !== 11) {
-    return "\u0444\u0430\u0439\u043b";
+    return "файл";
   }
 
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
-    return "\u0444\u0430\u0439\u043b\u0430";
+    return "файла";
   }
 
-  return "\u0444\u0430\u0439\u043b\u043e\u0432";
+  return "файлов";
 }
 
 function decodeMojibakeText(value: string) {
