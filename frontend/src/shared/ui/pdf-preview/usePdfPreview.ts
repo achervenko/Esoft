@@ -36,7 +36,10 @@ export function usePdfPreview({
     setFileUrl(null);
     setIsLoading(true);
 
-    fetchPdfPreviewBlob({ fileId, visibleId })
+    fetchPdfPreviewBlob(
+      { fileId, visibleId },
+      { signal: abortController.signal },
+    )
       .then((blob) => {
         if (abortController.signal.aborted) {
           return;
@@ -45,9 +48,12 @@ export function usePdfPreview({
         objectUrl = URL.createObjectURL(blob);
         setFileUrl(objectUrl);
       })
-      .catch((requestError: Error) => {
-        if (!abortController.signal.aborted) {
-          setError(requestError.message || pdfPreviewText.error);
+      .catch((requestError: unknown) => {
+        if (
+          !abortController.signal.aborted &&
+          !isAbortError(requestError)
+        ) {
+          setError(getRequestErrorMessage(requestError));
         }
       })
       .finally(() => {
@@ -72,4 +78,14 @@ export function usePdfPreview({
     loadPreview,
     setError,
   };
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+function getRequestErrorMessage(error: unknown) {
+  return error instanceof Error && error.message
+    ? error.message
+    : pdfPreviewText.error;
 }

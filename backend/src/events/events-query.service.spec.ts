@@ -133,6 +133,14 @@ describe('EventsQueryService', () => {
               name: 'Model',
             },
             name: 'Pump',
+            section: {
+              id: 10,
+              name: 'Line 1',
+              workshop: {
+                id: 11,
+                name: 'Workshop',
+              },
+            },
             visibleId: 5001,
           },
           eventType: {

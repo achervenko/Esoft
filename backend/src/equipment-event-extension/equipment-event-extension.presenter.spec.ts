@@ -17,6 +17,14 @@ describe('equipment event extension presenter', () => {
           name: 'Model',
         },
         name: 'Pump',
+        section: {
+          id: 10,
+          name: 'Line 1',
+          workshop: {
+            id: 11,
+            name: 'Workshop',
+          },
+        },
         visibleId: 5001,
       },
       eventType: {
@@ -38,7 +46,16 @@ describe('equipment event extension presenter', () => {
           id: 20,
           name: 'Model',
         },
+        location: 'Workshop / Line 1',
         name: 'Pump',
+        section: {
+          id: 10,
+          name: 'Line 1',
+          workshop: {
+            id: 11,
+            name: 'Workshop',
+          },
+        },
         visibleId: 5001,
       },
       maintenanceType: {

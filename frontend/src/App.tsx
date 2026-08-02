@@ -19,6 +19,7 @@ import {
   type SessionUser,
 } from './shared/api/auth-session';
 import { getSetupStatus } from './shared/api/setup';
+import { subscribeSessionExpired } from './shared/api/session-expired';
 import { markCurrentHashHistoryEntry } from './shared/lib/hash-history-marker';
 
 function App() {
@@ -28,8 +29,13 @@ function App() {
   const routeRef = useRef(route);
   const [setupError, setSetupError] = useState<string | null>(null);
   const [setupRequired, setSetupRequired] = useState(false);
+  const setupRequiredRef = useRef(setupRequired);
   const [user, setUser] = useState<SessionUser | null>(null);
   const isAuthenticated = Boolean(user);
+
+  useEffect(() => {
+    setupRequiredRef.current = setupRequired;
+  }, [setupRequired]);
 
   const updateRoute = useCallback((nextRoute: string) => {
     if (routeRef.current === nextRoute) {
@@ -84,6 +90,17 @@ function App() {
     return () => {
       isMounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    return subscribeSessionExpired(() => {
+      setUser(null);
+      setIsCheckingSession(false);
+
+      if (!setupRequiredRef.current && !isLoginRoute(routeRef.current)) {
+        setHashRoute(LOGIN_ROUTE);
+      }
+    });
   }, []);
 
   useEffect(() => {

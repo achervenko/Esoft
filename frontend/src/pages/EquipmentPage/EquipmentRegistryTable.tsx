@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { EquipmentStatusBadge } from '../../modules/equipment-status';
 import type { EquipmentRegistryItem } from '../../shared/api/equipment/equipment.types';
 import {
@@ -7,6 +7,8 @@ import {
   type DataTableSortDirection,
 } from '../../shared/ui/DataTable';
 import { sortDataTableRows } from '../../shared/ui/data-table-model';
+
+const MOBILE_EQUIPMENT_REGISTRY_QUERY = '(max-width: 760px)';
 
 type EquipmentRegistryTableProps = {
   items: EquipmentRegistryItem[];
@@ -80,10 +82,14 @@ export function EquipmentRegistryTable({
   items,
   onOpenEquipment,
 }: EquipmentRegistryTableProps) {
+  const isMobileRegistry = useMobileEquipmentRegistry();
   const [mobileSort] = useState(defaultEquipmentSort);
   const sortedMobileItems = useMemo(
-    () => sortDataTableRows(items, equipmentColumns, mobileSort),
-    [items, mobileSort],
+    () =>
+      isMobileRegistry
+        ? sortDataTableRows(items, equipmentColumns, mobileSort)
+        : [],
+    [isMobileRegistry, items, mobileSort],
   );
 
   if (items.length === 0) {
@@ -99,53 +105,85 @@ export function EquipmentRegistryTable({
 
   return (
     <div className="equipment-table-shell">
-      <DataTable
-        columns={equipmentColumns}
-        defaultSort={defaultEquipmentSort}
-        getRowKey={(item) => item.id}
-        onRowDoubleClick={(item) => onOpenEquipment(item.visibleId)}
-        rows={items}
-      />
-
-      <div className="equipment-registry-cards" aria-label="Реестр оборудования">
-        {sortedMobileItems.map((item) => (
-          <article
-            className="equipment-registry-card"
-            key={item.id}
-            onDoubleClick={() => onOpenEquipment(item.visibleId)}
-          >
-            <span className="equipment-card-id">ID {item.visibleId}</span>
-            <h2>{item.name}</h2>
-            <dl>
-              <div>
-                <dt>Производитель</dt>
-                <dd>{item.manufacturer}</dd>
-              </div>
-              <div>
-                <dt>Модель</dt>
-                <dd>{item.model}</dd>
-              </div>
-              <div>
-                <dt>Инв. номер</dt>
-                <dd>{item.inventoryNumber}</dd>
-              </div>
-              <div>
-                <dt>Заводской</dt>
-                <dd>{item.serialNumber ?? 'б/н'}</dd>
-              </div>
-              <div>
-                <dt>Статус</dt>
-                <dd>
-                  <EquipmentStatusBadge
-                    label={item.statusLabel}
-                    status={item.status}
-                  />
-                </dd>
-              </div>
-            </dl>
-          </article>
-        ))}
-      </div>
+      {isMobileRegistry ? (
+        <div className="equipment-registry-cards" aria-label="Реестр оборудования">
+          {sortedMobileItems.map((item) => (
+            <article
+              className="equipment-registry-card"
+              key={item.id}
+              onDoubleClick={() => onOpenEquipment(item.visibleId)}
+            >
+              <span className="equipment-card-id">ID {item.visibleId}</span>
+              <h2>{item.name}</h2>
+              <dl>
+                <div>
+                  <dt>Производитель</dt>
+                  <dd>{item.manufacturer}</dd>
+                </div>
+                <div>
+                  <dt>Модель</dt>
+                  <dd>{item.model}</dd>
+                </div>
+                <div>
+                  <dt>Инв. номер</dt>
+                  <dd>{item.inventoryNumber}</dd>
+                </div>
+                <div>
+                  <dt>Заводской</dt>
+                  <dd>{item.serialNumber ?? 'б/н'}</dd>
+                </div>
+                <div>
+                  <dt>Статус</dt>
+                  <dd>
+                    <EquipmentStatusBadge
+                      label={item.statusLabel}
+                      status={item.status}
+                    />
+                  </dd>
+                </div>
+              </dl>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <DataTable
+          columns={equipmentColumns}
+          defaultSort={defaultEquipmentSort}
+          getRowKey={(item) => item.id}
+          onRowDoubleClick={(item) => onOpenEquipment(item.visibleId)}
+          rows={items}
+        />
+      )}
     </div>
   );
+}
+
+function getIsMobileEquipmentRegistry() {
+  if (typeof window === 'undefined' || !window.matchMedia) {
+    return false;
+  }
+
+  return window.matchMedia(MOBILE_EQUIPMENT_REGISTRY_QUERY).matches;
+}
+
+function useMobileEquipmentRegistry() {
+  const [isMobileRegistry, setIsMobileRegistry] = useState(
+    getIsMobileEquipmentRegistry,
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia(MOBILE_EQUIPMENT_REGISTRY_QUERY);
+    const handleChange = () => setIsMobileRegistry(mediaQuery.matches);
+
+    handleChange();
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  return isMobileRegistry;
 }

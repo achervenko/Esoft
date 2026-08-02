@@ -1,20 +1,30 @@
 import { ApiRequestError } from "./api-error";
 import { API_URL } from "./api-config";
+import { emitSessionExpired } from "./session-expired";
 
-export async function request<T>(path: string, init: RequestInit = {}) {
-  const headers = new Headers(init.headers);
+type ApiRequestInit = RequestInit & {
+  handleUnauthorized?: boolean;
+};
 
-  if (typeof init.body === "string" && !headers.has("Content-Type")) {
+export async function request<T>(path: string, init: ApiRequestInit = {}) {
+  const { handleUnauthorized = true, ...requestInit } = init;
+  const headers = new Headers(requestInit.headers);
+
+  if (typeof requestInit.body === "string" && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
   const response = await fetch(`${API_URL}${path}`, {
-    ...init,
+    ...requestInit,
     credentials: "include",
     headers,
   });
 
   if (!response.ok) {
+    if (response.status === 401 && handleUnauthorized) {
+      emitSessionExpired();
+    }
+
     const errorBody = await readJsonResponse(response).catch(() => null);
     throw new ApiRequestError(
       errorBody?.message ?? "Не удалось выполнить запрос.",

@@ -1,5 +1,6 @@
 import { ApiRequestError } from "./api-error";
 import { API_URL } from "./api-config";
+import { emitSessionExpired } from "./session-expired";
 
 export type FilePreviewSize = "small" | "medium";
 
@@ -21,12 +22,19 @@ export function getFileDownloadUrl(params: {
 export async function fetchPdfPreviewBlob(params: {
   fileId: number;
   visibleId: number;
-}) {
+}, options: {
+  signal?: AbortSignal;
+} = {}) {
   const response = await fetch(getFilePreviewUrl(params), {
     credentials: "include",
+    signal: options.signal,
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      emitSessionExpired();
+    }
+
     const errorBody = await readFileErrorResponse(response);
     throw new ApiRequestError(
       errorBody?.message ?? "Не удалось открыть PDF.",
@@ -48,6 +56,10 @@ export async function downloadFileById(params: {
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      emitSessionExpired();
+    }
+
     const errorBody = await readFileErrorResponse(response);
     throw new ApiRequestError(
       errorBody?.message ?? "Не удалось скачать файл.",

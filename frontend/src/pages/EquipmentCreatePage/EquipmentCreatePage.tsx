@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { canCreateEquipment } from '../../modules/equipment-permissions';
 import { getApiErrorMessage } from '../../shared/api/api-error';
 import {
@@ -21,6 +21,10 @@ import {
   getEquipmentFieldErrorsFromMessage,
   validateEquipmentCreateForm,
 } from './model/equipment-create-form.validation';
+import {
+  clearEquipmentCreateRedirectTimeout,
+  scheduleEquipmentCreateRedirect,
+} from './equipment-create-redirect';
 import './EquipmentCreatePage.css';
 
 type EquipmentCreatePageProps = {
@@ -29,6 +33,7 @@ type EquipmentCreatePageProps = {
 
 export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
   const { notifyError, notifySuccess, notifyWarning } = useNotifications();
+  const redirectTimeoutRef = useRef<number | null>(null);
   const isCreateAllowed = canCreateEquipment(userRole);
   const [form, setForm] = useState<EquipmentCreateFormState>(
     initialEquipmentCreateFormState,
@@ -84,6 +89,12 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
     };
   }, [isCreateAllowed, notifyError]);
 
+  useEffect(() => {
+    return () => {
+      clearEquipmentCreateRedirectTimeout(redirectTimeoutRef);
+    };
+  }, []);
+
   const updateForm = <Key extends keyof EquipmentCreateFormState>(
     key: Key,
     value: EquipmentCreateFormState[Key],
@@ -122,9 +133,7 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
 
       notifySuccess("Оборудование добавлено");
       shouldResetSubmitting = false;
-      window.setTimeout(() => {
-        window.location.hash = '#/equipment';
-      }, 500);
+      scheduleEquipmentCreateRedirect(redirectTimeoutRef);
     } catch (requestError) {
       const errorMessage = getApiErrorMessage(
         requestError,

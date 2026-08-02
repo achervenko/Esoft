@@ -14,6 +14,19 @@
   padding: 28px;
 }
 
+.app-page-loading {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  color: #5f6b7a;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.app-page-loading--error {
+  color: #b42318;
+}
+
 .equipment-view-page,
 .equipment-create-page {
   animation: workspace-page-enter 140ms ease-out both;
