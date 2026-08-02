@@ -16,6 +16,7 @@ type EquipmentDocumentListItemProps = {
   onOpenPreview: (file: EquipmentFile) => void;
   onSetPrimary?: (file: EquipmentFile) => void;
   settingPrimaryFileId?: number | null;
+  visibleId: number;
 };
 
 export function EquipmentDocumentListItem({
@@ -28,6 +29,7 @@ export function EquipmentDocumentListItem({
   onOpenPreview,
   onSetPrimary,
   settingPrimaryFileId,
+  visibleId,
 }: EquipmentDocumentListItemProps) {
   const isPreviewable = isPdfFile(file);
   const canSetPrimary =
@@ -59,7 +61,7 @@ export function EquipmentDocumentListItem({
       role={isPreviewable ? "button" : undefined}
       tabIndex={isPreviewable ? 0 : undefined}
     >
-      <EquipmentDocumentIcon file={file} />
+      <EquipmentDocumentIcon file={file} visibleId={visibleId} />
 
       <div className="equipment-document-meta">
         <strong>{getDisplayName(file)}</strong>

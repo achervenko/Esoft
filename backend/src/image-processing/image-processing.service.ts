@@ -86,14 +86,16 @@ export class ImageProcessingService {
     file: UploadedFileInput,
     constraints: ImageProcessingConstraints,
   ) {
-    if (!file.size || file.size <= 0) {
+    const fileSize = file.buffer?.length ?? 0;
+
+    if (fileSize <= 0) {
       throw new BadRequestException({
         code: 'EMPTY_FILE',
         message: 'Файл пустой.',
       });
     }
 
-    if (file.size > constraints.maxFileSizeBytes) {
+    if (fileSize > constraints.maxFileSizeBytes) {
       throw new BadRequestException({
         code: 'FILE_TOO_LARGE',
         message: `Размер фото не должен превышать ${formatMegabytes(
@@ -124,7 +126,9 @@ export class ImageProcessingService {
 
   private async readMetadata(buffer: Buffer) {
     try {
-      return await sharp(buffer, { limitInputPixels: false }).metadata();
+      return await sharp(buffer, {
+        limitInputPixels: false,
+      }).metadata();
     } catch {
       throwInvalidImage();
     }

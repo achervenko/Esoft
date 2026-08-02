@@ -13,12 +13,12 @@ import {
 } from './storage-file-names.helper';
 import { StorageFileUploadTransactionService } from './storage-file-upload-transaction.service';
 import {
-  assertStorageFileMatchesDocumentType,
   assertValidStorageDocumentType,
   assertValidStorageFile,
 } from './storage-file.validation';
 import { toStorageFileDto } from './storage-file.mapper';
 import { StorageObjectService } from './storage-object.service';
+import { StorageFilePolicyService } from './storage-file-policy.service';
 import type {
   StorageAuditContext,
   StorageFileDto,
@@ -32,24 +32,22 @@ export class StorageFileUploadService {
 
   constructor(
     private readonly objectStorage: StorageObjectService,
+    private readonly policy: StorageFilePolicyService,
     private readonly transactionStorage: StorageFileUploadTransactionService,
   ) {}
 
   async uploadFile(params: {
     audit: StorageAuditContext;
     documentType: StorageDocumentType;
-    file: UploadedFileInput;
+    file: UploadedFileInput | undefined;
     owner: StorageOwnerContext;
     userId?: string | null;
   }): Promise<StorageFileDto> {
-    assertValidStorageFile(params.file);
-    assertValidStorageDocumentType(params.documentType);
+    const file = normalizeUploadedFileInput(params.file);
 
-    const file = {
-      ...params.file,
-      originalname: normalizeOriginalFileName(params.file.originalname),
-    };
-    await assertStorageFileMatchesDocumentType({
+    assertValidStorageFile(file);
+    assertValidStorageDocumentType(params.documentType);
+    await this.policy.assertFileMatchesDocumentType({
       documentType: params.documentType,
       file,
     });
@@ -134,4 +132,26 @@ export class StorageFileUploadService {
       );
     }
   }
+}
+
+function normalizeUploadedFileInput(
+  file: UploadedFileInput | undefined,
+): UploadedFileInput | undefined {
+  if (!file) {
+    return undefined;
+  }
+
+  const inputBuffer: unknown = file.buffer;
+  const buffer = Buffer.isBuffer(inputBuffer)
+    ? inputBuffer
+    : inputBuffer instanceof Uint8Array
+      ? Buffer.from(inputBuffer)
+      : Buffer.alloc(0);
+
+  return {
+    ...file,
+    buffer,
+    originalname: normalizeOriginalFileName(file.originalname ?? ''),
+    size: buffer.length,
+  };
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import type { StorageFile } from '@prisma/client';
 import { Readable } from 'node:stream';
 import { ImageProcessingService } from '../image-processing/image-processing.service';
@@ -44,8 +44,21 @@ export class StorageImagePreviewService {
       return cachedPreview;
     }
 
+    assertPreviewSourceSize(
+      Number(file.sizeBytes),
+      PREVIEW_CONSTRAINTS.maxFileSizeBytes,
+    );
+
     const source = await this.objectStorage.getObject(file.objectKey);
-    const sourceBuffer = await streamToBuffer(source.body);
+    assertPreviewSourceSize(
+      source.contentLength,
+      PREVIEW_CONSTRAINTS.maxFileSizeBytes,
+    );
+
+    const sourceBuffer = await streamToBuffer(
+      source.body,
+      PREVIEW_CONSTRAINTS.maxFileSizeBytes,
+    );
     const [preview] = await this.imageProcessing.createWebpVersions({
       constraints: PREVIEW_CONSTRAINTS,
       file: {
@@ -78,22 +91,34 @@ function createPreviewObjectKey(
   return `storage-previews/${file.id}/${size}.webp`;
 }
 
-async function streamToBuffer(stream: Readable): Promise<Buffer> {
+async function streamToBuffer(
+  stream: Readable,
+  maxSizeBytes: number,
+): Promise<Buffer> {
   const chunks: Buffer[] = [];
+  let sizeBytes = 0;
 
   for await (const chunk of stream) {
     if (Buffer.isBuffer(chunk)) {
       chunks.push(chunk);
+      sizeBytes += chunk.length;
+      assertPreviewSourceSize(sizeBytes, maxSizeBytes);
       continue;
     }
 
     if (typeof chunk === 'string') {
-      chunks.push(Buffer.from(chunk));
+      const buffer = Buffer.from(chunk);
+      chunks.push(buffer);
+      sizeBytes += buffer.length;
+      assertPreviewSourceSize(sizeBytes, maxSizeBytes);
       continue;
     }
 
     if (chunk instanceof Uint8Array) {
-      chunks.push(Buffer.from(chunk));
+      const buffer = Buffer.from(chunk);
+      chunks.push(buffer);
+      sizeBytes += buffer.length;
+      assertPreviewSourceSize(sizeBytes, maxSizeBytes);
       continue;
     }
 
@@ -101,4 +126,13 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
   }
 
   return Buffer.concat(chunks);
+}
+
+function assertPreviewSourceSize(sizeBytes: number | undefined, limit: number) {
+  if (sizeBytes !== undefined && sizeBytes > limit) {
+    throw new BadRequestException({
+      code: 'FILE_TOO_LARGE',
+      message: 'Файл слишком большой для генерации превью.',
+    });
+  }
 }

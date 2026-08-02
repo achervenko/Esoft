@@ -43,6 +43,7 @@ export function EquipmentDetailsTab({
           photoError={photosError}
           photos={photos}
           title={mainSection.title}
+          visibleId={equipment.visibleId}
         />
       ) : null}
 

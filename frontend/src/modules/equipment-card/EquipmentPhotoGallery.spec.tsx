@@ -14,17 +14,21 @@ vi.mock("../../shared/ui/AsyncImage", () => ({
 describe("EquipmentPhotoGallery", () => {
   it("renders placeholder states for loading, error and empty photos", () => {
     const { rerender } = render(
-      <EquipmentPhotoGallery isLoading photos={[]} />,
+      <EquipmentPhotoGallery isLoading photos={[]} visibleId={1001} />,
     );
 
     expect(screen.getByText("Загрузка фото...")).toBeInTheDocument();
 
     rerender(
-      <EquipmentPhotoGallery error="Не удалось загрузить фото" photos={[]} />,
+      <EquipmentPhotoGallery
+        error="Не удалось загрузить фото"
+        photos={[]}
+        visibleId={1001}
+      />,
     );
     expect(screen.getByText("Не удалось загрузить фото")).toBeInTheDocument();
 
-    rerender(<EquipmentPhotoGallery photos={[]} />);
+    rerender(<EquipmentPhotoGallery photos={[]} visibleId={1001} />);
     expect(screen.getByText("Фото не загружено")).toBeInTheDocument();
   });
 
@@ -41,6 +45,7 @@ describe("EquipmentPhotoGallery", () => {
             isPrimary: true,
           }),
         ]}
+        visibleId={1001}
       />,
     );
 
@@ -51,7 +56,7 @@ describe("EquipmentPhotoGallery", () => {
 
     expect(previewImage).toHaveAttribute(
       "src",
-      getFilePreviewUrl(10, { size: "medium" }),
+      getFilePreviewUrl({ fileId: 10, visibleId: 1001 }, { size: "medium" }),
     );
 
     await user.click(previewButton);
@@ -70,15 +75,14 @@ describe("EquipmentPhotoGallery", () => {
           createEquipmentPhoto({ displayName: "Фото 1.jpg", id: 10 }),
           createEquipmentPhoto({ displayName: "Фото 2.jpg", id: 20 }),
         ]}
+        visibleId={1001}
       />,
     );
 
     expect(screen.getByRole("img", { name: "Фото 2.jpg" })).toBeInTheDocument();
     expect(screen.getByText("1 / 2")).toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", { name: "Следующее фото" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Следующее фото" }));
 
     expect(screen.getByText("2 / 2")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Фото 1.jpg" })).toBeInTheDocument();

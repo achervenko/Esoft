@@ -30,16 +30,21 @@ type UseEquipmentDocumentActionsParams = {
   notifySuccess: (title: string, message?: string) => string;
   notifyWarning: (title: string, message?: string) => string;
   onFilesChange: (
-    update: EquipmentFile[] | ((currentFiles: EquipmentFile[]) => EquipmentFile[]),
+    update:
+      EquipmentFile[] | ((currentFiles: EquipmentFile[]) => EquipmentFile[]),
   ) => void;
   onSaved?: () => void;
   onSelectedFilesChange: (
     update:
       | SelectedEquipmentDocumentFiles
-      | ((currentFiles: SelectedEquipmentDocumentFiles) => SelectedEquipmentDocumentFiles),
+      | ((
+          currentFiles: SelectedEquipmentDocumentFiles,
+        ) => SelectedEquipmentDocumentFiles),
   ) => void;
   onErrorChange: (error: string | null) => void;
-  onUploadingDocumentTypeChange: (documentType: StorageDocumentType | null) => void;
+  onUploadingDocumentTypeChange: (
+    documentType: StorageDocumentType | null,
+  ) => void;
   onDownloadingFileIdChange: (fileId: number | null) => void;
   onDeletingFileIdChange: (fileId: number | null) => void;
   onSettingPrimaryFileIdChange: (fileId: number | null) => void;
@@ -122,7 +127,9 @@ export function useEquipmentDocumentActions({
 
       onSelectedFilesChange({});
       notifySuccess(
-        selectedDocumentEntries.length > 1 ? "Файлы загружены" : "Файл загружен",
+        selectedDocumentEntries.length > 1
+          ? "Файлы загружены"
+          : "Файл загружен",
       );
       loadFiles();
       onSaved?.();
@@ -160,7 +167,7 @@ export function useEquipmentDocumentActions({
     onDeletingFileIdChange(file.id);
 
     try {
-      await deleteEquipmentFile(file.id);
+      await deleteEquipmentFile({ fileId: file.id, visibleId });
       onFilesChange((currentFiles) =>
         currentFiles.filter((currentFile) => currentFile.id !== file.id),
       );
@@ -181,7 +188,7 @@ export function useEquipmentDocumentActions({
     onDownloadingFileIdChange(file.id);
 
     try {
-      await downloadEquipmentFile(file);
+      await downloadEquipmentFile({ file, visibleId });
     } catch (requestError) {
       const errorMessage = getApiErrorMessage(
         requestError,
@@ -199,7 +206,10 @@ export function useEquipmentDocumentActions({
     onSettingPrimaryFileIdChange(file.id);
 
     try {
-      const updatedFile = await setEquipmentFilePrimary(file.id);
+      const updatedFile = await setEquipmentFilePrimary({
+        fileId: file.id,
+        visibleId,
+      });
 
       onFilesChange((currentFiles) =>
         currentFiles.map((currentFile) => {

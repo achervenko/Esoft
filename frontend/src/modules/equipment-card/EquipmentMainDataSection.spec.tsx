@@ -9,6 +9,7 @@ describe("EquipmentMainDataSection", () => {
       <EquipmentMainDataSection
         fields={[{ label: "Производитель", value: "DMG MORI" }]}
         photos={[createEquipmentPhoto()]}
+        visibleId={1001}
         title="Основные данные"
       />,
     );

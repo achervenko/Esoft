@@ -4,19 +4,25 @@ import { API_URL } from "./api-config";
 export type FilePreviewSize = "small" | "medium";
 
 export function getFilePreviewUrl(
-  fileId: number,
+  params: { fileId: number; visibleId: number },
   options: { size?: FilePreviewSize } = {},
 ) {
-  const baseUrl = `${API_URL}/api/files/${fileId}/preview`;
+  const baseUrl = `${API_URL}/api/equipment/${params.visibleId}/files/${params.fileId}/preview`;
   return options.size ? `${baseUrl}?size=${options.size}` : baseUrl;
 }
 
-export function getFileDownloadUrl(fileId: number) {
-  return `${API_URL}/api/files/${fileId}/download`;
+export function getFileDownloadUrl(params: {
+  fileId: number;
+  visibleId: number;
+}) {
+  return `${API_URL}/api/equipment/${params.visibleId}/files/${params.fileId}/download`;
 }
 
-export async function fetchPdfPreviewBlob(fileId: number) {
-  const response = await fetch(getFilePreviewUrl(fileId), {
+export async function fetchPdfPreviewBlob(params: {
+  fileId: number;
+  visibleId: number;
+}) {
+  const response = await fetch(getFilePreviewUrl(params), {
     credentials: "include",
   });
 
@@ -35,8 +41,9 @@ export async function fetchPdfPreviewBlob(fileId: number) {
 export async function downloadFileById(params: {
   fileId: number;
   fileName: string;
+  visibleId: number;
 }) {
-  const response = await fetch(getFileDownloadUrl(params.fileId), {
+  const response = await fetch(getFileDownloadUrl(params), {
     credentials: "include",
   });
 

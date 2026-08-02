@@ -9,6 +9,7 @@ type EquipmentMainDataSectionProps = {
   photoError?: string | null;
   photos: EquipmentFile[];
   title: string;
+  visibleId: number;
 };
 
 export function EquipmentMainDataSection({
@@ -17,6 +18,7 @@ export function EquipmentMainDataSection({
   photoError = null,
   photos,
   title,
+  visibleId,
 }: EquipmentMainDataSectionProps) {
   return (
     <section className="equipment-card-view-section equipment-card-main-section">
@@ -26,6 +28,7 @@ export function EquipmentMainDataSection({
           error={photoError}
           isLoading={isPhotosLoading}
           photos={photos}
+          visibleId={visibleId}
         />
         <EquipmentCardGrid items={fields} />
       </div>

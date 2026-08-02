@@ -18,21 +18,6 @@ export class StorageOwnerService {
     });
   }
 
-  async findActiveFile(fileId: number) {
-    const file = await this.prisma.storageFile.findFirst({
-      where: {
-        deletedAt: null,
-        id: fileId,
-      },
-    });
-
-    if (!file) {
-      throw new NotFoundException('Файл не найден.');
-    }
-
-    return file;
-  }
-
   async findActiveFileForOwner(fileId: number, owner: StorageOwnerContext) {
     const file = await this.prisma.storageFile.findFirst({
       where: {

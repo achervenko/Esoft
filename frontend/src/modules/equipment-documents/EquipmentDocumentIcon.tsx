@@ -13,16 +13,25 @@ import { getFileExtension } from "./equipment-document-utils";
 
 type EquipmentDocumentIconProps = {
   file: EquipmentFile;
+  visibleId: number;
 };
 
-export function EquipmentDocumentIcon({ file }: EquipmentDocumentIconProps) {
+export function EquipmentDocumentIcon({
+  file,
+  visibleId,
+}: EquipmentDocumentIconProps) {
   if (file.documentType === "equipment_photo") {
     return (
       <div
         className="equipment-document-icon equipment-document-icon-thumbnail"
         title="Фото"
       >
-        <AsyncImage src={getFilePreviewUrl(file.id, { size: "small" })} />
+        <AsyncImage
+          src={getFilePreviewUrl(
+            { fileId: file.id, visibleId },
+            { size: "small" },
+          )}
+        />
       </div>
     );
   }

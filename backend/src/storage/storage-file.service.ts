@@ -8,7 +8,6 @@ import { AuditAction, StorageDocumentType } from '@prisma/client';
 import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  toAuditModule,
   toStorageFileDisplayNameInList,
   toStorageFileDto,
   toStorageFileDtos,
@@ -52,15 +51,18 @@ export class StorageFileService {
   async uploadFile(params: {
     audit: StorageAuditContext;
     documentType: StorageDocumentType;
-    file: UploadedFileInput;
+    file: UploadedFileInput | undefined;
     owner: StorageOwnerContext;
     userId?: string | null;
   }): Promise<StorageFileDto> {
     return this.uploadStorage.uploadFile(params);
   }
 
-  async getDownload(fileId: number) {
-    const file = await this.ownerStorage.findActiveFile(fileId);
+  async getDownload(params: { fileId: number; owner: StorageOwnerContext }) {
+    const file = await this.ownerStorage.findActiveFileForOwner(
+      params.fileId,
+      params.owner,
+    );
     const object = await this.objectStorage.getObject(file.objectKey);
 
     return {
@@ -71,8 +73,15 @@ export class StorageFileService {
     };
   }
 
-  async getPreview(fileId: number, size?: StorageImagePreviewSize) {
-    const file = await this.ownerStorage.findActiveFile(fileId);
+  async getPreview(params: {
+    fileId: number;
+    owner: StorageOwnerContext;
+    size?: StorageImagePreviewSize;
+  }) {
+    const file = await this.ownerStorage.findActiveFileForOwner(
+      params.fileId,
+      params.owner,
+    );
 
     if (!isPdfStorageFile(file) && !isImageStorageFile(file)) {
       throw new BadRequestException(
@@ -80,27 +89,34 @@ export class StorageFileService {
       );
     }
 
+    const isOptimizedImagePreview = Boolean(
+      params.size && isImageStorageFile(file),
+    );
     const object =
-      size && isImageStorageFile(file)
-        ? await this.imagePreviewStorage.getPreview(file, size)
+      isOptimizedImagePreview && params.size
+        ? await this.imagePreviewStorage.getPreview(file, params.size)
         : await this.objectStorage.getObject(file.objectKey);
 
     return {
       body: object.body,
       contentLength: object.contentLength,
-      contentType:
-        size && isImageStorageFile(file)
-          ? 'image/webp'
-          : isPdfStorageFile(file)
-            ? 'application/pdf'
-            : file.mimeType,
+      contentType: isOptimizedImagePreview
+        ? 'image/webp'
+        : isPdfStorageFile(file)
+          ? 'application/pdf'
+          : file.mimeType,
       fileName: await this.getActiveDisplayName(file),
-      isOptimizedImagePreview: Boolean(size && isImageStorageFile(file)),
+      isOptimizedImagePreview,
     };
   }
 
-  async setPrimaryFileById(params: { fileId: number; userId?: string | null }) {
-    return this.primaryStorage.setPrimaryFileById(params);
+  async setPrimaryFile(params: {
+    audit: StorageAuditContext;
+    fileId: number;
+    owner: StorageOwnerContext;
+    userId?: string | null;
+  }) {
+    return this.primaryStorage.setPrimaryFile(params);
   }
 
   async softDeleteFile(params: {
@@ -154,6 +170,7 @@ export class StorageFileService {
           audit: params.audit,
           newValue: null,
           oldValue: displayName,
+          owner: params.owner,
           userId: params.userId,
         },
         tx,
@@ -165,39 +182,21 @@ export class StorageFileService {
     return toStorageFileDto(deletedFile);
   }
 
-  async softDeleteFileById(params: { fileId: number; userId?: string | null }) {
-    const file = await this.ownerStorage.findActiveFile(params.fileId);
-
-    return this.softDeleteFile({
-      audit: {
-        actionModule: toAuditModule(file.ownerModule),
-        entityId: file.ownerEntityId,
-        entityType: file.ownerEntityType,
-      },
-      fileId: file.id,
-      owner: {
-        entityId: file.ownerEntityId,
-        entityType: file.ownerEntityType,
-        module: file.ownerModule,
-      },
-      userId: params.userId,
-    });
-  }
-
   private writeAudit(
     params: {
       action: AuditAction;
       audit: StorageAuditContext;
       newValue: string | null;
       oldValue: string | null;
+      owner: StorageOwnerContext;
       userId?: string | null;
     },
     tx?: Prisma.TransactionClient,
   ) {
     return this.auditLog.writeFieldChanges({
       action: params.action,
-      entityId: params.audit.entityId,
-      entityType: params.audit.entityType,
+      entityId: params.owner.entityId,
+      entityType: params.owner.entityType,
       fields: [
         {
           fieldName: 'Файл',

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { StorageDocumentType } from '@prisma/client';
 import { loadRootConfig } from './config/root-environment';
 import { AppAuthModule } from './auth/auth.module';
 import { CalendarModule } from './calendar/calendar.module';
@@ -24,6 +25,28 @@ loadRootConfig();
       ignoreEnvFile: true,
       isGlobal: true,
     }),
+    StorageModule.register({
+      documentRules: {
+        [StorageDocumentType.equipment_photo]: {
+          allowedExtensions: ['jpg', 'jpeg', 'png', 'webp'],
+          allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+          maxPixelCount: 120_000_000,
+          validateContent: 'image',
+        },
+        [StorageDocumentType.maintenance_instruction]: {
+          allowedExtensions: ['pdf'],
+          allowedMimeTypes: ['application/pdf'],
+          validateContent: 'pdf',
+        },
+        [StorageDocumentType.passport]: {
+          allowedExtensions: ['pdf'],
+          allowedMimeTypes: ['application/pdf'],
+          validateContent: 'pdf',
+        },
+      },
+      primaryDocumentTypes: [StorageDocumentType.equipment_photo],
+      singleDocumentTypes: [StorageDocumentType.passport],
+    }),
     AppAuthModule,
     CalendarModule,
     ChecklistsModule,
@@ -35,7 +58,6 @@ loadRootConfig();
     HealthModule,
     SearchModule,
     SetupModule,
-    StorageModule,
     UsersAdminModule,
     UsersModule,
   ],

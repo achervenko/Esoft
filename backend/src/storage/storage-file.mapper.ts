@@ -1,11 +1,5 @@
 import type { StorageFile } from '@prisma/client';
-import { AuditModule, StorageOwnerModule } from '@prisma/client';
-import { createEquipmentDocumentDisplayName } from './equipment-documents.helper';
-import {
-  getExtensionByMimeType,
-  getExtensionFromName,
-  normalizeOriginalFileName,
-} from './storage-file-names.helper';
+import { normalizeOriginalFileName } from './storage-file-names.helper';
 import type { StorageFileDto } from './storage.types';
 
 export function toStorageFileDto(
@@ -61,23 +55,7 @@ export function toStorageFileDisplayName(
 }
 
 function toStorageFileBaseDisplayName(file: StorageFile) {
-  if (file.ownerModule === StorageOwnerModule.EQUIPMENT) {
-    if (file.documentType === 'supporting_document') {
-      return normalizeOriginalFileName(file.originalName);
-    }
-
-    return createEquipmentDocumentDisplayName({
-      documentType: file.documentType,
-      equipmentId: file.ownerEntityId,
-      extension:
-        getExtensionFromName(file.objectKey) ||
-        getExtensionFromName(file.originalName) ||
-        getExtensionByMimeType(file.mimeType) ||
-        'bin',
-    });
-  }
-
-  return file.originalName;
+  return normalizeOriginalFileName(file.originalName);
 }
 
 function getStorageFileDuplicateIndexes(files: StorageFile[]) {
@@ -120,12 +98,4 @@ function appendDuplicateSuffix(fileName: string, duplicateIndex: number) {
   return `${fileName.slice(0, extensionStart)}${suffix}${fileName.slice(
     extensionStart,
   )}`;
-}
-
-export function toAuditModule(module: StorageOwnerModule) {
-  const modules: Record<StorageOwnerModule, AuditModule> = {
-    [StorageOwnerModule.EQUIPMENT]: AuditModule.EQUIPMENT,
-  };
-
-  return modules[module];
 }

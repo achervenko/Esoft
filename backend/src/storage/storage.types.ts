@@ -36,8 +36,6 @@ export type StorageOwnerContext = {
 
 export type StorageAuditContext = {
   actionModule: AuditModule;
-  entityId: number;
-  entityType: string;
 };
 
 export type StorageFileDto = {

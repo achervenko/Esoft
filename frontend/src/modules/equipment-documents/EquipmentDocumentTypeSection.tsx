@@ -21,6 +21,7 @@ type EquipmentDocumentTypeSectionProps = {
   selectedFile: File | null;
   settingPrimaryFileId?: number | null;
   title: string;
+  visibleId: number;
 };
 
 export function EquipmentDocumentTypeSection({
@@ -38,6 +39,7 @@ export function EquipmentDocumentTypeSection({
   selectedFile,
   settingPrimaryFileId,
   title,
+  visibleId,
 }: EquipmentDocumentTypeSectionProps) {
   const fileInputId = useId();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -72,6 +74,7 @@ export function EquipmentDocumentTypeSection({
               onOpenPreview={onOpenPreview}
               onSetPrimary={onSetPrimary}
               settingPrimaryFileId={settingPrimaryFileId}
+              visibleId={visibleId}
             />
           ))}
         </ul>

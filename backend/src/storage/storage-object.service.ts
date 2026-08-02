@@ -105,8 +105,17 @@ function isMissingObjectError(error: unknown) {
     return false;
   }
 
-  const namedError = error as { Code?: string; name?: string };
-  return ['NoSuchKey', 'NotFound'].includes(
-    namedError.name ?? namedError.Code ?? '',
+  const storageError = error as {
+    Code?: string;
+    name?: string;
+    $metadata?: {
+      httpStatusCode?: number;
+    };
+  };
+
+  return (
+    ['NoSuchKey', 'NotFound'].includes(
+      storageError.name ?? storageError.Code ?? '',
+    ) || storageError.$metadata?.httpStatusCode === 404
   );
 }

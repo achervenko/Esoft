@@ -13,6 +13,7 @@ type PdfPreviewModalProps = {
   fileName: string;
   onClose: () => void;
   open: boolean;
+  visibleId: number;
 };
 
 export function PdfPreviewModal({
@@ -20,6 +21,7 @@ export function PdfPreviewModal({
   fileName,
   onClose,
   open,
+  visibleId,
 }: PdfPreviewModalProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -27,6 +29,7 @@ export function PdfPreviewModal({
   const { error, fileUrl, isLoading, loadPreview, setError } = usePdfPreview({
     fileId,
     open,
+    visibleId,
   });
 
   useEffect(() => {
@@ -62,15 +65,18 @@ export function PdfPreviewModal({
       await downloadFileById({
         fileId,
         fileName: resolvedFileName,
+        visibleId,
       });
     } catch (requestError) {
       setError(
-        requestError instanceof Error ? requestError.message : pdfPreviewText.error,
+        requestError instanceof Error
+          ? requestError.message
+          : pdfPreviewText.error,
       );
     } finally {
       setIsDownloading(false);
     }
-  }, [fileId, resolvedFileName, setError]);
+  }, [fileId, resolvedFileName, setError, visibleId]);
 
   const handlePrint = useCallback(async () => {
     if (!fileUrl) {
@@ -94,11 +100,7 @@ export function PdfPreviewModal({
   }
 
   return createPortal(
-    <div
-      className="pdf-preview-backdrop"
-      onClick={onClose}
-      role="presentation"
-    >
+    <div className="pdf-preview-backdrop" onClick={onClose} role="presentation">
       <section
         aria-label={resolvedFileName}
         aria-modal="true"

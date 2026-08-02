@@ -64,6 +64,7 @@ export function EquipmentDocumentsPanel({
               selectedFile={panel.selectedFiles[option.value] ?? null}
               settingPrimaryFileId={panel.settingPrimaryFileId}
               title={option.label}
+              visibleId={visibleId}
             />
           ))
         : null}
@@ -93,6 +94,7 @@ export function EquipmentDocumentsPanel({
         fileName={panel.previewFile ? getDisplayName(panel.previewFile) : ""}
         onClose={() => panel.setPreviewFile(null)}
         open={Boolean(panel.previewFile)}
+        visibleId={visibleId}
       />
     </section>
   );

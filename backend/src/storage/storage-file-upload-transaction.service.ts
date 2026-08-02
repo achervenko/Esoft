@@ -3,7 +3,7 @@ import { AuditAction, Prisma, StorageDocumentType } from '@prisma/client';
 import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { toStorageFileDisplayNameInList } from './storage-file.mapper';
-import { StorageFileUploadPolicyService } from './storage-file-upload-policy.service';
+import { StorageFilePolicyService } from './storage-file-policy.service';
 import { StorageOwnerLockService } from './storage-owner-lock.service';
 import type {
   StorageAuditContext,
@@ -16,7 +16,7 @@ export class StorageFileUploadTransactionService {
   constructor(
     private readonly auditLog: AuditLogService,
     private readonly ownerLock: StorageOwnerLockService,
-    private readonly policy: StorageFileUploadPolicyService,
+    private readonly policy: StorageFilePolicyService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -67,8 +67,8 @@ export class StorageFileUploadTransactionService {
 
       await this.auditLog.writeFieldChanges({
         action: AuditAction.FILE_UPLOAD,
-        entityId: params.audit.entityId,
-        entityType: params.audit.entityType,
+        entityId: params.owner.entityId,
+        entityType: params.owner.entityType,
         fields: [
           {
             fieldName: 'Файл',

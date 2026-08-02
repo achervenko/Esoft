@@ -10,12 +10,14 @@ type EquipmentPhotoGalleryProps = {
   error?: string | null;
   isLoading?: boolean;
   photos: EquipmentFile[];
+  visibleId: number;
 };
 
 export function EquipmentPhotoGallery({
   error = null,
   isLoading = false,
   photos,
+  visibleId,
 }: EquipmentPhotoGalleryProps) {
   const sortedPhotos = useMemo(
     () =>
@@ -34,7 +36,9 @@ export function EquipmentPhotoGallery({
   const photoSetKey = useMemo(
     () =>
       sortedPhotos
-        .map((photo) => `${photo.id}:${photo.isPrimary ? "primary" : "regular"}`)
+        .map(
+          (photo) => `${photo.id}:${photo.isPrimary ? "primary" : "regular"}`,
+        )
         .join("|"),
     [sortedPhotos],
   );
@@ -70,7 +74,10 @@ export function EquipmentPhotoGallery({
           >
             <AsyncImage
               alt={getDisplayName(activePhoto)}
-              src={getFilePreviewUrl(activePhoto.id, { size: "medium" })}
+              src={getFilePreviewUrl(
+                { fileId: activePhoto.id, visibleId },
+                { size: "medium" },
+              )}
             />
           </button>
         ) : (
@@ -110,7 +117,10 @@ export function EquipmentPhotoGallery({
               : undefined
           }
           imageAlt={getDisplayName(activePhoto)}
-          imageUrl={getFilePreviewUrl(activePhoto.id)}
+          imageUrl={getFilePreviewUrl({
+            fileId: activePhoto.id,
+            visibleId,
+          })}
           onClose={() => setIsPreviewOpen(false)}
           onNext={canNavigate ? showNext : undefined}
           onPrevious={canNavigate ? showPrevious : undefined}

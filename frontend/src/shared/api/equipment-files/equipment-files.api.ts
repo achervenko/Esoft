@@ -39,25 +39,44 @@ export async function uploadEquipmentFile(params: {
   }
 }
 
-export function deleteEquipmentFile(fileId: number) {
-  return request<EquipmentFile>(`/api/files/${fileId}`, {
-    method: "DELETE",
-  });
+export function deleteEquipmentFile(params: {
+  fileId: number;
+  visibleId: number;
+}) {
+  return request<EquipmentFile>(
+    `/api/equipment/${params.visibleId}/files/${params.fileId}`,
+    {
+      method: "DELETE",
+    },
+  );
 }
 
-export function setEquipmentFilePrimary(fileId: number) {
-  return request<EquipmentFile>(`/api/files/${fileId}/primary`, {
-    method: "PATCH",
-  });
+export function setEquipmentFilePrimary(params: {
+  fileId: number;
+  visibleId: number;
+}) {
+  return request<EquipmentFile>(
+    `/api/equipment/${params.visibleId}/files/${params.fileId}/primary`,
+    {
+      method: "PATCH",
+    },
+  );
 }
 
-export function getEquipmentFileDownloadUrl(fileId: number) {
-  return getFileDownloadUrl(fileId);
+export function getEquipmentFileDownloadUrl(params: {
+  fileId: number;
+  visibleId: number;
+}) {
+  return getFileDownloadUrl(params);
 }
 
-export async function downloadEquipmentFile(file: EquipmentFile) {
+export async function downloadEquipmentFile(params: {
+  file: EquipmentFile;
+  visibleId: number;
+}) {
   await downloadFileById({
-    fileId: file.id,
-    fileName: file.displayName,
+    fileId: params.file.id,
+    fileName: params.file.displayName,
+    visibleId: params.visibleId,
   });
 }

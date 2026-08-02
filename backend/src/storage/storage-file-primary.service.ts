@@ -1,51 +1,41 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma, StorageFile } from '@prisma/client';
-import { AuditAction, StorageDocumentType } from '@prisma/client';
+import { AuditAction, type StorageDocumentType } from '@prisma/client';
 import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  toAuditModule,
   toStorageFileDisplayNameInList,
   toStorageFileDto,
 } from './storage-file.mapper';
+import { StorageFilePolicyService } from './storage-file-policy.service';
 import { StorageOwnerLockService } from './storage-owner-lock.service';
-import type { StorageOwnerContext } from './storage.types';
+import type { StorageAuditContext, StorageOwnerContext } from './storage.types';
 
 @Injectable()
 export class StorageFilePrimaryService {
   constructor(
     private readonly auditLog: AuditLogService,
     private readonly ownerLock: StorageOwnerLockService,
+    private readonly policy: StorageFilePolicyService,
     private readonly prisma: PrismaService,
   ) {}
 
-  async setPrimaryFileById(params: { fileId: number; userId?: string | null }) {
+  async setPrimaryFile(params: {
+    audit: StorageAuditContext;
+    fileId: number;
+    owner: StorageOwnerContext;
+    userId?: string | null;
+  }) {
     const updatedFile = await this.prisma.$transaction(async (tx) => {
-      const initialFile = await tx.storageFile.findFirst({
-        where: {
-          deletedAt: null,
-          id: params.fileId,
-        },
-      });
-
-      if (!initialFile) {
-        throw new NotFoundException('Файл не найден.');
-      }
-
-      const owner = this.toOwnerContext(initialFile);
-      await this.ownerLock.lock(tx, owner);
+      await this.ownerLock.lock(tx, params.owner);
 
       const file = await tx.storageFile.findFirst({
         where: {
           deletedAt: null,
           id: params.fileId,
-          ownerEntityId: owner.entityId,
-          ownerEntityType: owner.entityType,
-          ownerModule: owner.module,
+          ownerEntityId: params.owner.entityId,
+          ownerEntityType: params.owner.entityType,
+          ownerModule: params.owner.module,
         },
       });
 
@@ -53,14 +43,13 @@ export class StorageFilePrimaryService {
         throw new NotFoundException('Файл не найден.');
       }
 
-      if (file.documentType !== StorageDocumentType.equipment_photo) {
-        throw new BadRequestException({
-          code: 'UNSUPPORTED_PRIMARY_FILE',
-          message: 'Основным можно сделать только фото оборудования.',
-        });
-      }
+      this.policy.assertCanBePrimary(file.documentType);
 
-      const activeFiles = await this.findActiveOwnerFiles(tx, owner);
+      const activeFiles = await this.findActiveOwnerFiles(
+        tx,
+        params.owner,
+        file.documentType,
+      );
 
       if (file.isPrimary) {
         return file;
@@ -94,8 +83,8 @@ export class StorageFilePrimaryService {
 
       await this.auditLog.writeFieldChanges({
         action: AuditAction.UPDATE,
-        entityId: file.ownerEntityId,
-        entityType: file.ownerEntityType,
+        entityId: params.owner.entityId,
+        entityType: params.owner.entityType,
         fields: [
           {
             fieldName: 'Основной файл',
@@ -103,7 +92,7 @@ export class StorageFilePrimaryService {
             oldValue: previousPrimaryDisplayName,
           },
         ],
-        module: toAuditModule(file.ownerModule),
+        module: params.audit.actionModule,
         tx,
         userId: params.userId,
       });
@@ -117,11 +106,13 @@ export class StorageFilePrimaryService {
   private findActiveOwnerFiles(
     tx: Prisma.TransactionClient,
     owner: StorageOwnerContext,
+    documentType: StorageDocumentType,
   ) {
     return tx.storageFile.findMany({
       orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
       where: {
         deletedAt: null,
+        documentType,
         ownerEntityId: owner.entityId,
         ownerEntityType: owner.entityType,
         ownerModule: owner.module,
@@ -129,43 +120,32 @@ export class StorageFilePrimaryService {
     });
   }
 
-  private toOwnerContext(file: StorageFile): StorageOwnerContext {
-    return {
-      entityId: file.ownerEntityId,
-      entityType: file.ownerEntityType,
-      module: file.ownerModule,
-    };
-  }
-
   async assignNextPrimaryAfterDelete(
     tx: Prisma.TransactionClient,
     file: StorageFile,
   ) {
-    if (
-      !file.isPrimary ||
-      file.documentType !== StorageDocumentType.equipment_photo
-    ) {
+    if (!file.isPrimary || !this.policy.canBePrimary(file.documentType)) {
       return;
     }
 
-    const nextPrimaryPhoto = await tx.storageFile.findFirst({
+    const nextPrimaryFile = await tx.storageFile.findFirst({
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       where: {
         deletedAt: null,
-        documentType: StorageDocumentType.equipment_photo,
+        documentType: file.documentType,
         ownerEntityId: file.ownerEntityId,
         ownerEntityType: file.ownerEntityType,
         ownerModule: file.ownerModule,
       },
     });
 
-    if (!nextPrimaryPhoto) {
+    if (!nextPrimaryFile) {
       return;
     }
 
     await tx.storageFile.update({
       data: { isPrimary: true },
-      where: { id: nextPrimaryPhoto.id },
+      where: { id: nextPrimaryFile.id },
     });
   }
 }

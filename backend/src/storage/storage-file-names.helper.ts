@@ -9,7 +9,13 @@ export function createStorageObjectKey(params: {
   extension: string;
   owner: StorageOwnerContext;
 }) {
-  return `equipment/${params.owner.entityId}/${params.documentType}/${randomUUID()}.${params.extension}`;
+  return [
+    toStorageKeySegment(params.owner.module.toLowerCase()),
+    toStorageKeySegment(params.owner.entityType),
+    toStorageKeySegment(String(params.owner.entityId)),
+    toStorageKeySegment(params.documentType),
+    `${randomUUID()}.${toStorageKeySegment(params.extension)}`,
+  ].join('/');
 }
 
 export function getSafeExtension(file: UploadedFileInput) {
@@ -86,4 +92,10 @@ function decodeMojibakeText(value: string) {
   }
 
   return decodedValue;
+}
+
+function toStorageKeySegment(value: string) {
+  const segment = value.trim().replace(/[^a-zA-Z0-9._=-]/g, '_');
+
+  return segment || 'unknown';
 }
