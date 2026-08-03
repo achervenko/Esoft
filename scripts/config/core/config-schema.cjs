@@ -101,6 +101,11 @@ function buildConfig(env) {
       secretKey: env.MINIO_SECRET_KEY,
       useSsl: minioUseSsl,
     },
+    backup: {
+      dir: env.BACKUP_DIR?.trim() || null,
+      pgDumpPath: env.PG_DUMP_PATH?.trim() || null,
+      pgRestorePath: env.PG_RESTORE_PATH?.trim() || null,
+    },
   };
 }
 
@@ -132,6 +137,9 @@ function validateEnvironment(env) {
   validateNodeEnv(env, errors, nodeEnvValues);
   validateExistingFile(env, 'MINIO_EXECUTABLE', errors);
   validateExistingOrCreatableDirectory(env, 'MINIO_DATA_DIR', errors);
+  validateExistingOrCreatableDirectory(env, 'BACKUP_DIR', errors);
+  validateExistingFile(env, 'PG_DUMP_PATH', errors);
+  validateExistingFile(env, 'PG_RESTORE_PATH', errors);
 
   validateNotPlaceholder(env, errors, placeholderValues);
   validateDistinctPorts(env, errors);

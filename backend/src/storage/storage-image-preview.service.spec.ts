@@ -1,12 +1,18 @@
 import { BadRequestException } from '@nestjs/common';
-import { StorageDocumentType, StorageOwnerModule, type StorageFile } from '@prisma/client';
+import {
+  StorageDocumentType,
+  StorageOwnerModule,
+  type StorageFile,
+} from '@prisma/client';
 import { Readable } from 'node:stream';
 import { ImageProcessingService } from '../image-processing/image-processing.service';
 import { StorageImagePreviewService } from './storage-image-preview.service';
 import { StorageObjectService } from './storage-object.service';
 
 describe('StorageImagePreviewService', () => {
-  let imageProcessing: jest.Mocked<Pick<ImageProcessingService, 'createWebpVersions'>>;
+  let imageProcessing: jest.Mocked<
+    Pick<ImageProcessingService, 'createWebpVersions'>
+  >;
   let objectStorage: jest.Mocked<
     Pick<StorageObjectService, 'getObject' | 'getObjectOrNull' | 'putObject'>
   >;
@@ -77,7 +83,7 @@ describe('StorageImagePreviewService', () => {
     await expect(
       service.getPreview(createImageFile(), 'medium'),
     ).rejects.toMatchObject({
-      response: expect.objectContaining({ code: 'FILE_TOO_LARGE' }),
+      response: { code: 'FILE_TOO_LARGE' },
     });
 
     expect(imageProcessing.createWebpVersions).not.toHaveBeenCalled();
@@ -96,7 +102,7 @@ describe('StorageImagePreviewService', () => {
     await expect(
       service.getPreview(createImageFile(), 'medium'),
     ).rejects.toMatchObject({
-      response: expect.objectContaining({ code: 'FILE_TOO_LARGE' }),
+      response: { code: 'FILE_TOO_LARGE' },
     });
 
     expect(imageProcessing.createWebpVersions).not.toHaveBeenCalled();
@@ -104,15 +110,13 @@ describe('StorageImagePreviewService', () => {
 
   it('creates and stores preview for a normal small source stream', async () => {
     const result = await service.getPreview(createImageFile(), 'medium');
+    const createVersionsCall =
+      imageProcessing.createWebpVersions.mock.calls[0]?.[0];
 
-    expect(imageProcessing.createWebpVersions).toHaveBeenCalledWith(
-      expect.objectContaining({
-        file: expect.objectContaining({
-          buffer: Buffer.from('source'),
-          mimetype: 'image/jpeg',
-        }),
-      }),
-    );
+    expect(createVersionsCall?.file).toMatchObject({
+      buffer: Buffer.from('source'),
+      mimetype: 'image/jpeg',
+    });
     expect(objectStorage.putObject).toHaveBeenCalledWith({
       body: Buffer.from('webp'),
       contentType: 'image/webp',

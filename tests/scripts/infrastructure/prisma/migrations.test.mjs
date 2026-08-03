@@ -45,6 +45,40 @@ test('checkPrismaMigrationStatus calls the root migration status script', async 
   });
 });
 
+test('checkPrismaMigrationStatus passes env to the command when provided', async () => {
+  const env = {
+    DATABASE_URL: 'postgresql://example',
+    NODE_ENV: 'production',
+  };
+  const calls = [];
+
+  const result = await checkPrismaMigrationStatus({
+    env,
+    npm: 'npm',
+    projectRoot: 'C:/project',
+    runCommand: async (...args) => {
+      calls.push(args);
+
+      return {
+        code: 0,
+        ok: true,
+        stderr: '',
+        stdout: '',
+        timedOut: false,
+      };
+    },
+    timeoutMs: 123,
+  });
+
+  assertOperationResult(result, { ok: true });
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0][2], {
+    cwd: 'C:/project',
+    env,
+    timeoutMs: 123,
+  });
+});
+
 test('checkPrismaMigrationStatus reports an unexpected command failure', async () => {
   const result = await checkPrismaMigrationStatus({
     npm: 'npm',
@@ -223,6 +257,40 @@ test('deployPrismaMigrations deploys migrations successfully', async () => {
   assert.deepEqual(args, ['run', 'db:migrate:deploy']);
   assert.deepEqual(options, {
     cwd: 'C:/project',
+    timeoutMs: 456,
+  });
+});
+
+test('deployPrismaMigrations passes env to the command when provided', async () => {
+  const env = {
+    DATABASE_URL: 'postgresql://example',
+    NODE_ENV: 'production',
+  };
+  const calls = [];
+
+  const result = await deployPrismaMigrations({
+    env,
+    npm: 'npm',
+    projectRoot: 'C:/project',
+    runCommand: async (...args) => {
+      calls.push(args);
+
+      return {
+        code: 0,
+        ok: true,
+        stderr: '',
+        stdout: '',
+        timedOut: false,
+      };
+    },
+    timeoutMs: 456,
+  });
+
+  assertOperationResult(result, { ok: true });
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0][2], {
+    cwd: 'C:/project',
+    env,
     timeoutMs: 456,
   });
 });

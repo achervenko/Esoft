@@ -188,5 +188,7 @@ describe('CalendarWorkdayWriterService', () => {
 function getTransactionArg(
   repository: ReturnType<typeof createMockCalendarRepository>,
 ) {
-  return repository.findDay.mock.calls[0]?.[1];
+  const calls = repository.findDay.mock.calls as Array<[unknown, unknown?]>;
+
+  return calls[0]?.[1];
 }

@@ -162,7 +162,7 @@ function copyDocumentRules(
           : undefined,
       },
     ]),
-  ) as Partial<Record<StorageDocumentType, StorageFileDocumentRule>>;
+  );
 }
 
 function assertValidPdfBuffer(buffer: Buffer) {

@@ -119,6 +119,7 @@ type AppShellRouteBoundaryProps = {
 
 type AppShellRouteBoundaryState = {
   hasError: boolean;
+  routeKey: string;
 };
 
 class AppShellRouteBoundary extends Component<
@@ -127,23 +128,27 @@ class AppShellRouteBoundary extends Component<
 > {
   state: AppShellRouteBoundaryState = {
     hasError: false,
+    routeKey: this.props.routeKey,
   };
+
+  static getDerivedStateFromProps(
+    props: AppShellRouteBoundaryProps,
+    state: AppShellRouteBoundaryState,
+  ) {
+    if (props.routeKey !== state.routeKey) {
+      return {
+        hasError: false,
+        routeKey: props.routeKey,
+      };
+    }
+
+    return null;
+  }
 
   static getDerivedStateFromError() {
     return {
       hasError: true,
     };
-  }
-
-  componentDidUpdate(previousProps: AppShellRouteBoundaryProps) {
-    if (
-      previousProps.routeKey !== this.props.routeKey &&
-      this.state.hasError
-    ) {
-      this.setState({
-        hasError: false,
-      });
-    }
   }
 
   render() {

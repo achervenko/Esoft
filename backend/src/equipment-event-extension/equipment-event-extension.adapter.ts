@@ -30,16 +30,13 @@ import { EquipmentEventExtensionUpdate } from './equipment-event-extension.updat
 import { EquipmentEventExtensionValidation } from './equipment-event-extension.validation';
 
 @Injectable()
-export class EquipmentEventExtensionAdapter
-  implements
-    EventExtensionAdapter<
-      EquipmentEventExtensionCreateInput,
-      EquipmentEventExtensionUpdateInput,
-      PreparedEquipmentEventExtensionCreate,
-      EquipmentEventExtensionDetailResponse,
-      EquipmentEventExtensionListResponse
-    >
-{
+export class EquipmentEventExtensionAdapter implements EventExtensionAdapter<
+  EquipmentEventExtensionCreateInput,
+  EquipmentEventExtensionUpdateInput,
+  PreparedEquipmentEventExtensionCreate,
+  EquipmentEventExtensionDetailResponse,
+  EquipmentEventExtensionListResponse
+> {
   readonly code = EventExtensionCode.EQUIPMENT;
 
   constructor(

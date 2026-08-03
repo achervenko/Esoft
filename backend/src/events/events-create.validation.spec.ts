@@ -14,8 +14,9 @@ type ExceptionWithResponse = {
 const extensionRegistry = new EventExtensionRegistry([
   createEquipmentEventExtensionAdapter(),
 ]);
-const parseCreateEventDto = (dto: Parameters<typeof parseCreateEventDtoBase>[0]) =>
-  parseCreateEventDtoBase(dto, extensionRegistry);
+const parseCreateEventDto = (
+  dto: Parameters<typeof parseCreateEventDtoBase>[0],
+) => parseCreateEventDtoBase(dto, extensionRegistry);
 
 function createEquipmentEventExtensionAdapter(): EquipmentEventExtensionAdapter {
   const validation = new EquipmentEventExtensionValidation();

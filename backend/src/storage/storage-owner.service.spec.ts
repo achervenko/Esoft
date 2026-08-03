@@ -48,9 +48,9 @@ describe('StorageOwnerService', () => {
   ])('throws NotFoundException when file belongs to %s', async () => {
     findFirst.mockResolvedValue(null);
 
-    await expect(service.findActiveFileForOwner(5, owner)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.findActiveFileForOwner(5, owner),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });
 

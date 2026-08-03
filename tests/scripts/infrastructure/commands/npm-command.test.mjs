@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  createNpmInvocation,
   npmArgs,
   npmCommandName,
   npmScriptArgs,
@@ -42,5 +43,75 @@ test('npmScriptArgs omits -- when there are no extra arguments', () => {
   assert.deepEqual(
     npmScriptArgs('lint', 'frontend'),
     ['run', 'lint', '--workspace', 'frontend'],
+  );
+});
+
+test('createNpmInvocation uses npm_execpath through the current node executable', () => {
+  assert.deepEqual(
+    createNpmInvocation({
+      execPath: 'C:/Program Files/nodejs/node.exe',
+      npmExecPath:
+        'C:/Users/alex/AppData/Roaming/npm/node_modules/npm/bin/npm-cli.js',
+      platform: 'win32',
+    }),
+    {
+      command: 'C:/Program Files/nodejs/node.exe',
+      argsPrefix: [
+        'C:/Users/alex/AppData/Roaming/npm/node_modules/npm/bin/npm-cli.js',
+      ],
+    },
+  );
+});
+
+test('createNpmInvocation falls back to npm.cmd on Windows without npm_execpath', () => {
+  assert.deepEqual(
+    createNpmInvocation({
+      npmExecPath: undefined,
+      platform: 'win32',
+    }),
+    {
+      command: 'npm.cmd',
+      argsPrefix: [],
+    },
+  );
+
+  assert.deepEqual(
+    createNpmInvocation({
+      npmExecPath: '   ',
+      platform: 'win32',
+    }),
+    {
+      command: 'npm.cmd',
+      argsPrefix: [],
+    },
+  );
+});
+
+test('createNpmInvocation falls back to npm on POSIX without npm_execpath', () => {
+  assert.deepEqual(
+    createNpmInvocation({
+      npmExecPath: '',
+      platform: 'linux',
+    }),
+    {
+      command: 'npm',
+      argsPrefix: [],
+    },
+  );
+});
+
+test('createNpmInvocation preserves paths with spaces as separate arguments', () => {
+  assert.deepEqual(
+    createNpmInvocation({
+      execPath: 'C:/Program Files/nodejs/node.exe',
+      npmExecPath: 'C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js',
+      platform: 'win32',
+    }),
+    {
+      command: 'C:/Program Files/nodejs/node.exe',
+      argsPrefix: [
+        'C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js',
+      ],
+    },
   );
 });

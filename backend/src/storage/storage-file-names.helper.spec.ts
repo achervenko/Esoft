@@ -48,7 +48,9 @@ describe('storage-file-names helper', () => {
       },
     };
 
-    expect(createStorageObjectKey(params)).not.toBe(createStorageObjectKey(params));
+    expect(createStorageObjectKey(params)).not.toBe(
+      createStorageObjectKey(params),
+    );
   });
 
   it('derives safe extension from filename, MIME or bin fallback', () => {

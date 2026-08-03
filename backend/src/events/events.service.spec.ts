@@ -251,7 +251,7 @@ describe('EventsService', () => {
       title: 'Equipment event',
     });
     expect(options?.createExtension).toBeDefined();
-    const extensionContext = await options?.createExtension?.({
+    await options?.createExtension?.({
       eventId: 25,
       tx: tx as never,
     });

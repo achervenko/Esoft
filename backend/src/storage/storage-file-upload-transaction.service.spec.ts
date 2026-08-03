@@ -40,7 +40,7 @@ describe('StorageFileUploadTransactionService', () => {
 
     service = new StorageFileUploadTransactionService(
       auditLog as never,
-      ownerLock as never,
+      ownerLock,
       policy as never,
       prisma as never as PrismaService,
     );
@@ -79,15 +79,19 @@ describe('StorageFileUploadTransactionService', () => {
       documentType: StorageDocumentType.passport,
     });
     expect(tx.storageFile.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
+      data: {
+        bucket: 'bucket',
         documentType: StorageDocumentType.passport,
         isPrimary: true,
         mimeType: 'application/octet-stream',
+        objectKey: 'equipment/equipment/10/passport/object.pdf',
+        originalName: 'passport.pdf',
         ownerEntityId: 10,
         ownerEntityType: 'equipment',
         ownerModule: StorageOwnerModule.EQUIPMENT,
         sizeBytes: 123n,
-      }),
+        uploadedByUserId: 'user-1',
+      },
     });
     expect(auditLog.writeFieldChanges).toHaveBeenCalledWith(
       expect.objectContaining({

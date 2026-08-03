@@ -1,13 +1,13 @@
-import { HeadBucketCommand, S3Client } from '@aws-sdk/client-s3';
 import { Injectable } from '@nestjs/common';
-import { loadRootConfig } from '../config/root-environment';
 import { PrismaService } from '../prisma/prisma.service';
+import { StorageObjectService } from '../storage/storage-object.service';
 
 type DependencyStatus = 'ok' | 'error';
 
 type HealthResponse = {
   dependencies: {
     minio: DependencyStatus;
+    minioBucket: DependencyStatus;
     postgres: DependencyStatus;
   };
   status: DependencyStatus;
@@ -15,20 +15,27 @@ type HealthResponse = {
 
 @Injectable()
 export class HealthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storageObjects: StorageObjectService,
+  ) {}
 
   async check(): Promise<HealthResponse> {
-    const [postgres, minio] = await Promise.all([
+    const [postgres, storage] = await Promise.all([
       this.checkPostgres(),
       this.checkMinio(),
     ]);
 
     return {
       dependencies: {
-        minio,
+        minio: storage.minio,
+        minioBucket: storage.bucket,
         postgres,
       },
-      status: postgres === 'ok' && minio === 'ok' ? 'ok' : 'error',
+      status:
+        postgres === 'ok' && storage.minio === 'ok' && storage.bucket === 'ok'
+          ? 'ok'
+          : 'error',
     };
   }
 
@@ -41,25 +48,48 @@ export class HealthService {
     }
   }
 
-  private async checkMinio(): Promise<DependencyStatus> {
-    const config = loadRootConfig();
-    const client = new S3Client({
-      credentials: {
-        accessKeyId: config.minio.accessKey,
-        secretAccessKey: config.minio.secretKey,
-      },
-      endpoint: config.minio.endpoint,
-      forcePathStyle: true,
-      region: config.minio.region,
-    });
-
+  private async checkMinio(): Promise<{
+    bucket: DependencyStatus;
+    minio: DependencyStatus;
+  }> {
     try {
-      await client.send(new HeadBucketCommand({ Bucket: config.minio.bucket }));
-      return 'ok';
-    } catch {
-      return 'error';
-    } finally {
-      client.destroy();
+      await this.storageObjects.assertBucketAvailable();
+      return {
+        bucket: 'ok',
+        minio: 'ok',
+      };
+    } catch (error) {
+      if (isBucketMissingError(error)) {
+        return {
+          bucket: 'error',
+          minio: 'ok',
+        };
+      }
+
+      return {
+        bucket: 'error',
+        minio: 'error',
+      };
     }
   }
+}
+
+function isBucketMissingError(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const storageError = error as {
+    $metadata?: {
+      httpStatusCode?: number;
+    };
+    Code?: string;
+    name?: string;
+  };
+  const code = storageError.name ?? storageError.Code ?? '';
+
+  return (
+    ['NoSuchBucket', 'NotFound'].includes(code) ||
+    storageError.$metadata?.httpStatusCode === 404
+  );
 }

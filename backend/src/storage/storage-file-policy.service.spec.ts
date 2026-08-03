@@ -45,7 +45,7 @@ describe('StorageFilePolicyService', () => {
         }),
       }),
     ).rejects.toMatchObject({
-      response: expect.objectContaining({ code: 'UNSUPPORTED_FILE_FORMAT' }),
+      response: { code: 'UNSUPPORTED_FILE_FORMAT' },
     });
 
     await expect(
@@ -70,7 +70,7 @@ describe('StorageFilePolicyService', () => {
         }),
       }),
     ).rejects.toMatchObject({
-      response: expect.objectContaining({ code: 'UNSUPPORTED_FILE_FORMAT' }),
+      response: { code: 'UNSUPPORTED_FILE_FORMAT' },
     });
   });
 
@@ -78,14 +78,17 @@ describe('StorageFilePolicyService', () => {
     ['JPEG', jpegBytes(), 'image/jpeg', 'photo.jpg'],
     ['PNG', pngBytes(), 'image/png', 'photo.png'],
     ['WebP', webpBytes(), 'image/webp', 'photo.webp'],
-  ])('accepts valid %s image signatures', async (_label, buffer, mimetype, name) => {
-    await expect(
-      service.assertFileMatchesDocumentType({
-        documentType: StorageDocumentType.equipment_photo,
-        file: createFile({ buffer, mimetype, originalname: name }),
-      }),
-    ).resolves.toBeUndefined();
-  });
+  ])(
+    'accepts valid %s image signatures',
+    async (_label, buffer, mimetype, name) => {
+      await expect(
+        service.assertFileMatchesDocumentType({
+          documentType: StorageDocumentType.equipment_photo,
+          file: createFile({ buffer, mimetype, originalname: name }),
+        }),
+      ).resolves.toBeUndefined();
+    },
+  );
 
   it('rejects a second active file for single document types', () => {
     expect(() =>
@@ -144,7 +147,9 @@ function createPolicyConfig(): StorageFilePolicyConfig {
   };
 }
 
-function createFile(overrides: Partial<UploadedFileInput> = {}): UploadedFileInput {
+function createFile(
+  overrides: Partial<UploadedFileInput> = {},
+): UploadedFileInput {
   const buffer = Buffer.from('%PDF-1.4\n%%EOF', 'ascii');
 
   return {

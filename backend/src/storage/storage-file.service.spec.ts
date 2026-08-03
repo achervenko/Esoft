@@ -1,5 +1,4 @@
 import {
-  AuditModule,
   StorageDocumentType,
   StorageOwnerModule,
   type StorageFile,
@@ -16,7 +15,9 @@ import { StorageOwnerLockService } from './storage-owner-lock.service';
 import { StorageOwnerService } from './storage-owner.service';
 
 describe('StorageFileService', () => {
-  let imagePreviewStorage: jest.Mocked<Pick<StorageImagePreviewService, 'getPreview'>>;
+  let imagePreviewStorage: jest.Mocked<
+    Pick<StorageImagePreviewService, 'getPreview'>
+  >;
   let objectStorage: jest.Mocked<Pick<StorageObjectService, 'getObject'>>;
   let ownerStorage: jest.Mocked<
     Pick<StorageOwnerService, 'findActiveFileForOwner' | 'findActiveFiles'>
@@ -58,7 +59,10 @@ describe('StorageFileService', () => {
   it('loads downloads through owner-bound lookup before reading object storage', async () => {
     await service.getDownload({ fileId: 5, owner: owner() });
 
-    expect(ownerStorage.findActiveFileForOwner).toHaveBeenCalledWith(5, owner());
+    expect(ownerStorage.findActiveFileForOwner).toHaveBeenCalledWith(
+      5,
+      owner(),
+    );
     expect(objectStorage.getObject).toHaveBeenCalledWith(
       'equipment/equipment/10/passport/object.pdf',
     );
@@ -76,7 +80,10 @@ describe('StorageFileService', () => {
 
     await service.getPreview({ fileId: 6, owner: owner(), size: 'small' });
 
-    expect(ownerStorage.findActiveFileForOwner).toHaveBeenCalledWith(6, owner());
+    expect(ownerStorage.findActiveFileForOwner).toHaveBeenCalledWith(
+      6,
+      owner(),
+    );
     expect(imagePreviewStorage.getPreview).toHaveBeenCalledWith(
       imageFile,
       'small',

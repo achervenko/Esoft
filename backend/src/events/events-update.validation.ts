@@ -3,9 +3,7 @@ import {
   parseResponsibleUserIds,
 } from './events-checklist.validation';
 import { throwEventBadRequest } from './events.errors';
-import {
-  assertNoUpdateExtensionCode,
-} from './events-extension.validation';
+import { assertNoUpdateExtensionCode } from './events-extension.validation';
 import type { EventExtensionRegistry } from './event-extensions/event-extension.registry';
 import type { UpdateCreatedEventData } from './events-update.types';
 import {

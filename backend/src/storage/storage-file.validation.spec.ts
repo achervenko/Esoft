@@ -37,12 +37,7 @@ describe('storage-file validation', () => {
       'UNSUPPORTED_FILE_FORMAT',
     ],
   ])('rejects %s with a stable bad request code', (_label, file, code) => {
-    expect(() => assertValidStorageFile(file)).toThrow(BadRequestException);
-    expect(() => assertValidStorageFile(file)).toThrow(
-      expect.objectContaining({
-        response: expect.objectContaining({ code }),
-      }),
-    );
+    expectStorageFileBadRequestCode(() => assertValidStorageFile(file), code);
   });
 
   it('accepts known document types and rejects unknown runtime values', () => {
@@ -50,17 +45,28 @@ describe('storage-file validation', () => {
       assertValidStorageDocumentType(StorageDocumentType.passport),
     ).not.toThrow();
 
-    expect(() => assertValidStorageDocumentType('INVALID_VALUE')).toThrow(
-      expect.objectContaining({
-        response: expect.objectContaining({
-          code: 'UNSUPPORTED_DOCUMENT_TYPE',
-        }),
-      }),
+    expectStorageFileBadRequestCode(
+      () => assertValidStorageDocumentType('INVALID_VALUE'),
+      'UNSUPPORTED_DOCUMENT_TYPE',
     );
   });
 });
 
-function createFile(overrides: Partial<UploadedFileInput> = {}): UploadedFileInput {
+function expectStorageFileBadRequestCode(action: () => void, code: string) {
+  try {
+    action();
+    throw new Error(`Expected BadRequestException with code ${code}`);
+  } catch (error) {
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect((error as BadRequestException).getResponse()).toMatchObject({
+      code,
+    });
+  }
+}
+
+function createFile(
+  overrides: Partial<UploadedFileInput> = {},
+): UploadedFileInput {
   const buffer = Buffer.from('content');
 
   return {

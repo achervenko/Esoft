@@ -15,9 +15,7 @@ import type {
   CompleteEventData,
   StartEventData,
 } from './events-lifecycle.types';
-import type {
-  EventUpdateExtensionOptionsResolver,
-} from './events-update.types';
+import type { EventUpdateExtensionOptionsResolver } from './events-update.types';
 import { throwEventBadRequest } from './events.errors';
 import type { CreateEventData } from './events-create.validation';
 import type { UpdateCreatedEventPayload } from './events-update.validation';

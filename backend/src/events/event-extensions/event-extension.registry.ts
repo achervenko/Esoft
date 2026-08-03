@@ -170,9 +170,7 @@ export class EventExtensionRegistry {
     return select;
   }
 
-  private assertNoExtensionRecord(
-    event: EventExtensionPresenterRecord,
-  ): void {
+  private assertNoExtensionRecord(event: EventExtensionPresenterRecord): void {
     if (!this.hasAnyExtensionRecord(event)) {
       return;
     }

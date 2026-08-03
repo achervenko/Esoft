@@ -4,7 +4,7 @@ import type { Response } from 'express';
 import { HealthService } from './health.service';
 
 @AllowAnonymous()
-@Controller('health')
+@Controller('api/health')
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 

@@ -24,6 +24,12 @@ test('loadValidatedConfig loads, validates and applies environment after success
       assert.equal(result.code, 'CONFIG_VALID');
       assert.equal(result.details.config.backend.port, 3000);
       assert.equal(result.details.config.minio.endpoint, 'http://127.0.0.1:9000');
+      assert.equal(
+        result.details.config.backup.dir,
+        join(project.root, 'backups'),
+      );
+      assert.equal(result.details.config.backup.pgDumpPath, null);
+      assert.equal(result.details.config.backup.pgRestorePath, null);
       assert.equal(result.details.envPath, join(project.root, '.env'));
       assert.equal(result.details.projectRoot, project.root);
       assert.equal('env' in result.details, false);
@@ -58,6 +64,27 @@ test('loadValidatedConfig does not modify process.env by default', async () => {
       await project.remove();
     }
   });
+});
+
+test('loadValidatedConfig allows missing optional backup variables', async () => {
+  const project = await createProjectWithEnv({
+    BACKUP_DIR: undefined,
+    PG_DUMP_PATH: undefined,
+    PG_RESTORE_PATH: undefined,
+  });
+
+  try {
+    const result = loadValidatedConfig({
+      projectRoot: project.root,
+    });
+
+    assertOperationResult(result, { ok: true });
+    assert.equal(result.details.config.backup.dir, null);
+    assert.equal(result.details.config.backup.pgDumpPath, null);
+    assert.equal(result.details.config.backup.pgRestorePath, null);
+  } finally {
+    await project.remove();
+  }
 });
 
 test('loadValidatedConfig does not apply invalid environment to process.env', async () => {
@@ -141,12 +168,14 @@ async function createProjectWithEnv(overrides = {}) {
     MINIO_BUCKET: 'esoft',
     MINIO_EXECUTABLE: join(project.root, 'tools/minio.exe'),
     MINIO_DATA_DIR: join(project.root, 'minio'),
+    BACKUP_DIR: join(project.root, 'backups'),
     ...overrides,
   };
 
   await writeFile(
     join(project.root, '.env'),
     Object.entries(env)
+      .filter(([, value]) => value !== undefined)
       .map(([key, value]) => `${key}=${value}`)
       .join('\n'),
   );

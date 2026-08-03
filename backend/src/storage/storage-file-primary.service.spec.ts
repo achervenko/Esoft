@@ -1,4 +1,9 @@
-import { AuditModule, StorageDocumentType, StorageOwnerModule, type StorageFile } from '@prisma/client';
+import {
+  AuditModule,
+  StorageDocumentType,
+  StorageOwnerModule,
+  type StorageFile,
+} from '@prisma/client';
 import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageFilePolicyService } from './storage-file-policy.service';
@@ -8,7 +13,9 @@ import { StorageOwnerLockService } from './storage-owner-lock.service';
 describe('StorageFilePrimaryService', () => {
   let auditLog: jest.Mocked<Pick<AuditLogService, 'writeFieldChanges'>>;
   let ownerLock: jest.Mocked<Pick<StorageOwnerLockService, 'lock'>>;
-  let policy: jest.Mocked<Pick<StorageFilePolicyService, 'assertCanBePrimary' | 'canBePrimary'>>;
+  let policy: jest.Mocked<
+    Pick<StorageFilePolicyService, 'assertCanBePrimary' | 'canBePrimary'>
+  >;
   let prisma: { $transaction: jest.Mock };
   let service: StorageFilePrimaryService;
 
@@ -27,7 +34,7 @@ describe('StorageFilePrimaryService', () => {
 
     service = new StorageFilePrimaryService(
       auditLog as never,
-      ownerLock as never,
+      ownerLock,
       policy as never,
       prisma as never as PrismaService,
     );
@@ -36,7 +43,8 @@ describe('StorageFilePrimaryService', () => {
   it('sets primary only for active files of the same owner and documentType', async () => {
     const tx = createPrimaryTx();
     prisma.$transaction.mockImplementationOnce(
-      (operation: (transaction: typeof tx) => Promise<unknown>) => operation(tx),
+      (operation: (transaction: typeof tx) => Promise<unknown>) =>
+        operation(tx),
     );
 
     await service.setPrimaryFile({
@@ -47,17 +55,16 @@ describe('StorageFilePrimaryService', () => {
     });
 
     expect(ownerLock.lock).toHaveBeenCalledWith(tx, owner());
-    expect(tx.storageFile.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          deletedAt: null,
-          documentType: StorageDocumentType.equipment_photo,
-          ownerEntityId: 10,
-          ownerEntityType: 'equipment',
-          ownerModule: StorageOwnerModule.EQUIPMENT,
-        }),
-      }),
-    );
+    expect(tx.storageFile.findMany).toHaveBeenCalledWith({
+      orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+      where: {
+        deletedAt: null,
+        documentType: StorageDocumentType.equipment_photo,
+        ownerEntityId: 10,
+        ownerEntityType: 'equipment',
+        ownerModule: StorageOwnerModule.EQUIPMENT,
+      },
+    });
     expect(tx.storageFile.updateMany).toHaveBeenCalledWith({
       data: { isPrimary: false },
       where: {

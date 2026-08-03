@@ -548,10 +548,13 @@ describe('EventsController', () => {
   it('rejects lifecycle endpoint without version before calling service', async () => {
     const { controller, eventsService, session } = createController();
 
-    await expectThrownResponse(() => controller.cancel(1, {}, session as never), {
-      code: 'VERSION_REQUIRED',
-      message: 'Укажите версию события.',
-    });
+    await expectThrownResponse(
+      () => controller.cancel(1, {}, session as never),
+      {
+        code: 'VERSION_REQUIRED',
+        message: 'Укажите версию события.',
+      },
+    );
     expect(eventsService.cancel).not.toHaveBeenCalled();
   });
 
@@ -591,7 +594,7 @@ describe('EventsController', () => {
 });
 
 async function expectThrownResponse(
-  action: () => unknown | Promise<unknown>,
+  action: () => unknown,
   expectedResponse: ErrorResponse,
 ): Promise<void> {
   try {

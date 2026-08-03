@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { EventExtensionCode, Prisma } from '@prisma/client';
 import type { EventExtensionPresenterRecord } from '../events/event-extensions/event-extension.adapter';
-import { throwEventBadRequest, throwEventConflict } from '../events/events.errors';
+import {
+  throwEventBadRequest,
+  throwEventConflict,
+} from '../events/events.errors';
 import {
   equipmentEventExtensionDetailSelect,
   equipmentEventExtensionListSelect,
@@ -12,9 +15,7 @@ import { EquipmentEventExtensionValidation } from './equipment-event-extension.v
 
 @Injectable()
 export class EquipmentEventExtensionQuery {
-  constructor(
-    private readonly validation: EquipmentEventExtensionValidation,
-  ) {}
+  constructor(private readonly validation: EquipmentEventExtensionValidation) {}
 
   buildListWhere(params: {
     extensionCode: EventExtensionCode | null | undefined;
@@ -26,12 +27,11 @@ export class EquipmentEventExtensionQuery {
         'EQUIPMENT_INVALID',
         'Некорректный ID оборудования.',
       );
-    const maintenanceTypeId =
-      this.validation.parseOptionalQueryPositiveInteger(
-        params.query.maintenanceTypeId,
-        'MAINTENANCE_TYPE_INVALID',
-        'Некорректный вид обслуживания.',
-      );
+    const maintenanceTypeId = this.validation.parseOptionalQueryPositiveInteger(
+      params.query.maintenanceTypeId,
+      'MAINTENANCE_TYPE_INVALID',
+      'Некорректный вид обслуживания.',
+    );
 
     if (equipmentVisibleId === undefined && maintenanceTypeId === undefined) {
       return null;
@@ -69,8 +69,7 @@ export class EquipmentEventExtensionQuery {
 
   getEquipmentExtension<
     TExtension extends
-      | EquipmentEventExtensionDetailRecord
-      | EquipmentEventExtensionListRecord,
+      EquipmentEventExtensionDetailRecord | EquipmentEventExtensionListRecord,
   >(event: EventExtensionPresenterRecord): TExtension {
     const extension = event.equipmentExtension;
 

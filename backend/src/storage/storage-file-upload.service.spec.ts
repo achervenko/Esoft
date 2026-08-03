@@ -1,5 +1,9 @@
 import { InternalServerErrorException, Logger } from '@nestjs/common';
-import { AuditModule, StorageDocumentType, StorageOwnerModule } from '@prisma/client';
+import {
+  AuditModule,
+  StorageDocumentType,
+  StorageOwnerModule,
+} from '@prisma/client';
 import { StorageFilePolicyService } from './storage-file-policy.service';
 import { StorageFileUploadService } from './storage-file-upload.service';
 import { StorageFileUploadTransactionService } from './storage-file-upload-transaction.service';
@@ -7,8 +11,12 @@ import { StorageObjectService } from './storage-object.service';
 import type { UploadedFileInput } from './storage.types';
 
 describe('StorageFileUploadService', () => {
-  let objectStorage: jest.Mocked<Pick<StorageObjectService, 'deleteObject' | 'putObject'>>;
-  let policy: jest.Mocked<Pick<StorageFilePolicyService, 'assertFileMatchesDocumentType'>>;
+  let objectStorage: jest.Mocked<
+    Pick<StorageObjectService, 'deleteObject' | 'putObject'>
+  >;
+  let policy: jest.Mocked<
+    Pick<StorageFilePolicyService, 'assertFileMatchesDocumentType'>
+  >;
   let service: StorageFileUploadService;
   let transactionStorage: jest.Mocked<
     Pick<StorageFileUploadTransactionService, 'createStorageFile'>
@@ -61,25 +69,24 @@ describe('StorageFileUploadService', () => {
       userId: 'user-1',
     });
 
-    expect(policy.assertFileMatchesDocumentType).toHaveBeenCalledWith({
+    const policyCall = policy.assertFileMatchesDocumentType.mock.calls[0]?.[0];
+    const transactionCall =
+      transactionStorage.createStorageFile.mock.calls[0]?.[0];
+    const putObjectCall = objectStorage.putObject.mock.calls[0]?.[0];
+
+    expect(policyCall).toMatchObject({
       documentType: StorageDocumentType.passport,
-      file: expect.objectContaining({
+      file: {
         buffer,
         originalname: 'passport.pdf',
         size: buffer.length,
-      }),
+      },
     });
-    expect(transactionStorage.createStorageFile).toHaveBeenCalledWith(
-      expect.objectContaining({
-        file: expect.objectContaining({ size: buffer.length }),
-      }),
-    );
-    expect(objectStorage.putObject).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: buffer,
-        contentType: 'application/pdf',
-      }),
-    );
+    expect(transactionCall?.file).toMatchObject({ size: buffer.length });
+    expect(putObjectCall).toMatchObject({
+      body: buffer,
+      contentType: 'application/pdf',
+    });
   });
 
   it('converts Uint8Array body to Buffer before validation and storage', async () => {
@@ -97,17 +104,14 @@ describe('StorageFileUploadService', () => {
       owner: owner(),
     });
 
-    expect(policy.assertFileMatchesDocumentType).toHaveBeenCalledWith(
-      expect.objectContaining({
-        file: expect.objectContaining({
-          buffer: Buffer.from(bytes),
-          size: bytes.length,
-        }),
-      }),
-    );
-    expect(objectStorage.putObject).toHaveBeenCalledWith(
-      expect.objectContaining({ body: Buffer.from(bytes) }),
-    );
+    const policyCall = policy.assertFileMatchesDocumentType.mock.calls[0]?.[0];
+    const putObjectCall = objectStorage.putObject.mock.calls[0]?.[0];
+
+    expect(policyCall?.file).toMatchObject({
+      buffer: Buffer.from(bytes),
+      size: bytes.length,
+    });
+    expect(putObjectCall).toMatchObject({ body: Buffer.from(bytes) });
   });
 
   it('routes missing or invalid buffers through validation instead of TypeError', async () => {
@@ -119,7 +123,7 @@ describe('StorageFileUploadService', () => {
         owner: owner(),
       }),
     ).rejects.toMatchObject({
-      response: expect.objectContaining({ code: 'FILE_REQUIRED' }),
+      response: { code: 'FILE_REQUIRED' },
     });
 
     await expect(
@@ -135,7 +139,7 @@ describe('StorageFileUploadService', () => {
         owner: owner(),
       }),
     ).rejects.toMatchObject({
-      response: expect.objectContaining({ code: 'EMPTY_FILE' }),
+      response: { code: 'EMPTY_FILE' },
     });
   });
 
@@ -161,7 +165,9 @@ describe('StorageFileUploadService', () => {
     transactionStorage.createStorageFile.mockRejectedValueOnce(
       new Error('database failed'),
     );
-    objectStorage.deleteObject.mockRejectedValueOnce(new Error('cleanup failed'));
+    objectStorage.deleteObject.mockRejectedValueOnce(
+      new Error('cleanup failed'),
+    );
 
     await expect(
       service.uploadFile({
@@ -171,7 +177,7 @@ describe('StorageFileUploadService', () => {
         owner: owner(),
       }),
     ).rejects.toMatchObject({
-      response: expect.objectContaining({ code: 'UPLOAD_FAILED' }),
+      response: { code: 'UPLOAD_FAILED' },
     });
   });
 });

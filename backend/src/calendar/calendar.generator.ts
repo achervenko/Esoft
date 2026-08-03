@@ -1,4 +1,4 @@
-import { CalendarSource, Prisma, PrismaClient } from '@prisma/client';
+import { CalendarSource, PrismaClient } from '@prisma/client';
 import {
   CALENDAR_END_DATE,
   CALENDAR_START_DATE,
@@ -6,8 +6,7 @@ import {
 } from './calendar.constants';
 
 type CalendarGenerationClient = {
-  $executeRaw:
-    PrismaClient['$executeRaw'] | Prisma.TransactionClient['$executeRaw'];
+  $executeRaw: PrismaClient['$executeRaw'];
 };
 
 export async function generateDefaultCalendar(

@@ -6,6 +6,7 @@ import {
 } from '../security/redaction.mjs';
 
 export async function checkPrismaMigrationStatus({
+  env,
   npm,
   projectRoot,
   runCommand,
@@ -17,10 +18,7 @@ export async function checkPrismaMigrationStatus({
     result = await runCommand(
       npm,
       npmArgs(['run', 'db:migrate:status']),
-      {
-        cwd: projectRoot,
-        timeoutMs,
-      },
+      commandOptions({ env, projectRoot, timeoutMs }),
     );
   } catch (error) {
     return failure(
@@ -57,6 +55,7 @@ export async function checkPrismaMigrationStatus({
 }
 
 export async function deployPrismaMigrations({
+  env,
   npm,
   projectRoot,
   runCommand,
@@ -68,10 +67,7 @@ export async function deployPrismaMigrations({
     result = await runCommand(
       npm,
       npmArgs(['run', 'db:migrate:deploy']),
-      {
-        cwd: projectRoot,
-        timeoutMs,
-      },
+      commandOptions({ env, projectRoot, timeoutMs }),
     );
   } catch (error) {
     return failure(
@@ -149,5 +145,13 @@ function commandFailureDetails(result) {
     stderr: redactSensitiveText(result.stderr),
     stdout: redactSensitiveText(result.stdout),
     timedOut: result.timedOut,
+  };
+}
+
+function commandOptions({ env, projectRoot, timeoutMs }) {
+  return {
+    cwd: projectRoot,
+    ...(env === undefined ? {} : { env }),
+    timeoutMs,
   };
 }
