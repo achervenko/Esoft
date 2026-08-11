@@ -25,18 +25,33 @@ export const SETUP_STEPS = Object.freeze([
   }),
   Object.freeze({
     label: 'Prisma Client',
-    run: ({ npm, operations, projectRoot, runCommand }) =>
-      operations.generatePrismaClient({ npm, projectRoot, runCommand }),
+    run: ({ npm, npmInvocation, operations, projectRoot, runCommand }) =>
+      operations.generatePrismaClient(npmOperationParams({
+        npm,
+        npmInvocation,
+        projectRoot,
+        runCommand,
+      })),
   }),
   Object.freeze({
     label: 'Migrations',
-    run: ({ npm, operations, projectRoot, runCommand }) =>
-      operations.deployPrismaMigrations({ npm, projectRoot, runCommand }),
+    run: ({ npm, npmInvocation, operations, projectRoot, runCommand }) =>
+      operations.deployPrismaMigrations(npmOperationParams({
+        npm,
+        npmInvocation,
+        projectRoot,
+        runCommand,
+      })),
   }),
   Object.freeze({
     label: 'Seed data',
-    run: ({ npm, operations, projectRoot, runCommand }) =>
-      operations.seedDatabase({ npm, projectRoot, runCommand }),
+    run: ({ npm, npmInvocation, operations, projectRoot, runCommand }) =>
+      operations.seedDatabase(npmOperationParams({
+        npm,
+        npmInvocation,
+        projectRoot,
+        runCommand,
+      })),
   }),
   Object.freeze({
     label: 'Application data',
@@ -59,3 +74,12 @@ export const SETUP_STEPS = Object.freeze([
       }),
   }),
 ]);
+
+function npmOperationParams({ npm, npmInvocation, projectRoot, runCommand }) {
+  return {
+    npm,
+    ...(npmInvocation === undefined ? {} : { npmInvocation }),
+    projectRoot,
+    runCommand,
+  };
+}

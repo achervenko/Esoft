@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { checkRequiredApplicationData } from '../../../../scripts/infrastructure/application-data/required-data.mjs';
-import { assertOperationResult } from '../../helpers/operation-result.mjs';
+import {
+  assertNoSecretLeak,
+  assertOperationResult,
+  SECRET_MARKERS,
+} from '../../helpers/operation-result.mjs';
 
 const config = {
   database: {
@@ -121,4 +125,115 @@ test('checkRequiredApplicationData closes client after query failure', async () 
   assertOperationResult(result, { ok: false });
   assert.equal(result.code, 'APPLICATION_DATA_CHECK_FAILED');
   assert.equal(ended, true);
+});
+
+test('checkRequiredApplicationData reports client close failure after success and terminates transport', async () => {
+  let destroyed = false;
+  class PgClient {
+    connection = {
+      stream: {
+        destroy() {
+          destroyed = true;
+        },
+      },
+    };
+
+    async connect() {}
+
+    async query() {
+      return {
+        rows: [
+          {
+            count: '250',
+            required_count: '3',
+          },
+        ],
+      };
+    }
+
+    async end() {
+      throw new Error('close failed');
+    }
+  }
+
+  const result = await checkRequiredApplicationData({ config, PgClient });
+
+  assertOperationResult(result, { ok: false });
+  assert.equal(result.code, 'APPLICATION_DATA_CHECK_FAILED');
+  assert.deepEqual(result.details, {
+    error: 'close failed',
+  });
+  assert.equal(destroyed, true);
+});
+
+test('checkRequiredApplicationData reports close and termination failures after success', async () => {
+  class PgClient {
+    async connect() {}
+
+    async query() {
+      return {
+        rows: [
+          {
+            count: '250',
+            required_count: '3',
+          },
+        ],
+      };
+    }
+
+    async end() {
+      throw new Error('close failed');
+    }
+  }
+
+  const result = await checkRequiredApplicationData({ config, PgClient });
+
+  assertOperationResult(result, { ok: false });
+  assert.equal(result.code, 'APPLICATION_DATA_CHECK_FAILED');
+  assert.deepEqual(result.details, {
+    error: 'close failed',
+    terminationError: 'PgClient transport cannot be forcibly terminated',
+  });
+});
+
+test('checkRequiredApplicationData preserves primary and cleanup failures', async () => {
+  class PgClient {
+    async connect() {}
+
+    async query() {
+      throw new Error('query failed');
+    }
+
+    async end() {
+      throw new Error('close failed');
+    }
+  }
+
+  const result = await checkRequiredApplicationData({ config, PgClient });
+
+  assertOperationResult(result, { ok: false });
+  assert.equal(result.code, 'APPLICATION_DATA_CHECK_FAILED');
+  assert.deepEqual(result.details, {
+    cleanupError: 'close failed',
+    error: 'query failed',
+    terminationError: 'PgClient transport cannot be forcibly terminated',
+  });
+});
+
+test('checkRequiredApplicationData redacts query failure diagnostics', async () => {
+  class PgClient {
+    async connect() {}
+
+    async query() {
+      throw new Error(`query failed DATABASE_URL=${SECRET_MARKERS[0]}`);
+    }
+
+    async end() {}
+  }
+
+  const result = await checkRequiredApplicationData({ config, PgClient });
+
+  assertOperationResult(result, { ok: false });
+  assert.equal(result.code, 'APPLICATION_DATA_CHECK_FAILED');
+  assertNoSecretLeak(result);
 });

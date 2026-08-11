@@ -6,6 +6,10 @@ import { pipeline } from 'node:stream/promises';
 
 import { checkMinioBucket } from '../infrastructure/minio/bucket.mjs';
 import { createS3Client } from '../infrastructure/minio/client.mjs';
+import {
+  destroyClient,
+  mergeClientCleanupResult,
+} from '../infrastructure/minio/client-cleanup.mjs';
 import { failure, success } from '../infrastructure/result.mjs';
 import { formatError } from '../infrastructure/security/redaction.mjs';
 import {
@@ -21,29 +25,30 @@ export async function checkStorageBucket({
   S3Client,
 }) {
   const client = createS3Client({ config, S3Client });
+  let result;
 
   try {
-    const result = await checkMinioBucket({
+    result = await checkMinioBucket({
       bucket: config.minio.bucket,
       client,
       HeadBucketCommand,
     });
 
     if (!result.ok) {
-      return failure('MINIO_BUCKET_UNAVAILABLE', result.message, result.details);
+      result = failure('MINIO_BUCKET_UNAVAILABLE', result.message, result.details);
+    } else {
+      result = success('MINIO_BUCKET_AVAILABLE', 'MinIO bucket is available', {
+        bucket: config.minio.bucket,
+      });
     }
-
-    return success('MINIO_BUCKET_AVAILABLE', 'MinIO bucket is available', {
-      bucket: config.minio.bucket,
-    });
   } catch (error) {
-    return failure('MINIO_BUCKET_UNAVAILABLE', 'Unable to check MinIO bucket', {
+    result = failure('MINIO_BUCKET_UNAVAILABLE', 'Unable to check MinIO bucket', {
       bucket: config.minio.bucket,
       error: formatError(error),
     });
-  } finally {
-    client.destroy();
   }
+
+  return mergeClientCleanupResult(result, destroyClient(client));
 }
 
 export async function backupStorageBucket({
@@ -57,6 +62,7 @@ export async function backupStorageBucket({
   const pathTracker = createObjectPathTracker();
   let continuationToken;
   let objectCount = 0;
+  let result;
   let totalBytes = 0;
 
   try {
@@ -78,7 +84,8 @@ export async function backupStorageBucket({
         const filePathResult = resolveObjectBackupPath(storagePath, objectKey);
 
         if (!filePathResult.ok) {
-          return filePathResult;
+          result = filePathResult;
+          break;
         }
 
         const registrationResult = pathTracker.register({
@@ -87,7 +94,8 @@ export async function backupStorageBucket({
         });
 
         if (!registrationResult.ok) {
-          return registrationResult;
+          result = registrationResult;
+          break;
         }
 
         const objectResponse = await client.send(
@@ -106,18 +114,22 @@ export async function backupStorageBucket({
       }
 
       if (
-        page.IsTruncated &&
-        !isValidContinuationToken(page.NextContinuationToken)
+        result ||
+        (page.IsTruncated &&
+          !isValidContinuationToken(page.NextContinuationToken))
       ) {
-        return failure(
-          'MINIO_BACKUP_FAILED',
-          'MinIO object listing is truncated without a continuation token',
-          {
-            bucket: config.minio.bucket,
-            objectCount,
-            totalBytes,
-          },
-        );
+        if (!result) {
+          result = failure(
+            'MINIO_BACKUP_FAILED',
+            'MinIO object listing is truncated without a continuation token',
+            {
+              bucket: config.minio.bucket,
+              objectCount,
+              totalBytes,
+            },
+          );
+        }
+        break;
       }
 
       continuationToken = page.IsTruncated
@@ -125,21 +137,21 @@ export async function backupStorageBucket({
         : undefined;
     } while (continuationToken);
 
-    return success('MINIO_BACKUP_OK', 'MinIO bucket backup completed', {
+    result ??= success('MINIO_BACKUP_OK', 'MinIO bucket backup completed', {
       bucket: config.minio.bucket,
       objectCount,
       totalBytes,
     });
   } catch (error) {
-    return failure('MINIO_BACKUP_FAILED', 'MinIO bucket backup failed', {
+    result = failure('MINIO_BACKUP_FAILED', 'MinIO bucket backup failed', {
       bucket: config.minio.bucket,
       error: formatError(error),
       objectCount,
       totalBytes,
     });
-  } finally {
-    client.destroy();
   }
+
+  return mergeClientCleanupResult(result, destroyClient(client));
 }
 
 async function writeObjectBodyToFile(body, filePath) {

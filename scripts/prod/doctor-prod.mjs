@@ -43,7 +43,7 @@ export async function runProductionDoctor(options = {}) {
   const projectRoot = configCheck.value?.projectRoot ?? context.projectRoot;
   const commandContext = {
     env,
-    npm: context.npm,
+    npmInvocation: context.npmInvocation,
     projectRoot,
     runCommand: context.runCommand,
   };

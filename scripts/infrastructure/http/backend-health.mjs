@@ -26,7 +26,7 @@ export async function checkBackendHealth({
       );
     }
 
-    const response = await fetchImpl(`${baseUrl}/health`, {
+    const response = await fetchImpl(`${baseUrl}/api/health`, {
       signal: AbortSignal.timeout(requestTimeoutMs),
     });
     const contentType = response.headers.get('content-type') ?? '';

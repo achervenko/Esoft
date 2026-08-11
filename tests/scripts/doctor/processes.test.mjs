@@ -7,9 +7,8 @@ import { fileURLToPath } from 'node:url';
 import {
   addStoppedProcessReport,
   startManagedProcess,
-  stopManagedProcess,
-  waitForExit,
 } from '../../../scripts/doctor/processes.mjs';
+import { SECRET_MARKERS } from '../helpers/operation-result.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -213,99 +212,104 @@ test('startManagedProcess reports cleanup exception during shutdown registration
   assert.equal(managedProcesses.length, 0);
 });
 
-test('stopManagedProcess stops a POSIX process group after the leader exited', async () => {
-  const signals = [];
-  let groupRunning = true;
+test('startManagedProcess wraps Windows batch commands before spawn', async () => {
+  const child = new EventEmitter();
+  child.exitCode = null;
+  child.pid = 12345;
+  child.signalCode = null;
+  const cleanupState = { started: false };
+  const managedProcesses = [];
+  let spawnCall = null;
 
-  const stopped = await stopManagedProcess(
+  const result = await startManagedProcess(
+    'backend',
+    'npm.cmd',
+    ['run', 'start', '--workspace', 'backend'],
     {
-      child: {
-        exitCode: 0,
-        pid: 12345,
-        signalCode: null,
+      cleanupState,
+      comSpec: 'C:/Windows/System32/cmd.exe',
+      isShuttingDown: () => false,
+      managedProcesses,
+      platform: 'win32',
+      projectRoot: resolve(__dirname, '../../..'),
+      report: {
+        add: () => undefined,
       },
-      name: 'backend',
-      ports: [],
-    },
-    {
-      groupPollIntervalMs: 1,
-      killGraceMs: 0,
-      killProcess: (pid, signal) => {
-        assert.equal(pid, -12345);
+      spawnImpl: (command, args, options) => {
+        spawnCall = { args, command, options };
+        queueMicrotask(() => {
+          child.emit('spawn');
+        });
 
-        if (signal === 0) {
-          if (!groupRunning) {
-            const error = new Error('missing');
-            error.code = 'ESRCH';
-            throw error;
-          }
-
-          return;
-        }
-
-        signals.push(signal);
-
-        if (signal === 'SIGKILL') {
-          groupRunning = false;
-        }
+        return child;
       },
-      platform: 'linux',
-      terminationGraceMs: 0,
     },
   );
 
-  assert.equal(stopped, true);
-  assert.deepEqual(signals, ['SIGTERM', 'SIGKILL']);
+  assert.equal(result.ok, true);
+  assert.equal(spawnCall.command, 'C:/Windows/System32/cmd.exe');
+  assert.deepEqual(spawnCall.args.slice(0, 3), ['/d', '/s', '/c']);
+  assert.equal(spawnCall.options.detached, false);
+  assert.equal(spawnCall.options.windowsVerbatimArguments, true);
 });
 
-test('waitForExit resolves immediately for an already exited child process', async () => {
-  const child = new EventEmitter();
-  child.exitCode = 0;
-  child.signalCode = null;
+test('startManagedProcess redacts spawn exceptions', async () => {
+  const result = await startManagedProcess(
+    'backend',
+    process.execPath,
+    ['server.js'],
+    {
+      cleanupState: { started: false },
+      isShuttingDown: () => false,
+      managedProcesses: [],
+      projectRoot: resolve(__dirname, '../../..'),
+      report: {
+        add: () => undefined,
+      },
+      spawnImpl: () => {
+        throw new Error(`spawn failed ${SECRET_MARKERS[0]}`);
+      },
+    },
+  );
 
-  assert.equal(await waitForExit(child, 1), true);
-  assert.equal(child.listenerCount('exit'), 0);
+  assert.equal(result.ok, false);
+  assert.match(result.message, /spawn failed/);
+  assert.doesNotMatch(result.message, new RegExp(SECRET_MARKERS[0]));
 });
 
-test('waitForExit resolves immediately for a child terminated by signal', async () => {
-  const child = new EventEmitter();
-  child.exitCode = null;
-  child.signalCode = 'SIGTERM';
-
-  assert.equal(await waitForExit(child, 100), true);
-  assert.equal(child.listenerCount('exit'), 0);
-});
-
-test('waitForExit validates timeout', async () => {
-  const child = new EventEmitter();
-  child.exitCode = null;
-  child.signalCode = null;
-
-  assert.throws(() => waitForExit(child, -1), /timeoutMs/);
-});
-
-test('waitForExit waits for the child exit event', async () => {
-  const child = new EventEmitter();
-  child.exitCode = null;
-  child.signalCode = null;
-  const wait = waitForExit(child, 100);
-
-  child.exitCode = 0;
-  child.emit('exit', 0, null);
-
-  assert.equal(await wait, true);
-  assert.equal(child.listenerCount('exit'), 0);
-});
-
-test('waitForExit returns false after timeout', async () => {
+test('startManagedProcess redacts asynchronous spawn errors', async () => {
   const child = new EventEmitter();
   child.exitCode = null;
+  child.pid = undefined;
   child.signalCode = null;
+  const managedProcesses = [];
 
-  const result = await waitForExit(child, 10);
+  const result = await startManagedProcess(
+    'backend',
+    process.execPath,
+    ['server.js'],
+    {
+      cleanupState: { started: false },
+      isShuttingDown: () => false,
+      managedProcesses,
+      projectRoot: resolve(__dirname, '../../..'),
+      report: {
+        add: () => undefined,
+      },
+      spawnImpl: () => {
+        queueMicrotask(() => {
+          child.emit('error', new Error(`spawn failed ${SECRET_MARKERS[0]}`));
+        });
 
-  assert.equal(result, false);
-  assert.equal(child.listenerCount('exit'), 0);
+        return child;
+      },
+    },
+  );
+
+  assert.equal(result.ok, false);
+  assert.match(result.message, /spawn failed/);
+  assert.doesNotMatch(result.message, new RegExp(SECRET_MARKERS[0]));
+  assert.equal(managedProcesses.length, 0);
 });
 
 test('addStoppedProcessReport records successful cleanup', () => {

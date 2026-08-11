@@ -50,7 +50,7 @@ export async function runProductionSetup(options = {}) {
 
   const { config, projectRoot } = configStage.value;
   const commandContext = {
-    npm: context.npm,
+    npmInvocation: context.npmInvocation,
     projectRoot,
     runCommand: context.runCommand,
   };

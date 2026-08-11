@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { npmCommandName } from '../infrastructure/commands/npm-command.mjs';
+import { createNpmInvocation } from '../infrastructure/commands/npm-command.mjs';
 import { runCommand } from '../infrastructure/commands/run-command.mjs';
 import { loadValidatedConfig } from '../infrastructure/config/validated-config.mjs';
 import { createResourceRegistry } from '../infrastructure/resources/resource-registry.mjs';
@@ -33,7 +33,7 @@ export async function runSetup() {
   });
 
   try {
-    const npm = npmCommandName();
+    const npmInvocation = createNpmInvocation();
     const configuration = loadValidatedConfig({
       applyToProcessEnv: true,
       overrideProcessEnv: true,
@@ -50,7 +50,7 @@ export async function runSetup() {
       ...loadRuntimeDependencies(),
       config: configuration.details.config,
       isShuttingDown: () => interrupted,
-      npm,
+      npmInvocation,
       onStep: (label, result) => {
         report.addStep(label, result);
       },

@@ -1,6 +1,10 @@
 import { spawn } from 'node:child_process';
 
+import { createSpawnConfig } from '../infrastructure/commands/spawn-config.mjs';
+import { formatError } from '../infrastructure/security/redaction.mjs';
+
 export {
+  createNpmInvocation,
   npmArgs,
   npmCommandName,
   npmScriptArgs,
@@ -90,7 +94,7 @@ export function runParallel(commands) {
     children.push(child);
 
     child.once('error', (error) => {
-      console.error(`[${command.name}] Failed to start: ${error.message}`);
+      console.error(`[${command.name}] Failed to start: ${formatError(error)}`);
       void shutdown(1);
     });
 
@@ -121,21 +125,6 @@ export function runParallel(commands) {
   });
 }
 
-function createSpawnConfig(command, args = []) {
-  if (
-    process.platform === 'win32' &&
-    (command.endsWith('.cmd') || command.endsWith('.bat'))
-  ) {
-    return {
-      args: ['/d', '/s', '/c', `"${quoteCmdCommand([command, ...args])}"`],
-      command: process.env.ComSpec ?? 'cmd.exe',
-      windowsVerbatimArguments: true,
-    };
-  }
-
-  return { args, command };
-}
-
 function getExitCode(code, signal) {
   if (signal === 'SIGINT' || code === 130) {
     return 130;
@@ -146,14 +135,6 @@ function getExitCode(code, signal) {
   }
 
   return code ?? 1;
-}
-
-function quoteCmdCommand(parts) {
-  return parts.map(quoteCmdArgument).join(' ');
-}
-
-function quoteCmdArgument(value) {
-  return `"${String(value).replaceAll('"', '""')}"`;
 }
 
 async function stopChildProcess(child) {
@@ -297,8 +278,4 @@ function isProcessMissingError(error) {
     'code' in error &&
     error.code === 'ESRCH'
   );
-}
-
-function formatError(error) {
-  return error instanceof Error ? error.message : String(error);
 }

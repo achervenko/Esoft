@@ -6,7 +6,10 @@ import { Readable } from 'node:stream';
 import test from 'node:test';
 
 import { runProductionBackup } from '../../../scripts/prod/backup-prod.mjs';
-import { backupStorageBucket } from '../../../scripts/prod/backup-prod.storage.mjs';
+import {
+  backupStorageBucket,
+  checkStorageBucket as checkBackupStorageBucket,
+} from '../../../scripts/prod/backup-prod.storage.mjs';
 import { success } from '../../../scripts/infrastructure/result.mjs';
 import { assertOperationResult } from '../helpers/operation-result.mjs';
 import { createTemporaryProject } from '../helpers/temporary-project.mjs';
@@ -93,12 +96,18 @@ test('backupStorageBucket supports ListObjectsV2 pagination', async () => {
       },
       {
         Contents: [{ Key: 'b/two.txt', Size: 3 }],
+        IsTruncated: true,
+        NextContinuationToken: 'third-page',
+      },
+      {
+        Contents: [{ Key: 'c/three.txt', Size: 5 }],
         IsTruncated: false,
       },
     ],
     objects: new Map([
       ['a/one.txt', 'one'],
       ['b/two.txt', 'two'],
+      ['c/three.txt', 'three'],
     ]),
   });
 
@@ -111,14 +120,15 @@ test('backupStorageBucket supports ListObjectsV2 pagination', async () => {
     });
 
     assertOperationResult(result, { ok: true });
-    assert.equal(result.details.objectCount, 2);
+    assert.equal(result.details.objectCount, 3);
     assert.equal(await readFile(join(storagePath, 'a/one.txt'), 'utf8'), 'one');
     assert.equal(await readFile(join(storagePath, 'b/two.txt'), 'utf8'), 'two');
+    assert.equal(await readFile(join(storagePath, 'c/three.txt'), 'utf8'), 'three');
     assert.deepEqual(
       s3Runtime.calls
         .filter((call) => call.type === 'list')
         .map((call) => call.input.ContinuationToken),
-      [undefined, 'next-page'],
+      [undefined, 'next-page', 'third-page'],
     );
     assert.equal(
       s3Runtime.calls.some((call) => call.type === 'destroy'),
@@ -188,6 +198,55 @@ test('backupStorageBucket fails on object stream failure', async () => {
       s3Runtime.calls.some((call) => call.type === 'destroy'),
       true,
     );
+  } finally {
+    await project.remove();
+  }
+});
+
+test('backup storage bucket reports client cleanup failure after success', async () => {
+  const project = await createBackupProject();
+  const s3Runtime = createS3Runtime({
+    destroyError: new Error('destroy failed'),
+    objects: new Map([['file.txt', 'content']]),
+  });
+
+  try {
+    const result = await backupStorageBucket({
+      config: createConfig(project),
+      GetObjectCommand: s3Runtime.runtimeDependencies.GetObjectCommand,
+      ListObjectsV2Command: s3Runtime.runtimeDependencies.ListObjectsV2Command,
+      S3Client: s3Runtime.runtimeDependencies.S3Client,
+      storagePath: join(project.root, 'backup-storage'),
+    });
+
+    assertOperationResult(result, { ok: false });
+    assert.equal(result.code, 'MINIO_CLIENT_CLEANUP_FAILED');
+    assert.equal(result.details.cleanupError, 'destroy failed');
+    assert.equal(result.details.operationResult.code, 'MINIO_BACKUP_OK');
+  } finally {
+    await project.remove();
+  }
+});
+
+test('backup storage bucket preserves main failure when client cleanup fails', async () => {
+  const project = await createBackupProject();
+  const s3Runtime = createS3Runtime({
+    destroyError: new Error('destroy failed'),
+    headError: Object.assign(new Error('access denied'), {
+      name: 'AccessDenied',
+    }),
+  });
+
+  try {
+    const result = await checkBackupStorageBucket({
+      config: createConfig(project),
+      HeadBucketCommand: s3Runtime.runtimeDependencies.HeadBucketCommand,
+      S3Client: s3Runtime.runtimeDependencies.S3Client,
+    });
+
+    assertOperationResult(result, { ok: false });
+    assert.equal(result.code, 'MINIO_BUCKET_UNAVAILABLE');
+    assert.equal(result.details.cleanupError, 'destroy failed');
   } finally {
     await project.remove();
   }

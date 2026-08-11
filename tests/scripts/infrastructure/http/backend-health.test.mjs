@@ -21,7 +21,7 @@ test('checkBackendHealth returns success for 200 JSON response', async () => {
   const result = await checkBackendHealth({
     config,
     fetchImpl: async (url) => {
-      assert.equal(url, 'http://127.0.0.1:3000/health');
+      assert.equal(url, 'http://127.0.0.1:3000/api/health');
       return jsonResponse(200, { status: 'ok' });
     },
   });
@@ -39,7 +39,7 @@ test('checkBackendHealth appends health path when backend url has no trailing sl
       },
     },
     fetchImpl: async (url) => {
-      assert.equal(url, 'http://127.0.0.1:3000/health');
+      assert.equal(url, 'http://127.0.0.1:3000/api/health');
       return jsonResponse(200, { status: 'ok' });
     },
   });

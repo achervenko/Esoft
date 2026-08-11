@@ -6,6 +6,7 @@ import {
   npmArgs,
   npmCommandName,
   npmScriptArgs,
+  resolveNpmInvocation,
 } from '../../../../scripts/infrastructure/commands/npm-command.mjs';
 
 test('npmCommandName returns npm.cmd on Windows', () => {
@@ -114,4 +115,20 @@ test('createNpmInvocation preserves paths with spaces as separate arguments', ()
       ],
     },
   );
+});
+
+test('resolveNpmInvocation preserves an injected npm invocation', () => {
+  const npmInvocation = {
+    command: 'node',
+    argsPrefix: ['npm-cli.js'],
+  };
+
+  assert.equal(resolveNpmInvocation({ npmInvocation }), npmInvocation);
+});
+
+test('resolveNpmInvocation maps legacy npm command injection to an invocation', () => {
+  assert.deepEqual(resolveNpmInvocation({ npm: 'npm-test' }), {
+    command: 'npm-test',
+    argsPrefix: [],
+  });
 });

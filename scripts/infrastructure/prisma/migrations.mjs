@@ -1,4 +1,7 @@
-import { npmArgs } from '../commands/npm-command.mjs';
+import {
+  npmArgs,
+  resolveNpmInvocation,
+} from '../commands/npm-command.mjs';
 import { failure, success } from '../result.mjs';
 import {
   formatError,
@@ -8,16 +11,21 @@ import {
 export async function checkPrismaMigrationStatus({
   env,
   npm,
+  npmInvocation,
   projectRoot,
   runCommand,
   timeoutMs = 30_000,
 }) {
+  const invocation = resolveNpmInvocation({ npm, npmInvocation });
   let result;
 
   try {
     result = await runCommand(
-      npm,
-      npmArgs(['run', 'db:migrate:status']),
+      invocation.command,
+      [
+        ...invocation.argsPrefix,
+        ...npmArgs(['run', 'db:migrate:status']),
+      ],
       commandOptions({ env, projectRoot, timeoutMs }),
     );
   } catch (error) {
@@ -57,16 +65,21 @@ export async function checkPrismaMigrationStatus({
 export async function deployPrismaMigrations({
   env,
   npm,
+  npmInvocation,
   projectRoot,
   runCommand,
   timeoutMs = 120_000,
 }) {
+  const invocation = resolveNpmInvocation({ npm, npmInvocation });
   let result;
 
   try {
     result = await runCommand(
-      npm,
-      npmArgs(['run', 'db:migrate:deploy']),
+      invocation.command,
+      [
+        ...invocation.argsPrefix,
+        ...npmArgs(['run', 'db:migrate:deploy']),
+      ],
       commandOptions({ env, projectRoot, timeoutMs }),
     );
   } catch (error) {

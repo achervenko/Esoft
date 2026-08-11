@@ -12,13 +12,7 @@ export function displayName(name) {
   return name[0].toUpperCase() + name.slice(1);
 }
 
-export function formatError(error) {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return String(error);
-}
+export { formatError } from '../infrastructure/security/redaction.mjs';
 
 export function delay(ms) {
   return new Promise((resolveDelay) => {

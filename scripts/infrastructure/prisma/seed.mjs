@@ -1,4 +1,7 @@
-import { npmArgs } from '../commands/npm-command.mjs';
+import {
+  npmArgs,
+  resolveNpmInvocation,
+} from '../commands/npm-command.mjs';
 import { failure, success } from '../result.mjs';
 import {
   formatError,
@@ -7,17 +10,26 @@ import {
 
 export async function seedDatabase({
   npm,
+  npmInvocation,
   projectRoot,
   runCommand,
   timeoutMs = 120_000,
 }) {
+  const invocation = resolveNpmInvocation({ npm, npmInvocation });
   let result;
 
   try {
-    result = await runCommand(npm, npmArgs(['run', 'db:seed']), {
-      cwd: projectRoot,
-      timeoutMs,
-    });
+    result = await runCommand(
+      invocation.command,
+      [
+        ...invocation.argsPrefix,
+        ...npmArgs(['run', 'db:seed']),
+      ],
+      {
+        cwd: projectRoot,
+        timeoutMs,
+      },
+    );
   } catch (error) {
     return failure('PRISMA_SEED_FAILED', 'Database seed failed', {
       error: formatError(error),

@@ -43,3 +43,21 @@ export function createNpmInvocation(options = {}) {
     argsPrefix: [],
   };
 }
+
+export function resolveNpmInvocation({
+  npm,
+  npmInvocation,
+} = {}) {
+  if (npmInvocation) {
+    return npmInvocation;
+  }
+
+  if (npm !== undefined) {
+    return {
+      command: npm,
+      argsPrefix: [],
+    };
+  }
+
+  return createNpmInvocation();
+}

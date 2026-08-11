@@ -3,8 +3,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  npmCommandName,
-  npmScriptArgs,
+  createNpmInvocation,
+  npmArgs,
 } from '../infrastructure/commands/npm-command.mjs';
 import { loadValidatedConfig } from '../infrastructure/config/validated-config.mjs';
 import { checkBackend } from './backend.mjs';
@@ -65,7 +65,7 @@ export async function runDoctor() {
   });
 
   try {
-    const npm = npmCommandName();
+    const npmInvocation = createNpmInvocation();
     const { config, doctorEnv } = await checkConfiguration({ report });
     const {
       DeleteObjectCommand,
@@ -82,7 +82,7 @@ export async function runDoctor() {
       env: doctorEnv,
       isShuttingDown: () => cleanupState.started || interrupted,
       managedServices,
-      npm,
+      npmInvocation,
       PgClient,
       projectRoot,
       report,
@@ -106,16 +106,16 @@ export async function runDoctor() {
     await checkBackend({
       config,
       minio,
-      npm,
-      npmScriptArgs,
+      npmArgs,
+      npmInvocation,
       postgres,
       report,
       startManagedProcess: startProcess,
     });
     await checkFrontend({
       config,
-      npm,
-      npmScriptArgs,
+      npmArgs,
+      npmInvocation,
       report,
       startManagedProcess: startProcess,
     });

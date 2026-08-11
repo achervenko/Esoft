@@ -82,6 +82,7 @@ export async function writeTextFile(filePath, content) {
 }
 
 export function createS3Runtime({
+  destroyError = null,
   headError = null,
   objects = new Map(),
   pages = null,
@@ -122,8 +123,7 @@ export function createS3Runtime({
         calls.push({ input: command.input, type: 'list' });
 
         if (pages) {
-          const pageIndex = command.input.ContinuationToken ? 1 : 0;
-          return pages[pageIndex];
+          return getPageByContinuationToken(pages, command.input.ContinuationToken);
         }
 
         return {
@@ -148,6 +148,10 @@ export function createS3Runtime({
     }
 
     destroy() {
+      if (destroyError) {
+        throw destroyError;
+      }
+
       calls.push({ type: 'destroy' });
     }
   }
@@ -161,6 +165,24 @@ export function createS3Runtime({
       S3Client,
     },
   };
+}
+
+function getPageByContinuationToken(pages, continuationToken) {
+  if (pages instanceof Map) {
+    return pages.get(continuationToken);
+  }
+
+  if (!continuationToken) {
+    return pages[0];
+  }
+
+  const previousPageIndex = pages.findIndex(
+    (page) => page.NextContinuationToken === continuationToken,
+  );
+
+  return previousPageIndex === -1
+    ? undefined
+    : pages[previousPageIndex + 1];
 }
 
 export function createOutput() {

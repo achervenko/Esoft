@@ -1,8 +1,8 @@
 import {
   addStoppedProcessReport,
-  stopManagedProcess,
-  waitForPortReleased,
 } from './processes.mjs';
+import { stopManagedProcess } from './process-stop.mjs';
+import { waitForPortReleased } from './process-wait.mjs';
 import { getPostgresServiceState, stopManagedService } from './postgres.mjs';
 import {
   getActiveStartupCount,

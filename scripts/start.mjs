@@ -1,14 +1,21 @@
 import {
+  createNpmInvocation,
   npmArgs,
-  npmCommandName,
-  npmScriptArgs,
+} from './infrastructure/commands/npm-command.mjs';
+import {
   runCommand,
   runParallel,
 } from './process/run-parallel.mjs';
 
-const npm = npmCommandName();
+const npmInvocation = createNpmInvocation();
 
-const validation = await runCommand(npm, npmArgs(['run', 'config:validate']));
+const validation = await runCommand(
+  npmInvocation.command,
+  [
+    ...npmInvocation.argsPrefix,
+    ...npmArgs(['run', 'config:validate']),
+  ],
+);
 
 if (validation.code !== 0) {
   process.exit(validation.code ?? 1);
@@ -18,13 +25,19 @@ console.log('[project] Configuration validated');
 
 runParallel([
   {
-    args: npmScriptArgs('start:prod', 'backend'),
-    command: npm,
+    args: [
+      ...npmInvocation.argsPrefix,
+      ...npmArgs(['run', 'start:prod', '--workspace', 'backend']),
+    ],
+    command: npmInvocation.command,
     name: 'backend',
   },
   {
-    args: npmScriptArgs('preview', 'frontend'),
-    command: npm,
+    args: [
+      ...npmInvocation.argsPrefix,
+      ...npmArgs(['run', 'preview', '--workspace', 'frontend']),
+    ],
+    command: npmInvocation.command,
     name: 'frontend',
   },
 ]);

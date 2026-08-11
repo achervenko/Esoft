@@ -6,8 +6,8 @@ import {
 export async function checkBackend({
   config,
   minio,
-  npm,
-  npmScriptArgs,
+  npmArgs,
+  npmInvocation,
   postgres,
   report,
   startManagedProcess,
@@ -21,8 +21,11 @@ export async function checkBackend({
   if (!response.reachable) {
     const processStarted = await startManagedProcess(
       'backend',
-      npm,
-      npmScriptArgs('start', 'backend'),
+      npmInvocation.command,
+      [
+        ...npmInvocation.argsPrefix,
+        ...npmArgs(['run', 'start', '--workspace', 'backend']),
+      ],
       {
         ports: [config.backend.port],
       },
@@ -54,7 +57,7 @@ export async function checkBackend({
       report.add(
         'Backend',
         'SKIP',
-        `Backend health check skipped: ${unavailable} is unavailable and backend did not expose /health`,
+        `Backend health check skipped: ${unavailable} is unavailable and backend did not expose /api/health`,
       );
       return { ok: false };
     }

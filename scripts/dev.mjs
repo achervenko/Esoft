@@ -1,21 +1,29 @@
 import { createServer } from 'node:net';
 import { mkdir } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 
 import {
+  createNpmInvocation,
   npmArgs,
-  npmCommandName,
-  npmScriptArgs,
+} from './infrastructure/commands/npm-command.mjs';
+import { formatError } from './infrastructure/security/redaction.mjs';
+import {
   runCommand,
   runParallel,
 } from './process/run-parallel.mjs';
-import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const configCore = require('./config/config-core.cjs');
 
-const npm = npmCommandName();
+const npmInvocation = createNpmInvocation();
 
-const validation = await runCommand(npm, npmArgs(['run', 'config:validate']));
+const validation = await runCommand(
+  npmInvocation.command,
+  [
+    ...npmInvocation.argsPrefix,
+    ...npmArgs(['run', 'config:validate']),
+  ],
+);
 
 if (validation.code !== 0) {
   process.exit(validation.code ?? 1);
@@ -55,9 +63,7 @@ try {
   await mkdir(config.minio.dataDir, { recursive: true });
 } catch (error) {
   console.error(
-    `[project] Failed to prepare MinIO data directory ${config.minio.dataDir}: ${
-      error instanceof Error ? error.message : String(error)
-    }`,
+    `[project] Failed to prepare MinIO data directory ${config.minio.dataDir}: ${formatError(error)}`,
   );
   process.exit(1);
 }
@@ -81,13 +87,19 @@ runParallel([
     name: 'minio',
   },
   {
-    args: npmScriptArgs('start:dev', 'backend'),
-    command: npm,
+    args: [
+      ...npmInvocation.argsPrefix,
+      ...npmArgs(['run', 'start:dev', '--workspace', 'backend']),
+    ],
+    command: npmInvocation.command,
     name: 'backend',
   },
   {
-    args: npmScriptArgs('dev', 'frontend'),
-    command: npm,
+    args: [
+      ...npmInvocation.argsPrefix,
+      ...npmArgs(['run', 'dev', '--workspace', 'frontend']),
+    ],
+    command: npmInvocation.command,
     name: 'frontend',
   },
 ]);
@@ -113,7 +125,7 @@ function checkPortAvailable({ host, name, port }) {
       resolve({
         available: false,
         host,
-        message: error.message,
+        message: formatError(error),
         name,
         port,
       });

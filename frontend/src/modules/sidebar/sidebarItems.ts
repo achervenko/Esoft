@@ -5,17 +5,30 @@ import {
   ClipboardList,
   Factory,
   Gauge,
+  ListChecks,
+  Settings,
   Search,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-export type SidebarItem = {
+export type SidebarLinkItem = {
   href: string;
   icon: LucideIcon;
   label: string;
   roles?: string[];
+  type?: "link";
 };
+
+export type SidebarGroupItem = {
+  icon: LucideIcon;
+  id: string;
+  items: SidebarLinkItem[];
+  label: string;
+  type: "group";
+};
+
+export type SidebarItem = SidebarGroupItem | SidebarLinkItem;
 
 export type SidebarSection = {
   items: SidebarItem[];
@@ -47,44 +60,50 @@ export const sidebarSections: SidebarSection[] = [
         icon: Search,
         label: "Поиск",
       },
-    ],
-  },
-  {
-    title: "Чек-листы",
-    items: [
       {
-        href: "#/my-checklists",
-        icon: ClipboardList,
-        label: "Мои чек-листы",
+        icon: ListChecks,
+        id: "checklists",
+        label: "Чек-листы",
+        type: "group",
+        items: [
+          {
+            href: "#/my-checklists",
+            icon: ClipboardList,
+            label: "Мои чек-листы",
+          },
+          {
+            href: "#/checklist-admin",
+            icon: BookCheck,
+            label: "Редактор чек-листов",
+            roles: ["admin", "chief_engineer"],
+          },
+        ],
       },
       {
-        href: "#/checklist-admin",
-        icon: BookCheck,
-        label: "Редактор чек-листов",
-        roles: ["admin", "chief_engineer"],
-      },
-    ],
-  },
-  {
-    title: "Администрирование",
-    items: [
-      {
-        href: "#/users",
-        icon: Users,
-        label: "Пользователи",
-        roles: ["admin"],
-      },
-      {
-        href: "#/dictionaries",
-        icon: BookOpen,
-        label: "Справочники",
-        roles: ["admin"],
-      },
-      {
-        href: "#/production-calendar",
-        icon: CalendarDays,
-        label: "Производственный",
-        roles: ["admin"],
+        icon: Settings,
+        id: "administration",
+        label: "Администрирование",
+        type: "group",
+        items: [
+          {
+            href: "#/users",
+            icon: Users,
+            label: "Пользователи",
+            roles: ["admin"],
+          },
+          {
+            href: "#/dictionaries",
+            icon: BookOpen,
+            label: "Справочники",
+            roles: ["admin"],
+          },
+          {
+            href: "#/production-calendar",
+            icon: CalendarDays,
+            label: "Производственный",
+            roles: ["admin"],
+          },
+        ],
       },
     ],
   },

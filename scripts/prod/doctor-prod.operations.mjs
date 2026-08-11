@@ -4,9 +4,13 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { runCommand } from '../infrastructure/commands/run-command.mjs';
-import { npmCommandName } from '../infrastructure/commands/npm-command.mjs';
+import { createNpmInvocation } from '../infrastructure/commands/npm-command.mjs';
 import { checkMinioBucket } from '../infrastructure/minio/bucket.mjs';
 import { createS3Client } from '../infrastructure/minio/client.mjs';
+import {
+  destroyClient,
+  mergeClientCleanupResult,
+} from '../infrastructure/minio/client-cleanup.mjs';
 import { checkPostgresConnection } from '../infrastructure/postgres/connection.mjs';
 import { terminatePgClient } from '../infrastructure/postgres/pg-client-terminator.mjs';
 import { checkPrismaMigrationStatus } from '../infrastructure/prisma/migrations.mjs';
@@ -40,7 +44,7 @@ export function createDefaultProductionDoctorOperations() {
 
 export function createDefaultProductionDoctorContext(options = {}) {
   return {
-    npm: options.npm ?? npmCommandName(),
+    npmInvocation: options.npmInvocation ?? createNpmInvocation(),
     projectRoot: options.projectRoot ?? defaultProjectRoot,
     runCommand: options.runCommand ?? runCommand,
     ...options.runtimeDependencies,
@@ -63,30 +67,29 @@ export function loadRuntimeDependencies(projectRoot = defaultProjectRoot) {
 
 async function checkStorageBucket({ config, HeadBucketCommand, S3Client }) {
   const client = createS3Client({ config, S3Client });
+  let result;
 
   try {
-    const result = await checkMinioBucket({
+    result = await checkMinioBucket({
       bucket: config.minio.bucket,
       client,
       HeadBucketCommand,
     });
 
     if (result.code === 'MINIO_BUCKET_MISSING') {
-      return failure(
+      result = failure(
         result.code,
         'MinIO bucket is missing. Run npm run setup:prod.',
         result.details,
       );
     }
-
-    return result;
   } catch (error) {
-    return failure('MINIO_BUCKET_CHECK_FAILED', 'Unable to check MinIO bucket', {
+    result = failure('MINIO_BUCKET_CHECK_FAILED', 'Unable to check MinIO bucket', {
       error: formatError(error),
     });
-  } finally {
-    client.destroy();
   }
+
+  return mergeClientCleanupResult(result, destroyClient(client));
 }
 
 export async function checkBackendBuild({ projectRoot }) {

@@ -1,4 +1,6 @@
+import { terminatePgClient } from '../postgres/pg-client-terminator.mjs';
 import { failure, success } from '../result.mjs';
+import { formatError } from '../security/redaction.mjs';
 
 const MINIMUM_COUNTRIES = 200;
 const REQUIRED_COUNTRY_ISO_CODES = Object.freeze(['LV', 'EE', 'LT']);
@@ -8,10 +10,11 @@ export async function checkRequiredApplicationData({ config, PgClient }) {
     connectionString: config.database.url,
     connectionTimeoutMillis: 3_000,
   });
+  let result;
 
   try {
     await client.connect();
-    const result = await client.query(
+    const queryResult = await client.query(
       `
         SELECT
           count(*)::integer AS count,
@@ -22,14 +25,14 @@ export async function checkRequiredApplicationData({ config, PgClient }) {
       `,
       [REQUIRED_COUNTRY_ISO_CODES],
     );
-    const count = Number(result.rows[0]?.count ?? 0);
-    const requiredCount = Number(result.rows[0]?.required_count ?? 0);
+    const count = Number(queryResult.rows[0]?.count ?? 0);
+    const requiredCount = Number(queryResult.rows[0]?.required_count ?? 0);
 
     if (
       count < MINIMUM_COUNTRIES ||
       requiredCount < REQUIRED_COUNTRY_ISO_CODES.length
     ) {
-      return failure(
+      result = failure(
         'APPLICATION_DATA_MISSING',
         'Required application data is missing',
         {
@@ -39,26 +42,63 @@ export async function checkRequiredApplicationData({ config, PgClient }) {
           requiredCountriesFound: requiredCount,
         },
       );
+    } else {
+      result = success('APPLICATION_DATA_OK', 'Required application data exists', {
+        countries: count,
+        requiredCountryIsoCodes: [...REQUIRED_COUNTRY_ISO_CODES],
+        requiredCountriesFound: requiredCount,
+      });
     }
-
-    return success('APPLICATION_DATA_OK', 'Required application data exists', {
-      countries: count,
-      requiredCountryIsoCodes: [...REQUIRED_COUNTRY_ISO_CODES],
-      requiredCountriesFound: requiredCount,
-    });
   } catch (error) {
-    return failure(
+    result = failure(
       'APPLICATION_DATA_CHECK_FAILED',
       'Unable to check required application data',
       {
         error: formatError(error),
       },
     );
-  } finally {
-    await client.end().catch(() => undefined);
   }
+
+  const cleanup = await closeRequiredApplicationDataClient(client);
+
+  if (!cleanup.ok) {
+    if (result.ok) {
+      return failure(
+        'APPLICATION_DATA_CHECK_FAILED',
+        'Unable to check required application data',
+        cleanup.details,
+      );
+    }
+
+    return failure(result.code, result.message, {
+      ...result.details,
+      cleanupError: cleanup.details.error,
+      ...('terminationError' in cleanup.details
+        ? { terminationError: cleanup.details.terminationError }
+        : {}),
+    });
+  }
+
+  return result;
 }
 
-function formatError(error) {
-  return error instanceof Error ? error.message : String(error);
+async function closeRequiredApplicationDataClient(client) {
+  try {
+    await client.end();
+    return success('APPLICATION_DATA_CLIENT_CLOSED', 'PostgreSQL client closed');
+  } catch (error) {
+    const details = { error: formatError(error) };
+
+    try {
+      terminatePgClient(client);
+    } catch (terminationError) {
+      details.terminationError = formatError(terminationError);
+    }
+
+    return failure(
+      'APPLICATION_DATA_CLIENT_CLOSE_FAILED',
+      'Unable to close PostgreSQL client',
+      details,
+    );
+  }
 }

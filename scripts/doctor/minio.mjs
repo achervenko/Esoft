@@ -2,6 +2,8 @@ import { mkdir } from 'node:fs/promises';
 
 import { checkMinioBucket } from '../infrastructure/minio/bucket.mjs';
 import { createS3Client } from '../infrastructure/minio/client.mjs';
+import { destroyClient } from '../infrastructure/minio/client-cleanup.mjs';
+import { formatError } from '../infrastructure/security/redaction.mjs';
 import {
   checkMinioReadiness,
   waitForMinioReadiness,
@@ -111,10 +113,10 @@ export async function checkMinio({
     report.add('MinIO', 'ERROR', roundtrip.message);
     return { dependencyOk: true, ok: false };
   } finally {
-    try {
-      client.destroy();
-    } catch {
-      // Cleanup failure should not replace the check result.
+    const cleanup = destroyClient(client);
+
+    if (!cleanup.ok) {
+      report.add('MinIO', 'WARN', `Client cleanup failed: ${cleanup.error}`);
     }
   }
 }
@@ -172,8 +174,4 @@ function formatBucketFailure(bucket) {
   }
 
   return bucket.message;
-}
-
-function formatError(error) {
-  return error instanceof Error ? error.message : String(error);
 }

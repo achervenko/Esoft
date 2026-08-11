@@ -22,7 +22,7 @@ export async function checkPostgres({
   env,
   isShuttingDown = () => false,
   managedServices,
-  npm,
+  npmInvocation,
   PgClient,
   platform = process.platform,
   projectRoot,
@@ -95,7 +95,7 @@ export async function checkPostgres({
   report.add('PostgreSQL', 'OK', 'SELECT 1');
 
   const migration = await checkMigrations({
-    npm,
+    npmInvocation,
     projectRoot,
     report,
     runCaptured,
@@ -250,9 +250,14 @@ export async function checkPostgresConnection({ config, PgClient, signal }) {
   });
 }
 
-export async function checkMigrations({ npm, projectRoot, report, runCaptured }) {
+export async function checkMigrations({
+  npmInvocation,
+  projectRoot,
+  report,
+  runCaptured,
+}) {
   const result = await checkPrismaMigrationStatus({
-    npm,
+    npmInvocation,
     projectRoot,
     runCommand: runCaptured,
   });

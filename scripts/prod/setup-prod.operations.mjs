@@ -2,10 +2,14 @@ import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { npmCommandName } from '../infrastructure/commands/npm-command.mjs';
+import { createNpmInvocation } from '../infrastructure/commands/npm-command.mjs';
 import { runCommand } from '../infrastructure/commands/run-command.mjs';
 import { ensureMinioBucket } from '../infrastructure/minio/bucket.mjs';
 import { createS3Client } from '../infrastructure/minio/client.mjs';
+import {
+  destroyClient,
+  mergeClientCleanupResult,
+} from '../infrastructure/minio/client-cleanup.mjs';
 import { checkPostgresConnection } from '../infrastructure/postgres/connection.mjs';
 import { terminatePgClient } from '../infrastructure/postgres/pg-client-terminator.mjs';
 import { generatePrismaClient } from '../infrastructure/prisma/generate.mjs';
@@ -41,7 +45,7 @@ export function createDefaultProductionSetupOperations() {
 
 export function createDefaultProductionSetupContext(options = {}) {
   return {
-    npm: options.npm ?? npmCommandName(),
+    npmInvocation: options.npmInvocation ?? createNpmInvocation(),
     projectRoot: options.projectRoot ?? defaultProjectRoot,
     runCommand: options.runCommand ?? runCommand,
     ...options.runtimeDependencies,
@@ -90,19 +94,20 @@ async function ensureStorageBucket({
   S3Client,
 }) {
   const client = createS3Client({ config, S3Client });
+  let result;
 
   try {
-    return await ensureMinioBucket({
+    result = await ensureMinioBucket({
       bucket: config.minio.bucket,
       client,
       CreateBucketCommand,
       HeadBucketCommand,
     });
   } catch (error) {
-    return failure('MINIO_BUCKET_CHECK_FAILED', 'Unable to check MinIO bucket', {
+    result = failure('MINIO_BUCKET_CHECK_FAILED', 'Unable to check MinIO bucket', {
       error: formatError(error),
     });
-  } finally {
-    client.destroy();
   }
+
+  return mergeClientCleanupResult(result, destroyClient(client));
 }

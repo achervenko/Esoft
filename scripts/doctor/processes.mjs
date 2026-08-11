@@ -1,12 +1,14 @@
 import { spawn } from 'node:child_process';
-import { createServer } from 'node:net';
 
+import { createSpawnConfig } from '../infrastructure/commands/spawn-config.mjs';
 import { runCommand as runInfrastructureCommand } from '../infrastructure/commands/run-command.mjs';
+import { formatError } from '../infrastructure/security/redaction.mjs';
 import {
   beginStartupOperation,
   notifyCleanupStateChanged,
 } from './resource-registry.mjs';
-import { displayName, formatError } from './utils.mjs';
+import { stopManagedProcess } from './process-stop.mjs';
+import { displayName } from './utils.mjs';
 
 export async function startManagedProcess(
   name,
@@ -35,14 +37,21 @@ export async function startManagedProcess(
       };
     }
 
-    const child = spawnProcess(command, args, {
+    const platform = options.platform ?? process.platform;
+    const spawnConfig = createSpawnConfig(
+      command,
+      args,
+      platform,
+      options.comSpec,
+    );
+    const child = spawnProcess(spawnConfig.command, spawnConfig.args, {
       cwd: options.cwd ?? projectRoot,
-      detached: process.platform !== 'win32',
+      detached: platform !== 'win32',
       env: options.env ?? process.env,
       shell: false,
       stdio: 'inherit',
       windowsHide: true,
-      windowsVerbatimArguments: false,
+      windowsVerbatimArguments: spawnConfig.windowsVerbatimArguments,
     });
 
     const processInfo = {
@@ -125,146 +134,6 @@ export async function startManagedProcess(
   }
 }
 
-export async function stopManagedProcess(processInfo, {
-  groupPollIntervalMs = 100,
-  killGraceMs = 2_000,
-  killProcess = process.kill,
-  platform = process.platform,
-  runCommand = runInfrastructureCommand,
-  terminationGraceMs = 3_000,
-} = {}) {
-  const { child } = processInfo;
-
-  if (!child.pid) {
-    return true;
-  }
-
-  if (platform === 'win32') {
-    const result = await runCommand(
-      'taskkill.exe',
-      ['/pid', String(child.pid), '/t', '/f'],
-      {
-        timeoutMs: 10_000,
-      },
-    ).catch(() => ({ ok: false }));
-
-    await waitForExit(child, 3_000);
-    return child.exitCode !== null || child.signalCode !== null || result.ok;
-  }
-
-  if (!isProcessGroupRunning(child.pid, killProcess)) {
-    return true;
-  }
-
-  try {
-    killProcess(-child.pid, 'SIGTERM');
-  } catch (error) {
-    return isProcessMissingError(error);
-  }
-
-  await waitForProcessGroupExit(
-    child.pid,
-    terminationGraceMs,
-    groupPollIntervalMs,
-    killProcess,
-  );
-
-  if (isProcessGroupRunning(child.pid, killProcess)) {
-    try {
-      killProcess(-child.pid, 'SIGKILL');
-    } catch (error) {
-      return isProcessMissingError(error);
-    }
-
-    await waitForProcessGroupExit(
-      child.pid,
-      killGraceMs,
-      groupPollIntervalMs,
-      killProcess,
-    );
-  }
-
-  return !isProcessGroupRunning(child.pid, killProcess);
-}
-
-export function waitForExit(child, timeoutMs) {
-  if (!Number.isFinite(timeoutMs) || timeoutMs < 0) {
-    throw new TypeError('timeoutMs must be a non-negative finite number');
-  }
-
-  if (child.exitCode !== null || child.signalCode !== null) {
-    return Promise.resolve(true);
-  }
-
-  return new Promise((resolveWait) => {
-    let settled = false;
-
-    const finish = (result) => {
-      if (settled) {
-        return;
-      }
-
-      settled = true;
-      clearTimeout(timeout);
-      child.removeListener('exit', handleExit);
-      resolveWait(result);
-    };
-
-    const handleExit = () => {
-      finish(true);
-    };
-
-    const timeout = setTimeout(() => {
-      finish(false);
-    }, timeoutMs);
-    child.once('exit', handleExit);
-  });
-}
-
-export function waitForPortReleased(port, host, timeoutMs) {
-  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
-    throw new TypeError('port must be an integer from 1 to 65535');
-  }
-
-  if (typeof host !== 'string' || host.length === 0) {
-    throw new TypeError('host must be a non-empty string');
-  }
-
-  if (!Number.isFinite(timeoutMs) || timeoutMs < 0) {
-    throw new TypeError('timeoutMs must be a non-negative finite number');
-  }
-
-  const startedAt = Date.now();
-
-  return new Promise((resolveReleased) => {
-    const check = () => {
-      const server = createServer();
-
-      server.once('error', (error) => {
-        if (error.code !== 'EADDRINUSE') {
-          resolveReleased(false);
-          return;
-        }
-
-        const remainingMs = timeoutMs - (Date.now() - startedAt);
-
-        if (remainingMs <= 0) {
-          resolveReleased(false);
-          return;
-        }
-
-        setTimeout(check, Math.min(500, remainingMs));
-      });
-
-      server.listen(port, host, () => {
-        server.close(() => resolveReleased(true));
-      });
-    };
-
-    check();
-  });
-}
-
 export function runCaptured(command, args, options = {}) {
   return runInfrastructureCommand(command, args, options);
 }
@@ -277,14 +146,6 @@ export function addStoppedProcessReport(report, processInfo, stopped) {
 
   report.add(processInfo.name, 'ERROR', `${displayName(processInfo.name)} cleanup failed`);
   return 1;
-}
-
-function isProcessMissingError(error) {
-  return (
-    error &&
-    typeof error === 'object' &&
-    error.code === 'ESRCH'
-  );
 }
 
 async function cleanupUnregisteredProcess(processInfo, stopProcess) {
@@ -301,52 +162,6 @@ async function cleanupUnregisteredProcess(processInfo, stopProcess) {
 
 function appendCleanupError(message, cleanupError) {
   return cleanupError ? `${message}; ${cleanupError}` : message;
-}
-
-function isProcessGroupRunning(pid, killProcess) {
-  try {
-    killProcess(-pid, 0);
-    return true;
-  } catch (error) {
-    if (isProcessMissingError(error)) {
-      return false;
-    }
-
-    throw error;
-  }
-}
-
-async function waitForProcessGroupExit(
-  pid,
-  timeoutMs,
-  intervalMs,
-  killProcess,
-) {
-  if (!Number.isFinite(timeoutMs) || timeoutMs < 0) {
-    throw new TypeError('timeoutMs must be a non-negative finite number');
-  }
-
-  if (!Number.isFinite(intervalMs) || intervalMs <= 0) {
-    throw new TypeError('intervalMs must be a positive finite number');
-  }
-
-  const startedAt = Date.now();
-
-  while (true) {
-    if (!isProcessGroupRunning(pid, killProcess)) {
-      return true;
-    }
-
-    const remainingMs = timeoutMs - (Date.now() - startedAt);
-
-    if (remainingMs <= 0) {
-      return false;
-    }
-
-    await new Promise((resolveDelay) => {
-      setTimeout(resolveDelay, Math.min(intervalMs, remainingMs));
-    });
-  }
 }
 
 function removeManagedProcess(managedProcesses, processInfo) {

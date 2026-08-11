@@ -5,8 +5,8 @@ import {
 
 export async function checkFrontend({
   config,
-  npm,
-  npmScriptArgs,
+  npmArgs,
+  npmInvocation,
   report,
   startManagedProcess,
 }) {
@@ -18,8 +18,11 @@ export async function checkFrontend({
   if (!response.reachable) {
     const processStarted = await startManagedProcess(
       'frontend',
-      npm,
-      npmScriptArgs('dev', 'frontend'),
+      npmInvocation.command,
+      [
+        ...npmInvocation.argsPrefix,
+        ...npmArgs(['run', 'dev', '--workspace', 'frontend']),
+      ],
       {
         ports: [config.frontend.port],
       },

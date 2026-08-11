@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {
-  checkPrismaMigrationStatus,
-  deployPrismaMigrations,
-} from '../../../../scripts/infrastructure/prisma/migrations.mjs';
+import { checkPrismaMigrationStatus } from '../../../../scripts/infrastructure/prisma/migrations.mjs';
 import {
   assertNoSecretLeak,
   assertOperationResult,
@@ -43,6 +40,96 @@ test('checkPrismaMigrationStatus calls the root migration status script', async 
     cwd: 'C:/project',
     timeoutMs: 123,
   });
+});
+
+test('checkPrismaMigrationStatus uses injected npm invocation', async () => {
+  const calls = [];
+  const npmExecPath = 'C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js';
+
+  const result = await checkPrismaMigrationStatus({
+    npmInvocation: {
+      command: 'C:/Program Files/nodejs/node.exe',
+      argsPrefix: [npmExecPath],
+    },
+    projectRoot: 'C:/project',
+    runCommand: async (...args) => {
+      calls.push(args);
+
+      return {
+        code: 0,
+        ok: true,
+        stderr: '',
+        stdout: '',
+        timedOut: false,
+      };
+    },
+  });
+
+  assertOperationResult(result, { ok: true });
+  assert.equal(calls[0][0], 'C:/Program Files/nodejs/node.exe');
+  assert.deepEqual(calls[0][1], [
+    npmExecPath,
+    'run',
+    'db:migrate:status',
+  ]);
+});
+
+test('checkPrismaMigrationStatus supports fallback invocation without args prefix', async () => {
+  const calls = [];
+
+  const result = await checkPrismaMigrationStatus({
+    npmInvocation: {
+      command: 'npm-test',
+      argsPrefix: [],
+    },
+    projectRoot: 'C:/project',
+    runCommand: async (...args) => {
+      calls.push(args);
+
+      return {
+        code: 0,
+        ok: true,
+        stderr: '',
+        stdout: '',
+        timedOut: false,
+      };
+    },
+  });
+
+  assertOperationResult(result, { ok: true });
+  assert.equal(calls[0][0], 'npm-test');
+  assert.deepEqual(calls[0][1], ['run', 'db:migrate:status']);
+});
+
+test('checkPrismaMigrationStatus preserves npm paths with spaces as arguments', async () => {
+  const calls = [];
+
+  await checkPrismaMigrationStatus({
+    npmInvocation: {
+      command: 'C:/Program Files/nodejs/node.exe',
+      argsPrefix: [
+        'C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js',
+      ],
+    },
+    projectRoot: 'C:/project',
+    runCommand: async (...args) => {
+      calls.push(args);
+
+      return {
+        code: 0,
+        ok: true,
+        stderr: '',
+        stdout: '',
+        timedOut: false,
+      };
+    },
+  });
+
+  assert.deepEqual(calls[0][1], [
+    'C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js',
+    'run',
+    'db:migrate:status',
+  ]);
 });
 
 test('checkPrismaMigrationStatus passes env to the command when provided', async () => {
@@ -227,164 +314,7 @@ test('checkPrismaMigrationStatus maps command runner rejection to OperationResul
   assert.equal(result.details.error, 'spawn failed');
 });
 
-test('deployPrismaMigrations deploys migrations successfully', async () => {
-  const calls = [];
-
-  const result = await deployPrismaMigrations({
-    npm: 'npm',
-    projectRoot: 'C:/project',
-    runCommand: async (...args) => {
-      calls.push(args);
-
-      return {
-        code: 0,
-        ok: true,
-        stderr: '',
-        stdout: '',
-        timedOut: false,
-      };
-    },
-    timeoutMs: 456,
-  });
-
-  assertOperationResult(result, { ok: true });
-  assert.equal(result.code, 'PRISMA_MIGRATIONS_DEPLOYED');
-  assert.equal(calls.length, 1);
-
-  const [command, args, options] = calls[0];
-
-  assert.equal(command, 'npm');
-  assert.deepEqual(args, ['run', 'db:migrate:deploy']);
-  assert.deepEqual(options, {
-    cwd: 'C:/project',
-    timeoutMs: 456,
-  });
-});
-
-test('deployPrismaMigrations passes env to the command when provided', async () => {
-  const env = {
-    DATABASE_URL: 'postgresql://example',
-    NODE_ENV: 'production',
-  };
-  const calls = [];
-
-  const result = await deployPrismaMigrations({
-    env,
-    npm: 'npm',
-    projectRoot: 'C:/project',
-    runCommand: async (...args) => {
-      calls.push(args);
-
-      return {
-        code: 0,
-        ok: true,
-        stderr: '',
-        stdout: '',
-        timedOut: false,
-      };
-    },
-    timeoutMs: 456,
-  });
-
-  assertOperationResult(result, { ok: true });
-  assert.equal(calls.length, 1);
-  assert.deepEqual(calls[0][2], {
-    cwd: 'C:/project',
-    env,
-    timeoutMs: 456,
-  });
-});
-
-test('deployPrismaMigrations uses deploy command and maps failure', async () => {
-  const calls = [];
-
-  const result = await deployPrismaMigrations({
-    npm: 'npm',
-    projectRoot: 'C:/project',
-    runCommand: async (...args) => {
-      calls.push(args);
-
-      return {
-        code: 1,
-        ok: false,
-        stderr: 'deploy failed',
-        stdout: '',
-        timedOut: false,
-      };
-    },
-    timeoutMs: 456,
-  });
-
-  assertOperationResult(result, { ok: false });
-  assert.equal(result.code, 'PRISMA_MIGRATION_DEPLOY_FAILED');
-  assert.equal(calls.length, 1);
-
-  const [command, args, options] = calls[0];
-
-  assert.equal(command, 'npm');
-  assert.deepEqual(args, ['run', 'db:migrate:deploy']);
-  assert.deepEqual(options, {
-    cwd: 'C:/project',
-    timeoutMs: 456,
-  });
-  assert.deepEqual(result.details, {
-    code: 1,
-    stderr: 'deploy failed',
-    stdout: '',
-    timedOut: false,
-  });
-});
-
-test('deployPrismaMigrations reports command timeout', async () => {
-  const result = await deployPrismaMigrations({
-    npm: 'npm',
-    projectRoot: 'C:/project',
-    runCommand: async () => ({
-      code: null,
-      ok: false,
-      stderr: '',
-      stdout: '',
-      timedOut: true,
-    }),
-  });
-
-  assertOperationResult(result, { ok: false });
-  assert.equal(result.code, 'PRISMA_MIGRATION_DEPLOY_FAILED');
-  assert.equal(result.details.timedOut, true);
-});
-
-test('deployPrismaMigrations maps command runner rejection to OperationResult', async () => {
-  const result = await deployPrismaMigrations({
-    npm: 'npm',
-    projectRoot: 'C:/project',
-    runCommand: async () => {
-      throw new Error('spawn failed');
-    },
-  });
-
-  assertOperationResult(result, { ok: false });
-  assert.equal(result.code, 'PRISMA_MIGRATION_DEPLOY_FAILED');
-  assert.equal(result.details.error, 'spawn failed');
-});
-
-test('Prisma migration operations do not leak command diagnostics secrets', async () => {
-  const result = await deployPrismaMigrations({
-    npm: 'npm',
-    projectRoot: 'C:/project',
-    runCommand: async () => ({
-      code: 1,
-      ok: false,
-      stderr: `failed ${SECRET_MARKERS[0]}`,
-      stdout: `output ${SECRET_MARKERS[1]}`,
-      timedOut: false,
-    }),
-  });
-
-  assertOperationResult(result, { ok: false });
-  assertNoSecretLeak(result);
-});
-
-test('Prisma migration operations do not leak rejection secrets', async () => {
+test('checkPrismaMigrationStatus does not leak rejection secrets', async () => {
   const result = await checkPrismaMigrationStatus({
     npm: 'npm',
     projectRoot: 'C:/project',

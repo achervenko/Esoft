@@ -1,6 +1,10 @@
 import { checkRequiredApplicationData } from '../application-data/required-data.mjs';
 import { checkMinioBucket, ensureMinioBucket } from '../minio/bucket.mjs';
 import { createS3Client } from '../minio/client.mjs';
+import {
+  destroyClient,
+  mergeClientCleanupResult,
+} from '../minio/client-cleanup.mjs';
 import { ensureMinioAvailable } from '../minio/ensure-minio-available.mjs';
 import { checkMinioObjectRoundtrip } from '../minio/object-roundtrip.mjs';
 import { checkMinioReadiness } from '../minio/readiness.mjs';
@@ -10,7 +14,6 @@ import { generatePrismaClient } from '../prisma/generate.mjs';
 import { deployPrismaMigrations } from '../prisma/migrations.mjs';
 import { seedDatabase } from '../prisma/seed.mjs';
 import { failure, success } from '../result.mjs';
-import { formatError } from '../security/redaction.mjs';
 
 export function createDefaultSetupOperations() {
   return {
@@ -122,41 +125,6 @@ async function verifySetupInfrastructure({
   }
 
   return mergeClientCleanupResult(result, destroyClient(client));
-}
-
-function destroyClient(client) {
-  try {
-    client.destroy();
-
-    return { ok: true };
-  } catch (error) {
-    return {
-      error: formatError(error),
-      ok: false,
-    };
-  }
-}
-
-function mergeClientCleanupResult(operationResult, cleanupResult) {
-  if (cleanupResult.ok) {
-    return operationResult;
-  }
-
-  if (!operationResult.ok) {
-    return failure(operationResult.code, operationResult.message, {
-      ...(operationResult.details ?? {}),
-      cleanupError: cleanupResult.error,
-    });
-  }
-
-  return failure(
-    'MINIO_CLIENT_CLEANUP_FAILED',
-    'Unable to close MinIO client',
-    {
-      cleanupError: cleanupResult.error,
-      operationResult,
-    },
-  );
 }
 
 function finalCheckFailure(result) {
