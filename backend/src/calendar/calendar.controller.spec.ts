@@ -18,6 +18,7 @@ describe('CalendarController', () => {
       getDay: jest.fn().mockResolvedValue({ date: '2026-08-03' }),
       getRange: jest.fn().mockResolvedValue({ days: [] }),
       updateWorkday: jest.fn().mockResolvedValue({ date: '2026-08-03' }),
+      resetWorkday: jest.fn().mockResolvedValue({ date: '2026-08-03' }),
     };
     const sourceResolver = {
       resolveProviders: jest.fn().mockReturnValue(['provider']),
@@ -43,26 +44,53 @@ describe('CalendarController', () => {
     };
   }
 
-  it('returns calendar engine dto through read-only endpoint', async () => {
+  it.each(['admin', 'chief_engineer', 'engineer'])(
+    'returns calendar engine dto for %s through read-only endpoint',
+    async (role) => {
+      const { calendarEngine, controller, session, sourceResolver } =
+        createController();
+      session.user.role = role;
+
+      await expect(
+        controller.findCalendar(
+          {
+            from: '2026-08-01',
+            to: '2026-08-31',
+          },
+          session as never,
+        ),
+      ).resolves.toEqual({ days: [], layers: [] });
+
+      expect(sourceResolver.resolveProviders).toHaveBeenCalledWith(session);
+      expect(calendarEngine.buildCalendar).toHaveBeenCalledWith({
+        dateFrom: new Date('2026-08-01T00:00:00.000Z'),
+        dateTo: new Date('2026-08-31T00:00:00.000Z'),
+        providers: ['provider'],
+      });
+    },
+  );
+
+  it.each([
+    'operator',
+    'auditor',
+    'ppe_specialist',
+    'accounting_specialist',
+    'unknown',
+    null,
+    undefined,
+  ])('rejects calendar viewing for %s before resolving providers', (role) => {
     const { calendarEngine, controller, session, sourceResolver } =
       createController();
-
-    await expect(
-      controller.findCalendar(
-        {
-          from: '2026-08-01',
-          to: '2026-08-31',
-        },
-        session as never,
+    expect(
+      getThrownResponse(() =>
+        controller.findCalendar({ from: '2026-08-01', to: '2026-08-31' }, {
+          ...session,
+          user: { ...session.user, role },
+        } as never),
       ),
-    ).resolves.toEqual({ days: [], layers: [] });
-
-    expect(sourceResolver.resolveProviders).toHaveBeenCalledWith(session);
-    expect(calendarEngine.buildCalendar).toHaveBeenCalledWith({
-      dateFrom: new Date('2026-08-01T00:00:00.000Z'),
-      dateTo: new Date('2026-08-31T00:00:00.000Z'),
-      providers: ['provider'],
-    });
+    ).toMatchObject({ code: 'FORBIDDEN' });
+    expect(sourceResolver.resolveProviders).not.toHaveBeenCalled();
+    expect(calendarEngine.buildCalendar).not.toHaveBeenCalled();
   });
 
   it('keeps administrative calendar endpoints protected for admin only', () => {
@@ -83,6 +111,27 @@ describe('CalendarController', () => {
       message: 'Недостаточно прав для работы с календарем.',
     });
     expect(calendarService.getRange).not.toHaveBeenCalled();
+  });
+
+  it('resets a day only for an admin and forwards date and actor', async () => {
+    const { controller, calendarService, session } = createController();
+    expect(
+      getThrownResponse(() =>
+        controller.resetWorkday({ date: '2026-08-03' }, session as never),
+      ),
+    ).toMatchObject({ code: 'FORBIDDEN' });
+    expect(calendarService.resetWorkday).not.toHaveBeenCalled();
+    session.user.role = 'admin';
+    await controller.resetWorkday({ date: '2026-08-03' }, session as never);
+    expect(calendarService.resetWorkday).toHaveBeenCalledWith(
+      new Date('2026-08-03T00:00:00.000Z'),
+      'user-1',
+    );
+    expect(
+      getThrownResponse(() =>
+        controller.resetWorkday({ date: 'not-a-date' }, session as never),
+      ),
+    ).toMatchObject({ code: 'DATE_INVALID' });
   });
 });
 

@@ -1,0 +1,142 @@
+enum PpePeriodUnit {
+  MONTH
+  YEAR
+
+  @@map("ppe_period_unit")
+}
+
+enum PpeIssueStatus {
+  ISSUED
+  CANCELLED
+
+  @@map("ppe_issue_status")
+}
+
+enum PpeIssueType {
+  REGULAR
+  EXTRA
+
+  @@map("ppe_issue_type")
+}
+
+enum PpeItemType {
+  OTHER
+  BODY
+  FEET
+  HANDS
+  HEAD
+
+  @@map("ppe_item_type")
+}
+
+model PpeItem {
+  id         Int           @id @default(autoincrement())
+  article    String        @unique(map: "uq_ppe_items_article")
+  name       String
+  unit       String
+  isActive   Boolean       @default(true) @map("is_active")
+  type       PpeItemType   @map("type")
+  normItems  PpeNormItem[]
+  sizes      PpeItemSize[]
+  issues     PpeIssue[]    @relation("IssueActualPpeItem")
+  normIssues PpeIssue[]    @relation("IssueNormPpeItem")
+
+  @@map("ppe_items")
+}
+
+model PpeNorm {
+  id            Int           @id @default(autoincrement())
+  positionId    Int           @map("position_id")
+  position      Position      @relation(fields: [positionId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_ppe_norms_position")
+  effectiveFrom DateTime      @map("effective_from") @db.Date
+  effectiveTo   DateTime?     @map("effective_to") @db.Date
+  items         PpeNormItem[]
+  transitionMode String @default("LEGACY") @map("transition_mode")
+  previousNormId Int? @map("previous_norm_id")
+  previousNorm PpeNorm? @relation("PpeNormRevisions", fields: [previousNormId], references: [id], onDelete: SetNull, onUpdate: Cascade, map: "ppe_norms_previous_norm_id_fkey")
+  revisions PpeNorm[] @relation("PpeNormRevisions")
+  @@index([previousNormId], map: "idx_ppe_norm_previous")
+
+  @@index([positionId, effectiveFrom], map: "idx_ppe_norms_position_effective_from")
+  @@map("ppe_norms")
+}
+
+model PpeNormItem {
+  id          Int           @id @default(autoincrement())
+  normId      Int           @map("norm_id")
+  norm        PpeNorm       @relation(fields: [normId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "fk_ppe_norm_items_norm")
+  ppeItemId   Int           @map("ppe_item_id")
+  ppeItem     PpeItem       @relation(fields: [ppeItemId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_ppe_norm_items_ppe_item")
+  ppeNameSnapshot String @map("ppe_name_snapshot")
+  ppeUnitSnapshot String @map("ppe_unit_snapshot")
+  ppeItemTypeSnapshot PpeItemType @map("ppe_item_type_snapshot")
+  quantity    Decimal       @db.Decimal(12, 3)
+  periodCount Int           @map("period_count")
+  periodUnit  PpePeriodUnit @map("period_unit")
+  calculationMode String @default("LEGACY") @map("calculation_mode")
+  issues      PpeIssue[]
+
+  @@unique([normId, ppeItemId], map: "uq_ppe_norm_items_norm_ppe_item")
+  @@index([normId], map: "idx_ppe_norm_items_norm_id")
+  @@index([ppeItemId], map: "idx_ppe_norm_items_ppe_item_id")
+  @@map("ppe_norm_items")
+}
+
+model PpeItemSize {
+  id          Int     @id @default(autoincrement())
+  ppeItemId   Int     @map("ppe_item_id")
+  ppeItem     PpeItem @relation(fields: [ppeItemId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "fk_ppe_item_sizes_ppe_item")
+  value       String
+  heightValue String? @map("height_value")
+  isActive    Boolean @default(true) @map("is_active")
+
+  @@map("ppe_item_sizes")
+}
+
+model PpeIssue {
+  id                      Int            @id @default(autoincrement())
+  employeeId              Int            @map("employee_id")
+  employee                Employee       @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_ppe_issues_employee")
+  employeeNameSnapshot    String         @map("employee_name_snapshot")
+  positionId              Int            @map("position_id")
+  position                Position       @relation(fields: [positionId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_ppe_issues_position")
+  positionNameSnapshot    String         @map("position_name_snapshot") @db.VarChar(64)
+  issueType               PpeIssueType   @map("issue_type")
+  normItemId              Int?           @map("norm_item_id")
+  normItem                PpeNormItem?   @relation(fields: [normItemId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_ppe_issues_norm_item")
+  normItemPpeItemId       Int?           @map("norm_item_ppe_item_id")
+  normPpeItem             PpeItem?       @relation("IssueNormPpeItem", fields: [normItemPpeItemId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_ppe_issues_norm_ppe_item")
+  normPpeArticleSnapshot  String?        @map("norm_ppe_article_snapshot")
+  normPpeNameSnapshot     String?        @map("norm_ppe_name_snapshot")
+  ppeItemId               Int            @map("ppe_item_id")
+  ppeItem                 PpeItem        @relation("IssueActualPpeItem", fields: [ppeItemId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_ppe_issues_ppe_item")
+  ppeItemTypeSnapshot     PpeItemType    @map("ppe_item_type_snapshot")
+  ppeArticleSnapshot      String         @map("ppe_article_snapshot")
+  ppeNameSnapshot         String         @map("ppe_name_snapshot")
+  ppeUnitSnapshot         String         @map("ppe_unit_snapshot")
+  quantity                Decimal        @db.Decimal(12, 3)
+  sizeValue               String?        @map("size_value")
+  clothingHeightSnapshot  String?        @map("clothing_height_snapshot")
+  scheduledAt             DateTime?      @map("scheduled_at") @db.Date
+  scheduledPortion        Int?           @map("scheduled_portion")
+  issuedAt                DateTime       @map("issued_at") @db.Date
+  issuedByUserId          String         @map("issued_by_user_id")
+  issuedByUser            User           @relation("PpeIssuedBy", fields: [issuedByUserId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_ppe_issues_issued_by_user")
+  issuedByNameSnapshot    String         @map("issued_by_name_snapshot")
+  status                  PpeIssueStatus @default(ISSUED)
+  comment                 String?
+  cancelledAt             DateTime?      @map("cancelled_at") @db.Timestamptz(6)
+  cancelledByUserId       String?        @map("cancelled_by_user_id")
+  cancelledByUser         User?          @relation("PpeCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_ppe_issues_cancelled_by_user")
+  cancelledByNameSnapshot String?        @map("cancelled_by_name_snapshot")
+  cancellationReason      String?        @map("cancellation_reason")
+
+  @@index([employeeId, issuedAt], map: "idx_ppe_issues_employee_issued_at")
+  @@index([normItemId, issuedAt], map: "idx_ppe_issues_norm_item_issued_at")
+  @@index([ppeItemId], map: "idx_ppe_issues_ppe_item_id")
+  @@index([positionId], map: "idx_ppe_issues_position_id")
+  @@index([issuedByUserId], map: "idx_ppe_issues_issued_by_user_id")
+  @@index([cancelledByUserId], map: "idx_ppe_issues_cancelled_by_user_id")
+  @@index([normItemPpeItemId], map: "idx_ppe_issues_norm_ppe_item_id")
+  @@map("ppe_issues")
+}

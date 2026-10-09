@@ -1,14 +1,11 @@
+import { DictionariesPageContent } from "./DictionariesPageContent";
+import { DictionariesPageModals } from "./DictionariesPageModals";
+import { useState } from "react";
+import { canManageEmployeeSizes } from "../../modules/ppe-permissions/ppe-permissions";
+import { PpeEmployeesPanel } from "./PpeEmployeesPanel";
 import { Plus } from "lucide-react";
 import "../../shared/ui/AdminPage.css";
 import { Notice } from "../../shared/ui/Notice";
-import { CountriesTable } from "./CountriesTable";
-import { CountryFormModal } from "./CountryFormModal";
-import { DictionaryEmployeesTable } from "./DictionaryEmployeesTable";
-import { EmployeeDictionaryFormModal } from "./EmployeeDictionaryFormModal";
-import { LocationsDictionaryPanel } from "./LocationsDictionaryPanel";
-import { ManufacturersDictionaryPanel } from "./ManufacturersDictionaryPanel";
-import { NameDictionaryFormModal } from "./NameDictionaryFormModal";
-import { ParentNameDictionaryFormModal } from "./ParentNameDictionaryFormModal";
 import {
   useDictionariesAdminPage,
   type ActiveDictionariesTab,
@@ -20,6 +17,7 @@ type DictionariesPageProps = {
 
 const tabLabels: Record<ActiveDictionariesTab, string> = {
   employees: "Сотрудники",
+  positions: "Должности",
   manufacturers: "Производители",
   countries: "Страны",
   locations: "Местонахождения",
@@ -27,6 +25,7 @@ const tabLabels: Record<ActiveDictionariesTab, string> = {
 
 const addButtonLabels: Record<ActiveDictionariesTab, string> = {
   employees: "Добавить",
+  positions: "Добавить",
   manufacturers: "Добавить",
   countries: "Добавить",
   locations: "Добавить",
@@ -34,8 +33,10 @@ const addButtonLabels: Record<ActiveDictionariesTab, string> = {
 
 export function DictionariesPage({ userRole }: DictionariesPageProps) {
   const page = useDictionariesAdminPage({ userRole });
+  const [sizeEmployeeId, setSizeEmployeeId] = useState<number | null>(null);
 
   if (!page.isAdmin) {
+    if (canManageEmployeeSizes(userRole)) return <PpeEmployeesPanel />;
     return (
       <section className="admin-page dictionaries-page">
         <Notice tone="error">
@@ -46,6 +47,10 @@ export function DictionariesPage({ userRole }: DictionariesPageProps) {
   }
 
   const openCreateForm = () => {
+    if (page.activeTab === "positions") {
+      page.setPositionForm("new");
+      return;
+    }
     if (page.activeTab === "employees") {
       page.setEmployeeForm("new");
       return;
@@ -100,146 +105,81 @@ export function DictionariesPage({ userRole }: DictionariesPageProps) {
           </header>
         ) : null}
 
-        {page.isLoading ? <p className="admin-state">Загрузка...</p> : null}
-        {!page.isLoading && page.activeTab === "employees" ? (
-          <DictionaryEmployeesTable
-            employees={page.employees}
-            onEdit={page.setEmployeeForm}
-            onToggleStatus={(employee) =>
-              void page.toggleEmployeeStatus(employee)
-            }
-          />
-        ) : null}
-        {!page.isLoading && page.activeTab === "manufacturers" ? (
-          <ManufacturersDictionaryPanel
-            manufacturers={page.manufacturers}
-            models={page.models}
-            onCreateManufacturer={() => page.setManufacturerForm("new")}
-            onCreateModel={() => page.setModelForm("new")}
-            onDeleteManufacturer={(manufacturer) =>
-              void page.removeManufacturer(manufacturer)
-            }
-            onDeleteModel={(model) => void page.removeModel(model)}
-            onEditManufacturer={page.setManufacturerForm}
-            onEditModel={page.setModelForm}
-          />
-        ) : null}
-        {!page.isLoading && page.activeTab === "countries" ? (
-          <CountriesTable
-            countries={page.countries}
-            onDelete={(country) => void page.removeCountry(country)}
-            onEdit={page.setCountryForm}
-          />
-        ) : null}
-        {!page.isLoading && page.activeTab === "locations" ? (
-          <LocationsDictionaryPanel
-            locations={page.locations}
-            objects={page.objects}
-            onCreateLocation={() => page.setLocationForm("new")}
-            onCreateObject={() => page.setObjectForm("new")}
-            onDeleteLocation={(location) => void page.removeLocation(location)}
-            onDeleteObject={(object) => void page.removeObject(object)}
-            onEditLocation={page.setLocationForm}
-            onEditObject={page.setObjectForm}
-          />
-        ) : null}
+        {page.error && (
+          <Notice tone="error">
+            {page.error}
+            <button
+              className="admin-secondary-button"
+              type="button"
+              onClick={page.retry}
+            >
+              Повторить загрузку
+            </button>
+          </Notice>
+        )}
+        <DictionariesPageContent
+          page={{
+            activeTab: page.activeTab,
+            countries: page.countries,
+            employees: page.employees,
+            isLoading: page.isLoading,
+            isSaving: page.isSaving,
+            locations: page.locations,
+            manufacturers: page.manufacturers,
+            models: page.models,
+            objects: page.objects,
+            positions: page.positions,
+            removeCountry: page.removeCountry,
+            removeLocation: page.removeLocation,
+            removeManufacturer: page.removeManufacturer,
+            removeModel: page.removeModel,
+            removeObject: page.removeObject,
+            setCountryForm: page.setCountryForm,
+            setEmployeeForm: page.setEmployeeForm,
+            setLocationForm: page.setLocationForm,
+            setManufacturerForm: page.setManufacturerForm,
+            setModelForm: page.setModelForm,
+            setObjectForm: page.setObjectForm,
+            setPositionForm: page.setPositionForm,
+            toggleEmployeeStatus: page.toggleEmployeeStatus,
+            togglePositionStatus: page.togglePositionStatus,
+          }}
+          userRole={userRole}
+          onOpenEmployeeSizes={setSizeEmployeeId}
+        />
       </section>
 
-      {page.employeeForm ? (
-        <EmployeeDictionaryFormModal
-          employee={page.employeeForm === "new" ? null : page.employeeForm}
-          isSaving={page.isSaving}
-          onClose={() => page.setEmployeeForm(null)}
-          onSubmit={(payload) => void page.saveEmployee(payload)}
-        />
-      ) : null}
-
-      {page.manufacturerForm ? (
-        <NameDictionaryFormModal
-          isSaving={page.isSaving}
-          item={page.manufacturerForm === "new" ? null : page.manufacturerForm}
-          onClose={() => page.setManufacturerForm(null)}
-          onSubmit={(payload) => void page.saveManufacturer(payload)}
-          title={
-            page.manufacturerForm === "new"
-              ? "Новый производитель"
-              : "Редактирование производителя"
-          }
-        />
-      ) : null}
-
-      {page.countryForm ? (
-        <CountryFormModal
-          country={page.countryForm === "new" ? null : page.countryForm}
-          isSaving={page.isSaving}
-          onClose={() => page.setCountryForm(null)}
-          onSubmit={(payload) => void page.saveCountry(payload)}
-        />
-      ) : null}
-
-      {page.objectForm ? (
-        <NameDictionaryFormModal
-          isSaving={page.isSaving}
-          item={page.objectForm === "new" ? null : page.objectForm}
-          onClose={() => page.setObjectForm(null)}
-          onSubmit={(payload) => void page.saveObject(payload)}
-          title={
-            page.objectForm === "new"
-              ? "Новый объект"
-              : "Редактирование объекта"
-          }
-        />
-      ) : null}
-
-      {page.locationForm ? (
-        <ParentNameDictionaryFormModal
-          initialName={
-            page.locationForm === "new" ? "" : page.locationForm.name
-          }
-          initialParentId={
-            page.locationForm === "new" ? null : page.locationForm.workshopId
-          }
-          isSaving={page.isSaving}
-          nameLabel="Местонахождение"
-          onClose={() => page.setLocationForm(null)}
-          onSubmit={(payload) =>
-            void page.saveLocation({
-              name: payload.name,
-              objectId: payload.parentId,
-            })
-          }
-          parentLabel="Объект"
-          parentOptions={page.objects}
-          title={
-            page.locationForm === "new"
-              ? "Новое местонахождение"
-              : "Редактирование местонахождения"
-          }
-        />
-      ) : null}
-
-      {page.modelForm ? (
-        <ParentNameDictionaryFormModal
-          initialName={page.modelForm === "new" ? "" : page.modelForm.name}
-          initialParentId={
-            page.modelForm === "new" ? null : page.modelForm.manufacturerId
-          }
-          isSaving={page.isSaving}
-          nameLabel="Модель"
-          onClose={() => page.setModelForm(null)}
-          onSubmit={(payload) =>
-            void page.saveModel({
-              name: payload.name,
-              manufacturerId: payload.parentId,
-            })
-          }
-          parentLabel="Производитель"
-          parentOptions={page.manufacturers}
-          title={
-            page.modelForm === "new" ? "Новая модель" : "Редактирование модели"
-          }
-        />
-      ) : null}
+      <DictionariesPageModals
+        page={{
+          countryForm: page.countryForm,
+          employeeForm: page.employeeForm,
+          isSaving: page.isSaving,
+          locationForm: page.locationForm,
+          manufacturerForm: page.manufacturerForm,
+          manufacturers: page.manufacturers,
+          modelForm: page.modelForm,
+          objectForm: page.objectForm,
+          objects: page.objects,
+          positionForm: page.positionForm,
+          positions: page.positions,
+          saveCountry: page.saveCountry,
+          saveEmployee: page.saveEmployee,
+          saveLocation: page.saveLocation,
+          saveManufacturer: page.saveManufacturer,
+          saveModel: page.saveModel,
+          saveObject: page.saveObject,
+          savePosition: page.savePosition,
+          setCountryForm: page.setCountryForm,
+          setEmployeeForm: page.setEmployeeForm,
+          setLocationForm: page.setLocationForm,
+          setManufacturerForm: page.setManufacturerForm,
+          setModelForm: page.setModelForm,
+          setObjectForm: page.setObjectForm,
+          setPositionForm: page.setPositionForm,
+        }}
+        sizeEmployeeId={sizeEmployeeId}
+        onCloseEmployeeSizes={() => setSizeEmployeeId(null)}
+      />
     </section>
   );
 }

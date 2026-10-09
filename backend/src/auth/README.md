@@ -20,8 +20,18 @@
 - `engineer`
 - `operator`
 - `auditor`
+- `ppe_specialist` — Специалист по охране труда
 
 `admin` — единственная роль, которая управляет учётными записями. Остальные роли не получают административных разрешений Better Auth.
+
+`ppe_specialist` получает рабочие права только в рамках сценариев модуля СИЗ.
+Доступ к сотрудникам и должностям предоставляется только через специализированные
+PPE endpoints и только в объёме, необходимом для работы с СИЗ, включая изменение
+размеров сотрудников. Универсальные users-admin endpoints ему недоступны.
+Пять основных PPE-разрешений определены отдельно в `role-permissions.ts`;
+`canBackdatePpeIssue` отдельно разрешает указание даты выдачи только `admin`.
+Подробности
+и маршруты перечислены в `../ppe/README.md`.
 
 ## Better Auth
 
@@ -109,7 +119,7 @@ npm test
 
 ```bash
 npx eslint src/auth/auth.config.ts src/auth/better-auth-access.ts src/auth/role-permissions.ts
-npm test -- src/auth/better-auth-access.spec.ts
+npm test -- src/auth/better-auth-access.spec.ts src/auth/ppe-permissions.spec.ts
 ```
 
 Перед расширением прав Better Auth отдельно проверить, что:

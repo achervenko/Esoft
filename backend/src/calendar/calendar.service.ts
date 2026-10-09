@@ -48,6 +48,10 @@ export class CalendarService {
     return this.workdayWriter.updateWorkday(update, userId);
   }
 
+  resetWorkday(date: Date, userId?: string | null) {
+    return this.workdayWriter.resetWorkday(date, userId);
+  }
+
   async validateIntegrity(): Promise<CalendarIntegrityReport> {
     const report = await this.repository.validateIntegrity();
 

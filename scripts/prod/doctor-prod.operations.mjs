@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 
 import { runCommand } from '../infrastructure/commands/run-command.mjs';
 import { createNpmInvocation } from '../infrastructure/commands/npm-command.mjs';
+import { checkBackendHealth } from '../infrastructure/http/backend-health.mjs';
+import { checkFrontendHttp } from '../infrastructure/http/frontend-health.mjs';
 import { checkMinioBucket } from '../infrastructure/minio/bucket.mjs';
 import { createS3Client } from '../infrastructure/minio/client.mjs';
 import {
@@ -39,11 +41,14 @@ export function createDefaultProductionDoctorOperations() {
     checkStorageBucket,
     checkBackendBuild,
     checkFrontendBuild,
+    checkBackendRuntimeHealth,
+    checkFrontendHttp,
   };
 }
 
 export function createDefaultProductionDoctorContext(options = {}) {
   return {
+    fetchImpl: options.fetchImpl ?? globalThis.fetch,
     npmInvocation: options.npmInvocation ?? createNpmInvocation(),
     projectRoot: options.projectRoot ?? defaultProjectRoot,
     runCommand: options.runCommand ?? runCommand,
@@ -171,4 +176,26 @@ export async function checkFrontendBuild({ projectRoot }) {
 
 function frontendBuildFailure(message, details) {
   return failure('PROD_FRONTEND_BUILD_MISSING', message, details);
+}
+
+export async function checkBackendRuntimeHealth(params) {
+  const result = await checkBackendHealth(params);
+  if (!result.ok) {
+    return result;
+  }
+
+  const body = result.details?.body;
+  if (
+    body?.status !== 'ok' ||
+    body.dependencies?.postgres !== 'ok' ||
+    body.dependencies?.minio !== 'ok' ||
+    body.dependencies?.minioBucket !== 'ok'
+  ) {
+    return failure(
+      'PROD_BACKEND_HEALTH_INVALID',
+      'Backend did not return a healthy Esoft health response',
+    );
+  }
+
+  return result;
 }

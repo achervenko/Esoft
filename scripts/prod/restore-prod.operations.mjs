@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { verifyPostgresArchive } from '../infrastructure/postgres/archive.mjs';
 import { runCommand } from '../infrastructure/commands/run-command.mjs';
 import { loadProductionRestoreConfig } from './restore-prod.config.mjs';
 import {
@@ -31,6 +32,7 @@ export function createDefaultProductionRestoreOperations() {
     readRestoreManifest,
     validateRestoreArtifacts,
     checkPgRestoreAvailable,
+    verifyPostgresArchive,
     checkProductionPostgres,
     checkStorageBucket,
     restorePostgresDatabase,

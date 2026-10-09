@@ -16,6 +16,7 @@ import { SetupModule } from './setup/setup.module';
 import { StorageModule } from './storage/storage.module';
 import { UsersAdminModule } from './users-admin/users-admin.module';
 import { UsersModule } from './users/users.module';
+import { PpeModule } from './ppe/ppe.module';
 
 loadRootConfig();
 
@@ -60,6 +61,7 @@ loadRootConfig();
     SetupModule,
     UsersAdminModule,
     UsersModule,
+    PpeModule,
   ],
 })
 export class AppModule {}

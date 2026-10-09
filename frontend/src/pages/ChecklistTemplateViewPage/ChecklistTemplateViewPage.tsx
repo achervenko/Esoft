@@ -1,5 +1,6 @@
+import "../../shared/ui/PageActions.css";
 import { Copy, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChecklistTemplateArchiveDialog } from "../../modules/checklists/ChecklistTemplateArchiveDialog";
 import {
   checklistAnswerTypeLabels,
@@ -15,7 +16,8 @@ import {
 } from "../../shared/lib/formatters";
 import { canManageChecklists } from "../../shared/lib/roles";
 import { Notice } from "../../shared/ui/Notice";
-import "../ChecklistAdminPage/ChecklistAdminPage.css";
+import "../../shared/ui/AdminPage.css";
+import "../../modules/checklists/ChecklistStatus.css";
 import "./ChecklistTemplateViewPage.css";
 
 type ChecklistTemplateViewPageProps = {
@@ -38,6 +40,7 @@ export function ChecklistTemplateViewPage({
     window.history.state?.checklistTemplateSaved ? "Шаблон сохранён." : null,
   );
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const previousTemplateIdRef = useRef(templateId);
 
   useEffect(() => {
     if (window.history.state?.checklistTemplateSaved) {
@@ -49,6 +52,10 @@ export function ChecklistTemplateViewPage({
   }, []);
 
   useEffect(() => {
+    if (previousTemplateIdRef.current !== templateId) {
+      previousTemplateIdRef.current = templateId;
+      setMessage(null);
+    }
     if (!isAdmin) {
       setIsLoading(false);
       return;
@@ -126,7 +133,7 @@ export function ChecklistTemplateViewPage({
     <section className="checklist-template-view-page">
       <header className="checklist-template-view-header">
         <button
-          className="checklist-editor-back"
+          className="page-back-button"
           onClick={() => {
             window.location.hash = "#/checklist-admin";
           }}
@@ -137,7 +144,7 @@ export function ChecklistTemplateViewPage({
         <div className="checklist-template-view-title-row">
           <div>
             <div className="checklist-template-view-title-main">
-              <h1>{template.name}</h1>
+              <h1 className="page-title">{template.name}</h1>
               <span
                 className={`checklist-admin-status ${template.state.toLowerCase()}`}
               >
@@ -150,7 +157,7 @@ export function ChecklistTemplateViewPage({
               </p>
             ) : null}
           </div>
-          <div className="checklist-editor-actions">
+          <div className="page-actions">
             <button
               className="admin-secondary-button"
               onClick={() => {

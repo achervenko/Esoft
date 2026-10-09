@@ -40,7 +40,7 @@ export class ChecklistWorkQueryRepository {
               ),
               assigned_user.name
             ) AS "assignedUserFullName",
-            COALESCE(assigned_employee.position, '') AS "assignedUserPosition",
+            COALESCE(assigned_position.name, '') AS "assignedUserPosition",
             template.name AS "templateName",
             event.id AS "eventId",
             event.status AS "eventStatus",
@@ -73,6 +73,8 @@ export class ChecklistWorkQueryRepository {
             ON assigned_employee_user.user_id = assigned_user.id
           LEFT JOIN employees assigned_employee
             ON assigned_employee.id = assigned_employee_user.employee_id
+          LEFT JOIN positions assigned_position
+            ON assigned_position.id = assigned_employee.position_id
           LEFT JOIN checklist_progress progress
             ON progress.checklist_id = checklist.id
           WHERE checklist.assigned_user_id = ${params.userId}
@@ -223,7 +225,7 @@ export class ChecklistWorkQueryRepository {
           ),
           assigned_user.name
         ) AS "assignedUserFullName",
-        COALESCE(assigned_employee.position, '') AS "assignedUserPosition",
+        COALESCE(assigned_position.name, '') AS "assignedUserPosition",
         template.name AS "templateName",
         event.id AS "eventId",
         event.status AS "eventStatus",
@@ -257,6 +259,8 @@ export class ChecklistWorkQueryRepository {
         ON assigned_employee_user.user_id = assigned_user.id
       LEFT JOIN employees assigned_employee
         ON assigned_employee.id = assigned_employee_user.employee_id
+      LEFT JOIN positions assigned_position
+        ON assigned_position.id = assigned_employee.position_id
       LEFT JOIN (
         ${checklistProgressGroupedByChecklistSql()}
       ) progress

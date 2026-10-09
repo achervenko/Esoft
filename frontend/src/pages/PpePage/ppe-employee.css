@@ -1,0 +1,191 @@
+.ppe-norm-card,
+.ppe-employee-card {
+  padding: 16px;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+}
+.ppe-employee-search {
+  position: relative;
+  width: 100%;
+}
+.ppe-search-back {
+  align-self: flex-start;
+  margin-bottom: 16px;
+}
+.ppe-page .ppe-employee-card {
+  background: 0 0;
+  border: 0;
+  gap: 18px;
+  padding: 0;
+  display: grid;
+}
+.ppe-employee-header {
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.ppe-employee-header h2 {
+  color: #15171c;
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.ppe-employee-header p {
+  color: #475467;
+  margin: 8px 0 0;
+  font-size: 15px;
+  font-family: inherit;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.ppe-employee-section {
+  background: #fff;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  gap: 14px;
+  padding: 18px;
+  display: grid;
+}
+.ppe-employee-section h3 {
+  color: #15171c;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+.ppe-employee-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 18px 24px;
+  margin: 0;
+  display: grid;
+}
+.ppe-employee-grid > div {
+  align-content: start;
+  gap: 6px;
+  display: grid;
+}
+.ppe-employee-grid dt {
+  color: #6b7280;
+  font-size: 13px;
+}
+.ppe-employee-grid dd {
+  color: #15171c;
+  overflow-wrap: anywhere;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+.ppe-page .ppe-search-back {
+  color: #303744;
+  cursor: pointer;
+  background: 0 0;
+  border: 0;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 800;
+  display: inline-flex;
+}
+.ppe-employee-sizes summary {
+  cursor: pointer;
+  color: #15171c;
+  min-height: 24px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 24px;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  display: flex;
+}
+.ppe-employee-sizes[open] summary {
+  margin-bottom: 18px;
+}
+.ppe-employee-sizes summary:focus-visible {
+  outline-offset: 4px;
+  border-radius: 4px;
+  outline: 2px solid #667085;
+}
+.ppe-employee-sizes summary::-webkit-details-marker {
+  display: none;
+}
+.ppe-employee-sizes summary svg {
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.ppe-employee-sizes[open] summary svg {
+  transform: rotate(90deg);
+}
+.ppe-plan-table th,
+.ppe-plan-table td {
+  vertical-align: middle;
+}
+.ppe-employee-header > button {
+  align-self: start;
+  min-height: 36px;
+}
+@media (width<=640px) {
+  .ppe-employee-header {
+    grid-template-columns: 1fr;
+  }
+}
+.ppe-employee-content {
+  gap: 18px;
+  min-width: 0;
+  display: grid;
+}
+.ppe-employee-page .ppe-employee-header {
+  margin-bottom: 0;
+}
+.ppe-plan-section {
+  gap: 14px;
+  min-width: 0;
+  display: grid;
+}
+.ppe-employee-page .ppe-plan-section {
+  background: #fff;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 18px;
+}
+.ppe-plan-section h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+.ppe-employee-page .ppe-search-back {
+  margin-bottom: 0;
+}
+.ppe-plan-section .ppe-plan-table th:first-child,
+.ppe-plan-section .ppe-plan-table td:first-child {
+  text-align: center;
+  width: 80px;
+}
+.ppe-plan-section .ppe-plan-table input[type="checkbox"] {
+  vertical-align: middle;
+  margin: 0;
+  display: inline-block;
+}
+.ppe-employee-sizes {
+  padding: 12px 18px;
+  display: block;
+}
+.ppe-employee-sizes:not([open]) summary {
+  margin: 0;
+}
+.ppe-employee-page .ppe-norm-card {
+  background: #fff;
+  padding: 18px;
+}
+.ppe-employee-page .ppe-norm-card header p {
+  color: #15171c;
+  margin-top: 0;
+  font-size: 16px;
+  font-weight: 750;
+}

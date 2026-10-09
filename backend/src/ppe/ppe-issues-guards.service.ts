@@ -1,0 +1,247 @@
+import { ConflictException, Injectable } from '@nestjs/common';
+import { Prisma, PpeItemType } from '@prisma/client';
+import { ppeNotFound } from './ppe.errors';
+import { badPpeRequest } from './ppe.validation';
+import { normalizePpeSizeText } from './ppe-size-text';
+
+export const issueNormInclude = {
+  items: {
+    orderBy: { id: 'asc' },
+    include: { ppeItem: { include: { sizes: { orderBy: { id: 'asc' } } } } },
+  },
+} satisfies Prisma.PpeNormInclude;
+export type IssueNorm = Prisma.PpeNormGetPayload<{
+  include: typeof issueNormInclude;
+}>;
+export type IssueEmployee = Prisma.EmployeeGetPayload<Record<string, never>>;
+export type IssueCatalogItem = Prisma.PpeItemGetPayload<{
+  include: { sizes: true };
+}>;
+export type PpeIssueWarning = {
+  code: 'PPE_SIZE_DIFFERS_FROM_RECOMMENDED';
+  message: string;
+};
+
+function matchesRecommendedSize(
+  type: PpeItemType,
+  value: string,
+  recommended: string | null,
+) {
+  return (
+    (recommended !== null &&
+      normalizePpeSizeText(value) === normalizePpeSizeText(recommended)) ||
+    (type === PpeItemType.FEET &&
+      recommended !== null &&
+      /^\d+(\.\d+)?$/.test(value) &&
+      Number(value) === Number(recommended))
+  );
+}
+
+@Injectable()
+export class PpeIssuesGuardsService {
+  async lockEmployee(
+    tx: Prisma.TransactionClient,
+    id: number,
+    requireActive = true,
+  ) {
+    await tx.$queryRaw`SELECT id FROM employees WHERE id = ${id} FOR UPDATE`;
+    const employee = await tx.employee.findUnique({ where: { id } });
+    if (!employee) ppeNotFound('PPE_EMPLOYEE_NOT_FOUND');
+    if (requireActive && !employee.isActive)
+      badPpeRequest(
+        'PPE_EMPLOYEE_INACTIVE',
+        'Нельзя выдать СИЗ отключённому сотруднику.',
+      );
+    return employee;
+  }
+
+  async lockPosition(tx: Prisma.TransactionClient, id: number) {
+    await tx.$queryRaw`SELECT id FROM positions WHERE id = ${id} FOR UPDATE`;
+    const position = await tx.position.findUnique({ where: { id } });
+    if (!position) ppeNotFound('POSITION_NOT_FOUND');
+    return position;
+  }
+
+  async lockEffectiveNorm(
+    tx: Prisma.TransactionClient,
+    positionId: number,
+    date: Date,
+  ) {
+    const candidates = await tx.ppeNorm.findMany({
+      where: {
+        positionId,
+        effectiveFrom: { lte: date },
+        OR: [{ effectiveTo: null }, { effectiveTo: { gte: date } }],
+      },
+      select: { id: true },
+      take: 2,
+    });
+    if (candidates.length > 1)
+      this.conflict(
+        'PPE_NORM_PERIOD_CONFLICT',
+        'Найдено несколько действующих норм.',
+      );
+    if (!candidates[0]) return null;
+    await tx.$queryRaw`SELECT id FROM ppe_norms WHERE id = ${candidates[0].id} FOR UPDATE`;
+    await tx.$queryRaw`SELECT id FROM ppe_norm_items WHERE norm_id = ${candidates[0].id} ORDER BY id FOR UPDATE`;
+    return tx.ppeNorm.findUnique({
+      where: { id: candidates[0].id },
+      include: issueNormInclude,
+    });
+  }
+
+  async lockCatalog(
+    tx: Prisma.TransactionClient,
+    ids: number[],
+    requireActive: boolean,
+  ) {
+    const uniqueIds = [...new Set(ids)].sort((a, b) => a - b);
+    if (!uniqueIds.length) return new Map<number, IssueCatalogItem>();
+    await tx.$queryRaw`SELECT id FROM ppe_items WHERE id IN (${Prisma.join(uniqueIds)}) ORDER BY id FOR UPDATE`;
+    const items = await tx.ppeItem.findMany({
+      where: { id: { in: uniqueIds } },
+      include: { sizes: { orderBy: { id: 'asc' } } },
+    });
+    if (items.length !== uniqueIds.length) ppeNotFound('PPE_ITEM_NOT_FOUND');
+    if (requireActive && items.some((item) => !item.isActive))
+      badPpeRequest('PPE_ITEM_INACTIVE', 'Выдавать можно только активные СИЗ.');
+    return new Map(items.map((item) => [item.id, item]));
+  }
+
+  recommendSize(employee: IssueEmployee, item: IssueCatalogItem) {
+    let recommendedValue: string | null = null;
+    switch (item.type) {
+      case PpeItemType.BODY:
+        recommendedValue = employee.clothingSize;
+        break;
+      case PpeItemType.FEET:
+        recommendedValue = employee.shoeSize?.toString() ?? null;
+        break;
+      case PpeItemType.HANDS:
+        recommendedValue = employee.gloveSize;
+        break;
+      case PpeItemType.HEAD:
+        recommendedValue = employee.headwearSize;
+        break;
+    }
+    const activeSizes = item.sizes.filter((size) => size.isActive);
+    const matching =
+      item.type === PpeItemType.OTHER
+        ? undefined
+        : activeSizes.find(
+            (size) =>
+              matchesRecommendedSize(item.type, size.value, recommendedValue) &&
+              (item.type !== PpeItemType.BODY ||
+                (employee.clothingHeight !== null &&
+                  size.heightValue !== null &&
+                  normalizePpeSizeText(size.heightValue) ===
+                    normalizePpeSizeText(employee.clothingHeight))),
+          );
+    return {
+      type: item.type,
+      recommendedValue,
+      recommendedSizeId: matching?.id ?? null,
+      recommendedSizeValue: matching?.value ?? null,
+      recommendedHeightValue: matching?.heightValue ?? null,
+      clothingHeight:
+        item.type === PpeItemType.BODY ? employee.clothingHeight : null,
+      requiresSelection:
+        item.type !== PpeItemType.OTHER && item.sizes.length > 0 && !matching,
+      activeSizes: activeSizes.map(({ id, value, heightValue }) => ({
+        id,
+        value,
+        heightValue,
+      })),
+    };
+  }
+
+  assertActive(item: IssueCatalogItem) {
+    if (!item.isActive)
+      badPpeRequest('PPE_ITEM_INACTIVE', 'Выдавать можно только активные СИЗ.');
+  }
+
+  assertReplacement(
+    normItem: Pick<
+      IssueNorm['items'][number],
+      'ppeItemTypeSnapshot' | 'ppeUnitSnapshot'
+    >,
+    actual: Pick<IssueCatalogItem, 'type' | 'unit'>,
+  ) {
+    if (
+      actual.type !== normItem.ppeItemTypeSnapshot ||
+      actual.unit !== normItem.ppeUnitSnapshot
+    )
+      badPpeRequest(
+        'PPE_REPLACEMENT_INCOMPATIBLE',
+        'Замена должна иметь тот же тип СИЗ и единицу измерения, что и позиция нормы.',
+      );
+  }
+
+  resolveSize(
+    employee: IssueEmployee,
+    item: IssueCatalogItem,
+    sizeId: number | null,
+  ) {
+    const recommendation = this.recommendSize(employee, item);
+    if (item.type === PpeItemType.OTHER || item.sizes.length === 0) {
+      if (sizeId !== null)
+        badPpeRequest(
+          'PPE_SIZE_NOT_FOUND',
+          'Размер не предусмотрен для этой позиции СИЗ.',
+        );
+      return {
+        sizeValue: null,
+        clothingHeightSnapshot: null,
+        warnings: [] as PpeIssueWarning[],
+      };
+    }
+    const selectedId = sizeId ?? recommendation.recommendedSizeId;
+    if (selectedId === null)
+      badPpeRequest(
+        'PPE_SIZE_REQUIRED',
+        'Выберите активный размер этой позиции СИЗ.',
+      );
+    const selected = item.sizes.find((size) => size.id === selectedId);
+    if (!selected) ppeNotFound('PPE_SIZE_NOT_FOUND');
+    if (!selected.isActive)
+      badPpeRequest('PPE_SIZE_INACTIVE', 'Выбранный размер отключён.');
+    return {
+      sizeValue: selected.value,
+      clothingHeightSnapshot:
+        item.type === PpeItemType.BODY ? selected.heightValue : null,
+      warnings:
+        (recommendation.recommendedValue !== null &&
+          !matchesRecommendedSize(
+            item.type,
+            selected.value,
+            recommendation.recommendedValue,
+          )) ||
+        (item.type === PpeItemType.BODY &&
+          employee.clothingHeight !== null &&
+          (selected.heightValue === null ||
+            normalizePpeSizeText(selected.heightValue) !==
+              normalizePpeSizeText(employee.clothingHeight)))
+          ? ([
+              {
+                code: 'PPE_SIZE_DIFFERS_FROM_RECOMMENDED',
+                message:
+                  'Выбранный размер отличается от рекомендуемого размера сотрудника.',
+              },
+            ] as PpeIssueWarning[])
+          : ([] as PpeIssueWarning[]),
+    };
+  }
+
+  async actorName(tx: Prisma.TransactionClient, userId: string) {
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+    if (!user) ppeNotFound('PPE_ISSUE_ACTOR_NOT_FOUND');
+    return user.name;
+  }
+
+  conflict(code: string, message: string): never {
+    throw new ConflictException({ code, message });
+  }
+}

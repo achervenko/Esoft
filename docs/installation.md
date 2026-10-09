@@ -36,13 +36,64 @@
    - пароль — задайте самостоятельно;
    - права:
      - **Can login?** — `Yes`;
-     - **Superuser?** — `Yes`.
+     - **Superuser?** — `No`;
+     - **Create roles?** — `No`;
+     - **Create databases?** — `No`;
+     - **Replication?** — `No`;
+     - **Bypass RLS?** — `No`.
 
 4. Создайте новую базу данных:
    - имя базы данных — `esoft`;
    - владелец — созданный пользователь `esoft`.
 
 При заполнении файла `.env` рекомендуется использовать адрес сервера `127.0.0.1` вместо `localhost`.
+
+### Разделение прав PostgreSQL в production
+
+Для локальной разработки пользователь `esoft` может быть владельцем своей базы без прав superuser. В production используйте две отдельные роли:
+
+- `esoft_migrator` — владелец базы и объектов, используется оператором для setup, миграций и восстановления;
+- `esoft` — пользователь backend, имеет только доступ к данным приложения. Он не должен быть владельцем базы, наследовать роль миграций или иметь права superuser.
+
+Для новой production-базы вместо шагов 3–4 выполните следующий SQL в pgAdmin под администратором PostgreSQL, подключившись к базе `postgres`. Замените оба пароля на разные случайные значения. Команды создания базы выполняйте вне транзакции.
+
+```sql
+CREATE ROLE esoft_migrator LOGIN PASSWORD 'replace_migrator_password'
+  NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+CREATE ROLE esoft LOGIN PASSWORD 'replace_application_password'
+  NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+CREATE DATABASE esoft OWNER esoft_migrator;
+```
+
+Затем подключитесь к базе `esoft` под администратором PostgreSQL и выполните:
+
+```sql
+REVOKE CONNECT, TEMPORARY ON DATABASE esoft FROM PUBLIC;
+GRANT CONNECT ON DATABASE esoft TO esoft_migrator, esoft;
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+GRANT USAGE ON SCHEMA public TO esoft;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE esoft_migrator IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO esoft;
+ALTER DEFAULT PRIVILEGES FOR ROLE esoft_migrator IN SCHEMA public
+  GRANT USAGE, SELECT ON SEQUENCES TO esoft;
+```
+
+В текущей конфигурации и backend, и инфраструктурные команды используют один `DATABASE_URL` из корневого `.env`. Для первоначального `npm run setup` укажите в нём реквизиты `esoft_migrator`. После setup выполните в базе `esoft` под администратором PostgreSQL:
+
+```sql
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO esoft;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO esoft;
+REVOKE ALL PRIVILEGES ON TABLE public._prisma_migrations FROM esoft;
+```
+
+Перед запуском backend замените `DATABASE_URL` на реквизиты `esoft`. Пароль роли миграций не должен оставаться в окружении работающего приложения.
+
+При обновлении остановите backend, временно используйте реквизиты `esoft_migrator`, примените миграции через setup и верните прикладной `DATABASE_URL` до запуска backend. Backup/restore и диагностику статуса миграций также выполняйте с операторскими реквизитами: прикладная роль не имеет доступа к `_prisma_migrations`. После восстановления проверьте и при необходимости повторно выдайте права на существующие таблицы и последовательности и убедитесь, что доступ к `_prisma_migrations` отсутствует. Не запускайте приложение, пока прикладные права не проверены.
+
+Эти команды предназначены для новой базы. Для существующей базы сначала отдельно перенесите владение объектами на роль миграций; простое создание второй роли не ограничит владельца существующих объектов.
+
+Для `prisma migrate dev` с автоматически создаваемой shadow-базой нужны дополнительные права. Используйте отдельную локальную роль с `CREATEDB` либо заранее подготовленную shadow-базу; production-пользователю backend эти права не выдавайте.
 
 ### MinIO
 
@@ -141,7 +192,7 @@ npm run config:validate
 Выполните:
 
 ```powershell
-npm install
+npm ci
 npm run setup
 npm run dev
 ```
@@ -186,7 +237,7 @@ npm run dev
 
 ```powershell
 git pull
-npm install
+npm ci
 npm run setup
 ```
 

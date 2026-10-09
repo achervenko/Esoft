@@ -338,7 +338,7 @@ function createEquipmentWithRelations(overrides: {
       firstName: 'Иван',
       lastName: 'Иванов',
       middleName: 'Иванович',
-      position: 'Мастер',
+      position: { name: 'Мастер' },
     },
     responsibleEmployeeId: 7,
     section: {

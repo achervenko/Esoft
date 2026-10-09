@@ -43,6 +43,14 @@ export function createOperations(overrides = {}) {
       'checkBackendBuild',
       success('PROD_BACKEND_BUILD_OK', 'Backend production build exists'),
     ),
+    checkBackendRuntimeHealth: operation(
+      'checkBackendRuntimeHealth',
+      success('BACKEND_HEALTH_OK', 'Backend is healthy'),
+    ),
+    checkFrontendHttp: operation(
+      'checkFrontendHttp',
+      success('FRONTEND_HTTP_OK', 'Frontend returned HTML'),
+    ),
     checkFrontendBuild: operation(
       'checkFrontendBuild',
       success('PROD_FRONTEND_BUILD_OK', 'Frontend production build exists'),
@@ -90,6 +98,8 @@ export function createOutput() {
 
 export function createConfig() {
   return {
+    backend: { url: 'http://127.0.0.1:3000' },
+    frontend: { url: 'http://127.0.0.1:5173' },
     database: {
       url: 'postgresql://user:[redacted]@localhost:5432/esoft',
     },

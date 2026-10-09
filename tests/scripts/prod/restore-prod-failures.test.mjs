@@ -67,20 +67,7 @@ test('restore maps thrown operation exceptions to normalized failure', async () 
 
 test('restore stops before destructive stages when backup storage mismatches manifest', async () => {
   const project = await createRestoreProject({
-    manifest: {
-      formatVersion: 1,
-      createdAt: '2026-08-03T09:30:00.000Z',
-      appVersion: '0.0.1-test',
-      database: {
-        file: 'database.dump',
-      },
-      storage: {
-        bucket: 'esoft',
-        directory: 'storage',
-        objectCount: 100,
-        totalBytes: 'photo-bytes'.length + 'manual-bytes'.length,
-      },
-    },
+    storageFiles: { 'manuals/manual.pdf': 'manual-bytes' },
   });
   const commandCalls = [];
   const s3Runtime = createS3Runtime({

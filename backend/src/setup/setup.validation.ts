@@ -17,13 +17,20 @@ export function parseCreateInitialAdminDto(
 ): CreateInitialAdminInput {
   const payload = dto ?? {};
   const employeeId = payload.employeeId;
-
+  const employee =
+    payload.employee === undefined
+      ? undefined
+      : parseNewEmployee(payload.employee);
+  if (employee && employeeId !== undefined) {
+    throwSetupInvalidPayload('Выберите сотрудника или создайте нового.');
+  }
   if (
-    typeof employeeId !== 'number' ||
-    !Number.isInteger(employeeId) ||
-    employeeId <= 0
+    !employee &&
+    (typeof employeeId !== 'number' ||
+      !Number.isInteger(employeeId) ||
+      employeeId <= 0)
   ) {
-    throwSetupInvalidPayload('Выберите сотрудника.');
+    throwSetupInvalidPayload('Выберите сотрудника или создайте нового.');
   }
 
   const email = parseEmail(payload.email);
@@ -34,12 +41,10 @@ export function parseCreateInitialAdminDto(
     throwSetupPasswordConfirmationMismatch();
   }
 
-  return {
-    email,
-    employeeId,
-    password,
-    username,
-  };
+  const credentials = { email, password, username };
+  return employee
+    ? { ...credentials, employee }
+    : { ...credentials, employeeId: employeeId as number };
 }
 
 function parseEmail(value: unknown) {
@@ -67,7 +72,7 @@ function parseUsername(value: unknown) {
   }
 
   const rawUsername = value;
-  const username = rawUsername.trim();
+  const username = rawUsername.trim().toLowerCase();
 
   if (!USERNAME_PATTERN.test(username)) {
     throwSetupInvalidPayload(
@@ -87,8 +92,8 @@ function parsePassword(value: unknown, email: string, username: string) {
     value.length < 8 ||
     value.length > MAX_PASSWORD_LENGTH ||
     !value.trim() ||
-    value === username ||
-    value === email ||
+    value.toLowerCase() === username ||
+    value.toLowerCase() === email ||
     !/\p{L}/u.test(value) ||
     !/\d/.test(value)
   ) {
@@ -96,4 +101,35 @@ function parsePassword(value: unknown, email: string, username: string) {
   }
 
   return value;
+}
+
+function parseNewEmployee(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throwSetupInvalidPayload('Укажите данные сотрудника.');
+  }
+  const data = value as Record<string, unknown>;
+  if (
+    Object.keys(data).some(
+      (key) => !['lastName', 'firstName', 'middleName'].includes(key),
+    )
+  ) {
+    throwSetupInvalidPayload('Переданы неизвестные поля сотрудника.');
+  }
+  const name = (raw: unknown, label: string, optional = false) => {
+    if (optional && (raw === undefined || raw === null || raw === ''))
+      return null;
+    if (
+      typeof raw !== 'string' ||
+      (!optional && !raw.trim()) ||
+      raw.trim().length > 64
+    ) {
+      throwSetupInvalidPayload(label + ': допустимо от 1 до 64 символов.');
+    }
+    return raw.trim() || null;
+  };
+  return {
+    lastName: name(data.lastName, 'Фамилия')!,
+    firstName: name(data.firstName, 'Имя')!,
+    middleName: name(data.middleName, 'Отчество', true),
+  };
 }

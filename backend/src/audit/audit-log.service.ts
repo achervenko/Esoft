@@ -7,7 +7,7 @@ import {
 } from '@prisma/client';
 import { DATABASE_DATE_TIME_ZONE } from '../application/business-date';
 import { PrismaService } from '../prisma/prisma.service';
-import type { WriteAuditParams } from './audit.types';
+import type { WriteAuditParams, WriteAuditEventParams } from './audit.types';
 
 type AuditFieldLine = {
   label: string;
@@ -145,6 +145,19 @@ export class AuditLogService {
             : this.formatValue(field.oldValue),
         userId: params.userId ?? null,
       })),
+    });
+  }
+
+  async writeEvent(params: WriteAuditEventParams): Promise<void> {
+    await params.tx.auditLog.create({
+      data: {
+        action: params.action,
+        module: params.module,
+        entityType: params.entityType,
+        entityId: params.entityId ?? null,
+        entityStringId: params.entityStringId ?? null,
+        userId: params.userId ?? null,
+      },
     });
   }
 

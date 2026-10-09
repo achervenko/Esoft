@@ -1,0 +1,11 @@
+:root {
+  --color-text: #15171c;
+  --color-muted: #6b7280;
+  --color-surface: #ffffff;
+  --color-border: #d7dce3;
+  --color-border-subtle: #e3e6eb;
+  --color-action: #111111;
+  --color-danger: #b42318;
+  --radius-control: 8px;
+  --radius-dialog: 12px;
+}

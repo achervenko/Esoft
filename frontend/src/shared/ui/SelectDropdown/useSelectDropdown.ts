@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -12,6 +13,7 @@ import {
   getModalFocusableElements,
   getNextEnabledIndex,
 } from "./select-dropdown-focus";
+import { getFocusableElements } from "../focusable-elements";
 import type {
   SelectDropdownOption,
   SelectDropdownProps,
@@ -29,6 +31,7 @@ export function useSelectDropdown({
     left: number;
     top: number;
     width: number;
+    maxHeight: number;
   } | null>(null);
   const [ownerModalId, setOwnerModalId] = useState<string | null>(null);
   const listboxId = useId();
@@ -45,7 +48,7 @@ export function useSelectDropdown({
     [options, value],
   );
 
-  const updateMenuPosition = () => {
+  const updateMenuPosition = useCallback(() => {
     const trigger = triggerRef.current;
 
     if (!trigger) {
@@ -53,13 +56,21 @@ export function useSelectDropdown({
     }
 
     const rect = trigger.getBoundingClientRect();
+    const below = Math.max(0, window.innerHeight - rect.bottom - 18);
+    const above = Math.max(0, rect.top - 18);
+    const desiredHeight = Math.min(280, options.length * 42 + 2);
+    const opensAbove = below < desiredHeight && above > below;
+    const maxHeight = Math.max(42, Math.min(280, opensAbove ? above : below));
 
     setMenuStyle({
       left: rect.left,
-      top: rect.bottom + 6,
+      top: opensAbove
+        ? Math.max(12, rect.top - 6 - Math.min(desiredHeight, maxHeight))
+        : rect.bottom + 6,
       width: rect.width,
+      maxHeight,
     });
-  };
+  }, [options.length]);
 
   const closeMenu = () => {
     setIsOpen(false);
@@ -75,16 +86,17 @@ export function useSelectDropdown({
     triggerRef.current?.focus();
   };
 
-  const openMenu = (nextActiveIndex = selectedIndex >= 0 ? selectedIndex : 0) => {
+  const openMenu = (
+    nextActiveIndex = selectedIndex >= 0 ? selectedIndex : 0,
+  ) => {
     if (disabled || options.length === 0) {
       return;
     }
 
     const resolvedActiveIndex = getNextEnabledIndex(options, nextActiveIndex);
     const nextOwnerModalId =
-      triggerRef.current
-        ?.closest<HTMLElement>("[data-admin-modal-id]")
-        ?.dataset.adminModalId ?? null;
+      triggerRef.current?.closest<HTMLElement>("[data-admin-modal-id]")?.dataset
+        .adminModalId ?? null;
 
     setOwnerModalId(nextOwnerModalId);
     updateMenuPosition();
@@ -115,7 +127,7 @@ export function useSelectDropdown({
       window.removeEventListener("resize", updateMenuPosition);
       window.removeEventListener("scroll", updateMenuPosition, true);
     };
-  }, [isOpen]);
+  }, [isOpen, updateMenuPosition]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -132,7 +144,8 @@ export function useSelectDropdown({
 
       if (
         target instanceof Node &&
-        (triggerRef.current?.contains(target) || menuRef.current?.contains(target))
+        (triggerRef.current?.contains(target) ||
+          menuRef.current?.contains(target))
       ) {
         return;
       }
@@ -211,6 +224,26 @@ export function useSelectDropdown({
           });
           return;
         }
+      }
+
+      if (!modal) {
+        const focusableElements = getFocusableElements(document.body).filter(
+          (element) => element.tabIndex >= 0 && !menuRef.current?.contains(element),
+        );
+        const nextElement = getAdjacentFocusableElementForDropdown(
+          focusableElements,
+          triggerRef.current,
+          event.shiftKey ? -1 : 1,
+        );
+        closeMenu();
+        event.stopPropagation();
+        if (nextElement) {
+          event.preventDefault();
+          nextElement.focus();
+        } else {
+          triggerRef.current?.focus();
+        }
+        return;
       }
 
       event.preventDefault();

@@ -1,4 +1,4 @@
-import { EventExtensionCode, Prisma } from '@prisma/client';
+import { EventExtensionCode, EventStatus, Prisma } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { daysBetween } from '../calendar.date';
 import { throwCalendarConflict } from '../calendar.errors';
@@ -80,7 +80,7 @@ function toCalendarEventItem(
   }
 
   const overdue = calculateOverdue(event, today);
-  const extension = castEquipmentExtension(event.extension);
+  const extension = validateEquipmentExtension(event.extension);
 
   return {
     badge: extension.maintenanceType.name,
@@ -107,13 +107,13 @@ function toCalendarEventItem(
 }
 
 function formatCalendarEventTitle(
-  equipment: EquipmentEventExtensionListResponse['equipment'],
+  equipment: CalendarEquipmentExtension['equipment'],
 ) {
   return `${equipment.name} ID ${equipment.visibleId}`;
 }
 
 function formatCalendarEventSubtitle(
-  equipment: EquipmentEventExtensionListResponse['equipment'],
+  equipment: CalendarEquipmentExtension['equipment'],
 ) {
   return [
     equipment.location,
@@ -123,17 +123,66 @@ function formatCalendarEventSubtitle(
     .join(' · ');
 }
 
-function castEquipmentExtension(
-  extension: EventListResponse['extension'],
-): EquipmentEventExtensionListResponse {
-  return extension as EquipmentEventExtensionListResponse;
+// Validate the fields consumed by the calendar, without claiming the entire
+// extension DTO has been validated. Preserve the original object for details.
+type CalendarEquipmentExtension = {
+  code: typeof EventExtensionCode.EQUIPMENT;
+  maintenanceType: Pick<
+    EquipmentEventExtensionListResponse['maintenanceType'],
+    'name'
+  >;
+  equipment: Pick<
+    EquipmentEventExtensionListResponse['equipment'],
+    'name' | 'visibleId' | 'location' | 'serialNumber'
+  >;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isCalendarEquipmentExtension(
+  value: unknown,
+): value is CalendarEquipmentExtension {
+  if (!isRecord(value) || value.code !== EventExtensionCode.EQUIPMENT)
+    return false;
+  const { maintenanceType, equipment } = value;
+  return (
+    isRecord(maintenanceType) &&
+    typeof maintenanceType.name === 'string' &&
+    isRecord(equipment) &&
+    typeof equipment.name === 'string' &&
+    typeof equipment.visibleId === 'number' &&
+    Number.isSafeInteger(equipment.visibleId) &&
+    equipment.visibleId > 0 &&
+    typeof equipment.location === 'string' &&
+    (equipment.serialNumber === null ||
+      typeof equipment.serialNumber === 'string')
+  );
+}
+
+function validateEquipmentExtension(
+  extension: unknown,
+): CalendarEquipmentExtension {
+  if (!isCalendarEquipmentExtension(extension)) {
+    throwCalendarConflict(
+      'CALENDAR_EVENT_EXTENSION_INVALID',
+      'Событие содержит некорректные данные оборудования.',
+    );
+  }
+  return extension;
 }
 
 function calculateOverdue(
   event: EventListResponse,
   today: Date,
 ): { isOverdue: boolean; overdueDays: number } {
-  if (event.factDate !== null || !event.plannedDate) {
+  if (
+    (event.status !== EventStatus.CREATED &&
+      event.status !== EventStatus.IN_PROGRESS) ||
+    event.factDate !== null ||
+    !event.plannedDate
+  ) {
     return { isOverdue: false, overdueDays: 0 };
   }
 

@@ -7,6 +7,7 @@ import {
 } from 'node:fs/promises';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 
+import { verifyBackupChecksums } from './backup-integrity.mjs';
 import { failure, success } from '../infrastructure/result.mjs';
 import { formatError } from '../infrastructure/security/redaction.mjs';
 
@@ -98,7 +99,9 @@ export async function verifyBackupArtifacts({
       return failure('BACKUP_MANIFEST_FAILED', 'backup.json is invalid');
     }
 
-    JSON.parse(await readFile(manifestPath, 'utf8'));
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+    const integrity = await verifyBackupChecksums({ backupPath, manifest });
+    if (!integrity.ok) return integrity;
 
     return success('BACKUP_ARTIFACTS_VERIFIED', 'Backup artifacts are valid');
   } catch (error) {

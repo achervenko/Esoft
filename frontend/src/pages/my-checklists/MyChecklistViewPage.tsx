@@ -1,8 +1,10 @@
+import { useConfirmation } from "../../shared/ui/useConfirmation";
 import { ChevronLeft } from "lucide-react";
 import { useEffect } from "react";
 import { buildHashRoute } from "../../shared/lib/hash-navigation";
 import "../../shared/ui/AdminPage.css";
 import { Notice } from "../../shared/ui/Notice";
+import { UnsavedChangesGuard } from "../../shared/ui/UnsavedChangesGuard";
 import { MyChecklistDetail } from "./components/MyChecklistDetail";
 import type { ChecklistTabKey } from "./my-checklists.config";
 import { useChecklistWork } from "./hooks/use-checklist-work";
@@ -20,6 +22,7 @@ export function MyChecklistViewPage({
   checklistId,
   currentUserId = null,
 }: MyChecklistViewPageProps) {
+  const confirm = useConfirmation();
   const checklistWork = useChecklistWork({
     checklistId,
     currentUserId,
@@ -39,12 +42,14 @@ export function MyChecklistViewPage({
     }
   }, [checklistWork.checklist?.status]);
 
-  const handleReload = () => {
+  const handleReload = async () => {
     if (
       checklistWork.hasUnsavedChanges &&
-      !window.confirm(
-        "Перезагрузить чек-лист? Несохранённые изменения будут потеряны.",
-      )
+      !(await confirm({
+        title: "Перезагрузить чек-лист?",
+        description: "Несохранённые изменения будут потеряны.",
+        confirmLabel: "Перезагрузить",
+      }))
     ) {
       return;
     }
@@ -54,6 +59,10 @@ export function MyChecklistViewPage({
 
   return (
     <div className="admin-page my-checklist-view-page">
+      <UnsavedChangesGuard
+        hasChanges={checklistWork.hasUnsavedChanges}
+        isBlocked={checklistWork.isActionLoading}
+      />
       <header className="admin-page-header my-checklists-view-header">
         <a className="my-checklists-back-link" href={backHref}>
           <ChevronLeft aria-hidden="true" size={18} />
@@ -85,7 +94,7 @@ export function MyChecklistViewPage({
         isDetailLoading={checklistWork.isDetailLoading}
         onAnswerChange={checklistWork.setAnswerValue}
         onComplete={() => void checklistWork.completeChecklist()}
-        onReload={handleReload}
+        onReload={() => void handleReload()}
         onResultChange={checklistWork.setResultValue}
         onSave={() => void checklistWork.saveChecklist()}
         resultError={checklistWork.resultError}

@@ -6,6 +6,8 @@ export const userRoles = [
   'engineer',
   'operator',
   'auditor',
+  'ppe_specialist',
+  'accounting_specialist',
 ] as const;
 
 export type UserRole = (typeof userRoles)[number];
@@ -14,7 +16,7 @@ type EmployeePayload = {
   firstName?: unknown;
   lastName?: unknown;
   middleName?: unknown;
-  position?: unknown;
+  positionId?: unknown;
 };
 
 type UserPayload = {
@@ -43,19 +45,18 @@ export function parseEmployeePayload(payload: EmployeePayload) {
     'Укажите имя.',
     MAX_NAME_LENGTH,
   );
-  const position = parseRequiredText(
-    payload.position,
-    'POSITION_REQUIRED',
-    'Укажите должность.',
-    MAX_NAME_LENGTH,
-  );
+  const positionId =
+    typeof payload.positionId === 'number' ? payload.positionId : NaN;
+  if (!Number.isInteger(positionId) || positionId <= 0) {
+    throwBadRequest('POSITION_REQUIRED', 'Выберите должность.');
+  }
   const middleName = parseOptionalText(payload.middleName, MAX_NAME_LENGTH);
 
   return {
     firstName,
     lastName,
     middleName,
-    position,
+    positionId,
   };
 }
 
@@ -185,7 +186,7 @@ function parseRole(value: unknown): UserRole {
 }
 
 function parseEmployeeId(value: unknown) {
-  const employeeId = Number(value);
+  const employeeId = typeof value === 'number' ? value : NaN;
 
   if (!Number.isInteger(employeeId) || employeeId <= 0) {
     throwBadRequest('EMPLOYEE_REQUIRED', 'Выберите сотрудника.');

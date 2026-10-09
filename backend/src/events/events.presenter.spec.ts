@@ -75,7 +75,7 @@ describe('events presenter', () => {
           id: 10,
           lastName: 'Петров',
           middleName: null,
-          position: 'Инженер',
+          position: { name: 'Инженер' },
         },
         equipmentExtension: {
           equipment: {

@@ -52,14 +52,14 @@ export function runParallel(commands) {
   const children = [];
   let isShuttingDown = false;
 
-  const shutdown = async (exitCode) => {
+  const shutdown = async (exitCode, signal) => {
     if (isShuttingDown) {
       return;
     }
 
     isShuttingDown = true;
     const cleanupResults = await Promise.allSettled(
-      children.map((child) => stopChildProcess(child)),
+      children.map((child) => stopChildProcess(child, { signal })),
     );
     const cleanupFailed = cleanupResults.some(
       (result) => result.status === 'rejected',
@@ -117,11 +117,11 @@ export function runParallel(commands) {
   }
 
   process.once('SIGINT', () => {
-    void shutdown(130);
+    void shutdown(130, 'SIGINT');
   });
 
   process.once('SIGTERM', () => {
-    void shutdown(143);
+    void shutdown(143, 'SIGTERM');
   });
 }
 
@@ -137,12 +137,21 @@ function getExitCode(code, signal) {
   return code ?? 1;
 }
 
-async function stopChildProcess(child) {
+export async function stopChildProcess(child, { signal } = {}) {
   if (!child.pid) {
     return;
   }
 
   if (process.platform === 'win32') {
+    // Console Ctrl+C reaches children too; allow their shutdown hooks to finish.
+    // SIGTERM received by the launcher is not delivered to Windows children.
+    if (signal === 'SIGINT') {
+      await waitForExit(child, 10_000);
+    }
+    if (child.exitCode !== null || child.signalCode !== null) {
+      return;
+    }
+
     const result = await runCommand('taskkill.exe', [
       '/pid',
       String(child.pid),

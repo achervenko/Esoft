@@ -28,13 +28,6 @@
   line-height: 1.2;
 }
 
-.setup-heading p {
-  margin: 0;
-  color: #5f6b7a;
-  font-size: 14px;
-  line-height: 1.45;
-}
-
 .setup-form {
   display: grid;
   gap: 16px;
@@ -66,8 +59,7 @@
   outline: 3px solid rgba(37, 99, 235, 0.16);
 }
 
-.field-error {
-  color: #b42318;
+.setup-shell .field-error {
   font-size: 12px;
   font-weight: 650;
 }
@@ -76,4 +68,20 @@
   .setup-panel {
     padding: 22px;
   }
+}
+
+.setup-employee-fields {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+}
+.setup-employee-fields legend {
+  padding: 0 4px;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 700;
 }

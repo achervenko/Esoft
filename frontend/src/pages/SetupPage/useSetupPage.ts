@@ -14,7 +14,10 @@ import type { SetupFieldErrors, SetupFormState } from "./setup.types";
 
 const initialForm: SetupFormState = {
   email: "",
-  employeeId: "",
+  employeeId: "new",
+  lastName: "",
+  firstName: "",
+  middleName: "",
   password: "",
   passwordConfirmation: "",
   username: "",
@@ -90,11 +93,13 @@ export function useSetupPage({ onCompleted }: UseSetupPageParams) {
   useEffect(() => clearCompletionTimeout, [clearCompletionTimeout]);
 
   const employeeOptions = useMemo(
-    () =>
-      employees.map((employee) => ({
+    () => [
+      { label: "Создать сотрудника", value: "new" },
+      ...employees.map((employee) => ({
         label: `${employee.fullName} — ${employee.position}`,
         value: String(employee.id),
       })),
+    ],
     [employees],
   );
 
@@ -121,11 +126,20 @@ export function useSetupPage({ onCompleted }: UseSetupPageParams) {
     }
 
     setIsSubmitting(true);
+    let isCompletionScheduled = false;
 
     try {
       await createInitialAdmin({
         email: form.email.trim(),
-        employeeId: Number(form.employeeId),
+        ...(form.employeeId === "new"
+          ? {
+              employee: {
+                lastName: form.lastName.trim(),
+                firstName: form.firstName.trim(),
+                middleName: form.middleName.trim() || null,
+              },
+            }
+          : { employeeId: Number(form.employeeId) }),
         password: form.password,
         passwordConfirmation: form.passwordConfirmation,
         username: form.username.trim(),
@@ -133,6 +147,7 @@ export function useSetupPage({ onCompleted }: UseSetupPageParams) {
 
       setMessage("Администратор создан. Теперь можно войти в систему.");
       scheduleCompleted(900);
+      isCompletionScheduled = true;
     } catch (submitError) {
       const errorCode = getSetupErrorCode(submitError);
       const nextMessage = getSetupErrorMessage(submitError);
@@ -145,10 +160,13 @@ export function useSetupPage({ onCompleted }: UseSetupPageParams) {
 
       if (errorCode === "SETUP_ALREADY_COMPLETED") {
         scheduleCompleted(1200);
+        isCompletionScheduled = true;
       }
     } finally {
-      isSubmittingRef.current = false;
-      setIsSubmitting(false);
+      if (!isCompletionScheduled) {
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
+      }
     }
   };
 

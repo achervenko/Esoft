@@ -23,6 +23,8 @@ test('loadValidatedConfig loads, validates and applies environment after success
       assertOperationResult(result, { ok: true });
       assert.equal(result.code, 'CONFIG_VALID');
       assert.equal(result.details.config.backend.port, 3000);
+      assert.equal(result.details.config.backend.internalUrl, 'http://127.0.0.1:3000');
+      assert.equal(result.details.config.frontend.internalUrl, 'http://127.0.0.1:5173');
       assert.equal(result.details.config.minio.endpoint, 'http://127.0.0.1:9000');
       assert.equal(
         result.details.config.backup.dir,
@@ -136,6 +138,72 @@ test('loadValidatedConfig reports missing root .env file', async () => {
     await project.remove();
   }
 });
+
+test('public HTTPS URLs are independent of listener hosts and ports', async () => {
+  const project = await createProjectWithEnv({
+    NODE_ENV: 'production',
+    BACKEND_URL: 'https://insolution-esoft.ru',
+    FRONTEND_URL: 'https://insolution-esoft.ru',
+    VITE_API_URL: 'https://insolution-esoft.ru',
+    BETTER_AUTH_URL: 'https://insolution-esoft.ru',
+  });
+  try {
+    const result = loadValidatedConfig({ projectRoot: project.root });
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.details.warnings, []);
+    assert.equal(result.details.config.backend.url, 'https://insolution-esoft.ru');
+    assert.equal(result.details.config.backend.internalUrl, 'http://127.0.0.1:3000');
+    assert.equal(result.details.config.frontend.internalUrl, 'http://127.0.0.1:5173');
+  } finally {
+    await project.remove();
+  }
+});
+
+for (const [host, connectHost] of [['0.0.0.0', '127.0.0.1'], ['::', '[::1]']]) {
+  test(`wildcard listener ${host} uses a loopback address for internal requests`, async () => {
+    const project = await createProjectWithEnv({
+      BACKEND_HOST: host,
+      FRONTEND_HOST: host,
+    });
+    try {
+      const result = loadValidatedConfig({ projectRoot: project.root });
+      assert.equal(result.ok, true);
+      assert.equal(result.details.config.backend.internalUrl, `http://${connectHost}:3000`);
+      assert.equal(result.details.config.frontend.internalUrl, `http://${connectHost}:5173`);
+    } finally {
+      await project.remove();
+    }
+  });
+}
+
+test('listener HOST remains a host rather than a public URL', async () => {
+  const project = await createProjectWithEnv({ BACKEND_HOST: 'https://example.com' });
+  try {
+    const result = loadValidatedConfig({ projectRoot: project.root });
+    assert.equal(result.ok, false);
+    assert.ok(result.details.errors.some(({ variable }) => variable === 'BACKEND_HOST'));
+  } finally {
+    await project.remove();
+  }
+});
+
+for (const backendUrl of [
+  'https://insolution-esoft.ru/some/path',
+  'https://user:pass@insolution-esoft.ru',
+  'https://insolution-esoft.ru?x=1',
+  'https://insolution-esoft.ru#section',
+]) {
+  test(`BACKEND_URL rejects a non-origin address: ${backendUrl}`, async () => {
+    const project = await createProjectWithEnv({ BACKEND_URL: backendUrl });
+    try {
+      const result = loadValidatedConfig({ projectRoot: project.root });
+      assert.equal(result.ok, false);
+      assert.ok(result.details.errors.some(({ variable }) => variable === 'BACKEND_URL'));
+    } finally {
+      await project.remove();
+    }
+  });
+}
 
 async function createProjectWithEnv(overrides = {}) {
   const project = await createTemporaryProject({

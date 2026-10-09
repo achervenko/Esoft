@@ -1,4 +1,5 @@
 import { ApiRequestError } from "../../shared/api/api-error";
+import { isValidPassword, PASSWORD_POLICY_MESSAGE } from "../../shared/lib/password-validation";
 import type { SetupFieldErrors, SetupFormState } from "./setup.types";
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9._-]{3,64}$/;
@@ -7,11 +8,26 @@ export function validateSetupForm(form: SetupFormState) {
   const errors: SetupFieldErrors = {};
   const employeeId = Number(form.employeeId);
   const email = form.email.trim();
-  const normalizedEmail = email.toLowerCase();
   const username = form.username.trim();
   const password = form.password;
 
-  if (!form.employeeId || !Number.isInteger(employeeId) || employeeId <= 0) {
+  if (form.employeeId === "new") {
+    for (const field of ["lastName", "firstName", "middleName"] as const) {
+      const value = form[field].trim();
+      if ((field !== "middleName" && !value) || value.length > 64) {
+        errors[field] =
+          field === "lastName"
+            ? "Укажите фамилию (до 64 символов)."
+            : field === "firstName"
+              ? "Укажите имя (до 64 символов)."
+              : "Отчество — не более 64 символов.";
+      }
+    }
+  } else if (
+    !form.employeeId ||
+    !Number.isInteger(employeeId) ||
+    employeeId <= 0
+  ) {
     errors.employeeId = "Выберите сотрудника.";
   }
 
@@ -24,20 +40,12 @@ export function validateSetupForm(form: SetupFormState) {
   if (!username) {
     errors.username = "Укажите логин.";
   } else if (!USERNAME_PATTERN.test(username)) {
-    errors.username = "Логин должен содержать 3-64 латинских символа, цифры, точку, дефис или подчёркивание.";
+    errors.username =
+      "Логин должен содержать 3-64 латинских символа, цифры, точку, дефис или подчёркивание.";
   }
 
-  if (
-    password.length < 8 ||
-    password.length > 128 ||
-    password.trim().length === 0 ||
-    password === username ||
-    password === normalizedEmail ||
-    !/\p{L}/u.test(password) ||
-    !/\d/.test(password)
-  ) {
-    errors.password =
-      "Пароль должен содержать от 8 до 128 символов, букву и цифру и не совпадать с логином или email.";
+  if (!isValidPassword(password, { email, username })) {
+    errors.password = PASSWORD_POLICY_MESSAGE;
   }
 
   if (form.password !== form.passwordConfirmation) {
@@ -81,7 +89,7 @@ export function getSetupErrorMessage(error: unknown) {
 }
 
 export function getSetupErrorCode(error: unknown) {
-  return error instanceof ApiRequestError ? error.code ?? null : null;
+  return error instanceof ApiRequestError ? (error.code ?? null) : null;
 }
 
 export function hasSetupFieldErrors(errors: SetupFieldErrors) {

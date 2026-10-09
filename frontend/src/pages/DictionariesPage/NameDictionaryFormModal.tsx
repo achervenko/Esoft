@@ -13,6 +13,7 @@ type NameDictionaryFormModalProps = {
   onClose: () => void;
   onSubmit: (payload: DictionaryNamePayload) => void;
   title: string;
+  maxLength?: number;
 };
 
 export function NameDictionaryFormModal({
@@ -21,6 +22,7 @@ export function NameDictionaryFormModal({
   onClose,
   onSubmit,
   title,
+  maxLength = 128,
 }: NameDictionaryFormModalProps) {
   const [name, setName] = useState(item?.name ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -42,15 +44,16 @@ export function NameDictionaryFormModal({
   };
 
   return (
-    <AdminModal onClose={onClose} title={title}>
+    <AdminModal isCloseDisabled={isSaving} onClose={onClose} title={title}>
       <form className="admin-form" onSubmit={handleSubmit}>
         <label className="form-field">
-          <span>
+          <span className="form-field-label">
             Название<b aria-hidden="true">*</b>
           </span>
           <input
             autoFocus
-            maxLength={128}
+            maxLength={maxLength}
+            required
             onChange={(event) => setName(event.target.value)}
             value={name}
           />
@@ -61,6 +64,7 @@ export function NameDictionaryFormModal({
         <div className="admin-form-actions">
           <button
             className="admin-secondary-button"
+            disabled={isSaving}
             onClick={onClose}
             type="button"
           >

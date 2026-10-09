@@ -39,6 +39,20 @@ const sessionUser = {
 };
 
 describe("App session-expired flow", () => {
+  it.each(["#/login", "#/equipment", "#/dashboard"])(
+    "opens PPE instead of %s for a PPE specialist",
+    async (route) => {
+      window.location.hash = route;
+      vi.mocked(getSetupStatus).mockResolvedValueOnce({ setupRequired: false });
+      vi.mocked(getAuthenticatedUser).mockResolvedValueOnce({
+        ...sessionUser,
+        role: "ppe_specialist",
+      });
+      render(<App />);
+      await waitFor(() => expect(window.location.hash).toBe("#/ppe"));
+      expect(screen.getByTestId("app-shell")).toBeInTheDocument();
+    },
+  );
   afterEach(() => {
     cleanup();
     window.location.hash = "";

@@ -11,17 +11,26 @@ export type SetupEmployeeDto = {
 export type CreateInitialAdminDto = {
   email?: unknown;
   employeeId?: unknown;
+  employee?: unknown;
   password?: unknown;
   passwordConfirmation?: unknown;
   username?: unknown;
 };
 
+export type SetupNewEmployee = {
+  lastName: string;
+  firstName: string;
+  middleName: string | null;
+};
+
 export type CreateInitialAdminInput = {
   email: string;
-  employeeId: number;
   password: string;
   username: string;
-};
+} & (
+  | { employeeId: number; employee?: never }
+  | { employee: SetupNewEmployee; employeeId?: never }
+);
 
 export type SetupRequestMeta = {
   ipAddress?: string | null;

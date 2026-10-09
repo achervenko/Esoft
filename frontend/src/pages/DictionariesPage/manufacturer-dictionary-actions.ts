@@ -1,3 +1,4 @@
+import type { RequestConfirmation } from "../../shared/ui/useConfirmation";
 import type { Dispatch, SetStateAction } from "react";
 import {
   createDictionaryEquipmentModel,
@@ -17,6 +18,7 @@ import type {
 } from "./dictionaries-page-types";
 
 type ManufacturerDictionaryActionsParams = {
+  confirm: RequestConfirmation;
   loadData: () => Promise<void>;
   manufacturerForm: ManufacturerFormState;
   modelForm: EquipmentModelFormState;
@@ -27,6 +29,7 @@ type ManufacturerDictionaryActionsParams = {
 };
 
 export function createManufacturerDictionaryActions({
+  confirm,
   loadData,
   manufacturerForm,
   modelForm,
@@ -51,7 +54,12 @@ export function createManufacturerDictionaryActions({
   };
 
   const removeManufacturer = async (manufacturer: DictionaryManufacturer) => {
-    if (!window.confirm(`Удалить производителя «${manufacturer.name}»?`)) {
+    if (
+      !(await confirm({
+        description: `Удалить производителя «${manufacturer.name}»?`,
+        variant: "danger",
+      }))
+    ) {
       return;
     }
 
@@ -78,7 +86,12 @@ export function createManufacturerDictionaryActions({
   };
 
   const removeModel = async (model: DictionaryEquipmentModel) => {
-    if (!window.confirm(`Удалить модель «${model.name}»?`)) {
+    if (
+      !(await confirm({
+        description: `Удалить модель «${model.name}»?`,
+        variant: "danger",
+      }))
+    ) {
       return;
     }
 

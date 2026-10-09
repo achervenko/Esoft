@@ -1,3 +1,4 @@
+import type { RequestConfirmation } from "../../shared/ui/useConfirmation";
 import type { Dispatch, SetStateAction } from "react";
 import {
   createDictionaryLocation,
@@ -17,6 +18,7 @@ import type {
 } from "./dictionaries-page-types";
 
 type LocationDictionaryActionsParams = {
+  confirm: RequestConfirmation;
   loadData: () => Promise<void>;
   locationForm: LocationFormState;
   objectForm: ObjectFormState;
@@ -27,6 +29,7 @@ type LocationDictionaryActionsParams = {
 };
 
 export function createLocationDictionaryActions({
+  confirm,
   loadData,
   locationForm,
   objectForm,
@@ -51,7 +54,12 @@ export function createLocationDictionaryActions({
   };
 
   const removeObject = async (object: DictionaryObject) => {
-    if (!window.confirm(`Удалить объект «${object.name}»?`)) {
+    if (
+      !(await confirm({
+        description: `Удалить объект «${object.name}»?`,
+        variant: "danger",
+      }))
+    ) {
       return;
     }
 
@@ -78,7 +86,12 @@ export function createLocationDictionaryActions({
   };
 
   const removeLocation = async (location: DictionaryLocation) => {
-    if (!window.confirm(`Удалить местонахождение «${location.name}»?`)) {
+    if (
+      !(await confirm({
+        description: `Удалить местонахождение «${location.name}»?`,
+        variant: "danger",
+      }))
+    ) {
       return;
     }
 

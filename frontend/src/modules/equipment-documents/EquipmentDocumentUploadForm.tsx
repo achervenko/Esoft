@@ -23,7 +23,7 @@ export function EquipmentDocumentUploadForm({
   return (
     <div className="equipment-document-upload">
       <label className="form-field">
-        <span>{text.file}</span>
+        <span className="form-field-label">{text.file}</span>
         <div className="equipment-file-picker">
           <input
             ref={fileInputRef}

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -82,15 +83,23 @@ test('backup creates database dump, MinIO files, manifest and final folder', asy
       await readFile(join(result.details.backupPath, 'backup.json'), 'utf8'),
     );
     assert.deepEqual(manifest, {
-      formatVersion: 1,
+      formatVersion: 2,
       createdAt: '2026-08-03T09:30:00.000Z',
       appVersion: '0.0.1-test',
       database: {
         file: 'database.dump',
+        sizeBytes: 4,
+        sha256: createHash('sha256').update('dump').digest('hex'),
       },
       storage: {
         bucket: 'esoft',
         directory: 'storage',
+        objects: [
+          { key: 'equipment/equipment_card/42/equipment_photo/photo.webp', sizeBytes: 11,
+            sha256: createHash('sha256').update('photo-bytes').digest('hex') },
+          { key: 'users/user-1/photo/small/avatar.webp', sizeBytes: 12,
+            sha256: createHash('sha256').update('avatar-bytes').digest('hex') },
+        ],
         objectCount: 2,
         totalBytes: 'photo-bytes'.length + 'avatar-bytes'.length,
       },

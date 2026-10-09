@@ -7,7 +7,7 @@ type EquipmentCreateOptionsInput = {
     id: number;
     lastName: string;
     middleName: string | null;
-    position: string;
+    position: { name: string };
   }>;
   manufacturers: Array<{ id: number; name: string }>;
   models: Array<{ id: number; manufacturerId: number; name: string }>;
@@ -47,7 +47,7 @@ export function toEquipmentCreateOptions({
       name: [employee.lastName, employee.firstName, employee.middleName]
         .filter(Boolean)
         .join(' '),
-      position: employee.position,
+      position: employee.position.name,
     })),
     statuses: getEquipmentStatusOptions(),
   };

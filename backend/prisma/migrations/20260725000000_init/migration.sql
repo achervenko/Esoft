@@ -5,7 +5,7 @@ CREATE SCHEMA IF NOT EXISTS "public";
 CREATE TYPE "audit_action" AS ENUM ('CREATE', 'UPDATE', 'ARCHIVE', 'DELETE', 'STATUS_CHANGE', 'FILE_UPLOAD', 'FILE_DELETE', 'LOGIN', 'LOGOUT', 'USER_BLOCK', 'USER_PHOTO_DELETE', 'USER_PHOTO_UPLOAD', 'ROLE_CHANGE', 'SETUP_ADMIN_CREATED');
 
 -- CreateEnum
-CREATE TYPE "audit_module" AS ENUM ('calendar', 'equipment', 'events', 'users');
+CREATE TYPE "audit_module" AS ENUM ('calendar', 'equipment', 'events', 'users', 'ppe');
 
 -- CreateEnum
 CREATE TYPE "calendar_source" AS ENUM ('SYSTEM', 'IMPORT', 'MANUAL');
@@ -33,6 +33,14 @@ CREATE TYPE "event_status" AS ENUM ('CREATED', 'IN_PROGRESS', 'COMPLETED', 'CANC
 
 -- CreateEnum
 CREATE TYPE "equipment_status" AS ENUM ('active', 'reserve', 'repair', 'maintenance', 'written_off');
+
+-- CreateEnum
+CREATE TYPE "ppe_period_unit" AS ENUM ('MONTH', 'YEAR');
+
+-- CreateEnum
+CREATE TYPE "ppe_issue_status" AS ENUM ('ISSUED', 'CANCELLED');
+CREATE TYPE "ppe_issue_type" AS ENUM ('REGULAR', 'EXTRA');
+CREATE TYPE "ppe_item_type" AS ENUM ('OTHER', 'BODY', 'FEET', 'HANDS', 'HEAD');
 
 -- CreateEnum
 CREATE TYPE "storage_owner_module" AS ENUM ('equipment');
@@ -323,15 +331,141 @@ CREATE TABLE "sections" (
 );
 
 -- CreateTable
+CREATE TABLE "positions" (
+    "id" SERIAL NOT NULL,
+    "name" VARCHAR(64) NOT NULL,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+
+    CONSTRAINT "positions_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "chk_positions_name" CHECK ("name" = btrim("name") AND "name" <> '')
+);
+
+-- CreateTable
 CREATE TABLE "employees" (
     "id" SERIAL NOT NULL,
     "last_name" VARCHAR(64) NOT NULL,
     "first_name" VARCHAR(64) NOT NULL,
     "middle_name" VARCHAR(64),
-    "position" VARCHAR(64) NOT NULL,
+    "position_id" INTEGER NOT NULL,
+    "position_assigned_at" DATE,
+    "clothing_size" VARCHAR(20),
+    "clothing_height" VARCHAR(20),
+    "shoe_size" NUMERIC(3,1),
+    "glove_size" VARCHAR(20),
+    "headwear_size" VARCHAR(20),
     "is_active" BOOLEAN NOT NULL DEFAULT true,
 
-    CONSTRAINT "employees_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "employees_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "chk_employees_shoe_size" CHECK ("shoe_size" IS NULL OR "shoe_size" BETWEEN 15 AND 60)
+);
+
+-- CreateTable
+CREATE TABLE "ppe_items" (
+    "type" "ppe_item_type" NOT NULL,
+    "id" SERIAL NOT NULL,
+    "article" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "unit" TEXT NOT NULL,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+
+    CONSTRAINT "ppe_items_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "uq_ppe_items_article" UNIQUE ("article"),
+    CONSTRAINT "ck_ppe_items_unit" CHECK ("unit" IN ('шт', 'пары', 'мл'))
+);
+
+-- CreateTable
+CREATE TABLE "ppe_norms" (
+    "id" SERIAL NOT NULL,
+    "position_id" INTEGER NOT NULL,
+    "effective_from" DATE NOT NULL,
+    "effective_to" DATE,
+    "transition_mode" TEXT NOT NULL DEFAULT 'LEGACY',
+    "previous_norm_id" INTEGER,
+
+    CONSTRAINT "ppe_norms_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "ck_ppe_norm_transition_mode" CHECK ("transition_mode" IN ('LEGACY', 'SOFT', 'HARD')),
+    CONSTRAINT "chk_ppe_norms_effective_period" CHECK ("effective_to" IS NULL OR "effective_to" >= "effective_from")
+);
+
+-- CreateTable
+CREATE TABLE "ppe_norm_items" (
+    "ppe_name_snapshot" TEXT NOT NULL,
+    "ppe_unit_snapshot" TEXT NOT NULL,
+    "ppe_item_type_snapshot" "ppe_item_type" NOT NULL,
+    "id" SERIAL NOT NULL,
+    "norm_id" INTEGER NOT NULL,
+    "ppe_item_id" INTEGER NOT NULL,
+    "quantity" NUMERIC(12,3) NOT NULL,
+    "period_count" INTEGER NOT NULL,
+    "period_unit" "ppe_period_unit" NOT NULL,
+    "calculation_mode" TEXT NOT NULL DEFAULT 'LEGACY',
+
+    CONSTRAINT "ppe_norm_items_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "uq_ppe_norm_items_norm_ppe_item" UNIQUE ("norm_id", "ppe_item_id"),
+    CONSTRAINT "ck_ppe_norm_calculation_mode" CHECK ("calculation_mode" IN ('LEGACY', 'INTERVAL', 'MONTHLY')),
+    CONSTRAINT "chk_ppe_norm_items_quantity" CHECK ("quantity" > 0 AND "quantity" <> 'NaN'::numeric),
+    CONSTRAINT "chk_ppe_norm_items_period_count" CHECK ("period_count" > 0)
+);
+
+-- CreateTable
+CREATE TABLE "ppe_item_sizes" (
+    "id" SERIAL NOT NULL,
+    "ppe_item_id" INTEGER NOT NULL,
+    "value" TEXT NOT NULL,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+
+    CONSTRAINT "ppe_item_sizes_pkey" PRIMARY KEY ("id"),
+    "height_value" TEXT,
+    CONSTRAINT "uq_ppe_item_sizes_item_value" UNIQUE NULLS NOT DISTINCT ("ppe_item_id", "value", "height_value"),
+    CONSTRAINT "chk_ppe_item_sizes_value" CHECK ("value" = btrim("value") AND "value" <> ''),
+    CONSTRAINT "chk_ppe_item_sizes_height" CHECK ("height_value" IS NULL OR ("height_value" = btrim("height_value") AND "height_value" <> ''))
+);
+
+-- CreateTable
+CREATE TABLE "ppe_issues" (
+    "id" SERIAL NOT NULL,
+    "employee_id" INTEGER NOT NULL,
+    "employee_name_snapshot" TEXT NOT NULL,
+    "position_id" INTEGER NOT NULL,
+    "position_name_snapshot" VARCHAR(64) NOT NULL,
+    "issue_type" "ppe_issue_type" NOT NULL,
+    "norm_item_id" INTEGER,
+    "norm_item_ppe_item_id" INTEGER,
+    "norm_ppe_article_snapshot" TEXT,
+    "norm_ppe_name_snapshot" TEXT,
+    "ppe_item_id" INTEGER NOT NULL,
+    "ppe_item_type_snapshot" "ppe_item_type" NOT NULL,
+    "ppe_article_snapshot" TEXT NOT NULL,
+    "ppe_name_snapshot" TEXT NOT NULL,
+    "ppe_unit_snapshot" TEXT NOT NULL,
+    "quantity" NUMERIC(12,3) NOT NULL,
+    "size_value" TEXT,
+    "clothing_height_snapshot" TEXT,
+    "scheduled_at" DATE,
+    "scheduled_portion" INTEGER,
+    "issued_at" DATE NOT NULL,
+    "issued_by_user_id" TEXT NOT NULL,
+    "issued_by_name_snapshot" TEXT NOT NULL,
+    "status" "ppe_issue_status" NOT NULL DEFAULT 'ISSUED',
+    "comment" TEXT,
+    "cancelled_at" TIMESTAMPTZ(6),
+    "cancelled_by_user_id" TEXT,
+    "cancelled_by_name_snapshot" TEXT,
+    "cancellation_reason" TEXT,
+    CONSTRAINT "ppe_issues_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "chk_ppe_issues_quantity" CHECK ("quantity" > 0 AND "quantity" <> 'NaN'::numeric),
+    CONSTRAINT "chk_ppe_issues_type" CHECK (
+      ("issue_type" = 'REGULAR' AND "norm_item_id" IS NOT NULL AND "norm_item_ppe_item_id" IS NOT NULL
+        AND "norm_ppe_article_snapshot" IS NOT NULL AND "norm_ppe_name_snapshot" IS NOT NULL
+        AND "scheduled_at" IS NOT NULL AND "scheduled_at" <= "issued_at" AND "scheduled_portion" IS NOT NULL AND "scheduled_portion" >= 0)
+      OR ("issue_type" = 'EXTRA' AND "norm_item_id" IS NULL AND "norm_item_ppe_item_id" IS NULL
+        AND "norm_ppe_article_snapshot" IS NULL AND "norm_ppe_name_snapshot" IS NULL AND "scheduled_at" IS NULL AND "scheduled_portion" IS NULL)
+    ),
+    CONSTRAINT "chk_ppe_issues_cancellation" CHECK (
+      ("status" = 'ISSUED' AND "cancelled_at" IS NULL AND "cancelled_by_user_id" IS NULL AND "cancelled_by_name_snapshot" IS NULL AND "cancellation_reason" IS NULL)
+      OR ("status" = 'CANCELLED' AND "cancelled_at" IS NOT NULL AND "cancelled_by_user_id" IS NOT NULL AND "cancelled_by_name_snapshot" IS NOT NULL
+        AND "cancellation_reason" IS NOT NULL AND "cancellation_reason" = btrim("cancellation_reason") AND "cancellation_reason" <> '')
+    )
 );
 
 -- CreateTable
@@ -670,6 +804,39 @@ CREATE UNIQUE INDEX "uq_sections_workshop_name" ON "sections"("workshop_id", "na
 CREATE INDEX "idx_employees_full_name" ON "employees"("last_name", "first_name", "middle_name");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "uq_positions_name_normalized" ON "positions" (lower("name"));
+
+-- CreateIndex
+CREATE INDEX "idx_employees_position_id" ON "employees"("position_id");
+
+-- CreateIndex
+CREATE INDEX "idx_ppe_norms_position_effective_from" ON "ppe_norms"("position_id", "effective_from");
+
+-- CreateIndex
+CREATE INDEX "idx_ppe_norm_previous" ON "ppe_norms"("previous_norm_id");
+
+-- CreateIndex
+CREATE INDEX "idx_ppe_norm_items_norm_id" ON "ppe_norm_items"("norm_id");
+
+-- CreateIndex
+CREATE INDEX "idx_ppe_norm_items_ppe_item_id" ON "ppe_norm_items"("ppe_item_id");
+
+-- CreateIndex
+CREATE INDEX "idx_ppe_issues_employee_issued_at" ON "ppe_issues"("employee_id", "issued_at");
+
+-- CreateIndex
+CREATE INDEX "idx_ppe_issues_norm_item_issued_at" ON "ppe_issues"("norm_item_id", "issued_at");
+
+-- CreateIndex
+CREATE INDEX "idx_ppe_issues_ppe_item_id" ON "ppe_issues"("ppe_item_id");
+
+-- CreateIndex
+CREATE INDEX "idx_ppe_issues_position_id" ON "ppe_issues"("position_id");
+
+-- CreateIndex
+CREATE INDEX "idx_ppe_issues_issued_by_user_id" ON "ppe_issues"("issued_by_user_id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "uq_employee_users_user" ON "employee_users"("user_id");
 
 -- CreateIndex
@@ -875,6 +1042,39 @@ ALTER TABLE "sections" ADD CONSTRAINT "sections_workshop_id_fkey" FOREIGN KEY ("
 
 -- AddForeignKey
 ALTER TABLE "employee_users" ADD CONSTRAINT "employee_users_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "employees" ADD CONSTRAINT "fk_employees_position" FOREIGN KEY ("position_id") REFERENCES "positions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ppe_norms" ADD CONSTRAINT "fk_ppe_norms_position" FOREIGN KEY ("position_id") REFERENCES "positions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ppe_norms" ADD CONSTRAINT "ppe_norms_previous_norm_id_fkey" FOREIGN KEY ("previous_norm_id") REFERENCES "ppe_norms"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ppe_norm_items" ADD CONSTRAINT "fk_ppe_norm_items_norm" FOREIGN KEY ("norm_id") REFERENCES "ppe_norms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ppe_norm_items" ADD CONSTRAINT "fk_ppe_norm_items_ppe_item" FOREIGN KEY ("ppe_item_id") REFERENCES "ppe_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ppe_item_sizes" ADD CONSTRAINT "fk_ppe_item_sizes_ppe_item" FOREIGN KEY ("ppe_item_id") REFERENCES "ppe_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ppe_issues" ADD CONSTRAINT "fk_ppe_issues_employee" FOREIGN KEY ("employee_id") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ppe_issues" ADD CONSTRAINT "fk_ppe_issues_position" FOREIGN KEY ("position_id") REFERENCES "positions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ppe_issues" ADD CONSTRAINT "fk_ppe_issues_norm_item" FOREIGN KEY ("norm_item_id") REFERENCES "ppe_norm_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ppe_issues" ADD CONSTRAINT "fk_ppe_issues_ppe_item" FOREIGN KEY ("ppe_item_id") REFERENCES "ppe_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ppe_issues" ADD CONSTRAINT "fk_ppe_issues_issued_by_user" FOREIGN KEY ("issued_by_user_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "employee_users" ADD CONSTRAINT "employee_users_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -1282,7 +1482,7 @@ SELECT
         emp.first_name,
         emp.middle_name
     ) AS responsible_employee_name,
-    emp.position AS responsible_employee_position,
+    p.name AS responsible_employee_position,
 
     e.status,
     e.operation_text,
@@ -1300,7 +1500,9 @@ JOIN sections s
 JOIN workshops w
     ON w.id = s.workshop_id
 JOIN employees emp
-    ON emp.id = e.responsible_employee_id;
+    ON emp.id = e.responsible_employee_id
+JOIN positions p
+    ON p.id = emp.position_id;
 
 CREATE TRIGGER trg_equipment_sync_identity_after_insert
 AFTER INSERT ON equipment
@@ -1390,3 +1592,9 @@ CREATE TRIGGER trg_equipment_normalize_optional_fields
 BEFORE INSERT OR UPDATE ON equipment
 FOR EACH ROW
 EXECUTE FUNCTION app_normalize_equipment_optional_fields();
+
+CREATE INDEX "idx_ppe_issues_cancelled_by_user_id" ON "ppe_issues"("cancelled_by_user_id");
+CREATE INDEX "idx_ppe_issues_norm_ppe_item_id" ON "ppe_issues"("norm_item_ppe_item_id");
+CREATE UNIQUE INDEX "uq_ppe_issues_regular_portion" ON "ppe_issues"("employee_id", "norm_item_id", "scheduled_at", "scheduled_portion") WHERE "issue_type" = 'REGULAR' AND "status" = 'ISSUED';
+ALTER TABLE "ppe_issues" ADD CONSTRAINT "fk_ppe_issues_norm_ppe_item" FOREIGN KEY ("norm_item_ppe_item_id") REFERENCES "ppe_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ppe_issues" ADD CONSTRAINT "fk_ppe_issues_cancelled_by_user" FOREIGN KEY ("cancelled_by_user_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

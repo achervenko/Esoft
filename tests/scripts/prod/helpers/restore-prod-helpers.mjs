@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { Readable } from 'node:stream';
@@ -46,16 +47,24 @@ export async function createRestoreProject({
 
 export function createManifest(overrides = {}) {
   return {
-    formatVersion: overrides.formatVersion ?? 1,
+    formatVersion: overrides.formatVersion ?? 2,
     createdAt: overrides.createdAt ?? '2026-08-03T09:30:00.000Z',
     appVersion: overrides.appVersion ?? '0.0.1-test',
     database: {
       file: 'database.dump',
+      sizeBytes: 4,
+      sha256: createHash('sha256').update('dump').digest('hex'),
       ...(overrides.database ?? {}),
     },
     storage: {
       bucket: 'esoft',
       directory: 'storage',
+      objects: [
+        { key: 'equipment/equipment_card/42/equipment_photo/photo.webp', sizeBytes: 11,
+          sha256: createHash('sha256').update('photo-bytes').digest('hex') },
+        { key: 'manuals/manual.pdf', sizeBytes: 12,
+          sha256: createHash('sha256').update('manual-bytes').digest('hex') },
+      ],
       objectCount: 2,
       totalBytes: 'photo-bytes'.length + 'manual-bytes'.length,
       ...(overrides.storage ?? {}),
@@ -113,6 +122,10 @@ export function createPgRestoreRunner({ calls = [], result = null } = {}) {
         stderr: '',
         stdout: 'pg_restore (PostgreSQL) 17.0',
       };
+    }
+
+    if (args.includes('--list')) {
+      return { ok: true, stdout: '; Archive table of contents', stderr: '' };
     }
 
     if (result) {

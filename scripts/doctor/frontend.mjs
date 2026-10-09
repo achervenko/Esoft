@@ -73,13 +73,20 @@ export async function checkFrontend({
 }
 
 export async function fetchFrontend({ config }) {
-  const result = await checkFrontendHttp({ config });
+  const result = await checkFrontendHttp({
+    config,
+    url: config.frontend.internalUrl ?? config.frontend.url,
+  });
   return mapFrontendResult(result);
 }
 
 export async function waitForFrontend({ config, timeoutMs = 30_000 }) {
   const result = await waitForFrontendHttp({
-    checkFrontend: () => checkFrontendHttp({ config }),
+    checkFrontend: () =>
+      checkFrontendHttp({
+        config,
+        url: config.frontend.internalUrl ?? config.frontend.url,
+      }),
     timeoutMs,
   });
 

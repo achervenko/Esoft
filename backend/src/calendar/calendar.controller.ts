@@ -1,7 +1,10 @@
 import { Body, Controller, Get, Patch, Query } from '@nestjs/common';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { Auth } from '../auth/auth.config';
-import { assertCanAccessCalendar } from '../auth/role-permissions';
+import {
+  assertCanAccessCalendar,
+  assertCanViewCalendar,
+} from '../auth/role-permissions';
 import { CalendarService } from './calendar.service';
 import {
   parseCalendarEngineQuery,
@@ -34,6 +37,7 @@ export class CalendarController {
     @Query() query: CalendarEngineQueryDto | undefined,
     @Session() session: UserSession<Auth>,
   ): Promise<CalendarDto> {
+    assertCanViewCalendar(session.user.role);
     const providers = this.sourceResolver.resolveProviders(session);
     const parsedQuery = parseCalendarEngineQuery(query);
 
@@ -78,6 +82,18 @@ export class CalendarController {
 
     return this.calendarService.updateWorkday(
       parseCalendarWorkdayUpdateDto(dto),
+      session.user.id,
+    );
+  }
+
+  @Patch('calendar/workday/reset')
+  resetWorkday(
+    @Body() dto: CalendarDayQueryDto | undefined,
+    @Session() session: UserSession<Auth>,
+  ): Promise<CalendarDayResponse> {
+    assertCanAccessCalendar(session.user.role);
+    return this.calendarService.resetWorkday(
+      parseCalendarDayQuery(dto),
       session.user.id,
     );
   }

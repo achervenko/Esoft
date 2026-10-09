@@ -1,5 +1,22 @@
 const { accessSync, constants, existsSync, statSync } = require('node:fs');
 const { dirname, parse } = require('node:path');
+const { isIP } = require('node:net');
+
+function validateListenerHost(env, variable, errors) {
+  const value = env[variable];
+  if (!hasValue(value)) {
+    return;
+  }
+  const isHostname = value.length <= 253 && value.split('.').every((label) =>
+    /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(label),
+  );
+  if (!isIP(value) && !isHostname) {
+    errors.push({
+      variable,
+      message: 'Укажите IP-адрес или hostname без протокола, порта и пути.',
+    });
+  }
+}
 
 function validatePort(env, variable, errors) {
   if (!hasValue(env[variable])) {
@@ -274,45 +291,6 @@ function validateDistinctPorts(env, errors) {
   }
 }
 
-function validateExpectedUrl(env, urlVariable, hostVariable, portVariable, errors) {
-  if (!hasValue(env[urlVariable]) || !hasValue(env[portVariable])) {
-    return;
-  }
-
-  const url = parseUrl(env[urlVariable]);
-  const port = toInteger(env[portVariable]);
-
-  if (!url || !Number.isInteger(port)) {
-    return;
-  }
-
-  const actualPort = url.port
-    ? Number(url.port)
-    : defaultPortForProtocol(url.protocol);
-
-  if (actualPort !== port) {
-    errors.push({
-      variable: urlVariable,
-      message: `Порт URL должен совпадать с ${portVariable}.`,
-    });
-  }
-
-  if (hasValue(env[hostVariable]) && env[hostVariable] !== '0.0.0.0') {
-    const expectedHosts = new Set([
-      env[hostVariable],
-      'localhost',
-      '127.0.0.1',
-    ]);
-
-    if (!expectedHosts.has(url.hostname)) {
-      errors.push({
-        variable: urlVariable,
-        message: `Host URL должен совпадать с ${hostVariable} либо использовать localhost.`,
-      });
-    }
-  }
-}
-
 function validateApiUrl(env, warnings) {
   if (!hasValue(env.VITE_API_URL) || !hasValue(env.BACKEND_URL)) {
     return;
@@ -320,32 +298,16 @@ function validateApiUrl(env, warnings) {
 
   const apiUrl = parseUrl(env.VITE_API_URL);
   const backendUrl = parseUrl(env.BACKEND_URL);
-  const backendPort = toInteger(env.BACKEND_PORT);
 
-  if (!apiUrl || !backendUrl || !Number.isInteger(backendPort)) {
+  if (!apiUrl || !backendUrl) {
     return;
   }
 
-  if (
-    apiUrl.protocol !== backendUrl.protocol ||
-    apiUrl.hostname !== backendUrl.hostname
-  ) {
+  if (apiUrl.origin !== backendUrl.origin) {
     warnings.push({
       variable: 'VITE_API_URL',
       message:
-        'Протокол или host отличается от BACKEND_URL. Проверьте, что это сделано намеренно.',
-    });
-  }
-
-  const actualPort = apiUrl.port
-    ? Number(apiUrl.port)
-    : defaultPortForProtocol(apiUrl.protocol);
-
-  if (actualPort !== backendPort) {
-    warnings.push({
-      variable: 'VITE_API_URL',
-      message:
-        'Порт отличается от BACKEND_PORT. Проверьте, что это сделано намеренно.',
+        'Origin отличается от публичного BACKEND_URL. Проверьте, что это сделано намеренно.',
     });
   }
 }
@@ -365,18 +327,6 @@ function parseUrl(value) {
   } catch {
     return null;
   }
-}
-
-function defaultPortForProtocol(protocol) {
-  if (protocol === 'https:') {
-    return 443;
-  }
-
-  if (protocol === 'http:') {
-    return 80;
-  }
-
-  return Number.NaN;
 }
 
 function findExistingParentDirectory(pathValue) {
@@ -399,6 +349,7 @@ function findExistingParentDirectory(pathValue) {
 }
 
 module.exports = {
+  validateListenerHost,
   toInteger,
   validateApiUrl,
   validateBoolean,
@@ -406,7 +357,6 @@ module.exports = {
   validateDistinctPorts,
   validateExistingFile,
   validateExistingOrCreatableDirectory,
-  validateExpectedUrl,
   validateHttpOrigin,
   validateHttpUrl,
   validateNodeEnv,

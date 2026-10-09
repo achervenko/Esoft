@@ -1,3 +1,4 @@
+import "../../shared/ui/PageActions.css";
 import { Eye, Pencil, Save } from "lucide-react";
 import type { ChecklistTemplateDetail } from "../../shared/api/checklists";
 
@@ -20,14 +21,14 @@ export function ChecklistTemplateEditorHeader({
 }: ChecklistTemplateEditorHeaderProps) {
   return (
     <header className="checklist-editor-header">
-      <button className="checklist-editor-back" onClick={onBack} type="button">
+      <button className="page-back-button" onClick={onBack} type="button">
         ← Назад
       </button>
       <div className="checklist-editor-title-row">
         <div>
-          <h1>{template.name || "Новый шаблон"}</h1>
+          <h1 className="page-title">{template.name || "Новый шаблон"}</h1>
         </div>
-        <div className="checklist-editor-actions">
+        <div className="page-actions">
           {!isReadOnly ? (
             <button
               className="admin-secondary-button"

@@ -1,0 +1,29 @@
+.ppe-snapshot {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+.ppe-snapshot dt {
+  color: #6b7280;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.ppe-snapshot dd {
+  margin: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.admin-modal.ppe-issue-details-modal {
+  width: min(640px, calc(100vw - 40px));
+  max-width: 640px;
+}
+.ppe-issue-details-modal .ppe-snapshot {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 520px) {
+  .ppe-issue-details-modal .ppe-snapshot {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

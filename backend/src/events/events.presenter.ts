@@ -57,7 +57,7 @@ type EmployeeLike = {
   id: number;
   lastName: string;
   middleName: string | null;
-  position: string;
+  position: { name: string };
 };
 
 type ResponsibleUserLike = {
@@ -75,7 +75,7 @@ function toEmployeeResponse(employee: EmployeeLike) {
     fullName: [employee.lastName, employee.firstName, employee.middleName]
       .filter(Boolean)
       .join(' '),
-    position: employee.position,
+    position: employee.position.name,
   };
 }
 
@@ -89,7 +89,7 @@ function toUserResponse(user: ResponsibleUserLike) {
           .filter(Boolean)
           .join(' ')
       : user.name,
-    position: employee?.position ?? '',
+    position: employee?.position.name ?? '',
     role: user.role,
   };
 }

@@ -49,7 +49,7 @@ export function toEquipmentCard(equipment: EquipmentWithAuditRelations) {
     ]
       .filter(Boolean)
       .join(' '),
-    responsiblePosition: equipment.responsibleEmployee.position,
+    responsiblePosition: equipment.responsibleEmployee.position.name,
     status: equipment.status,
     statusLabel: getEquipmentStatusLabel(equipment.status),
     operationText: equipment.operationText,

@@ -1,0 +1,69 @@
+@import "./tokens.css";
+
+.admin-primary-button,
+.admin-secondary-button,
+.admin-table-actions button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--radius-control);
+  padding: 0 12px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.admin-icon-button {
+  width: 38px;
+  min-width: 38px;
+  padding: 0;
+}
+
+.admin-status-toggle.active {
+  border-color: #bfead0;
+  background: #edfdf3;
+  color: #087443;
+}
+
+.admin-status-toggle.inactive {
+  border-color: #ffd0d0;
+  background: #fff5f5;
+  color: var(--color-danger);
+}
+
+.admin-primary-button {
+  border: 1px solid var(--color-action);
+  background: var(--color-action);
+  color: var(--color-surface);
+}
+
+.admin-secondary-button,
+.admin-table-actions button {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: #3f4652;
+}
+
+.admin-primary-button:disabled,
+.admin-secondary-button:disabled,
+.admin-table-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.admin-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 760px) {
+  .admin-primary-button,
+  .admin-secondary-button {
+    width: 100%;
+  }
+}

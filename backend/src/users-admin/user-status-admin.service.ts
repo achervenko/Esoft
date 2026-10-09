@@ -35,7 +35,7 @@ export class UserStatusAdminService {
           include: {
             employeeUser: {
               include: {
-                employee: true,
+                employee: { include: { position: true } },
               },
             },
             photo: true,
@@ -60,7 +60,7 @@ export class UserStatusAdminService {
           include: {
             employeeUser: {
               include: {
-                employee: true,
+                employee: { include: { position: true } },
               },
             },
             photo: true,

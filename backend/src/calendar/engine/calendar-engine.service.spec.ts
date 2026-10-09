@@ -6,6 +6,24 @@ import {
 } from './calendar-engine.types';
 
 describe('CalendarEngineService', () => {
+  afterEach(() => jest.useRealTimers());
+
+  it.each([
+    ['2026-10-06T20:59:59Z', '2026-10-06'],
+    ['2026-10-06T21:00:00Z', '2026-10-07'],
+    ['2026-12-31T21:00:00Z', '2027-01-01'],
+  ])('uses the Moscow business date at %s', async (now, expected) => {
+    jest.useFakeTimers().setSystemTime(new Date(now));
+    const getCalendarData = jest.fn().mockResolvedValue({});
+    await new CalendarEngineService().buildCalendar({
+      dateFrom: new Date('2026-10-01'),
+      dateTo: new Date('2026-10-31'),
+      providers: [{ getCalendarData }],
+    });
+    expect(getCalendarData).toHaveBeenCalledWith(
+      expect.objectContaining({ today: new Date(`${expected}T00:00:00Z`) }),
+    );
+  });
   it('returns empty calendar when no providers are resolved', async () => {
     const service = new CalendarEngineService();
 

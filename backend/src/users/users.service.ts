@@ -12,7 +12,7 @@ export class UsersService {
       include: {
         employeeUser: {
           include: {
-            employee: true,
+            employee: { include: { position: true } },
           },
         },
         photo: true,
@@ -49,7 +49,7 @@ export class UsersService {
               .join(' '),
             lastName: employee.lastName,
             middleName: employee.middleName,
-            position: employee.position,
+            position: employee.position.name,
           }
         : null,
     };

@@ -1,3 +1,4 @@
+import type { RequestConfirmation } from "../../shared/ui/useConfirmation";
 import type { Dispatch, SetStateAction } from "react";
 import {
   createDictionaryCountry,
@@ -9,6 +10,7 @@ import {
 import type { CountryFormState } from "./dictionaries-page-types";
 
 type CountryDictionaryActionsParams = {
+  confirm: RequestConfirmation;
   countryForm: CountryFormState;
   loadData: () => Promise<void>;
   runSavingAction: (action: () => Promise<void>) => Promise<void>;
@@ -17,6 +19,7 @@ type CountryDictionaryActionsParams = {
 };
 
 export function createCountryDictionaryActions({
+  confirm,
   countryForm,
   loadData,
   runSavingAction,
@@ -39,7 +42,12 @@ export function createCountryDictionaryActions({
   };
 
   const removeCountry = async (country: DictionaryCountry) => {
-    if (!window.confirm(`Удалить страну «${country.name}»?`)) {
+    if (
+      !(await confirm({
+        description: `Удалить страну «${country.name}»?`,
+        variant: "danger",
+      }))
+    ) {
       return;
     }
 

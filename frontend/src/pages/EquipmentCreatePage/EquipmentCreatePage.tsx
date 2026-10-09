@@ -1,3 +1,4 @@
+import { isEquipmentCreateFormDirty } from "../../modules/equipment-create-form/model/equipment-create-form.dirty";
 import { ArrowLeft } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { canCreateEquipment } from '../../modules/equipment-permissions';
@@ -10,22 +11,22 @@ import type { EquipmentCreateOptions } from '../../shared/api/equipment/equipmen
 import { Notice } from '../../shared/ui/Notice';
 import { UnsavedChangesGuard } from '../../shared/ui/UnsavedChangesGuard';
 import { useNotifications } from '../../shared/ui/notifications';
-import { EquipmentCreateForm } from './EquipmentCreateForm';
-import { toEquipmentCreatePayload } from './model/equipment-create-form.mapper';
+import { EquipmentCreateForm } from '../../modules/equipment-create-form/EquipmentCreateForm';
+import { toEquipmentCreatePayload } from '../../modules/equipment-create-form/model/equipment-create-form.mapper';
 import {
   type EquipmentCreateFieldErrors,
   initialEquipmentCreateFormState,
   type EquipmentCreateFormState,
-} from './model/equipment-create-form.types';
+} from '../../modules/equipment-create-form/model/equipment-create-form.types';
 import {
   getEquipmentFieldErrorsFromMessage,
   validateEquipmentCreateForm,
-} from './model/equipment-create-form.validation';
+} from '../../modules/equipment-create-form/model/equipment-create-form.validation';
 import {
   clearEquipmentCreateRedirectTimeout,
   scheduleEquipmentCreateRedirect,
 } from './equipment-create-redirect';
-import './EquipmentCreatePage.css';
+import '../../modules/equipment-create-form/EquipmentPageLayout.css';
 
 type EquipmentCreatePageProps = {
   userRole: string | null;
@@ -34,6 +35,7 @@ type EquipmentCreatePageProps = {
 export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
   const { notifyError, notifySuccess, notifyWarning } = useNotifications();
   const redirectTimeoutRef = useRef<number | null>(null);
+  const isSubmittingRef = useRef(false);
   const isCreateAllowed = canCreateEquipment(userRole);
   const [form, setForm] = useState<EquipmentCreateFormState>(
     initialEquipmentCreateFormState,
@@ -46,8 +48,7 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
 
   const hasUnsavedChanges = useMemo(
     () =>
-      JSON.stringify(getCreateComparableForm(form)) !==
-      JSON.stringify(getCreateComparableForm(initialEquipmentCreateFormState)),
+      isEquipmentCreateFormDirty(form),
     [form],
   );
 
@@ -114,6 +115,7 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isSubmittingRef.current) return;
     setError(null);
 
     const validation = validateEquipmentCreateForm(form);
@@ -125,6 +127,7 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
       return;
     }
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     let shouldResetSubmitting = true;
 
@@ -148,6 +151,7 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
       }));
     } finally {
       if (shouldResetSubmitting) {
+        isSubmittingRef.current = false;
         setIsSubmitting(false);
       }
     }
@@ -157,7 +161,7 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
     return (
       <div className="equipment-create-page">
         <BackToRegistryLink />
-        <h1>Добавление оборудования</h1>
+        <h1 className="page-title">Добавление оборудования</h1>
         <Notice tone="error">
           У вашей роли нет доступа к добавлению оборудования.
         </Notice>
@@ -167,11 +171,14 @@ export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
 
   return (
     <div className="equipment-create-page">
-      <UnsavedChangesGuard hasChanges={hasUnsavedChanges} />
+      <UnsavedChangesGuard
+        hasChanges={hasUnsavedChanges}
+        isBlocked={isSubmitting}
+      />
       <BackToRegistryLink />
 
       <header className="equipment-create-header">
-        <h1>Добавление оборудования</h1>
+        <h1 className="page-title">Добавление оборудования</h1>
       </header>
 
       {isLoading ? <Notice>Загрузка справочников...</Notice> : null}
@@ -202,9 +209,4 @@ function BackToRegistryLink() {
       <span>К реестру</span>
     </a>
   );
-}
-
-function getCreateComparableForm(form: EquipmentCreateFormState) {
-  const { visibleId: _visibleId, ...comparableForm } = form;
-  return comparableForm;
 }

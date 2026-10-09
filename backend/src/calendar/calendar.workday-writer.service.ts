@@ -27,6 +27,26 @@ export class CalendarWorkdayWriterService {
     private readonly repository: CalendarRepository,
   ) {}
 
+  resetWorkday(
+    date: Date,
+    userId?: string | null,
+  ): Promise<CalendarDayResponse> {
+    const weekday = date.getUTCDay();
+    const isWorkingDay = weekday >= 1 && weekday <= 5;
+    return this.updateWorkday(
+      {
+        date,
+        holidayName: null,
+        isHoliday: false,
+        isPreholiday: false,
+        isWorkingDay,
+        workingHours: isWorkingDay ? DEFAULT_WORKING_HOURS : 0,
+        source: CalendarSource.SYSTEM,
+      },
+      userId,
+    );
+  }
+
   async updateWorkday(
     update: CalendarWorkdayUpdate,
     userId?: string | null,

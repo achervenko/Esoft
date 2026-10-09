@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { isValidPassword, MAX_PASSWORD_LENGTH, PASSWORD_POLICY_MESSAGE } from "../../shared/lib/password-validation";
 import type { AdminUserAccount } from "../../shared/api/users-admin-api";
-import { AdminModal } from "../../shared/ui/AdminModal";
+import { GuardedAdminModal } from "../../shared/ui/GuardedAdminModal";
+import { FormField } from "../../shared/ui/FormField";
 
 type PasswordFormModalProps = {
   isSaving: boolean;
@@ -25,8 +27,8 @@ export function PasswordFormModal({
       return;
     }
 
-    if (password.length < 8) {
-      setError("Пароль должен быть не короче 8 символов.");
+    if (!isValidPassword(password, user)) {
+      setError(PASSWORD_POLICY_MESSAGE);
       return;
     }
 
@@ -35,44 +37,49 @@ export function PasswordFormModal({
   };
 
   return (
-    <AdminModal onClose={onClose} title="Смена пароля">
-      <form className="admin-form" onSubmit={handleSubmit}>
-        <p className="admin-form-hint">
-          Новый пароль будет установлен для учётной записи{" "}
-          {user.username || user.email}.
-        </p>
-        <label className="form-field">
-          <span>
-            Новый пароль<b aria-hidden="true">*</b>
-          </span>
-          <input
-            autoFocus
-            minLength={8}
-            onChange={(event) => setPassword(event.target.value)}
-            type="password"
-            value={password}
-          />
-        </label>
+    <GuardedAdminModal
+      hasChanges={password !== ""}
+      isCloseDisabled={isSaving}
+      onClose={onClose}
+      title="Смена пароля"
+    >
+      {(requestLeave) => (
+        <form className="admin-form" onSubmit={handleSubmit}>
+          <p className="admin-form-hint">
+            Новый пароль будет установлен для учётной записи{" "}
+            {user.username || user.email}.
+          </p>
+          <FormField label="Новый пароль" required error={error ?? undefined}>
+            <input
+              disabled={isSaving}
+              autoFocus
+              minLength={8}
+              maxLength={MAX_PASSWORD_LENGTH}
+              onChange={(event) => setPassword(event.target.value)}
+              type="password"
+              value={password}
+            />
+          </FormField>
 
-        {error ? <p className="admin-form-error">{error}</p> : null}
-
-        <div className="admin-form-actions">
-          <button
-            className="admin-secondary-button"
-            onClick={onClose}
-            type="button"
-          >
-            Отмена
-          </button>
-          <button
-            className="admin-primary-button"
-            disabled={isSaving}
-            type="submit"
-          >
-            {isSaving ? "Сохранение..." : "Сменить пароль"}
-          </button>
-        </div>
-      </form>
-    </AdminModal>
+          <div className="admin-form-actions">
+            <button
+              className="admin-secondary-button"
+              disabled={isSaving}
+              onClick={() => requestLeave(onClose)}
+              type="button"
+            >
+              Отмена
+            </button>
+            <button
+              className="admin-primary-button"
+              disabled={isSaving}
+              type="submit"
+            >
+              {isSaving ? "Сохранение..." : "Сменить пароль"}
+            </button>
+          </div>
+        </form>
+      )}
+    </GuardedAdminModal>
   );
 }

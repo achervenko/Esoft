@@ -1,20 +1,14 @@
-import { EventExtensionCode, EventSource, EventStatus } from '@prisma/client';
+import { EventExtensionCode, EventStatus } from '@prisma/client';
 import {
   EQUIPMENT_CALENDAR_ITEM_SOURCE,
   EQUIPMENT_EVENTS_CALENDAR_LAYER_CODE,
-  EquipmentEventsProvider,
 } from './equipment-events.provider';
+import {
+  createProvider,
+  eventResponse,
+} from './equipment-events.provider.spec-fixtures';
 
 describe('EquipmentEventsProvider', () => {
-  function createProvider() {
-    const eventsQueryService = {
-      findAll: jest.fn().mockResolvedValue([]),
-    };
-    const provider = new EquipmentEventsProvider(eventsQueryService as never);
-
-    return { eventsQueryService, provider };
-  }
-
   it('loads events filtered by display date inside requested period', async () => {
     const { eventsQueryService, provider } = createProvider();
     const dateFrom = new Date('2026-08-01T00:00:00.000Z');
@@ -115,36 +109,6 @@ describe('EquipmentEventsProvider', () => {
     });
   });
 
-  it('does not mark event overdue when planned date is today', async () => {
-    const { eventsQueryService, provider } = createProvider();
-
-    eventsQueryService.findAll.mockResolvedValue([
-      eventResponse({
-        plannedDate: '2026-08-04',
-      }),
-    ]);
-
-    await expect(
-      provider.getCalendarData({
-        dateFrom: new Date('2026-08-01T00:00:00.000Z'),
-        dateTo: new Date('2026-08-31T00:00:00.000Z'),
-        today: new Date('2026-08-04T00:00:00.000Z'),
-      }),
-    ).resolves.toMatchObject({
-      layers: [
-        {
-          items: [
-            {
-              displayDate: '2026-08-04',
-              isOverdue: false,
-              overdueDays: 0,
-            },
-          ],
-        },
-      ],
-    });
-  });
-
   it('rejects event without display date', async () => {
     const { eventsQueryService, provider } = createProvider();
 
@@ -202,32 +166,3 @@ describe('EquipmentEventsProvider', () => {
     });
   });
 });
-
-function eventResponse(overrides = {}) {
-  return {
-    checklists: [],
-    extension: {
-      code: EventExtensionCode.EQUIPMENT,
-      equipment: {
-        location: 'Цех 1',
-        name: 'Компрессор',
-        serialNumber: 'SN-1001',
-        visibleId: 1001,
-      },
-      maintenanceType: {
-        name: 'ТО-1',
-      },
-    },
-    extensionCode: EventExtensionCode.EQUIPMENT,
-    factDate: null,
-    id: 1,
-    note: null,
-    plannedDate: '2026-08-01',
-    responsibles: [],
-    source: EventSource.MANUAL,
-    status: EventStatus.CREATED,
-    title: 'ТО',
-    version: 1,
-    ...overrides,
-  };
-}

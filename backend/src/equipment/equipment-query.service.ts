@@ -59,6 +59,7 @@ export class EquipmentQueryService {
         orderBy: [{ workshop: { name: 'asc' } }, { name: 'asc' }],
       }),
       this.prisma.employee.findMany({
+        include: { position: true },
         where: {
           isActive: true,
         },

@@ -16,3 +16,7 @@ export type WriteAuditParams = {
   tx?: Prisma.TransactionClient;
   userId?: string | null;
 };
+
+export type WriteAuditEventParams = Omit<WriteAuditParams, 'fields' | 'tx'> & {
+  tx: Prisma.TransactionClient;
+};

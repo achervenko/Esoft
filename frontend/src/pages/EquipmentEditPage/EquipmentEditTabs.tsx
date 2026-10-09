@@ -1,3 +1,4 @@
+import "../../shared/ui/Tabs.css";
 import {
   getEquipmentEditPanelId,
   getEquipmentEditTabId,

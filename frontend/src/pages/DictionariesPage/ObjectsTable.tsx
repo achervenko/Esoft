@@ -20,6 +20,7 @@ const columns = (
   },
   {
     key: "actions",
+    className: "admin-table-actions-column",
     label: "",
     render: (object) => (
       <AdminTableActions

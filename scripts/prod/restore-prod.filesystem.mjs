@@ -1,6 +1,7 @@
 import { lstat, readdir } from 'node:fs/promises';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 
+import { verifyBackupChecksums } from './backup-integrity.mjs';
 import { failure, success } from '../infrastructure/result.mjs';
 import { formatError } from '../infrastructure/security/redaction.mjs';
 
@@ -50,6 +51,7 @@ export function parseRestoreArguments(argv = process.argv.slice(2)) {
 
 export async function validateRestoreArtifacts({
   backupPath,
+  manifest,
   expectedObjectCount,
   expectedTotalBytes,
   filesystem = defaultRestoreFilesystem,
@@ -158,6 +160,11 @@ export async function validateRestoreArtifacts({
           expectedTotalBytes,
         },
       );
+    }
+
+    const integrity = await verifyBackupChecksums({ backupPath: resolvedBackupPath, manifest });
+    if (!integrity.ok) {
+      return integrity;
     }
 
     return success('RESTORE_ARTIFACTS_OK', 'Restore artifacts are valid', {

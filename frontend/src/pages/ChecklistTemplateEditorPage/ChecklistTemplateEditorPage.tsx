@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { Notice } from "../../shared/ui/Notice";
 import { canManageChecklists } from "../../shared/lib/roles";
-import "../ChecklistAdminPage/ChecklistAdminPage.css";
+import "../../shared/ui/AdminPage.css";
 import { AvailableModulesPanel } from "./AvailableModulesPanel";
 import "./ChecklistTemplateEditorPage.css";
 import { TemplateDragOverlay } from "./TemplateDragOverlay";
@@ -83,7 +83,8 @@ export function ChecklistTemplateEditorPage({
 
       openAddModuleState(
         moduleId,
-        targetIndex ?? getBaseOrderInsertionIndex(editor.modules, template, moduleId),
+        targetIndex ??
+          getBaseOrderInsertionIndex(editor.modules, template, moduleId),
       );
     },
     [editor.modules, openAddModuleState, template],
@@ -131,7 +132,9 @@ export function ChecklistTemplateEditorPage({
   if (!isAdmin) {
     return (
       <section className="checklist-editor-page">
-        <Notice tone="error">Недостаточно прав для управления чек-листами.</Notice>
+        <Notice tone="error">
+          Недостаточно прав для управления чек-листами.
+        </Notice>
       </section>
     );
   }
@@ -232,6 +235,7 @@ export function ChecklistTemplateEditorPage({
 
       <TemplateStructureContextMenu
         menu={contextMenu.menu}
+        onClose={contextMenu.closeMenu}
         onAddQuestions={handleContextAddQuestions}
         onDelete={contextMenu.requestMenuDelete}
       />
@@ -250,15 +254,21 @@ export function ChecklistTemplateEditorPage({
         }
         confirm={confirm}
         editMainData={editMainData}
-        editor={editor}
+        template={editor.template}
+        questions={editor.questions}
+        isNewTemplate={editor.isNewTemplate}
+        isCopyTemplate={editor.isCopyTemplate}
+        isSaving={editor.isSaving}
+        updateMainData={editor.updateMainData}
+        addModuleWithQuestions={editor.addModuleWithQuestions}
+        addQuestions={editor.addQuestions}
         mainDataError={mainDataError}
         onCloseAddModule={closeAddModuleModal}
         onCloseAddQuestion={closeAddQuestionModal}
         onCloseConfirm={() => setConfirm(null)}
         onCloseEditMainData={closeMainDataModal}
         onClosePreview={closePreview}
-        onConfirmAction={runConfirmAction}
-        pendingExitHref={pendingExitHref}
+        onConfirmAction={() => editor.exitEditor(pendingExitHref)}
         previewOpen={previewOpen}
         selectedModule={selectedModule}
       />
@@ -268,7 +278,9 @@ export function ChecklistTemplateEditorPage({
 
 function getBaseOrderInsertionIndex(
   modules: ReturnType<typeof useChecklistTemplateEditor>["modules"],
-  template: NonNullable<ReturnType<typeof useChecklistTemplateEditor>["template"]>,
+  template: NonNullable<
+    ReturnType<typeof useChecklistTemplateEditor>["template"]
+  >,
   moduleId: number,
 ) {
   const sourceModule = modules.find((module) => module.id === moduleId);
@@ -286,11 +298,4 @@ function getBaseOrderInsertionIndex(
       (orderByModuleId.get(templateModule.checklistModuleId) ??
         Number.MAX_SAFE_INTEGER) < sourceModule.sortOrder,
   ).length;
-}
-
-async function runConfirmAction(
-  editor: ReturnType<typeof useChecklistTemplateEditor>,
-  pendingExitHref: string,
-) {
-  return editor.exitEditor(pendingExitHref);
 }

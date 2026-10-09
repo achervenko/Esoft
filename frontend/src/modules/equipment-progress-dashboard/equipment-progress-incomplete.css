@@ -1,0 +1,117 @@
+.equipment-progress-incomplete-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.equipment-progress-incomplete-card .equipment-progress-card-heading {
+  margin: 0;
+  border-bottom: 1px solid #eef0f3;
+  padding: 16px 18px;
+}
+
+.equipment-progress-incomplete-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.equipment-progress-incomplete-list li + li {
+  border-top: 1px solid #eef0f3;
+}
+
+.equipment-progress-incomplete-list a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 18px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.equipment-progress-incomplete-list a:hover {
+  background: #f8fafc;
+}
+
+.equipment-progress-incomplete-list strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #15171c;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.equipment-progress-incomplete-list span {
+  display: block;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.equipment-progress-incomplete-list svg {
+  flex: 0 0 auto;
+  color: #6b7280;
+}
+
+.equipment-progress-empty,
+.equipment-progress-dashboard-state {
+  margin: 0;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 22px;
+  background: #ffffff;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.equipment-progress-empty {
+  border: 0;
+  border-radius: 0;
+}
+
+.equipment-progress-dashboard-state.error {
+  color: #b42318;
+}
+
+@media (max-width: 1120px) {
+  .equipment-progress-dashboard-grid {
+    grid-template-areas:
+      "main dynamics"
+      "stats forecast";
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .equipment-progress-card-main {
+    grid-area: main;
+  }
+}
+
+@media (max-width: 760px) {
+  .equipment-progress-dashboard-grid {
+    grid-template-areas:
+      "main"
+      "stats"
+      "dynamics"
+      "forecast";
+  }
+
+  .equipment-progress-dashboard-grid,
+  .equipment-progress-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .equipment-progress-card {
+    padding: 14px;
+  }
+
+  .equipment-progress-incomplete-card {
+    padding: 0;
+  }
+
+  .equipment-progress-bars {
+    gap: 5px;
+  }
+}

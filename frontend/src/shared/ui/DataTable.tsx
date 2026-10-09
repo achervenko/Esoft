@@ -1,11 +1,12 @@
-import { Table } from '@chakra-ui/react';
-import type { ReactNode } from 'react';
-import { useMemo, useState } from 'react';
-import { sortDataTableRows } from './data-table-model';
+import { AppTable } from "./AppTable";
+import type { ReactNode, MouseEvent } from "react";
+import { useMemo, useState } from "react";
+import { sortDataTableRows } from "./data-table-model";
 
-export type DataTableSortDirection = 'asc' | 'desc';
+export type DataTableSortDirection = "asc" | "desc";
 
 export type DataTableColumn<Row, SortKey extends string> = {
+  className?: string;
   isSortable?: boolean;
   key: SortKey;
   label: string;
@@ -22,6 +23,7 @@ type DataTableProps<Row, SortKey extends string> = {
   getRowKey: (row: Row) => string | number;
   onRowClick?: (row: Row) => void;
   onRowDoubleClick?: (row: Row) => void;
+  onRowContextMenu?: (row: Row, position: { x: number; y: number }) => void;
   rows: Row[];
 };
 
@@ -31,6 +33,7 @@ export function DataTable<Row, SortKey extends string>({
   getRowKey,
   onRowClick,
   onRowDoubleClick,
+  onRowContextMenu,
   rows,
 }: DataTableProps<Row, SortKey>) {
   const [sort, setSort] = useState(defaultSort);
@@ -43,30 +46,31 @@ export function DataTable<Row, SortKey extends string>({
   const toggleSort = (key: SortKey) => {
     setSort((currentSort) => {
       if (currentSort.key !== key) {
-        return { direction: 'asc', key };
+        return { direction: "asc", key };
       }
 
       return {
-        direction: currentSort.direction === 'asc' ? 'desc' : 'asc',
+        direction: currentSort.direction === "asc" ? "desc" : "asc",
         key,
       };
     });
   };
 
   return (
-    <Table.Root className="data-table" size="sm" native>
+    <AppTable>
       <thead>
         <tr>
           {columns.map((column) => {
             const isActive = sort.key === column.key;
-            const isSortable = column.isSortable !== false;
+            const isSortable =
+              column.isSortable !== false && column.sortValue !== undefined;
 
             return (
-              <th key={column.key}>
+              <th key={column.key} className={column.className}>
                 {isSortable ? (
                   <button
                     aria-label={`Сортировать: ${column.label}`}
-                    className={`data-table-sort-button${isActive ? ' active' : ''}`}
+                    className={`data-table-sort-button${isActive ? " active" : ""}`}
                     onClick={() => toggleSort(column.key)}
                     type="button"
                   >
@@ -79,7 +83,9 @@ export function DataTable<Row, SortKey extends string>({
                     ) : null}
                   </button>
                 ) : (
-                  <span className="data-table-header-label">{column.label}</span>
+                  <span className="data-table-header-label">
+                    {column.label}
+                  </span>
                 )}
               </th>
             );
@@ -90,9 +96,16 @@ export function DataTable<Row, SortKey extends string>({
         {sortedRows.map((row) => (
           <tr
             className={
-              onRowClick || onRowDoubleClick ? 'data-table-row-clickable' : undefined
+              onRowClick || onRowDoubleClick
+                ? "data-table-row-clickable"
+                : undefined
             }
             key={getRowKey(row)}
+            onContextMenu={(event: MouseEvent<HTMLTableRowElement>) => {
+              if (!onRowContextMenu) return;
+              event.preventDefault();
+              onRowContextMenu(row, { x: event.clientX, y: event.clientY });
+            }}
             onClick={(event) => {
               if (isInteractiveEventTarget(event.target, event.currentTarget)) {
                 return;
@@ -109,7 +122,20 @@ export function DataTable<Row, SortKey extends string>({
             }}
             onKeyDown={(event) => {
               if (
-                event.key !== 'Enter' ||
+                onRowContextMenu &&
+                (event.key === "ContextMenu" ||
+                  (event.shiftKey && event.key === "F10"))
+              ) {
+                event.preventDefault();
+                const bounds = event.currentTarget.getBoundingClientRect();
+                onRowContextMenu(row, {
+                  x: bounds.left + 16,
+                  y: bounds.bottom,
+                });
+                return;
+              }
+              if (
+                event.key !== "Enter" ||
                 isInteractiveEventTarget(event.target, event.currentTarget)
               ) {
                 return;
@@ -118,15 +144,17 @@ export function DataTable<Row, SortKey extends string>({
               event.preventDefault();
               (onRowClick ?? onRowDoubleClick)?.(row);
             }}
-            tabIndex={onRowClick || onRowDoubleClick ? 0 : undefined}
+            tabIndex={
+              onRowClick || onRowDoubleClick || onRowContextMenu ? 0 : undefined
+            }
           >
             {columns.map((column) => (
-              <td key={column.key}>{column.render(row)}</td>
+              <td key={column.key} className={column.className}>{column.render(row)}</td>
             ))}
           </tr>
         ))}
       </tbody>
-    </Table.Root>
+    </AppTable>
   );
 }
 
@@ -140,12 +168,12 @@ function isInteractiveEventTarget(
 
   const interactiveElement = target.closest(
     [
-      'a',
-      'button',
-      'input',
-      'select',
-      'textarea',
-      'summary',
+      "a",
+      "button",
+      "input",
+      "select",
+      "textarea",
+      "summary",
       '[contenteditable="true"]',
       '[role="button"]',
       '[role="checkbox"]',
@@ -156,7 +184,7 @@ function isInteractiveEventTarget(
       '[role="radio"]',
       '[role="switch"]',
       '[tabindex]:not([tabindex="-1"])',
-    ].join(','),
+    ].join(","),
   );
 
   return Boolean(interactiveElement && interactiveElement !== rowElement);

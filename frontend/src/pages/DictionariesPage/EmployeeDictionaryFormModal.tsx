@@ -1,12 +1,15 @@
+import { AppSelect } from "../../shared/ui/SelectDropdown/AppSelect";
 import { useState } from "react";
 import type {
   AdminEmployee,
+  AdminPosition,
   EmployeePayload,
 } from "../../shared/api/users-admin-api";
 import { AdminModal } from "../../shared/ui/AdminModal";
 
 type EmployeeDictionaryFormModalProps = {
   employee: AdminEmployee | null;
+  positions: AdminPosition[];
   isSaving: boolean;
   onClose: () => void;
   onSubmit: (payload: EmployeePayload) => void;
@@ -14,6 +17,7 @@ type EmployeeDictionaryFormModalProps = {
 
 export function EmployeeDictionaryFormModal({
   employee,
+  positions,
   isSaving,
   onClose,
   onSubmit,
@@ -22,11 +26,14 @@ export function EmployeeDictionaryFormModal({
     firstName: employee?.firstName ?? "",
     lastName: employee?.lastName ?? "",
     middleName: employee?.middleName ?? "",
-    position: employee?.position ?? "",
+    positionId: employee?.positionId ?? 0,
   });
   const [error, setError] = useState<string | null>(null);
 
-  const updateField = (field: keyof EmployeePayload, value: string) => {
+  const updateField = (
+    field: keyof EmployeePayload,
+    value: string | number,
+  ) => {
     setForm((currentForm) => ({
       ...currentForm,
       [field]: value,
@@ -40,11 +47,7 @@ export function EmployeeDictionaryFormModal({
       return;
     }
 
-    if (
-      !form.lastName.trim() ||
-      !form.firstName.trim() ||
-      !form.position.trim()
-    ) {
+    if (!form.lastName.trim() || !form.firstName.trim() || !form.positionId) {
       setError("Заполните фамилию, имя и должность.");
       return;
     }
@@ -54,39 +57,42 @@ export function EmployeeDictionaryFormModal({
       firstName: form.firstName.trim(),
       lastName: form.lastName.trim(),
       middleName: form.middleName?.trim() || null,
-      position: form.position.trim(),
+      positionId: form.positionId,
     });
   };
 
   return (
     <AdminModal
+      isCloseDisabled={isSaving}
       onClose={onClose}
       title={employee ? "Редактирование сотрудника" : "Новый сотрудник"}
     >
       <form className="admin-form" onSubmit={handleSubmit}>
         <label className="form-field">
-          <span>
+          <span className="form-field-label">
             Фамилия<b aria-hidden="true">*</b>
           </span>
           <input
             autoFocus
             maxLength={64}
             onChange={(event) => updateField("lastName", event.target.value)}
+            required
             value={form.lastName}
           />
         </label>
         <label className="form-field">
-          <span>
+          <span className="form-field-label">
             Имя<b aria-hidden="true">*</b>
           </span>
           <input
             maxLength={64}
             onChange={(event) => updateField("firstName", event.target.value)}
+            required
             value={form.firstName}
           />
         </label>
         <label className="form-field">
-          <span>Отчество</span>
+          <span className="form-field-label">Отчество</span>
           <input
             maxLength={64}
             onChange={(event) => updateField("middleName", event.target.value)}
@@ -94,14 +100,33 @@ export function EmployeeDictionaryFormModal({
           />
         </label>
         <label className="form-field">
-          <span>
+          <span className="form-field-label">
             Должность<b aria-hidden="true">*</b>
           </span>
-          <input
-            maxLength={64}
-            onChange={(event) => updateField("position", event.target.value)}
-            value={form.position}
-          />
+          <AppSelect
+            required
+            onChange={(event) =>
+              updateField("positionId", Number(event.target.value))
+            }
+            value={form.positionId}
+          >
+            <option value={0}>Выберите должность</option>
+            {positions
+              .filter(
+                (item) => item.isActive || item.id === employee?.positionId,
+              )
+              .map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                  {item.isActive ? "" : " (отключена)"}
+                </option>
+              ))}
+          </AppSelect>
+          {positions.every((item) => !item.isActive) ? (
+            <small>
+              Добавьте или включите должность во вкладке «Должности».
+            </small>
+          ) : null}
         </label>
 
         {error ? <p className="admin-form-error">{error}</p> : null}
@@ -109,6 +134,7 @@ export function EmployeeDictionaryFormModal({
         <div className="admin-form-actions">
           <button
             className="admin-secondary-button"
+            disabled={isSaving}
             onClick={onClose}
             type="button"
           >

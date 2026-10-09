@@ -6,6 +6,7 @@ import { PrismaService, prismaService } from './prisma.service';
   providers: [
     {
       provide: PrismaService,
+      // Better Auth uses this same instance; Nest owns its runtime lifecycle.
       useValue: prismaService,
     },
   ],

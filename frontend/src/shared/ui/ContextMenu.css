@@ -1,0 +1,41 @@
+.app-context-menu {
+  position: fixed;
+  z-index: 120;
+  width: 200px;
+  max-width: calc(100vw - 16px);
+  display: grid;
+  padding: 6px;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 12px 32px #0002;
+}
+.app-context-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  text-align: left;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: #15171c;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+}
+.app-context-menu button:hover,
+.app-context-menu button:focus-visible {
+  background: #f2f4f7;
+  outline: none;
+}
+.app-context-menu button.danger {
+  color: #b42318;
+}
+.app-context-menu button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

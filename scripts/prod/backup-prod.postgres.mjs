@@ -1,4 +1,5 @@
 import { stat } from 'node:fs/promises';
+import { verifyPostgresArchive } from '../infrastructure/postgres/archive.mjs';
 
 import { failure, success } from '../infrastructure/result.mjs';
 import {
@@ -96,7 +97,7 @@ export async function backupPostgresDatabase({
   });
 }
 
-export async function verifyDatabaseDump({ dumpPath }) {
+export async function verifyDatabaseDump({ config, dumpPath, runCommand }) {
   try {
     const dumpStat = await stat(dumpPath);
 
@@ -112,7 +113,12 @@ export async function verifyDatabaseDump({ dumpPath }) {
       });
     }
 
-    return success('POSTGRES_BACKUP_VERIFIED', 'database.dump is valid', {
+    const archive = await verifyPostgresArchive({ config, dumpPath, runCommand });
+    if (!archive.ok) {
+      return archive;
+    }
+
+    return success('POSTGRES_BACKUP_VERIFIED', 'database.dump table of contents is readable', {
       file: 'database.dump',
       sizeBytes: dumpStat.size,
     });

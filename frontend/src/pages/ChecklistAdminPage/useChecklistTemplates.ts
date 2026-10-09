@@ -36,15 +36,24 @@ export function useChecklistTemplates({ enabled }: { enabled: boolean }) {
     setTemplates([]);
 
     try {
-      const response = await getChecklistTemplates({
-        limit: 200,
-        search: appliedFilters.search.trim(),
-        state: appliedFilters.state,
-      });
-      if (requestIdRef.current !== requestId) {
-        return;
-      }
-      setTemplates(response.items);
+      const loaded: ChecklistTemplateListItem[] = [];
+      let page = 1;
+      let total: number;
+      do {
+        const response = await getChecklistTemplates({
+          limit: 200,
+          page,
+          search: appliedFilters.search.trim(),
+          state: appliedFilters.state,
+        });
+        if (requestIdRef.current !== requestId) return;
+        loaded.push(...response.items);
+        total = response.total;
+        if (response.items.length === 0 && loaded.length < total)
+          throw new Error("Не удалось загрузить полный список шаблонов.");
+        page += 1;
+      } while (loaded.length < total);
+      setTemplates(loaded);
     } catch (requestError) {
       if (requestIdRef.current === requestId) {
         setTemplates([]);
@@ -59,6 +68,9 @@ export function useChecklistTemplates({ enabled }: { enabled: boolean }) {
 
   useEffect(() => {
     void loadTemplates();
+    return () => {
+      requestIdRef.current += 1;
+    };
   }, [loadTemplates, reloadKey]);
 
   const applyFilters = useCallback(() => {

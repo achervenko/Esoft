@@ -1,3 +1,4 @@
+import "./AdminButtons.css";
 import { Edit2, Trash2 } from "lucide-react";
 
 type AdminTableActionsProps = {

@@ -1,0 +1,34 @@
+.ppe-draft-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 3fr) 1fr 1fr 1fr auto;
+  align-items: end;
+  gap: 12px;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 14px;
+  min-width: 0;
+}
+.ppe-draft-row legend {
+  padding: 0 6px;
+  font-weight: 800;
+  font-size: 14px;
+}
+.ppe-norm-card header {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.ppe-norm-card header p {
+  margin: 6px 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  .ppe-draft-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ppe-draft-row .ppe-field:first-of-type {
+    grid-column: 1 / -1;
+  }
+}

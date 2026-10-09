@@ -9,3 +9,7 @@ export function canViewCalendar(role: string | null | undefined) {
 export function canManageProductionCalendar(role: string | null | undefined) {
   return role === "admin";
 }
+
+export function isAdministrator(role: unknown) {
+  return role === "admin";
+}

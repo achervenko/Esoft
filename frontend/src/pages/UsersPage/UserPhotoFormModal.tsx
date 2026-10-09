@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { AdminUserAccount } from "../../shared/api/users-admin-api";
-import { AdminModal } from "../../shared/ui/AdminModal";
+import { GuardedAdminModal } from "../../shared/ui/GuardedAdminModal";
+import { FormField } from "../../shared/ui/FormField";
 
 type UserPhotoFormModalProps = {
   isSaving: boolean;
@@ -72,65 +73,70 @@ export function UserPhotoFormModal({
   };
 
   return (
-    <AdminModal onClose={onClose} title="Фото пользователя">
-      <form className="admin-form user-photo-form" onSubmit={handleSubmit}>
-        <div className="user-photo-preview">
-          {previewUrl || user.photo?.mediumUrl ? (
-            <img
-              alt=""
-              src={previewUrl ?? user.photo?.mediumUrl}
-            />
-          ) : (
-            <span>{getInitials(user.employee?.fullName ?? user.username ?? user.email)}</span>
-          )}
-        </div>
+    <GuardedAdminModal
+      hasChanges={file !== null}
+      isCloseDisabled={isSaving}
+      onClose={onClose}
+      title="Фото пользователя"
+    >
+      {(requestLeave) => (
+        <form className="admin-form user-photo-form" onSubmit={handleSubmit}>
+          <div className="user-photo-preview">
+            {previewUrl || user.photo?.mediumUrl ? (
+              <img alt="" src={previewUrl ?? user.photo?.mediumUrl} />
+            ) : (
+              <span>
+                {getInitials(
+                  user.employee?.fullName ?? user.username ?? user.email,
+                )}
+              </span>
+            )}
+          </div>
 
-        <label className="form-field">
-          <span>Фото</span>
-          <input
-            accept="image/jpeg,image/png,image/webp"
-            disabled={isSaving}
-            onChange={handleFileChange}
-            type="file"
-          />
-        </label>
-
-        <p className="admin-form-hint">
-          Лучше загружать квадратное фото 1024×1024 или больше. Backend сам
-          повернёт фото по EXIF и удалит метаданные.
-        </p>
-
-        {error ? <p className="admin-form-error">{error}</p> : null}
-
-        <div className="admin-form-actions">
-          {user.photo ? (
-            <button
-              className="admin-secondary-button user-photo-delete-button"
+          <FormField label="Фото" error={error ?? undefined}>
+            <input
+              accept="image/jpeg,image/png,image/webp"
               disabled={isSaving}
-              onClick={onDelete}
+              onChange={handleFileChange}
+              type="file"
+            />
+          </FormField>
+
+          <p className="admin-form-hint">
+            Лучше загружать квадратное фото 1024×1024 или больше. Backend сам
+            повернёт фото по EXIF и удалит метаданные.
+          </p>
+
+          <div className="admin-form-actions">
+            {user.photo ? (
+              <button
+                className="admin-secondary-button user-photo-delete-button"
+                disabled={isSaving}
+                onClick={() => requestLeave(onDelete)}
+                type="button"
+              >
+                Удалить фото
+              </button>
+            ) : null}
+            <button
+              className="admin-secondary-button"
+              disabled={isSaving}
+              onClick={() => requestLeave(onClose)}
               type="button"
             >
-              Удалить фото
+              Отмена
             </button>
-          ) : null}
-          <button
-            className="admin-secondary-button"
-            disabled={isSaving}
-            onClick={onClose}
-            type="button"
-          >
-            Отмена
-          </button>
-          <button
-            className="admin-primary-button"
-            disabled={isSaving}
-            type="submit"
-          >
-            {isSaving ? "Сохранение..." : "Сохранить"}
-          </button>
-        </div>
-      </form>
-    </AdminModal>
+            <button
+              className="admin-primary-button"
+              disabled={isSaving}
+              type="submit"
+            >
+              {isSaving ? "Сохранение..." : "Сохранить"}
+            </button>
+          </div>
+        </form>
+      )}
+    </GuardedAdminModal>
   );
 }
 

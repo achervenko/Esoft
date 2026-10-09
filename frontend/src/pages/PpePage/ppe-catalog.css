@@ -1,0 +1,35 @@
+.ppe-catalog-toolbar {
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  display: flex;
+}
+.ppe-catalog-toolbar .ppe-journal-search {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+.ppe-catalog-toolbar > button {
+  flex-shrink: 0;
+}
+@media (width<=540px) {
+  .ppe-catalog-toolbar {
+    flex-wrap: wrap;
+  }
+  .ppe-catalog-toolbar .ppe-journal-search {
+    flex-basis: 100%;
+  }
+}
+.ppe-item-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+.admin-modal.ppe-item-form-modal {
+  max-height: calc(100dvh - 24px);
+}
+.ppe-item-form-modal > .ppe-form {
+  gap: 12px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}

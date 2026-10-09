@@ -1,3 +1,4 @@
+import "./Notice.css";
 import { CheckCircle2, Info, TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 

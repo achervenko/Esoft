@@ -67,7 +67,7 @@ function CalendarView({ initialDate }: { initialDate?: string | null }) {
   return (
     <section className="calendar-page">
       <header className="calendar-page-header">
-        <h1>Календарь</h1>
+        <h1 className="page-title">Календарь</h1>
 
         <div className="calendar-page-toolbar">
           <div className="calendar-month-switcher" aria-label="Выбор периода">

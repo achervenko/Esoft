@@ -1,4 +1,10 @@
-import { useEffect, useState } from "react";
+import { useConfirmation } from "../../shared/ui/useConfirmation";
+import { useState } from "react";
+import {
+  saveAdminPosition,
+  setAdminPositionStatus,
+  type AdminPosition,
+} from "../../shared/api/users-admin-api";
 import { useNotifications } from "../../shared/ui/notifications";
 import { createCountryDictionaryActions } from "./country-dictionary-actions";
 import {
@@ -9,9 +15,9 @@ import {
   type LocationFormState,
   type ManufacturerFormState,
   type ObjectFormState,
+  type PositionFormState,
 } from "./dictionaries-page-types";
 import { createEmployeeDictionaryActions } from "./employee-dictionary-actions";
-import { getDictionariesAdminErrorMessage } from "./dictionaries-admin-error-messages";
 import { createLocationDictionaryActions } from "./location-dictionary-actions";
 import { createManufacturerDictionaryActions } from "./manufacturer-dictionary-actions";
 import { useDictionariesAdminData } from "./useDictionariesAdminData";
@@ -25,6 +31,7 @@ export type {
   LocationFormState,
   ManufacturerFormState,
   ObjectFormState,
+  PositionFormState,
 } from "./dictionaries-page-types";
 
 type UseDictionariesAdminPageParams = {
@@ -34,8 +41,10 @@ type UseDictionariesAdminPageParams = {
 export function useDictionariesAdminPage({
   userRole,
 }: UseDictionariesAdminPageParams) {
+  const confirm = useConfirmation();
   const [activeTab, setActiveTab] =
     useState<ActiveDictionariesTab>("employees");
+  const [positionForm, setPositionForm] = useState<PositionFormState>(null);
   const [countryForm, setCountryForm] = useState<CountryFormState>(null);
   const [employeeForm, setEmployeeForm] =
     useState<EmployeeDictionaryFormState>(null);
@@ -48,27 +57,13 @@ export function useDictionariesAdminPage({
   const isAdmin = userRole === "admin";
   const { notifyError, notifySuccess } = useNotifications();
 
-  const data = useDictionariesAdminData();
-  const { loadData, setIsLoading } = data;
+  const data = useDictionariesAdminData(activeTab, isAdmin);
+  const { loadData } = data;
   const { isSaving, runSavingAction } = useDictionariesSaving({
     notifyError,
     setError: data.setError,
     setMessage,
   });
-
-  useEffect(() => {
-    if (isAdmin) {
-      void loadData().catch((requestError) => {
-        notifyError(
-          "Не удалось загрузить справочники",
-          getDictionariesAdminErrorMessage(requestError),
-        );
-      });
-      return;
-    }
-
-    setIsLoading(false);
-  }, [isAdmin, loadData, notifyError, setIsLoading]);
 
   const showSuccessMessage = (nextMessage: string | null) => {
     setMessage(nextMessage);
@@ -79,15 +74,17 @@ export function useDictionariesAdminPage({
   };
 
   const employeeActions = createEmployeeDictionaryActions({
+    confirm,
     employeeForm,
-    loadData,
+    loadData: () => loadData(["employees"]),
     runSavingAction,
     setEmployeeForm,
     setMessage: showSuccessMessage,
   });
 
   const manufacturerActions = createManufacturerDictionaryActions({
-    loadData,
+    confirm,
+    loadData: () => loadData(["manufacturers", "models"]),
     manufacturerForm,
     modelForm,
     runSavingAction,
@@ -97,15 +94,17 @@ export function useDictionariesAdminPage({
   });
 
   const countryActions = createCountryDictionaryActions({
+    confirm,
     countryForm,
-    loadData,
+    loadData: () => loadData(["countries"]),
     runSavingAction,
     setCountryForm,
     setMessage: showSuccessMessage,
   });
 
   const locationActions = createLocationDictionaryActions({
-    loadData,
+    confirm,
+    loadData: () => loadData(["objects", "locations"]),
     locationForm,
     objectForm,
     runSavingAction,
@@ -116,11 +115,34 @@ export function useDictionariesAdminPage({
 
   return {
     activeTab,
+    positions: data.positions,
+    positionForm,
+    setPositionForm,
+    savePosition: (payload: { name: string }) =>
+      runSavingAction(async () => {
+        if (!positionForm) return;
+        await saveAdminPosition(
+          positionForm === "new" ? null : positionForm.id,
+          payload,
+        );
+        setPositionForm(null);
+        await loadData(["positions", "employees"]);
+        showSuccessMessage("Должность сохранена.");
+      }),
+    togglePositionStatus: (position: AdminPosition) =>
+      runSavingAction(async () => {
+        await setAdminPositionStatus(position.id, !position.isActive);
+        await loadData(["positions", "employees"]);
+        showSuccessMessage(
+          position.isActive ? "Должность отключена." : "Должность включена.",
+        );
+      }),
     countries: data.countries,
     countryForm,
     employees: data.employees,
     employeeForm,
     error: data.error,
+    retry: data.retry,
     isAdmin,
     isLoading: data.isLoading,
     isSaving,

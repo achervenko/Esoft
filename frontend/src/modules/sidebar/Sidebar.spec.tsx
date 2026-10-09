@@ -57,6 +57,29 @@ describe("Sidebar", () => {
     );
   });
 
+  it("shows PPE and limited employee navigation to specialists without other admin links", () => {
+    render(<Sidebar onLogout={vi.fn()} user={{ role: "ppe_specialist" }} />);
+    expect(screen.getByRole("link", { name: "СИЗ" })).toHaveAttribute(
+      "href",
+      "#/ppe",
+    );
+    expect(screen.getByRole("link", { name: "Сотрудники" })).toHaveAttribute(
+      "href",
+      "#/dictionaries",
+    );
+    expect(screen.queryByRole("link", { name: "Пользователи" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Справочники" })).toBeNull();
+    for (const name of [
+      "Панель",
+      "Оборудование",
+      "Поиск",
+      "Календарь",
+      "Мои чек-листы",
+    ]) {
+      expect(screen.queryByRole("link", { name })).toBeNull();
+    }
+  });
+
   it("renders checklist and administration sections as collapsible menu buttons", () => {
     render(<Sidebar onLogout={vi.fn()} user={adminUser} />);
 

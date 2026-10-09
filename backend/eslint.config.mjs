@@ -32,4 +32,14 @@ export default tseslint.config(
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },
+  {
+    ...tseslint.configs.disableTypeChecked,
+    files: ['test/**/*.mjs'],
+    languageOptions: {
+      sourceType: 'module',
+      parserOptions: {
+        projectService: false,
+      },
+    },
+  },
 );

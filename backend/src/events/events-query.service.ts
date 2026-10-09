@@ -68,7 +68,7 @@ export class EventsQueryService {
                 firstName: true,
                 lastName: true,
                 middleName: true,
-                position: true,
+                position: { select: { name: true } },
               },
             },
           },
@@ -105,7 +105,7 @@ export class EventsQueryService {
             ]
               .filter(Boolean)
               .join(' '),
-            position: employee.position,
+            position: employee.position.name,
             role: user.role,
             userId: user.id,
           },
@@ -190,7 +190,7 @@ export class EventsQueryService {
             assigned_user.name
           ),
           'position',
-          COALESCE(assigned_employee.position, '')
+          COALESCE(assigned_position.name, '')
         ) AS "assignedUser",
         json_build_object(
           'answered',
@@ -211,6 +211,8 @@ export class EventsQueryService {
         ON assigned_employee_user.user_id = assigned_user.id
       LEFT JOIN employees assigned_employee
         ON assigned_employee.id = assigned_employee_user.employee_id
+      LEFT JOIN positions assigned_position
+        ON assigned_position.id = assigned_employee.position_id
       LEFT JOIN checklist_progress progress
         ON progress.checklist_id = checklist.id
       WHERE checklist.event_id IN (${Prisma.join(eventIds)})

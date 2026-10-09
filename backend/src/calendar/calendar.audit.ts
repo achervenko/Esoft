@@ -7,6 +7,7 @@ const CALENDAR_AUDIT_FIELDS = {
   preholiday: 'Предпраздничный день',
   workingDay: 'Рабочий день',
   workingHours: 'Рабочие часы',
+  source: 'Источник',
 } as const;
 
 export function getCalendarWorkdayAuditChanges(params: {
@@ -38,6 +39,11 @@ export function getCalendarWorkdayAuditChanges(params: {
       CALENDAR_AUDIT_FIELDS.workingHours,
       params.oldValue.workingHours,
       params.newValue.workingHours,
+    ),
+    createAuditFieldChange(
+      CALENDAR_AUDIT_FIELDS.source,
+      params.oldValue.source,
+      params.newValue.source,
     ),
   ].filter((field) => field.oldValue !== field.newValue);
 }

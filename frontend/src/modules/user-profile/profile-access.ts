@@ -1,3 +1,19 @@
+import {
+  canEditEquipment,
+  canReadEquipment,
+  canDownloadEquipmentDocuments,
+} from "../equipment-permissions/equipment-permissions";
+import { canAccessWorkspaceRoute } from "../../lib/role-navigation";
+import { isAdministrator } from "../../shared/lib/roles";
+import {
+  canBackdatePpeIssue,
+  canIssuePpe,
+  canManageEmployeeSizes,
+  canManagePpeCatalog,
+  canManagePpeNorms,
+  canReadPpe,
+} from "../ppe-permissions/ppe-permissions";
+
 export type ProfileModuleAccess = {
   description: string;
   title: string;
@@ -12,6 +28,8 @@ export type ProfilePermissionAccess = {
 const roleLabels: Record<string, string> = {
   admin: "Админ",
   auditor: "Аудитор",
+  ppe_specialist: "Специалист по охране труда",
+  accounting_specialist: "Специалист по учёту",
   chief_engineer: "Главный инженер",
   engineer: "Инженер",
   operator: "Оператор",
@@ -67,42 +85,62 @@ export function getProfileRoleLabel(role: string | null | undefined) {
 }
 
 export function getProfileModuleAccess(role: string | null | undefined) {
-  const modules = [...baseModules];
+  const moduleRoutes: Record<string, string> = {
+    Панель: "#/dashboard",
+    Оборудование: "#/equipment",
+    Поиск: "#/search",
+    Профиль: "#/profile",
+  };
+  const modules = baseModules.filter((module) =>
+    canAccessWorkspaceRoute(role, moduleRoutes[module.title]),
+  );
+  if (canManageEmployeeSizes(role) && !isAdministrator(role))
+    modules.push({
+      title: "Сотрудники",
+      description: "Просмотр сотрудников и изменение размеров для СИЗ.",
+    });
 
-  if (role === "admin" || role === "chief_engineer" || role === "engineer") {
+  if (canEditEquipment(role)) {
     modules.push(...equipmentEditorModules);
   }
 
-  if (role === "admin") {
+  if (isAdministrator(role)) {
     modules.push(...adminModules);
+  }
+
+  if (canReadPpe(role)) {
+    modules.push({
+      title: "СИЗ",
+      description: "Работа со средствами индивидуальной защиты.",
+    });
   }
 
   return modules;
 }
 
 export function getProfilePermissionAccess(role: string | null | undefined) {
-  const isAdmin = role === "admin";
-  const canEditEquipment =
-    role === "admin" || role === "chief_engineer" || role === "engineer";
+  const isAdmin = isAdministrator(role);
+  const equipmentEditable = canEditEquipment(role);
 
   return [
     {
-      allowed: true,
+      allowed: canReadEquipment(role),
       title: "Просмотр оборудования",
-      description: "Карточки, документы и история изменений доступны для просмотра.",
+      description:
+        "Карточки, документы и история изменений доступны для просмотра.",
     },
     {
-      allowed: true,
+      allowed: canDownloadEquipmentDocuments(role),
       title: "Скачивание документов",
       description: "Документы оборудования доступны для скачивания.",
     },
     {
-      allowed: canEditEquipment,
+      allowed: equipmentEditable,
       title: "Редактирование оборудования",
       description: "Создание и изменение карточек оборудования.",
     },
     {
-      allowed: canEditEquipment,
+      allowed: equipmentEditable,
       title: "Управление документами",
       description: "Загрузка и удаление документов оборудования.",
     },
@@ -115,6 +153,44 @@ export function getProfilePermissionAccess(role: string | null | undefined) {
       allowed: isAdmin,
       title: "Управление справочниками",
       description: "Создание и редактирование справочников системы.",
+    },
+    {
+      allowed: canReadPpe(role),
+      title: "Чтение СИЗ",
+      description:
+        "Просмотр каталога СИЗ, сотрудников и должностей в рамках модуля СИЗ.",
+    },
+    {
+      allowed: canManagePpeCatalog(role),
+      title: "Управление каталогом СИЗ",
+      description:
+        "Создание, изменение и отключение позиций СИЗ и их размеров.",
+    },
+    {
+      allowed: canManagePpeNorms(role),
+      title: "Управление нормами СИЗ",
+      description:
+        "Создание и изменение редакций норм, завершение их действия.",
+    },
+    {
+      allowed: canIssuePpe(role),
+      title: "Выдача СИЗ",
+      description: "Нормативная и дополнительная выдача СИЗ сотрудникам.",
+    },
+    ...(isAdmin
+      ? [
+          {
+            allowed: canBackdatePpeIssue(role),
+            title: "Выдача СИЗ задним числом",
+            description: "Оформление выдачи СИЗ за прошедшую дату.",
+          },
+        ]
+      : []),
+    {
+      allowed: canManageEmployeeSizes(role),
+      title: "Изменение размеров сотрудников",
+      description:
+        "Изменение размеров одежды, обуви, перчаток и головных уборов для СИЗ.",
     },
   ];
 }

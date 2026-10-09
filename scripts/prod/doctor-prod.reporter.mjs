@@ -23,8 +23,8 @@ export function createProductionDoctorReporter({ output = console } = {}) {
 
       output.log(
         result.ok
-          ? 'Production environment is ready.'
-          : 'Production environment is not ready.',
+          ? 'Production dependency, build and HTTP checks passed.'
+          : 'Production dependency, build or HTTP checks failed.',
       );
       output.log(
         skipped === 0

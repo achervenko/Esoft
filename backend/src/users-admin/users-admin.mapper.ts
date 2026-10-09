@@ -17,7 +17,8 @@ export function toEmployeeDto(
     isActive: boolean;
     lastName: string;
     middleName: string | null;
-    position: string;
+    position: { name: string };
+    positionId: number;
   },
   currentUserId?: string | null,
 ) {
@@ -42,7 +43,8 @@ export function toEmployeeDto(
     isActive: employee.isActive,
     lastName: employee.lastName,
     middleName: employee.middleName,
-    position: employee.position,
+    position: employee.position.name,
+    positionId: employee.positionId,
   };
 }
 
@@ -57,7 +59,7 @@ type AdminUserForDto = {
       id: number;
       lastName: string;
       middleName: string | null;
-      position: string;
+      position: { name: string };
     };
   } | null;
   id: string;
@@ -87,7 +89,7 @@ export function toAdminUserDto(user: AdminUserForDto) {
       ? {
           fullName: getEmployeeFullName(employee),
           id: employee.id,
-          position: employee.position,
+          position: employee.position.name,
         }
       : null,
     id: user.id,
@@ -107,6 +109,8 @@ export function getRoleLabel(role: string | null | undefined) {
     engineer: 'Инженер',
     operator: 'Оператор',
     auditor: 'Аудитор',
+    ppe_specialist: 'Специалист по охране труда',
+    accounting_specialist: 'Специалист по учёту',
   };
 
   return role ? (labels[role] ?? role) : 'Не указана';

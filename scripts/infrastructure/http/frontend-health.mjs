@@ -3,6 +3,7 @@ import { formatError } from '../security/redaction.mjs';
 
 export async function checkFrontendHttp({
   config,
+  url = config.frontend.url,
   fetchImpl = globalThis.fetch,
   requestTimeoutMs = 3_000,
 }) {
@@ -23,7 +24,7 @@ export async function checkFrontendHttp({
       );
     }
 
-    const response = await fetchImpl(config.frontend.url, {
+    const response = await fetchImpl(url, {
       signal: AbortSignal.timeout(requestTimeoutMs),
     });
 

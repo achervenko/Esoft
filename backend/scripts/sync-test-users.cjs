@@ -47,12 +47,18 @@ async function main() {
   await client.query('begin');
 
   for (const person of people) {
+    const positionResult = await client.query(
+      `insert into positions (name) values ($1)
+       on conflict (lower(name)) do update set name = positions.name
+       returning id`,
+      [person.position],
+    );
     const result = await client.query(
       `update employees e
        set last_name = $1,
            first_name = $2,
            middle_name = $3,
-           position = $4
+           position_id = $4
        from employee_users eu
        join "user" u on u.id = eu.user_id
        where e.id = eu.employee_id
@@ -62,7 +68,7 @@ async function main() {
         person.lastName,
         person.firstName,
         person.middleName,
-        person.position,
+        positionResult.rows[0].id,
         person.username,
       ],
     );

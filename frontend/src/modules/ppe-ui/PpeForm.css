@@ -1,0 +1,20 @@
+.admin-modal > .ppe-form {
+  padding: 18px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.ppe-form p {
+  margin: 0;
+}
+
+.ppe-size-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  color: #6b7280;
+  font-size: 12px;
+}
+.ppe-size-summary strong {
+  color: #3f4652;
+}

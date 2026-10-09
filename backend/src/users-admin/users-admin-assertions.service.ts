@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { throwUserAdminNotFound } from './users-admin.errors';
 import { throwBadRequest } from './users-admin.validation';
@@ -7,11 +8,16 @@ import { throwBadRequest } from './users-admin.validation';
 export class UsersAdminAssertionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async assertEmployeeExists(employeeId: number) {
-    const employee = await this.prisma.employee.findUnique({
-      select: { id: true, isActive: true },
-      where: { id: employeeId },
-    });
+  async assertActiveEmployeeExists(
+    employeeId: number,
+    tx: Prisma.TransactionClient,
+  ) {
+    const [employee] = await tx.$queryRaw<
+      Array<{ id: number; isActive: boolean }>
+    >`
+      SELECT id, is_active AS "isActive"
+      FROM employees WHERE id = ${employeeId} FOR UPDATE
+    `;
 
     if (!employee) {
       throwUserAdminNotFound('EMPLOYEE_NOT_FOUND');

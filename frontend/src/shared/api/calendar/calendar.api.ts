@@ -40,3 +40,10 @@ export function updateCalendarWorkday(payload: CalendarWorkdayUpdatePayload) {
     method: "PATCH",
   });
 }
+
+export function resetCalendarWorkday(date: string) {
+  return request<CalendarWorkdayDto>("/api/calendar/workday/reset", {
+    body: JSON.stringify({ date }),
+    method: "PATCH",
+  });
+}

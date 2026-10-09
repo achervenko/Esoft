@@ -3,6 +3,30 @@ import type { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from './audit-log.service';
 
 describe('AuditLogService', () => {
+  it('writes one compact event using the supplied transaction', async () => {
+    const root = { auditLog: { create: jest.fn() } };
+    const tx = { auditLog: { create: jest.fn().mockResolvedValue({}) } };
+    const service = new AuditLogService(root as unknown as PrismaService);
+    await service.writeEvent({
+      action: AuditAction.CREATE,
+      module: AuditModule.PPE,
+      entityType: 'ppe_issue',
+      entityId: 1,
+      userId: 'actor',
+      tx: tx as never,
+    });
+    expect(tx.auditLog.create).toHaveBeenCalledWith({
+      data: {
+        action: AuditAction.CREATE,
+        module: AuditModule.PPE,
+        entityType: 'ppe_issue',
+        entityId: 1,
+        entityStringId: null,
+        userId: 'actor',
+      },
+    });
+    expect(root.auditLog.create).not.toHaveBeenCalled();
+  });
   it('writes field changes with string entity id', async () => {
     const prisma = {
       auditLog: {

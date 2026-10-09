@@ -1,4 +1,5 @@
 import { ChevronDown } from "lucide-react";
+import { useId } from "react";
 import { SelectDropdownMenu } from "./SelectDropdownMenu";
 import { useSelectDropdown } from "./useSelectDropdown";
 import type { SelectDropdownProps } from "./select-dropdown.types";
@@ -15,6 +16,7 @@ export function SelectDropdown({
   required = false,
   value,
 }: SelectDropdownProps) {
+  const errorId = useId();
   const dropdown = useSelectDropdown({
     disabled,
     onChange,
@@ -27,13 +29,16 @@ export function SelectDropdown({
       className={`form-field select-dropdown-field${error ? " has-error" : ""}`}
     >
       {label ? (
-        <span>
+        <span className="form-field-label">
           {label}
           {required ? <b aria-hidden="true">*</b> : null}
         </span>
       ) : null}
 
       <button
+        aria-required={required || undefined}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errorId : undefined}
         aria-controls={dropdown.isOpen ? dropdown.listboxId : undefined}
         aria-expanded={dropdown.isOpen}
         aria-haspopup="listbox"
@@ -71,7 +76,7 @@ export function SelectDropdown({
         value={value}
       />
 
-      {error ? <small className="field-error">{error}</small> : null}
+      {error ? <small id={errorId} className="field-error">{error}</small> : null}
     </label>
   );
 }

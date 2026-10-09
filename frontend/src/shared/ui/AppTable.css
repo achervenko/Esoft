@@ -1,0 +1,45 @@
+.data-table .data-table-sort-button {
+  width: 100%;
+  min-height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: inherit;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.data-table .data-table-sort-button:hover {
+  color: #111111;
+}
+
+.data-table .data-table-sort-button.active {
+  color: #111111;
+}
+
+.data-table .data-table-sort-triangle {
+  width: 0;
+  height: 0;
+  flex: 0 0 auto;
+  border-right: 4px solid transparent;
+  border-left: 4px solid transparent;
+}
+
+.data-table .data-table-sort-triangle.asc {
+  border-bottom: 6px solid #111111;
+}
+
+.data-table .data-table-sort-triangle.desc {
+  border-top: 6px solid #111111;
+}
+
+.data-table .data-table-row-clickable {
+  cursor: pointer;
+}

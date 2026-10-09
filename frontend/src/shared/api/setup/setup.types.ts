@@ -10,7 +10,8 @@ export type SetupEmployee = {
 
 export type CreateInitialAdminPayload = {
   email: string;
-  employeeId: number;
+  employeeId?: number;
+  employee?: { lastName: string; firstName: string; middleName: string | null };
   password: string;
   passwordConfirmation: string;
   username: string;

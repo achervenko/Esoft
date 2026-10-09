@@ -86,7 +86,7 @@ export function EquipmentCardView({
     <article className="equipment-card-view">
       <header className="equipment-card-view-header">
         <div>
-          <h1>
+          <h1 className="page-title">
             ID {equipment.visibleId} — {equipment.name}
           </h1>
         </div>

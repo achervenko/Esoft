@@ -1,3 +1,5 @@
+import { AdminTextField } from "../../shared/ui/AdminFormControls";
+import { FormField } from "../../shared/ui/FormField";
 import type { FormEvent } from "react";
 import { SelectDropdown } from "../../shared/ui/SelectDropdown";
 import { useSetupPage } from "./useSetupPage";
@@ -28,10 +30,6 @@ export function SetupPage({ onCompleted }: SetupPageProps) {
       <section className="setup-panel" aria-labelledby="setup-title">
         <div className="setup-heading">
           <h1 id="setup-title">Первоначальная настройка</h1>
-          <p>
-            В системе ещё нет администратора. Создайте первую учётную запись
-            администратора.
-          </p>
         </div>
 
         <form className="setup-form" onSubmit={handleSubmit}>
@@ -45,8 +43,33 @@ export function SetupPage({ onCompleted }: SetupPageProps) {
             value={page.form.employeeId}
           />
 
-          <label className="form-field">
-            <span>Email</span>
+          {page.form.employeeId === "new" && (
+            <fieldset
+              className="setup-employee-fields"
+              disabled={page.isSubmitting}
+            >
+              <legend>Новый сотрудник</legend>
+              {(
+                [
+                  ["lastName", "Фамилия"],
+                  ["firstName", "Имя"],
+                  ["middleName", "Отчество"],
+                ] as const
+              ).map(([field, label]) => (
+                  <AdminTextField
+                    key={field}
+                    error={page.fieldErrors[field]}
+                    label={label}
+                    maxLength={64}
+                    required={field !== "middleName"}
+                    value={page.form[field]}
+                    onChange={(value) => page.setField(field, value)}
+                  />
+              ))}
+            </fieldset>
+          )}
+
+          <FormField label="Email" error={page.fieldErrors.email}>
             <input
               autoComplete="email"
               maxLength={255}
@@ -56,13 +79,9 @@ export function SetupPage({ onCompleted }: SetupPageProps) {
               type="email"
               value={page.form.email}
             />
-            {page.fieldErrors.email ? (
-              <small className="field-error">{page.fieldErrors.email}</small>
-            ) : null}
-          </label>
+          </FormField>
 
-          <label className="form-field">
-            <span>Логин</span>
+          <FormField label="Логин" error={page.fieldErrors.username}>
             <input
               autoComplete="username"
               maxLength={64}
@@ -75,13 +94,9 @@ export function SetupPage({ onCompleted }: SetupPageProps) {
               type="text"
               value={page.form.username}
             />
-            {page.fieldErrors.username ? (
-              <small className="field-error">{page.fieldErrors.username}</small>
-            ) : null}
-          </label>
+          </FormField>
 
-          <label className="form-field">
-            <span>Пароль</span>
+          <FormField label="Пароль" error={page.fieldErrors.password}>
             <input
               autoComplete="new-password"
               maxLength={128}
@@ -94,13 +109,9 @@ export function SetupPage({ onCompleted }: SetupPageProps) {
               type="password"
               value={page.form.password}
             />
-            {page.fieldErrors.password ? (
-              <small className="field-error">{page.fieldErrors.password}</small>
-            ) : null}
-          </label>
+          </FormField>
 
-          <label className="form-field">
-            <span>Повторите пароль</span>
+          <FormField label="Повторите пароль" error={page.fieldErrors.passwordConfirmation}>
             <input
               autoComplete="new-password"
               maxLength={128}
@@ -113,14 +124,11 @@ export function SetupPage({ onCompleted }: SetupPageProps) {
               type="password"
               value={page.form.passwordConfirmation}
             />
-            {page.fieldErrors.passwordConfirmation ? (
-              <small className="field-error">
-                {page.fieldErrors.passwordConfirmation}
-              </small>
-            ) : null}
-          </label>
+          </FormField>
 
-          {page.error ? <p className="form-message error">{page.error}</p> : null}
+          {page.error ? (
+            <p className="form-message error">{page.error}</p>
+          ) : null}
           {page.message ? (
             <p className="form-message success">{page.message}</p>
           ) : null}

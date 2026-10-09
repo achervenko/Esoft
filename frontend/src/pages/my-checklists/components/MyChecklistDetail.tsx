@@ -1,6 +1,5 @@
-import { useState } from "react";
 import "../../../shared/ui/AdminPage.css";
-import { ConfirmDialog } from "../../../shared/ui/ConfirmDialog";
+import { useConfirmation } from "../../../shared/ui/useConfirmation";
 import { Notice } from "../../../shared/ui/Notice";
 import { checklistStatusLabels } from "../my-checklists.config";
 import { ChecklistModules } from "./ChecklistModules";
@@ -36,7 +35,7 @@ export function MyChecklistDetail({
   showRequiredErrors,
   versionConflict,
 }: MyChecklistDetailProps) {
-  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
+  const confirm = useConfirmation();
 
   if (!checklist) {
     return (
@@ -51,7 +50,7 @@ export function MyChecklistDetail({
     checklist.status === "IN_PROGRESS" &&
     !isDetailLoading &&
     !versionConflict;
-  const canEditAnswers = canMutateCurrent;
+  const canEditAnswers = canMutateCurrent && !isActionLoading;
   const canShowWorkActions = canMutateCurrent;
   const hasDetailActions = canShowWorkActions || Boolean(versionConflict);
 
@@ -115,8 +114,14 @@ export function MyChecklistDetail({
                 disabled={
                   isActionLoading || isDetailLoading || Boolean(versionConflict)
                 }
-                onClick={() => {
-                  setIsCompleteDialogOpen(true);
+                onClick={async () => {
+                  if (await confirm({
+                    title: "Завершить чек-лист?",
+                    description: "После завершения ответы нельзя будет изменить.",
+                    confirmLabel: "Завершить",
+                  })) {
+                    onComplete();
+                  }
                 }}
                 type="button"
               >
@@ -137,21 +142,6 @@ export function MyChecklistDetail({
         </div>
       ) : null}
 
-      {isCompleteDialogOpen && canMutateCurrent ? (
-        <ConfirmDialog
-          cancelLabel="Отмена"
-          confirmLabel="Завершить"
-          description="После завершения ответы нельзя будет изменить."
-          isLoading={isActionLoading}
-          loadingLabel="Завершение..."
-          onCancel={() => setIsCompleteDialogOpen(false)}
-          onConfirm={() => {
-            setIsCompleteDialogOpen(false);
-            onComplete();
-          }}
-          title="Завершить чек-лист?"
-        />
-      ) : null}
     </section>
   );
 }

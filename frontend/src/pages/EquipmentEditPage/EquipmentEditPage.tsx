@@ -2,7 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import { EquipmentDocumentsPanel } from "../../modules/equipment-documents";
 import { Notice } from "../../shared/ui/Notice";
 import { UnsavedChangesGuard } from "../../shared/ui/UnsavedChangesGuard";
-import { EquipmentCreateForm } from "../EquipmentCreatePage/EquipmentCreateForm";
+import { EquipmentCreateForm } from "../../modules/equipment-create-form/EquipmentCreateForm";
 import { EquipmentEditTabs } from "./EquipmentEditTabs";
 import {
   getEquipmentEditPanelId,
@@ -13,7 +13,7 @@ import {
   type EquipmentEditTab,
 } from "./equipment-edit-navigation";
 import { useEquipmentEditPage } from "./useEquipmentEditPage";
-import "../EquipmentCreatePage/EquipmentCreatePage.css";
+import "../../modules/equipment-create-form/EquipmentPageLayout.css";
 
 type EquipmentEditPageProps = {
   initialTab?: EquipmentEditTab;
@@ -43,7 +43,7 @@ export function EquipmentEditPage({
           returnTo={returnTo}
           visibleId={visibleId}
         />
-        <h1>Редактирование оборудования</h1>
+        <h1 className="page-title">Редактирование оборудования</h1>
         <Notice tone="error">
           У вашей роли нет доступа к редактированию оборудования.
         </Notice>
@@ -53,7 +53,10 @@ export function EquipmentEditPage({
 
   return (
     <div className="equipment-create-page">
-      <UnsavedChangesGuard hasChanges={page.hasUnsavedChanges} />
+      <UnsavedChangesGuard
+        hasChanges={page.hasUnsavedChanges}
+        isBlocked={page.isSubmitting}
+      />
       <BackToCardLink
         activeTab={page.activeTab}
         returnTo={returnTo}
@@ -61,7 +64,7 @@ export function EquipmentEditPage({
       />
 
       <header className="equipment-create-header">
-        <h1>Редактирование оборудования</h1>
+        <h1 className="page-title">Редактирование оборудования</h1>
       </header>
 
       {page.isLoading ? <Notice>Загрузка карточки оборудования...</Notice> : null}

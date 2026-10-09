@@ -6,18 +6,18 @@ type DictionaryEmployeesTableProps = {
   employees: AdminEmployee[];
   onEdit: (employee: AdminEmployee) => void;
   onToggleStatus: (employee: AdminEmployee) => void;
+  onSizes?: (employee: AdminEmployee) => void;
 };
 
 const employeeColumns = (
   onEdit: (employee: AdminEmployee) => void,
   onToggleStatus: (employee: AdminEmployee) => void,
+  onSizes?: (employee: AdminEmployee) => void,
 ): Array<DataTableColumn<AdminEmployee, string>> => [
   {
     key: "fullName",
     label: "Сотрудник",
-    render: (employee) => (
-      <strong>{employee.fullName}</strong>
-    ),
+    render: (employee) => <strong>{employee.fullName}</strong>,
     sortValue: (employee) => employee.fullName,
   },
   {
@@ -28,6 +28,7 @@ const employeeColumns = (
   },
   {
     key: "actions",
+    className: "admin-table-actions-column",
     label: "",
     render: (employee) => {
       const isOwnActiveEmployee =
@@ -40,6 +41,11 @@ const employeeColumns = (
 
       return (
         <div className="admin-table-actions">
+          {onSizes && (
+            <button type="button" onClick={() => onSizes(employee)}>
+              Размеры
+            </button>
+          )}
           <button
             aria-label={`Редактировать сотрудника ${employee.fullName}`}
             className="admin-icon-button"
@@ -75,10 +81,11 @@ export function DictionaryEmployeesTable({
   employees,
   onEdit,
   onToggleStatus,
+  onSizes,
 }: DictionaryEmployeesTableProps) {
   return (
     <DataTable
-      columns={employeeColumns(onEdit, onToggleStatus)}
+      columns={employeeColumns(onEdit, onToggleStatus, onSizes)}
       defaultSort={{ direction: "asc", key: "fullName" }}
       getRowKey={(employee) => employee.id}
       rows={employees}

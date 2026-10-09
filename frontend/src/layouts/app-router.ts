@@ -14,6 +14,12 @@ type AppRouteBase =
   | { kind: "checklist-template-create"; copyFromTemplateId: number | null }
   | { kind: "checklist-template-view"; templateId: number }
   | { kind: "dictionaries" }
+  | {
+      kind: "ppe";
+      tab: "issue" | "journal" | "norms" | "catalog";
+      employeeId?: number;
+      positionId?: number;
+    }
   | { kind: "equipment-list" }
   | { kind: "equipment-create" }
   | {
@@ -61,6 +67,26 @@ function parsePositiveParamId(value: string | null) {
 }
 
 export function resolveAppRoute(route: string): AppRoute {
+  const ppePositionId = parsePositiveRouteId(
+    route.match(/^#\/ppe\/positions\/(\d+)$/),
+  );
+  if (ppePositionId !== null)
+    return { kind: "ppe", tab: "norms", positionId: ppePositionId };
+  const ppeEmployeeId = parsePositiveRouteId(
+    route.match(/^#\/ppe\/employees\/(\d+)$/),
+  );
+  if (ppeEmployeeId !== null)
+    return { kind: "ppe", tab: "issue", employeeId: ppeEmployeeId };
+  if (route === "#/ppe" || route.startsWith("#/ppe?")) {
+    const tab = getHashRouteParam(route, "tab");
+    return {
+      kind: "ppe",
+      tab:
+        tab === "journal" || tab === "norms" || tab === "catalog"
+          ? tab
+          : "issue",
+    };
+  }
   if (route === "#/dashboard") {
     return { kind: "dashboard" };
   }

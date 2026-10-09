@@ -5,7 +5,7 @@ React + Vite frontend for Esoft.
 Use project commands from the repository root:
 
 ```bash
-npm install
+npm ci
 npm run dev
 npm run build
 npm run lint

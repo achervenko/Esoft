@@ -20,7 +20,7 @@ export function ProfilePage({ user }: ProfilePageProps) {
   return (
     <section className="profile-page">
       <header className="profile-page-header">
-        <h1>Профиль</h1>
+        <h1 className="page-title">Профиль</h1>
       </header>
 
       <UserProfileCard user={user} />

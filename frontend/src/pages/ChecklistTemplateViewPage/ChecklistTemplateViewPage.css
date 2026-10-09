@@ -1,3 +1,5 @@
+@import "../../shared/ui/PageHeading.css";
+
 .checklist-template-view-page {
   display: grid;
   gap: 18px;
@@ -20,14 +22,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-}
-
-.checklist-template-view-title-main h1 {
-  margin: 0;
-  color: #15171c;
-  font-size: 30px;
-  line-height: 1.2;
-  font-weight: 850;
 }
 
 .checklist-template-view-description {

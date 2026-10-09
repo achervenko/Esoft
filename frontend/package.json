@@ -6,12 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "oxlint",
+    "lint": "node scripts/check-import-boundaries.cjs && oxlint",
     "lint:fix": "oxlint --fix",
     "preview": "vite preview",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "test:architecture": "node --test scripts/check-import-boundaries.checks.cjs"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.36.0",

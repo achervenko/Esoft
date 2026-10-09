@@ -29,6 +29,8 @@ export function PeriodicityFields({
   onValueChange,
   value,
 }: PeriodicityFieldsProps) {
+  const errorId = useId();
+  const describedBy = error ? errorId : undefined;
   return (
     <>
       <Checkbox
@@ -40,10 +42,12 @@ export function PeriodicityFields({
       {hasPeriodicity ? (
         <>
           <fieldset
+            aria-describedby={describedBy}
             className={`maintenance-periodicity-fieldset${error ? " has-error" : ""}`}
           >
             <legend>Периодичность</legend>
             <PeriodicityInput
+              errorId={describedBy}
               label="Годы"
               name="years"
               onValueChange={onValueChange}
@@ -51,24 +55,27 @@ export function PeriodicityFields({
             />
             <PeriodicityInput
               label="Месяцы"
+              errorId={describedBy}
               name="months"
               onValueChange={onValueChange}
               value={value.months}
             />
             <PeriodicityInput
               label="Недели"
+              errorId={describedBy}
               name="weeks"
               onValueChange={onValueChange}
               value={value.weeks}
             />
             <PeriodicityInput
               label="Дни"
+              errorId={describedBy}
               name="days"
               onValueChange={onValueChange}
               value={value.days}
             />
             {error ? (
-              <small className="field-error maintenance-periodicity-error">
+              <small id={errorId} className="field-error maintenance-periodicity-error">
                 {error}
               </small>
             ) : null}
@@ -92,6 +99,7 @@ export function PeriodicityFields({
 }
 
 type PeriodicityInputProps = {
+  errorId?: string;
   label: string;
   name: keyof PeriodicityForm;
   onValueChange: (key: keyof PeriodicityForm, value: string) => void;
@@ -99,6 +107,7 @@ type PeriodicityInputProps = {
 };
 
 function PeriodicityInput({
+  errorId,
   label,
   name,
   onValueChange,
@@ -106,8 +115,10 @@ function PeriodicityInput({
 }: PeriodicityInputProps) {
   return (
     <label className="form-field">
-      <span>{label}</span>
+      <span className="form-field-label">{label}</span>
       <input
+        aria-invalid={errorId ? true : undefined}
+        aria-describedby={errorId}
         inputMode="numeric"
         onChange={(event) =>
           onValueChange(name, event.target.value.replace(/\D/g, "").slice(0, 5))
@@ -117,3 +128,4 @@ function PeriodicityInput({
     </label>
   );
 }
+import { useId } from "react";

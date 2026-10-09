@@ -9,6 +9,7 @@ import {
   Settings,
   Search,
   Users,
+  HardHat,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -48,6 +49,12 @@ export const sidebarSections: SidebarSection[] = [
         href: "#/equipment",
         icon: Factory,
         label: "Оборудование",
+      },
+      {
+        href: "#/ppe",
+        icon: HardHat,
+        label: "СИЗ",
+        roles: ["admin", "ppe_specialist", "accounting_specialist"],
       },
       {
         href: "#/calendar",
@@ -96,6 +103,12 @@ export const sidebarSections: SidebarSection[] = [
             icon: BookOpen,
             label: "Справочники",
             roles: ["admin"],
+          },
+          {
+            href: "#/dictionaries",
+            icon: Users,
+            label: "Сотрудники",
+            roles: ["ppe_specialist"],
           },
           {
             href: "#/production-calendar",

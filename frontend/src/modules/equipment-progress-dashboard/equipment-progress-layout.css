@@ -1,0 +1,64 @@
+.equipment-progress-dashboard {
+  display: grid;
+  gap: 18px;
+}
+
+.equipment-progress-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.05fr) repeat(2, minmax(220px, 0.8fr));
+  grid-template-areas:
+    "main stats dynamics"
+    "main forecast dynamics";
+  align-items: stretch;
+  gap: 18px;
+}
+
+.equipment-progress-card {
+  min-width: 0;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 18px;
+  background: #ffffff;
+}
+
+.equipment-progress-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: #15171c;
+}
+
+.equipment-progress-card-heading span {
+  color: #374151;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.equipment-progress-card-heading strong {
+  color: #15171c;
+  font-size: 15px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.equipment-progress-card-main {
+  grid-area: main;
+  display: grid;
+  align-content: start;
+}
+
+.equipment-progress-stats-card {
+  grid-area: stats;
+}
+
+.equipment-progress-dynamics-card {
+  grid-area: dynamics;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.equipment-progress-forecast-card {
+  grid-area: forecast;
+}

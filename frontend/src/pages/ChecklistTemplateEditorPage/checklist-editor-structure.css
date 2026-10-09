@@ -1,0 +1,108 @@
+.checklist-editor-available-list,
+.checklist-editor-structure,
+.checklist-editor-questions {
+  display: grid;
+  gap: 10px;
+}
+
+.checklist-editor-remove-drop-zone {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  border: 1px dashed rgba(248, 113, 113, 0.5);
+  border-radius: 8px;
+  background: rgba(254, 226, 226, 0.38);
+}
+
+.checklist-editor-remove-drop-zone > * {
+  color: #dc2626;
+  opacity: 0.72;
+  pointer-events: none;
+  transform: scale(1);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.checklist-editor-available-panel.remove-drop-over
+  .checklist-editor-remove-drop-zone {
+  border-color: rgba(220, 38, 38, 0.78);
+  background: rgba(254, 202, 202, 0.48);
+}
+
+.checklist-editor-available-panel.remove-drop-over
+  .checklist-editor-remove-drop-zone
+  > * {
+  opacity: 0.96;
+  transform: scale(1.08);
+}
+
+.checklist-editor-available-module,
+.checklist-editor-template-module,
+.checklist-editor-question-row {
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fafbfc;
+}
+
+.checklist-editor-available-module {
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.checklist-editor-available-module strong,
+.checklist-editor-module-header strong {
+  color: #15171c;
+}
+
+.checklist-editor-available-module-content {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.checklist-editor-available-module small,
+.checklist-editor-question-row small {
+  color: #6b7280;
+  font-weight: 750;
+}
+
+.checklist-editor-template-module {
+  position: relative;
+  display: grid;
+  gap: 10px;
+}
+
+.checklist-editor-question-row {
+  position: relative;
+  justify-content: flex-start;
+  background: #ffffff;
+}
+
+.checklist-editor-module-header {
+  justify-content: flex-start;
+}
+
+.checklist-editor-question-main {
+  display: grid;
+  gap: 4px;
+}
+
+.checklist-editor-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.checklist-editor-question-main .app-checkbox {
+  width: fit-content;
+}
+
+.checklist-editor-panel-hint {
+  margin: -4px 0 4px;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 700;
+}

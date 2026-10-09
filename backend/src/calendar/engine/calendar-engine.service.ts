@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { getBusinessTodayDate } from '../../application/business-date';
 import { throwCalendarConflict } from '../calendar.errors';
 import type {
   CalendarDayDto,
@@ -21,7 +22,7 @@ export class CalendarEngineService {
     const period = {
       dateFrom: params.dateFrom,
       dateTo: params.dateTo,
-      today: startOfUtcDay(new Date()),
+      today: getBusinessTodayDate(),
     };
 
     for (const provider of params.providers) {
@@ -44,8 +45,4 @@ export class CalendarEngineService {
 
     return { days, layers };
   }
-}
-
-function startOfUtcDay(value: Date): Date {
-  return new Date(`${value.toISOString().slice(0, 10)}T00:00:00.000Z`);
 }

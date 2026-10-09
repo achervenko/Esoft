@@ -56,7 +56,7 @@ export function EquipmentPage({ userRole }: EquipmentPageProps) {
   return (
     <div className="equipment-page">
       <header className="equipment-page-header">
-        <h1>Реестр оборудования</h1>
+        <h1 className="page-title">Реестр оборудования</h1>
 
         {isCreateAllowed ? (
           <a className="equipment-add-button" href="#/equipment/create">

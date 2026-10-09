@@ -203,7 +203,7 @@ export class UserPhotosAdminService {
 const adminUserInclude = {
   employeeUser: {
     include: {
-      employee: true,
+      employee: { include: { position: true } },
     },
   },
   photo: true,

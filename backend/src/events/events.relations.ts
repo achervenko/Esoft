@@ -7,7 +7,7 @@ const employeeResponseSelect = {
   id: true,
   lastName: true,
   middleName: true,
-  position: true,
+  position: { select: { name: true } },
 } satisfies Prisma.EmployeeSelect;
 
 const responsiblesOrderBy = [

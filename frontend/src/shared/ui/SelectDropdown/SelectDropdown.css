@@ -1,6 +1,36 @@
 .select-dropdown-field {
   position: relative;
 }
+.app-select {
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+.app-select > .select-dropdown-trigger {
+  min-height: 40px;
+  font-size: inherit;
+  font-weight: 500;
+}
+.app-select-description {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.app-select .select-dropdown-trigger > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-select .select-dropdown-trigger > svg {
+  flex-shrink: 0;
+}
+.select-dropdown-trigger:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
 
 .select-dropdown-trigger {
   width: 100%;
@@ -11,7 +41,7 @@
   gap: 12px;
   border: 1px solid #d7dce3;
   border-radius: 8px;
-  padding: 0 12px;
+  padding: 0 5px 0 12px;
   background: #ffffff;
   color: #15171c;
   cursor: pointer;
@@ -117,11 +147,4 @@
 .form-field.has-error .select-dropdown-trigger:focus-visible {
   border-color: #b42318;
   box-shadow: 0 0 0 3px rgba(217, 45, 32, 0.12);
-}
-
-.field-error {
-  color: #b42318;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.35;
 }

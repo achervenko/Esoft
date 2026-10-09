@@ -1,0 +1,122 @@
+.ppe-shoe-range {
+  gap: 16px;
+  display: grid;
+}
+.ppe-shoe-range-heading {
+  justify-content: space-between;
+  margin-bottom: 24px;
+  font-size: 14px;
+  display: flex;
+}
+.ppe-shoe-range-ticks {
+  pointer-events: none;
+  height: 12px;
+  position: absolute;
+  inset: auto 0 calc(50% + 10px);
+}
+.ppe-shoe-range-ticks > span {
+  background: #a0a6af;
+  width: 1px;
+  height: 4px;
+  position: absolute;
+  bottom: 0;
+  transform: translate(-50%);
+}
+.ppe-shoe-range-ticks > .ppe-tick-medium {
+  background: #687385;
+  height: 8px;
+}
+.ppe-shoe-range-ticks > .ppe-tick-major {
+  background: #3f4652;
+  height: 12px;
+}
+.ppe-shoe-manual summary {
+  cursor: pointer;
+  align-items: center;
+  gap: 8px;
+  font-weight: 750;
+  display: flex;
+}
+.ppe-shoe-manual summary::-webkit-details-marker {
+  display: none;
+}
+.ppe-shoe-manual[open] summary svg {
+  transform: rotate(90deg);
+}
+.ppe-shoe-size-list {
+  margin: 14px 0;
+  transition: height 0.18s ease-out;
+  overflow: hidden;
+}
+.ppe-shoe-size-list-content {
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px;
+  display: flex;
+}
+.ppe-shoe-size-list-content > span {
+  border: 1px solid #d7dce3;
+  border-radius: 6px;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  display: inline-flex;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ppe-shoe-size-list {
+    transition: none;
+  }
+}
+.ppe-shoe-size-list button {
+  cursor: pointer;
+  background: 0 0;
+  border: 0;
+  padding: 2px;
+  display: flex;
+}
+.ppe-shoe-range-gaps {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.ppe-shoe-range-gaps > span {
+  position: absolute;
+  top: 50%;
+  background: #fff;
+  pointer-events: none;
+}
+.ppe-shoe-range-hole {
+  width: 14px;
+  height: 14px;
+  border: 3px solid #15171c;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+.ppe-shoe-range .ppe-shoe-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #b8bdc5;
+  border: 3px solid #15171c;
+  border-radius: 50%;
+  z-index: 3;
+}
+.ppe-shoe-range-break {
+  height: 8px;
+  transform: translateY(-50%);
+  z-index: 0;
+}
+.ppe-shoe-range-segments {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.ppe-shoe-range-segments > span {
+  position: absolute;
+  top: 50%;
+  height: 6px;
+  border-radius: 999px;
+  background: #15171c;
+  transform: translateY(-50%);
+}

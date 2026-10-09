@@ -11,6 +11,10 @@ import type {
   UserPhoto,
 } from "../shared/api/user-profile-api";
 import { resolveAppRoute } from "./app-router";
+import {
+  canAccessWorkspaceRoute,
+  getDefaultAuthRoute,
+} from "../lib/role-navigation";
 import "./AppShell.css";
 
 type AppShellUser = {
@@ -30,9 +34,7 @@ type AppShellProps = {
   user: AppShellUser | null;
 };
 
-function lazyNamedPage<TProps>(
-  loadPage: () => Promise<ComponentType<TProps>>,
-) {
+function lazyNamedPage<TProps>(loadPage: () => Promise<ComponentType<TProps>>) {
   return lazy(async () => ({
     default: await loadPage(),
   }));
@@ -68,6 +70,10 @@ const DictionariesPage = lazyNamedPage(() =>
   import("../pages/DictionariesPage").then((module) => module.DictionariesPage),
 );
 
+const PpePage = lazyNamedPage(() =>
+  import("../pages/PpePage").then((module) => module.PpePage),
+);
+
 const EquipmentCreatePage = lazyNamedPage(() =>
   import("../pages/EquipmentCreatePage").then(
     (module) => module.EquipmentCreatePage,
@@ -75,7 +81,9 @@ const EquipmentCreatePage = lazyNamedPage(() =>
 );
 
 const EquipmentEditPage = lazyNamedPage(() =>
-  import("../pages/EquipmentEditPage").then((module) => module.EquipmentEditPage),
+  import("../pages/EquipmentEditPage").then(
+    (module) => module.EquipmentEditPage,
+  ),
 );
 
 const EquipmentPage = lazyNamedPage(() =>
@@ -83,7 +91,9 @@ const EquipmentPage = lazyNamedPage(() =>
 );
 
 const EquipmentViewPage = lazyNamedPage(() =>
-  import("../pages/EquipmentViewPage").then((module) => module.EquipmentViewPage),
+  import("../pages/EquipmentViewPage").then(
+    (module) => module.EquipmentViewPage,
+  ),
 );
 
 const MyChecklistsPage = lazyNamedPage(() =>
@@ -178,7 +188,14 @@ export function AppShell({
   route,
   user,
 }: AppShellProps) {
-  const appRoute = resolveAppRoute(route);
+  const routeAllowed = canAccessWorkspaceRoute(user?.role, route);
+  const defaultRoute = getDefaultAuthRoute(user?.role);
+  const fallbackRoute = canAccessWorkspaceRoute(user?.role, defaultRoute)
+    ? defaultRoute
+    : "#/profile";
+  const appRoute = routeAllowed
+    ? resolveAppRoute(route)
+    : { kind: "unknown" as const };
 
   return (
     <main className="app-shell">
@@ -187,6 +204,12 @@ export function AppShell({
       <section className="app-workspace" aria-label="Рабочая область">
         <AppShellRouteBoundary routeKey={route}>
           <Suspense fallback={<AppShellPageFallback />}>
+            {!routeAllowed && (
+              <div role="alert">
+                Этот раздел недоступен для вашей роли.{" "}
+                <a href={fallbackRoute}>Перейти в доступный раздел</a>
+              </div>
+            )}
             {appRoute.kind === "dashboard" ? <DashboardPage /> : null}
             {appRoute.kind === "calendar" ? (
               <CalendarPage
@@ -212,6 +235,14 @@ export function AppShell({
             ) : null}
             {appRoute.kind === "dictionaries" ? (
               <DictionariesPage userRole={user?.role ?? null} />
+            ) : null}
+            {appRoute.kind === "ppe" ? (
+              <PpePage
+                employeeId={appRoute.employeeId}
+                positionId={appRoute.positionId}
+                userRole={user?.role ?? null}
+                initialTab={appRoute.tab}
+              />
             ) : null}
             {appRoute.kind === "equipment-list" ? (
               <EquipmentPage userRole={user?.role ?? null} />
@@ -253,6 +284,7 @@ export function AppShell({
             ) : null}
             {appRoute.kind === "users" ? (
               <UsersPage
+                currentUserId={user?.id ?? null}
                 onCurrentUserChanged={onUserRefresh}
                 userRole={user?.role ?? null}
               />

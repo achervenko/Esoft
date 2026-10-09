@@ -1,8 +1,20 @@
-import { useEffect, useId, useMemo, useState } from 'react';
-import type { OptionItem } from '../api/equipment/equipment.types';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import "./FormField.css";
+import "./SearchInput.css";
+import "./SearchSelect.css";
+import type { OptionItem } from "../api/equipment/equipment.types";
 
 type SearchSelectProps = {
+  autoFocus?: boolean;
+  appearance?: "field" | "search";
   error?: string;
+  filterOption?: (option: OptionItem, query: string) => boolean;
+  maxResults?: number | null;
+  minQueryLength?: number;
+  hideLabel?: boolean;
+  icon?: ReactNode;
+  emptyMessage?: string;
+  className?: string;
   label: string;
   onFocus?: () => void;
   options: OptionItem[];
@@ -13,12 +25,21 @@ type SearchSelectProps = {
 };
 
 export function SearchSelect({
+  autoFocus = false,
+  appearance = "field",
   error,
+  filterOption,
+  maxResults = 8,
+  minQueryLength = 0,
+  hideLabel = false,
+  icon,
+  emptyMessage,
+  className = "",
   label,
   onChange,
   onFocus,
   options,
-  placeholder = 'Начните вводить',
+  placeholder = "Начните вводить",
   required = false,
   value,
 }: SearchSelectProps) {
@@ -26,29 +47,35 @@ export function SearchSelect({
   const listboxId = useId();
   const errorId = useId();
   const selectedOption = options.find((option) => option.id === value) ?? null;
-  const [query, setQuery] = useState(selectedOption?.name ?? '');
+  const [query, setQuery] = useState(selectedOption?.name ?? "");
   const [isOpen, setIsOpen] = useState(false);
   const [activeOptionIndex, setActiveOptionIndex] = useState(0);
+  const isInternalClearRef = useRef(false);
 
   useEffect(() => {
-    setQuery(selectedOption?.name ?? '');
-  }, [selectedOption?.id, selectedOption?.name]);
+    if (isInternalClearRef.current && value === null) {
+      isInternalClearRef.current = false;
+      return;
+    }
+    isInternalClearRef.current = false;
+    setQuery(selectedOption?.name ?? "");
+  }, [value, selectedOption?.id, selectedOption?.name]);
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    if (!normalizedQuery) {
-      return options.slice(0, 8);
-    }
-
-    return options
-      .filter((option) =>
-        `${option.name} ${option.position ?? ''}`
-          .toLowerCase()
-          .includes(normalizedQuery),
-      )
-      .slice(0, 8);
-  }, [options, query]);
+    if (normalizedQuery.length < minQueryLength) return [];
+    const matches = normalizedQuery
+      ? options.filter((option) =>
+          filterOption
+            ? filterOption(option, normalizedQuery)
+            : (option.name + " " + (option.position ?? ""))
+                .toLowerCase()
+                .includes(normalizedQuery),
+        )
+      : options;
+    return maxResults === null ? matches : matches.slice(0, maxResults);
+  }, [options, query, filterOption, maxResults, minQueryLength]);
 
   useEffect(() => {
     setActiveOptionIndex((currentIndex) => {
@@ -61,6 +88,7 @@ export function SearchSelect({
   }, [filteredOptions.length]);
 
   const selectOption = (option: OptionItem) => {
+    isInternalClearRef.current = false;
     setQuery(option.name);
     setIsOpen(false);
     setActiveOptionIndex(0);
@@ -94,60 +122,80 @@ export function SearchSelect({
   };
 
   return (
-    <div className={`form-field search-select-field${error ? ' has-error' : ''}`}>
-      <label htmlFor={inputId}>
+    <div
+      className={`${appearance === "search" ? "search-select-search" : "form-field"} search-select-field ${className}${error ? " has-error" : ""}`}
+    >
+      <label
+        htmlFor={inputId}
+        className={hideLabel ? "search-select-label-hidden" : undefined}
+      >
         {label}
         {required ? <b aria-hidden="true">*</b> : null}
       </label>
-      <input
-        aria-activedescendant={isOpen ? activeOptionId : undefined}
-        aria-autocomplete="list"
-        aria-controls={listboxId}
-        aria-describedby={error ? errorId : undefined}
-        aria-expanded={isOpen}
-        aria-invalid={error ? "true" : undefined}
-        id={inputId}
-        onBlur={() => window.setTimeout(() => setIsOpen(false), 120)}
-        onChange={(event) => {
-          setQuery(event.target.value);
-          setIsOpen(true);
-          setActiveOptionIndex(0);
-          onChange(null);
-        }}
-        onFocus={() => {
-          onFocus?.();
-          setIsOpen(true);
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "ArrowDown") {
-            event.preventDefault();
-            moveActiveOption(1);
-            return;
-          }
-
-          if (event.key === "ArrowUp") {
-            event.preventDefault();
-            moveActiveOption(-1);
-            return;
-          }
-
-          if (event.key === "Enter" && isOpen && activeOption) {
-            event.preventDefault();
-            selectOption(activeOption);
-            return;
-          }
-
-          if (event.key === "Escape") {
-            setIsOpen(false);
+      <div
+        className={
+          appearance === "search"
+            ? "search-input-shell"
+            : icon
+              ? "search-select-input-with-icon"
+              : undefined
+        }
+      >
+        {icon}
+        <input
+          autoFocus={autoFocus}
+          aria-activedescendant={isOpen ? activeOptionId : undefined}
+          aria-autocomplete="list"
+          aria-controls={listboxId}
+          aria-describedby={error ? errorId : undefined}
+          aria-expanded={isOpen}
+          aria-invalid={error ? "true" : undefined}
+          id={inputId}
+          onBlur={() => window.setTimeout(() => setIsOpen(false), 120)}
+          onChange={(event) => {
+            isInternalClearRef.current = value !== null;
+            setQuery(event.target.value);
+            setIsOpen(true);
             setActiveOptionIndex(0);
-          }
-        }}
-        placeholder={placeholder}
-        role="combobox"
-        type="text"
-        value={query}
-      />
-      {isOpen && filteredOptions.length > 0 ? (
+            onChange(null);
+          }}
+          onFocus={() => {
+            onFocus?.();
+            setIsOpen(true);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              moveActiveOption(1);
+              return;
+            }
+
+            if (event.key === "ArrowUp") {
+              event.preventDefault();
+              moveActiveOption(-1);
+              return;
+            }
+
+            if (event.key === "Enter" && isOpen && activeOption) {
+              event.preventDefault();
+              selectOption(activeOption);
+              return;
+            }
+
+            if (event.key === "Escape") {
+              setIsOpen(false);
+              setActiveOptionIndex(0);
+            }
+          }}
+          placeholder={placeholder}
+          role="combobox"
+          type="text"
+          value={query}
+        />
+      </div>
+      {isOpen &&
+      query.trim().length >= minQueryLength &&
+      filteredOptions.length > 0 ? (
         <div className="search-select-menu" id={listboxId} role="listbox">
           {filteredOptions.map((option, optionIndex) => (
             <div
@@ -165,6 +213,14 @@ export function SearchSelect({
               {option.position ? <small>{option.position}</small> : null}
             </div>
           ))}
+        </div>
+      ) : null}
+      {isOpen &&
+      query.trim().length >= minQueryLength &&
+      filteredOptions.length === 0 &&
+      emptyMessage ? (
+        <div className="search-select-menu" role="status">
+          {emptyMessage}
         </div>
       ) : null}
       {error ? (

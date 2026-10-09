@@ -3,14 +3,35 @@ model Employee {
   lastName             String         @map("last_name") @db.VarChar(64)
   firstName            String         @map("first_name") @db.VarChar(64)
   middleName           String?        @map("middle_name") @db.VarChar(64)
-  position             String         @db.VarChar(64)
+  positionId           Int            @map("position_id")
+  positionAssignedAt   DateTime?      @map("position_assigned_at") @db.Date
+  position             Position       @relation(fields: [positionId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_employees_position")
+  clothingSize         String?        @map("clothing_size") @db.VarChar(20)
+  clothingHeight       String?        @map("clothing_height") @db.VarChar(20)
+  shoeSize             Decimal?       @map("shoe_size") @db.Decimal(3, 1)
+  gloveSize            String?        @map("glove_size") @db.VarChar(20)
+  headwearSize         String?        @map("headwear_size") @db.VarChar(20)
   isActive             Boolean        @default(true) @map("is_active")
   employeeUsers        EmployeeUser[]
   responsibleEquipment Equipment[]    @relation("EquipmentResponsibleEmployee")
   createdEvents        Event[]        @relation("EventCreatedBy")
+  ppeIssues            PpeIssue[]
 
   @@index([lastName, firstName, middleName], map: "idx_employees_full_name")
+  @@index([positionId], map: "idx_employees_position_id")
   @@map("employees")
+}
+
+model Position {
+  id        Int        @id @default(autoincrement())
+  name      String     @db.VarChar(64)
+  isActive  Boolean    @default(true) @map("is_active")
+  employees Employee[]
+  ppeNorms  PpeNorm[]
+  ppeIssues PpeIssue[]
+
+  // Case-insensitive uniqueness is enforced by uq_positions_name_normalized in SQL.
+  @@map("positions")
 }
 
 model EmployeeUser {

@@ -56,7 +56,7 @@ export function ParentNameDictionaryFormModal({
   };
 
   return (
-    <AdminModal onClose={onClose} title={title}>
+    <AdminModal isCloseDisabled={isSaving} onClose={onClose} title={title}>
       <form className="admin-form" onSubmit={handleSubmit}>
         <SelectDropdown
           label={parentLabel}
@@ -76,13 +76,14 @@ export function ParentNameDictionaryFormModal({
         />
 
         <label className="form-field">
-          <span>
+          <span className="form-field-label">
             {nameLabel}
             <b aria-hidden="true">*</b>
           </span>
           <input
             autoFocus
             maxLength={128}
+            required
             onChange={(event) =>
               setForm((currentForm) => ({
                 ...currentForm,
@@ -98,6 +99,7 @@ export function ParentNameDictionaryFormModal({
         <div className="admin-form-actions">
           <button
             className="admin-secondary-button"
+            disabled={isSaving}
             onClick={onClose}
             type="button"
           >

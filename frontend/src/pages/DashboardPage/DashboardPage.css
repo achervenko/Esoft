@@ -1,14 +1,8 @@
+@import "../../shared/ui/PageHeading.css";
+
 .dashboard-page {
   display: grid;
   gap: 20px;
-}
-
-.dashboard-page-header h1 {
-  margin: 0;
-  color: #15171c;
-  font-size: 30px;
-  line-height: 1.2;
-  font-weight: 800;
 }
 
 .dashboard-empty-state {

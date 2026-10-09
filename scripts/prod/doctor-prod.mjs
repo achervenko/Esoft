@@ -13,7 +13,7 @@ import {
 } from './doctor-prod.operations.mjs';
 import { createProductionDoctorReporter } from './doctor-prod.reporter.mjs';
 
-const CHECK_COUNT = 6;
+const CHECK_COUNT = 8;
 
 export async function runProductionDoctor(options = {}) {
   const output = options.output ?? console;
@@ -100,6 +100,20 @@ export async function runProductionDoctor(options = {}) {
     run: () => operations.checkFrontendBuild({ projectRoot }),
   });
 
+  for (const [index, label, operation] of [
+    [7, 'Backend HTTP health', operations.checkBackendRuntimeHealth],
+    [8, 'Frontend HTTP', operations.checkFrontendHttp],
+  ]) {
+    await runConfigDependentCheck({
+      checks,
+      configAvailable,
+      index,
+      label,
+      reporter,
+      run: () => operation({ config, fetchImpl: context.fetchImpl }),
+    });
+  }
+
   const finalResult = createFinalResult(checks);
   reporter.summary(finalResult);
 
@@ -177,8 +191,8 @@ function createFinalResult(checks) {
   return (ok ? success : failure)(
     ok ? 'PROD_DOCTOR_OK' : 'PROD_DOCTOR_FAILED',
     ok
-      ? 'Production environment is ready'
-      : 'Production environment is not ready',
+      ? 'Production dependency, build and HTTP checks passed'
+      : 'Production dependency, build or HTTP checks failed',
     {
       checks,
     },

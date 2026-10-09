@@ -2,6 +2,7 @@ export {
   getCalendar,
   getCalendarRange,
   updateCalendarWorkday,
+  resetCalendarWorkday,
 } from "./calendar.api";
 export type {
   CalendarDayDto,

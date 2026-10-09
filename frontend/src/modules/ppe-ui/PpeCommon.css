@@ -1,0 +1,85 @@
+.ppe-tabs {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.ppe-tabs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 14px;
+  color: #4b5563;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 14px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ppe-tabs a.active {
+  background: #111;
+  color: #fff;
+}
+.ppe-toolbar,
+.ppe-actions {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.ppe-toolbar > h2 {
+  margin-right: auto;
+}
+.ppe-toolbar > .ppe-form {
+  display: grid;
+  gap: 16px;
+  padding: 18px 0 0;
+}
+.ppe-page .data-table td small {
+  display: block;
+  color: #6b7280;
+  font-size: 12px;
+  margin-top: 4px;
+}
+.ppe-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 750;
+}
+.ppe-good {
+  color: #246342;
+  background: #eaf6ed;
+}
+.ppe-muted {
+  color: #646c79;
+  background: #edf0f4;
+}
+.ppe-warn {
+  color: #876519;
+  background: #fff5dc;
+}
+@media (max-width: 760px) {
+  .ppe-toolbar {
+    align-items: stretch;
+  }
+  .ppe-tabs a {
+    padding: 0 10px;
+  }
+}
+.ppe-visually-hidden {
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  position: absolute;
+  overflow: hidden;
+}
+.admin-secondary-button.ppe-danger-button {
+  color: #b42318;
+  background: #fff;
+  border-color: #ffd6d3;
+}

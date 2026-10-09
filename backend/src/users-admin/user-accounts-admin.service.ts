@@ -37,7 +37,7 @@ export class UserAccountsAdminService {
       include: {
         employeeUser: {
           include: {
-            employee: true,
+            employee: { include: { position: true } },
           },
         },
         photo: true,
@@ -55,12 +55,12 @@ export class UserAccountsAdminService {
 
   async createUser(payload: UserPayload, actorUserId?: string | null) {
     const data = parseCreateUserPayload(payload);
-    await this.assertions.assertEmployeeExists(data.employeeId);
     const passwordHash = await hashUserPassword(data.password);
     const userId = randomUUID();
 
     try {
       return await this.prisma.$transaction(async (tx) => {
+        await this.assertions.assertActiveEmployeeExists(data.employeeId, tx);
         const createdUser = await tx.user.create({
           data: {
             displayUsername: data.username,
@@ -86,7 +86,7 @@ export class UserAccountsAdminService {
           include: {
             employeeUser: {
               include: {
-                employee: true,
+                employee: { include: { position: true } },
               },
             },
             photo: true,
@@ -112,15 +112,15 @@ export class UserAccountsAdminService {
   ) {
     const data = parseUpdateUserPayload(payload);
     await this.assertions.assertUserExists(userId);
-    await this.assertions.assertEmployeeExists(data.employeeId);
 
     try {
       return await this.runSerializableTransaction(async (tx) => {
+        await this.assertions.assertActiveEmployeeExists(data.employeeId, tx);
         const currentUser = await tx.user.findUniqueOrThrow({
           include: {
             employeeUser: {
               include: {
-                employee: true,
+                employee: { include: { position: true } },
               },
             },
             photo: true,
@@ -162,7 +162,7 @@ export class UserAccountsAdminService {
           include: {
             employeeUser: {
               include: {
-                employee: true,
+                employee: { include: { position: true } },
               },
             },
             photo: true,

@@ -10,7 +10,12 @@ import { CalendarWorkdayWriterService } from './calendar.workday-writer.service'
 describe('CalendarWorkdayWriterService', () => {
   function createTestContext() {
     const auditLog = {
-      writeFieldChanges: jest.fn(),
+      writeFieldChanges: jest
+        .fn<
+          Promise<void>,
+          [Parameters<AuditLogService['writeFieldChanges']>[0]]
+        >()
+        .mockResolvedValue(undefined),
     };
     const repository = createMockCalendarRepository();
     const writer = new CalendarWorkdayWriterService(
@@ -20,6 +25,58 @@ describe('CalendarWorkdayWriterService', () => {
 
     return { auditLog, repository, writer };
   }
+
+  it.each([
+    ['2026-08-03', true, 8],
+    ['2026-08-01', false, 0],
+    ['2026-08-02', false, 0],
+  ])(
+    'resets %s to the system weekday defaults with audit',
+    async (date, isWorkingDay, workingHours) => {
+      const { auditLog, repository, writer } = createTestContext();
+      repository.findDay.mockResolvedValue(
+        calendarRecord(date, {
+          source: CalendarSource.MANUAL,
+          isHoliday: true,
+          isWorkingDay: false,
+          workingHours: 0,
+        }),
+      );
+      repository.updateWorkday.mockResolvedValue(
+        calendarRecord(date, {
+          source: CalendarSource.SYSTEM,
+          isWorkingDay,
+          workingHours,
+        }),
+      );
+      await writer.resetWorkday(new Date(`${date}T00:00:00.000Z`), 'user-1');
+      expect(repository.updateWorkday).toHaveBeenCalledWith(
+        new Date(`${date}T00:00:00.000Z`),
+        {
+          holidayName: null,
+          isHoliday: false,
+          isPreholiday: false,
+          isWorkingDay,
+          workingHours,
+          source: CalendarSource.SYSTEM,
+        },
+        getTransactionArg(repository),
+      );
+      expect(auditLog.writeFieldChanges).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-1',
+          tx: getTransactionArg(repository),
+        }),
+      );
+      expect(auditLog.writeFieldChanges.mock.calls[0][0].fields).toContainEqual(
+        {
+          fieldName: 'Источник',
+          oldValue: CalendarSource.MANUAL,
+          newValue: CalendarSource.SYSTEM,
+        },
+      );
+    },
+  );
 
   it('sets working hours to zero when day becomes non-working', async () => {
     const { auditLog, repository, writer } = createTestContext();

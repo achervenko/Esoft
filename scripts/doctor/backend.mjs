@@ -120,7 +120,10 @@ export function addDependencyResult(report, label, expectedOk, actual) {
 }
 
 export async function fetchHealth({ config }) {
-  const result = await checkBackendHealth({ config });
+  const result = await checkBackendHealth({
+    config,
+    url: config.backend.internalUrl ?? config.backend.url,
+  });
   return mapHealthResult(result);
 }
 
@@ -133,7 +136,10 @@ export async function waitForBackendHealth({
 
   const result = await waitForBackendHealthOperation({
     checkHealth: async () => {
-      const health = await checkBackendHealth({ config });
+      const health = await checkBackendHealth({
+        config,
+        url: config.backend.internalUrl ?? config.backend.url,
+      });
       lastResult = health;
 
       if (isExpectedHealthResult(health, expectedStatus)) {

@@ -38,6 +38,7 @@ import {
   chiefEngineerRole,
   engineerRole,
   operatorRole,
+  ppeSpecialistRole,
 } from './better-auth-access';
 
 describe('Better Auth access control', () => {
@@ -75,6 +76,7 @@ describe('Better Auth access control', () => {
     ['engineer', engineerRole],
     ['chief_engineer', chiefEngineerRole],
     ['auditor', auditorRole],
+    ['ppe_specialist', ppeSpecialistRole],
   ])('does not grant Better Auth admin permissions to %s', (_role, role) => {
     expect(role.authorize({ user: ['create'] }).success).toBe(false);
     expect(role.authorize({ user: ['set-role'] }).success).toBe(false);

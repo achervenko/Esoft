@@ -2,6 +2,20 @@ import { describe, expect, it } from "vitest";
 import { resolveAppRoute } from "./app-router";
 
 describe("resolveAppRoute", () => {
+  it.each(["issue", "journal", "norms", "catalog"] as const)(
+    "resolves PPE tab %s",
+    (tab) => {
+      expect(resolveAppRoute(`#/ppe?tab=${tab}`)).toEqual({ kind: "ppe", tab });
+    },
+  );
+  it("defaults unknown PPE tabs and rejects unrelated PPE paths", () => {
+    expect(resolveAppRoute("#/ppe")).toEqual({ kind: "ppe", tab: "issue" });
+    expect(resolveAppRoute("#/ppe?tab=unknown")).toEqual({
+      kind: "ppe",
+      tab: "issue",
+    });
+    expect(resolveAppRoute("#/ppe-other")).toEqual({ kind: "unknown" });
+  });
   it("resolves calendar route without query params", () => {
     expect(resolveAppRoute("#/calendar")).toEqual({
       date: null,

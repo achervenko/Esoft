@@ -1,0 +1,37 @@
+.admin-modal.ppe-wide-modal {
+  width: min(1000px, calc(100vw - 40px));
+  max-width: 1000px;
+}
+.ppe-issue-row {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 14px;
+  min-width: 0;
+}
+.ppe-issue-row legend {
+  padding: 0 6px;
+  font-weight: 800;
+  font-size: 14px;
+}
+.ppe-warning {
+  color: #785a16;
+  background: #fff8e5;
+  padding: 10px;
+  border-radius: 6px;
+}
+.ppe-issue-actions {
+  justify-content: flex-end;
+}
+.ppe-issue-row input[type="number"] {
+  appearance: textfield;
+}
+.ppe-issue-row input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.ppe-issue-row input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

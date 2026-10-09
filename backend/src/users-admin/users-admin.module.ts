@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { ImageProcessingModule } from '../image-processing/image-processing.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { PositionsAdminService } from './positions-admin.service';
 import { EmployeesAdminService } from './employees-admin.service';
 import { UserAccountsAdminService } from './user-accounts-admin.service';
 import { UserCredentialsAdminService } from './user-credentials-admin.service';
@@ -18,6 +19,7 @@ import { UsersAdminController } from './users-admin.controller';
   controllers: [UsersAdminController],
   providers: [
     EmployeesAdminService,
+    PositionsAdminService,
     UserAccountsAdminService,
     UserCredentialsAdminService,
     UsersAdminAssertionsService,

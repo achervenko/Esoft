@@ -1,3 +1,4 @@
+import { useConfirmation } from "../../shared/ui/useConfirmation";
 import type { FormEvent } from "react";
 import { getApiErrorMessage } from "../../shared/api/api-error";
 import {
@@ -73,6 +74,7 @@ export function useEquipmentDocumentActions({
   uploadingDocumentType,
   visibleId,
 }: UseEquipmentDocumentActionsParams) {
+  const confirm = useConfirmation();
   const handleFileChange = (
     nextDocumentType: StorageDocumentType,
     file: File | null,
@@ -155,9 +157,11 @@ export function useEquipmentDocumentActions({
   };
 
   const handleDelete = async (file: EquipmentFile) => {
-    const isConfirmed = window.confirm(
-      `${text.deleteConfirmPrefix}${getDisplayName(file)}${text.deleteConfirmSuffix}`,
-    );
+    const isConfirmed = await confirm({
+      title: "Удалить документ?",
+      description: `${text.deleteConfirmPrefix}${getDisplayName(file)}${text.deleteConfirmSuffix}`,
+      variant: "danger",
+    });
 
     if (!isConfirmed) {
       return;

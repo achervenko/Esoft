@@ -51,6 +51,7 @@ export function EquipmentEventFormModal({
   return (
     <AdminModal
       className="equipment-event-form-modal"
+      isCloseDisabled={isSaving}
       onClose={onClose}
       title={mode === "edit" ? "Редактирование события" : "Назначить событие"}
     >
@@ -68,7 +69,7 @@ export function EquipmentEventFormModal({
         />
 
         <label className="form-field">
-          <span>
+          <span className="form-field-label">
             Плановая дата<b aria-hidden="true">*</b>
           </span>
           <input
@@ -96,7 +97,7 @@ export function EquipmentEventFormModal({
         />
 
         <label className="form-field">
-          <span>Комментарий</span>
+          <span className="form-field-label">Комментарий</span>
           <textarea
             onChange={(inputEvent) => form.setNote(inputEvent.target.value)}
             placeholder="Комментарий к событию"
@@ -112,6 +113,7 @@ export function EquipmentEventFormModal({
         <div className="admin-form-actions">
           <button
             className="admin-secondary-button"
+            disabled={isSaving}
             onClick={onClose}
             type="button"
           >

@@ -36,6 +36,8 @@ model User {
   photo                       UserPhoto?
   uploadedUserPhotos          UserPhoto[]         @relation("UploadedUserPhotos")
   uploadedStorageFiles        StorageFile[]       @relation("UploadedStorageFiles")
+  issuedPpe                   PpeIssue[]          @relation("PpeIssuedBy")
+  cancelledPpe                PpeIssue[]          @relation("PpeCancelledBy")
 
   @@unique([email])
   @@unique([username])

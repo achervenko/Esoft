@@ -78,7 +78,8 @@ export function TemplatesPanel({
         sortValue: (template) => template.questionCount,
       },
       {
-        key: "actions",
+    key: "actions",
+    className: "admin-table-actions-column",
         isSortable: false,
         label: "",
         render: (template) => (

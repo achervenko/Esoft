@@ -7,7 +7,13 @@ export type AdminRoleOption = {
 };
 
 export type AdminUserRole =
-  "admin" | "chief_engineer" | "engineer" | "operator" | "auditor";
+  | "admin"
+  | "chief_engineer"
+  | "engineer"
+  | "operator"
+  | "auditor"
+  | "ppe_specialist"
+  | "accounting_specialist";
 
 export type AdminEmployee = {
   accountCount: number;
@@ -22,6 +28,7 @@ export type AdminEmployee = {
   lastName: string;
   middleName: string | null;
   position: string;
+  positionId: number;
 };
 
 export type AdminUserAccount = {
@@ -47,7 +54,7 @@ export type EmployeePayload = {
   firstName: string;
   lastName: string;
   middleName?: string | null;
-  position: string;
+  positionId: number;
 };
 
 export type UserAccountPayload = {
@@ -135,5 +142,33 @@ export function uploadAdminUserPhoto(id: string, file: File) {
 export function deleteAdminUserPhoto(id: string) {
   return request<AdminUserAccount>(`/api/users/admin/accounts/${id}/photo`, {
     method: "DELETE",
+  });
+}
+
+export type AdminPosition = { id: number; name: string; isActive: boolean };
+
+export function getAdminPositions() {
+  return request<AdminPosition[]>("/api/users/admin/positions");
+}
+
+export function saveAdminPosition(
+  id: number | null,
+  payload: { name: string },
+) {
+  return request<AdminPosition>(
+    id === null
+      ? "/api/users/admin/positions"
+      : `/api/users/admin/positions/${id}`,
+    {
+      method: id === null ? "POST" : "PUT",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export function setAdminPositionStatus(id: number, isActive: boolean) {
+  return request<AdminPosition>(`/api/users/admin/positions/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ isActive }),
   });
 }

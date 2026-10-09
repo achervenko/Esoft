@@ -1,0 +1,18 @@
+.page-back-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  width: max-content;
+  color: #3f4652;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}

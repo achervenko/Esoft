@@ -5,7 +5,7 @@ export function DashboardPage() {
   return (
     <div className="dashboard-page">
       <header className="dashboard-page-header">
-        <h1>Панель</h1>
+        <h1 className="page-title">Панель</h1>
       </header>
 
       <EquipmentProgressDashboard />

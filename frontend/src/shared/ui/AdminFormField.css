@@ -1,0 +1,14 @@
+@import "./FormField.css";
+
+.admin-control-field {
+  --field-control-height: 40px;
+  --field-control-padding: 9px 12px;
+  --field-control-size: 14px;
+  --field-control-weight: 500;
+  --field-textarea-height: 76px;
+}
+
+.admin-control-field .admin-control-textarea {
+  min-height: 96px;
+  padding: 10px 12px;
+}

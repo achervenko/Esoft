@@ -1,0 +1,52 @@
+.admin-modal.ppe-clothing-modal {
+  width: min(var(--ppe-clothing-width, 600px), calc(100vw - 40px));
+  max-width: calc(100vw - 40px);
+  transition: width 180ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-modal.ppe-clothing-modal {
+    transition: none;
+  }
+}
+.ppe-clothing-size-grid {
+  display: grid;
+  gap: 6px;
+}
+.ppe-clothing-size-row {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding-bottom: 6px;
+  font-size: 14px;
+}
+.ppe-clothing-height-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
+  gap: 6px;
+}
+.ppe-clothing-height-options button {
+  border: 1px solid #d7dce3;
+  border-radius: 7px;
+  padding: 8px;
+  background: #fff;
+  color: #687385;
+  font: inherit;
+  cursor: pointer;
+}
+.ppe-clothing-height-options button[aria-pressed="true"] {
+  color: #111;
+  font-weight: 750;
+}
+.ppe-clothing-height-options button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.ppe-clothing-custom summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 750;
+}
+.ppe-clothing-custom .ppe-actions {
+  margin-top: 12px;
+}

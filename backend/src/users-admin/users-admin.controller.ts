@@ -16,6 +16,7 @@ import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { Auth } from '../auth/auth.config';
 import { assertAdmin } from '../auth/role-permissions';
 import type { UploadedFileInput } from '../storage/storage.types';
+import { PositionsAdminService } from './positions-admin.service';
 import { EmployeesAdminService } from './employees-admin.service';
 import { UserAccountsAdminService } from './user-accounts-admin.service';
 import { UserCredentialsAdminService } from './user-credentials-admin.service';
@@ -27,12 +28,48 @@ const MAX_USER_PHOTO_SIZE_BYTES = 10 * 1024 * 1024;
 @Controller('api/users/admin')
 export class UsersAdminController {
   constructor(
+    private readonly positionsAdminService: PositionsAdminService,
     private readonly employeeAdminService: EmployeesAdminService,
     private readonly userAccountsAdminService: UserAccountsAdminService,
     private readonly userCredentialsAdminService: UserCredentialsAdminService,
     private readonly userPhotosAdminService: UserPhotosAdminService,
     private readonly userStatusAdminService: UserStatusAdminService,
   ) {}
+
+  @Get('positions')
+  listPositions(@Session() session: UserSession<Auth>) {
+    assertAdmin(session.user.role);
+    return this.positionsAdminService.list();
+  }
+
+  @Post('positions')
+  createPosition(
+    @Body() payload: { name?: unknown },
+    @Session() session: UserSession<Auth>,
+  ) {
+    assertAdmin(session.user.role);
+    return this.positionsAdminService.save(null, payload, session.user.id);
+  }
+
+  @Put('positions/:id')
+  updatePosition(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() payload: { name?: unknown },
+    @Session() session: UserSession<Auth>,
+  ) {
+    assertAdmin(session.user.role);
+    return this.positionsAdminService.save(id, payload, session.user.id);
+  }
+
+  @Patch('positions/:id/status')
+  setPositionStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('isActive') isActive: unknown,
+    @Session() session: UserSession<Auth>,
+  ) {
+    assertAdmin(session.user.role);
+    return this.positionsAdminService.setStatus(id, isActive, session.user.id);
+  }
 
   @Get('roles')
   listRoles(@Session() session: UserSession<Auth>) {

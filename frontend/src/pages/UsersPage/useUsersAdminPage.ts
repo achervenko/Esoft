@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   createAdminUserAccount,
   deleteAdminUserPhoto,
@@ -39,30 +39,33 @@ export function useUsersAdminPage({
   const [photoUser, setPhotoUser] = useState<AdminUserAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const isSavingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const isAdmin = userRole === "admin";
 
-  const loadData = () => {
+  const loadData = async () => {
     setIsLoading(true);
     setError(null);
 
-    Promise.all([getAdminEmployees(), getAdminUserAccounts(), getAdminRoles()])
-      .then(([employeeItems, userItems, roleItems]) => {
-        setEmployees(employeeItems);
-        setUsers(userItems);
-        setRoles(roleItems);
-      })
-      .catch((requestError) =>
-        setError(getUsersAdminErrorMessage(requestError)),
-      )
-      .finally(() => setIsLoading(false));
+    try {
+      const [employeeItems, userItems, roleItems] = await Promise.all([
+        getAdminEmployees(), getAdminUserAccounts(), getAdminRoles(),
+      ]);
+      setEmployees(employeeItems);
+      setUsers(userItems);
+      setRoles(roleItems);
+    } catch (requestError) {
+      setError(getUsersAdminErrorMessage(requestError));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
     if (isAdmin) {
-      loadData();
+      void loadData();
       return;
     }
 
@@ -84,11 +87,12 @@ export function useUsersAdminPage({
           role: payload.role,
           username: payload.username,
         });
+        refreshCurrentUserIfNeeded(userForm.id);
         setMessage("Учётная запись обновлена.");
       }
 
       setUserForm(null);
-      loadData();
+      await loadData();
     });
   };
 
@@ -132,21 +136,18 @@ export function useUsersAdminPage({
     });
   };
 
-  const toggleUserStatus = async (user: AdminUserAccount) => {
-    setError(null);
-
-    try {
+  const toggleUserStatus = (user: AdminUserAccount) =>
+    runSavingAction(async () => {
       await setAdminUserStatus(user.id, !user.banned);
       setMessage(
         user.banned ? "Учётная запись включена." : "Учётная запись отключена.",
       );
-      loadData();
-    } catch (requestError) {
-      setError(getUsersAdminErrorMessage(requestError));
-    }
-  };
+      await loadData();
+    });
 
   const runSavingAction = async (action: () => Promise<void>) => {
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
     setIsSaving(true);
     setError(null);
 
@@ -155,6 +156,7 @@ export function useUsersAdminPage({
     } catch (requestError) {
       setError(getUsersAdminErrorMessage(requestError));
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   };

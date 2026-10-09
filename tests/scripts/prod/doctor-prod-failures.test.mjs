@@ -34,6 +34,8 @@ test('doctor:prod continues independent checks after PostgreSQL failure', async 
     'checkStorageBucket',
     'checkBackendBuild',
     'checkFrontendBuild',
+    'checkBackendRuntimeHealth',
+    'checkFrontendHttp',
   ]);
 });
 
@@ -89,6 +91,8 @@ test('doctor:prod maps thrown check exceptions and continues', async () => {
     'checkStorageBucket',
     'checkBackendBuild',
     'checkFrontendBuild',
+    'checkBackendRuntimeHealth',
+    'checkFrontendHttp',
   ]);
 });
 

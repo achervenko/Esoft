@@ -170,42 +170,54 @@ BETTER_AUTH_SECRET: Замените значение-заглушку на ло
 
 Решение: замените значение на длинный случайный секрет.
 
-### Смешаны разные адреса
+### Адреса процессов и публичные URL
 
-Для локального запуска используйте одну схему адресов:
+`BACKEND_HOST` / `BACKEND_PORT` задают внутренний HTTP listener backend. `FRONTEND_HOST` / `FRONTEND_PORT` задают listener Vite dev/preview; при отдаче production frontend веб-сервером эти параметры не определяют его публичный адрес.
+
+`BACKEND_URL`, `FRONTEND_URL`, `VITE_API_URL` и `BETTER_AUTH_URL` — адреса, доступные пользователю. Они могут отличаться от адресов и портов процессов. `FRONTEND_URL` также задаёт доверенный origin для CORS/авторизации; `BETTER_AUTH_URL` — публичный origin авторизации.
+
+#### Локальная разработка без reverse proxy
+
+Публичные URL обычно соответствуют адресам и портам процессов:
 
 ```env
+BACKEND_HOST=127.0.0.1
+BACKEND_PORT=3000
 BACKEND_URL=http://127.0.0.1:3000
-FRONTEND_URL=http://127.0.0.1:5173
-VITE_API_URL=http://127.0.0.1:3000
-BETTER_AUTH_URL=http://127.0.0.1:3000
-```
-
-Если запускаете проект по IP-адресу локальной сети, используйте этот IP во всех
-связанных URL.
-
-Связанные URL обычно должны меняться вместе:
-
-```env
-BACKEND_URL=http://127.0.0.1:3000
-BETTER_AUTH_URL=http://127.0.0.1:3000
-VITE_API_URL=http://127.0.0.1:3000
-```
-
-`FRONTEND_URL` обычно должен соответствовать `FRONTEND_HOST` и `FRONTEND_PORT`:
-
-```env
 FRONTEND_HOST=127.0.0.1
 FRONTEND_PORT=5173
 FRONTEND_URL=http://127.0.0.1:5173
+VITE_API_URL=http://127.0.0.1:3000
+BETTER_AUTH_URL=http://127.0.0.1:3000
 ```
+
+Для прямого доступа с телефона по LAN используйте доступный IP компьютера в публичных URL и настройте listener/firewall для подключения извне. Listener может быть `0.0.0.0`, но этот адрес не является публичным URL.
+
+#### Production за reverse proxy
+
+Proxy принимает HTTPS на домене, отдаёт frontend и направляет `/api` (включая `/api/auth`) на внутренний backend без изменения пути:
+
+```env
+BACKEND_HOST=127.0.0.1
+BACKEND_PORT=3000
+BACKEND_URL=https://insolution-esoft.ru
+FRONTEND_HOST=127.0.0.1
+FRONTEND_PORT=5173
+FRONTEND_URL=https://insolution-esoft.ru
+VITE_API_URL=https://insolution-esoft.ru
+BETTER_AUTH_URL=https://insolution-esoft.ru
+```
+
+Совпадение публичного URL с host/port процесса не требуется. TLS завершается на proxy; backend продолжает слушать внутренний HTTP. Домен должен разрешаться и быть доступен в сети предприятия. После изменения `VITE_API_URL` пересоберите frontend.
+
+Внутренние адреса `config.backend.internalUrl` и `config.frontend.internalUrl` вычисляются из host/port. Для wildcard `0.0.0.0` используется `127.0.0.1`, для `::` — `::1`. Vite proxy и локальный doctor используют эти HTTP-адреса. `doctor:prod` проверяет публичные `BACKEND_URL` и `FRONTEND_URL`, включая доступность настроенного proxy с машины запуска команды.
 
 ## Управление проектом
 
 Все основные команды выполняются из корня репозитория:
 
 ```bash
-npm install
+npm ci
 npm run dev
 npm run doctor
 npm run build

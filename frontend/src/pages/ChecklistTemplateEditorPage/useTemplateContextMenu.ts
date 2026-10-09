@@ -185,7 +185,7 @@ export function useTemplateContextMenu({
     const handlePointerDown = (event: PointerEvent) => {
       if (
         event.target instanceof Element &&
-        event.target.closest(".checklist-structure-context-menu")
+        event.target.closest(".app-context-menu")
       ) {
         return;
       }

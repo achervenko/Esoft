@@ -1,6 +1,7 @@
 import { lstat, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
+import { hasValidBackupChecksums } from './backup-integrity.mjs';
 import { failure, success } from '../infrastructure/result.mjs';
 import { formatError } from '../infrastructure/security/redaction.mjs';
 
@@ -93,8 +94,8 @@ function validateRestoreManifest({ config, manifest }) {
     return invalidManifest('Backup manifest must be an object');
   }
 
-  if (manifest.formatVersion !== 1) {
-    return invalidManifest('Backup manifest format is unsupported', {
+  if (manifest.formatVersion !== 2) {
+    return invalidManifest('Backup manifest format is unsupported; format 2 with checksums is required', {
       formatVersion: manifest.formatVersion,
     });
   }
@@ -132,6 +133,10 @@ function validateRestoreManifest({ config, manifest }) {
 
   if (!isNonNegativeInteger(manifest.storage?.totalBytes)) {
     return invalidManifest('Backup manifest totalBytes is invalid');
+  }
+
+  if (!hasValidBackupChecksums(manifest)) {
+    return invalidManifest('Backup checksum metadata is missing or invalid');
   }
 
   return success('RESTORE_MANIFEST_VALID', 'Backup manifest is valid');

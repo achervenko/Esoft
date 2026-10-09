@@ -111,25 +111,25 @@ function PdfPreviewModalFallback({
 
   return createPortal(
     <div
-      className="equipment-documents-pdf-preview-backdrop"
+      className="pdf-preview-backdrop"
       onClick={onClose}
       role="presentation"
     >
       <section
         aria-label={fileName || "PDF"}
         aria-modal="true"
-        className="equipment-documents-pdf-preview-modal"
+        className="pdf-preview-modal"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <header className="equipment-documents-pdf-preview-header">
-          <div className="equipment-documents-pdf-preview-title">
+        <header className="pdf-preview-header">
+          <div className="pdf-preview-title">
             <span>{fileName || "PDF"}</span>
           </div>
 
           <button
             aria-label="Закрыть"
-            className="equipment-documents-pdf-preview-close"
+            className="pdf-preview-close pdf-preview-close-text"
             onClick={onClose}
             type="button"
           >

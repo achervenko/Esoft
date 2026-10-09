@@ -58,11 +58,11 @@ test('restore completes PostgreSQL and MinIO replacement', async () => {
       '--exit-on-error',
       '--single-transaction',
     ]) {
-      assert.equal(commandCalls[1].args.includes(argument), true);
+      assert.equal(commandCalls[2].args.includes(argument), true);
     }
 
-    assert.equal(commandCalls[1].args.some((arg) => arg.includes(SECRET_MARKERS[0])), false);
-    assert.equal(commandCalls[1].options.env.PGPASSWORD, SECRET_MARKERS[0]);
+    assert.equal(commandCalls[2].args.some((arg) => arg.includes(SECRET_MARKERS[0])), false);
+    assert.equal(commandCalls[2].options.env.PGPASSWORD, SECRET_MARKERS[0]);
     assertNoSecretLeak(result);
   } finally {
     await project.remove();

@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppShell } from './layouts/AppShell';
-import { authClient } from './lib/auth-client';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AppShell } from "./layouts/AppShell";
+import { authClient } from "./lib/auth-client";
 import {
-  DEFAULT_AUTH_ROUTE,
   LOGIN_ROUTE,
   SETUP_ROUTE,
   getHashRoute,
@@ -10,17 +9,21 @@ import {
   isSetupRoute,
   setHashRoute,
   subscribeHashRouteNavigation,
-} from './lib/hash-router';
-import { LoginPage } from './pages/LoginPage';
-import { SetupPage } from './pages/SetupPage';
+} from "./lib/hash-router";
+import {
+  canAccessWorkspaceRoute,
+  getDefaultAuthRoute,
+} from "./lib/role-navigation";
+import { LoginPage } from "./pages/LoginPage";
+import { SetupPage } from "./pages/SetupPage";
 import {
   getAuthenticatedUser,
   waitForAuthenticatedUser,
   type SessionUser,
-} from './shared/api/auth-session';
-import { getSetupStatus } from './shared/api/setup';
-import { subscribeSessionExpired } from './shared/api/session-expired';
-import { markCurrentHashHistoryEntry } from './shared/lib/hash-history-marker';
+} from "./shared/api/auth-session";
+import { getSetupStatus } from "./shared/api/setup";
+import { subscribeSessionExpired } from "./shared/api/session-expired";
+import { markCurrentHashHistoryEntry } from "./shared/lib/hash-history-marker";
 
 function App() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
@@ -53,12 +56,12 @@ function App() {
     };
     const unsubscribeNavigation = subscribeHashRouteNavigation(updateRoute);
 
-    window.addEventListener('hashchange', handleHashChange);
+    window.addEventListener("hashchange", handleHashChange);
     handleHashChange();
 
     return () => {
       unsubscribeNavigation();
-      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener("hashchange", handleHashChange);
     };
   }, [updateRoute]);
 
@@ -77,7 +80,7 @@ function App() {
       .catch(() => {
         if (isMounted) {
           setSetupError(
-            'Не удалось проверить состояние первоначальной настройки.',
+            "Не удалось проверить состояние первоначальной настройки.",
           );
         }
       })
@@ -145,17 +148,22 @@ function App() {
     }
 
     if (isSetupRoute(route)) {
-      setHashRoute(isAuthenticated ? DEFAULT_AUTH_ROUTE : LOGIN_ROUTE);
+      setHashRoute(
+        isAuthenticated ? getDefaultAuthRoute(user?.role) : LOGIN_ROUTE,
+      );
       return;
     }
 
     if (isAuthenticated && isLoginRoute(route)) {
-      setHashRoute(DEFAULT_AUTH_ROUTE);
+      setHashRoute(getDefaultAuthRoute(user?.role));
       return;
     }
 
     if (!isAuthenticated && !isLoginRoute(route)) {
       setHashRoute(LOGIN_ROUTE);
+    }
+    if (isAuthenticated && !canAccessWorkspaceRoute(user?.role, route)) {
+      setHashRoute(getDefaultAuthRoute(user?.role));
     }
   }, [
     isAuthenticated,
@@ -164,6 +172,7 @@ function App() {
     route,
     setupError,
     setupRequired,
+    user?.role,
   ]);
 
   const handleLogout = async () => {
@@ -180,7 +189,7 @@ function App() {
       const sessionUser = await waitForAuthenticatedUser();
 
       setUser(sessionUser);
-      setHashRoute(DEFAULT_AUTH_ROUTE);
+      setHashRoute(getDefaultAuthRoute(sessionUser?.role));
     } catch (error) {
       setUser(null);
       throw error;
@@ -204,7 +213,10 @@ function App() {
 
   if (isCheckingSetup) {
     return (
-      <main className="empty-page" aria-label="Проверка первоначальной настройки">
+      <main
+        className="empty-page"
+        aria-label="Проверка первоначальной настройки"
+      >
         Проверка первоначальной настройки...
       </main>
     );

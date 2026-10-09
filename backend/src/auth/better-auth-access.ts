@@ -36,3 +36,9 @@ export const engineerRole = ac.newRole({
   user: [],
   session: [],
 });
+
+export const ppeSpecialistRole = ac.newRole({
+  user: [],
+  session: [],
+});
+export const accountingSpecialistRole = ac.newRole({ user: [], session: [] });

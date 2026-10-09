@@ -1,0 +1,106 @@
+.equipment-progress-gauge {
+  position: relative;
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+}
+
+.equipment-progress-gauge svg {
+  width: min(100%, 375px);
+  overflow: visible;
+}
+
+.equipment-progress-gauge-track,
+.equipment-progress-gauge-value {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 10;
+}
+
+.equipment-progress-gauge-track {
+  opacity: 0.18;
+  stroke: url("#equipment-progress-gauge-gradient");
+}
+
+.equipment-progress-gauge-value {
+  stroke: url("#equipment-progress-gauge-gradient");
+}
+
+.equipment-progress-gauge-needle {
+  stroke: #111827;
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+.equipment-progress-gauge-center {
+  fill: #111827;
+}
+
+.equipment-progress-gauge strong {
+  position: absolute;
+  top: 146px;
+  color: #15171c;
+  font-size: 38px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.equipment-progress-summary,
+.equipment-progress-forecast {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.equipment-progress-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.equipment-progress-summary div {
+  min-width: 0;
+  border: 1px solid #eef0f3;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.equipment-progress-summary dt {
+  margin: 0 0 4px;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.equipment-progress-summary dd {
+  margin: 0;
+  color: #15171c;
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.equipment-progress-forecast div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+}
+
+.equipment-progress-forecast div + div {
+  border-top: 1px solid #eef0f3;
+}
+
+.equipment-progress-forecast dt {
+  margin: 0;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.equipment-progress-forecast dd {
+  margin: 0;
+  color: #15171c;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 850;
+}

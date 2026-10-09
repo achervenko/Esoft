@@ -30,6 +30,8 @@ test('doctor:prod happy path reports production environment ready', async () => 
     'checkStorageBucket',
     'checkBackendBuild',
     'checkFrontendBuild',
+    'checkBackendRuntimeHealth',
+    'checkFrontendHttp',
   ]);
 });
 
@@ -60,7 +62,7 @@ test('doctor:prod skips config-dependent checks when production config is invali
     result.details.checks.filter(
       (check) => check.result.code === 'PROD_DOCTOR_CHECK_SKIPPED',
     ).length,
-    3,
+    5,
   );
   assertNoSecretLeak(result);
   assertNoSecretLeak(output.lines);

@@ -10,6 +10,8 @@ import {
   chiefEngineerRole,
   engineerRole,
   operatorRole,
+  ppeSpecialistRole,
+  accountingSpecialistRole,
 } from './better-auth-access';
 import { getFrontendOrigins } from '../config/frontend-origins';
 import { loadRootConfig } from '../config/root-environment';
@@ -63,6 +65,8 @@ export const auth = betterAuth({
         auditor: auditorRole,
         chief_engineer: chiefEngineerRole,
         engineer: engineerRole,
+        ppe_specialist: ppeSpecialistRole,
+        accounting_specialist: accountingSpecialistRole,
       },
       defaultRole: 'operator',
       adminRoles: ['admin'],

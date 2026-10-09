@@ -10,16 +10,16 @@ import type { EquipmentCreateOptions } from "../../shared/api/equipment/equipmen
 import {
   toEquipmentCreatePayload,
   toEquipmentFormState,
-} from "../EquipmentCreatePage/model/equipment-create-form.mapper";
+} from "../../modules/equipment-create-form/model/equipment-create-form.mapper";
 import {
   type EquipmentCreateFieldErrors,
   initialEquipmentCreateFormState,
   type EquipmentCreateFormState,
-} from "../EquipmentCreatePage/model/equipment-create-form.types";
+} from "../../modules/equipment-create-form/model/equipment-create-form.types";
 import {
   getEquipmentFieldErrorsFromMessage,
   validateEquipmentCreateForm,
-} from "../EquipmentCreatePage/model/equipment-create-form.validation";
+} from "../../modules/equipment-create-form/model/equipment-create-form.validation";
 import {
   buildEquipmentViewHref,
   type EquipmentEditTab,

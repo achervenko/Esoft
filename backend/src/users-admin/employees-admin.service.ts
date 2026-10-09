@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { toEmployeeDto } from './users-admin.mapper';
@@ -8,6 +9,7 @@ import {
 } from './users-admin.validation';
 import { throwNotFoundIfPrismaError } from './users-admin.errors';
 import { UsersAdminAuditService } from './users-admin-audit.service';
+import { getBusinessTodayDate } from '../application/business-date';
 
 type EmployeePayload = Parameters<typeof parseEmployeePayload>[0];
 
@@ -18,9 +20,26 @@ export class EmployeesAdminService {
     private readonly prisma: PrismaService,
   ) {}
 
+  private async assertPosition(
+    tx: Prisma.TransactionClient,
+    id: number,
+    currentId?: number,
+  ) {
+    const rows = await tx.$queryRaw<Array<{ isActive: boolean }>>`
+      SELECT is_active AS "isActive" FROM positions WHERE id = ${id} FOR SHARE
+    `;
+    if (!rows[0]) {
+      throwBadRequest('POSITION_NOT_FOUND', 'Должность не найдена.');
+    }
+    if (!rows[0].isActive && id !== currentId) {
+      throwBadRequest('POSITION_INACTIVE', 'Выберите активную должность.');
+    }
+  }
+
   async listEmployees(currentUserId?: string | null) {
     const employees = await this.prisma.employee.findMany({
       include: {
+        position: true,
         _count: {
           select: {
             employeeUsers: true,
@@ -50,11 +69,18 @@ export class EmployeesAdminService {
 
   async createEmployee(payload: EmployeePayload, actorUserId?: string | null) {
     const employee = await this.prisma.$transaction(async (tx) => {
+      const data = parseEmployeePayload(payload);
+      await this.assertPosition(tx, data.positionId);
       const nextEmployee = await tx.employee.create({
-        data: parseEmployeePayload(payload),
+        include: { position: true },
+        data: { ...data, positionAssignedAt: getBusinessTodayDate() },
       });
 
-      await this.audit.logEmployeeCreated(nextEmployee, actorUserId, tx);
+      await this.audit.logEmployeeCreated(
+        toEmployeeDto(nextEmployee),
+        actorUserId,
+        tx,
+      );
 
       return nextEmployee;
     });
@@ -69,12 +95,26 @@ export class EmployeesAdminService {
   ) {
     try {
       return await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM employees WHERE id = ${employeeId} FOR UPDATE`;
         const currentEmployee = await tx.employee.findUniqueOrThrow({
+          include: { position: true },
           where: { id: employeeId },
         });
+        const data = parseEmployeePayload(payload);
+        await this.assertPosition(
+          tx,
+          data.positionId,
+          currentEmployee.positionId,
+        );
         const employee = await tx.employee.update({
-          data: parseEmployeePayload(payload),
+          data: {
+            ...data,
+            ...(data.positionId !== currentEmployee.positionId
+              ? { positionAssignedAt: getBusinessTodayDate() }
+              : {}),
+          },
           include: {
+            position: true,
             _count: {
               select: {
                 employeeUsers: true,
@@ -97,8 +137,8 @@ export class EmployeesAdminService {
 
         await this.audit.logEmployeeUpdated({
           actorUserId,
-          newEmployee: employee,
-          oldEmployee: currentEmployee,
+          newEmployee: toEmployeeDto(employee),
+          oldEmployee: toEmployeeDto(currentEmployee),
           tx,
         });
 
@@ -119,8 +159,10 @@ export class EmployeesAdminService {
 
     try {
       return await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM employees WHERE id = ${params.employeeId} FOR UPDATE`;
         const currentEmployee = await tx.employee.findUniqueOrThrow({
           include: {
+            position: true,
             _count: {
               select: {
                 employeeUsers: true,
@@ -169,6 +211,7 @@ export class EmployeesAdminService {
           ? await tx.employee.update({
               data: { isActive },
               include: {
+                position: true,
                 _count: {
                   select: {
                     employeeUsers: true,
@@ -226,6 +269,7 @@ export class EmployeesAdminService {
 
           employee = await tx.employee.findUniqueOrThrow({
             include: {
+              position: true,
               _count: {
                 select: {
                   employeeUsers: true,

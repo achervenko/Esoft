@@ -48,10 +48,9 @@ export class SetupService {
         await this.state.assertSetupRequired(tx);
 
         await this.state.assertEmailAndUsernameAvailable(input, tx);
-        const employee = await this.state.lockSetupEmployee(
-          input.employeeId,
-          tx,
-        );
+        const employee = input.employee
+          ? await this.state.createSetupEmployee(input.employee, tx)
+          : await this.state.lockSetupEmployee(input.employeeId, tx);
         const user = await this.auth.createInitialAdminUser(input, employee);
         createdUserId = user.id;
 

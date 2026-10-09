@@ -93,6 +93,7 @@ export async function runProductionRestore(options = {}) {
   const artifactsStage = await stage(4, 'Validating backup artifacts', () =>
     operations.validateRestoreArtifacts({
       backupPath: restoreState.backupPath,
+      manifest,
       expectedObjectCount: manifest.storage.objectCount,
       expectedTotalBytes: manifest.storage.totalBytes,
     }),
@@ -110,16 +111,18 @@ export async function runProductionRestore(options = {}) {
 
   const { dumpPath, storagePath } = artifactsStage.result.details;
 
-  const pgRestoreStage = await stage(5, 'Checking pg_restore', () =>
-    operations.checkPgRestoreAvailable({
+  const pgRestoreStage = await stage(5, 'Checking pg_restore and archive', async () => {
+    const available = await operations.checkPgRestoreAvailable({
       config,
       runCommand: context.runCommand,
-    }),
-  );
+    });
+    if (!available.ok) return available;
+    return operations.verifyPostgresArchive({ config, dumpPath, runCommand: context.runCommand });
+  });
 
   if (!pgRestoreStage.result.ok) {
     return fail({
-      failedStage: 'Checking pg_restore',
+      failedStage: 'Checking pg_restore and archive',
       reporter,
       restoreState,
       result: pgRestoreStage.result,

@@ -9,16 +9,33 @@ import {
   getTemplateConfirmTitle,
   type TemplateEditorConfirmState,
 } from "./checklist-template-editor.utils";
-import type { useChecklistTemplateEditor } from "./useChecklistTemplateEditor";
-
-type EditorState = ReturnType<typeof useChecklistTemplateEditor>;
+import type {
+  ChecklistModule,
+  ChecklistQuestion,
+  ChecklistTemplateDetail,
+  ChecklistTemplateModule,
+} from "../../shared/api/checklists";
 
 type ChecklistTemplateEditorModalsProps = {
-  addQuestionModule: NonNullable<EditorState["template"]>["modules"][number] | null;
-  addQuestionQuestions: EditorState["questions"];
+  addQuestionModule: ChecklistTemplateModule | null;
+  addQuestionQuestions: ChecklistQuestion[];
   confirm: TemplateEditorConfirmState;
   editMainData: boolean;
-  editor: EditorState;
+  template: ChecklistTemplateDetail | null;
+  questions: ChecklistQuestion[];
+  isNewTemplate: boolean;
+  isCopyTemplate: boolean;
+  isSaving: boolean;
+  updateMainData: (payload: {
+    name: string;
+    description?: string | null;
+  }) => Promise<boolean>;
+  addModuleWithQuestions: (
+    moduleId: number,
+    questionIds: number[],
+    index: number,
+  ) => Promise<boolean>;
+  addQuestions: (moduleId: number, questionIds: number[]) => Promise<boolean>;
   mainDataError: string | null;
   addModuleTargetIndex: number | null;
   onCloseAddModule: () => void;
@@ -26,13 +43,10 @@ type ChecklistTemplateEditorModalsProps = {
   onCloseConfirm: () => void;
   onCloseEditMainData: () => void;
   onClosePreview: () => void;
-  onConfirmAction: (
-    editor: EditorState,
-    pendingExitHref: string,
-  ) => Promise<boolean>;
-  pendingExitHref: string;
+  onConfirmAction: () => Promise<boolean>;
+
   previewOpen: boolean;
-  selectedModule: EditorState["modules"][number] | null;
+  selectedModule: ChecklistModule | null;
 };
 
 export function ChecklistTemplateEditorModals({
@@ -40,7 +54,14 @@ export function ChecklistTemplateEditorModals({
   addQuestionQuestions,
   confirm,
   editMainData,
-  editor,
+  template,
+  questions,
+  isNewTemplate,
+  isCopyTemplate,
+  isSaving,
+  updateMainData,
+  addModuleWithQuestions,
+  addQuestions,
   mainDataError,
   addModuleTargetIndex,
   onCloseAddModule,
@@ -49,12 +70,10 @@ export function ChecklistTemplateEditorModals({
   onCloseEditMainData,
   onClosePreview,
   onConfirmAction,
-  pendingExitHref,
+
   previewOpen,
   selectedModule,
 }: ChecklistTemplateEditorModalsProps) {
-  const template = editor.template;
-
   if (!template) {
     return null;
   }
@@ -63,41 +82,39 @@ export function ChecklistTemplateEditorModals({
     <>
       {editMainData ? (
         <TemplateMainDataModal
-          autoFocusName={editor.isNewTemplate}
+          autoFocusName={isNewTemplate}
           initialError={mainDataError}
-          isSaving={editor.isSaving}
+          isSaving={isSaving}
           onClose={onCloseEditMainData}
           onSubmit={(payload) => {
-            void editor.updateMainData(payload).then((isSuccess) => {
+            void updateMainData(payload).then((isSuccess) => {
               if (isSuccess) {
                 onCloseEditMainData();
               }
             });
           }}
-          selectNameOnFocus={editor.isCopyTemplate}
+          selectNameOnFocus={isCopyTemplate}
           template={template}
         />
       ) : null}
 
       {selectedModule ? (
         <AddModuleModal
-          isSaving={editor.isSaving}
+          isSaving={isSaving}
           module={selectedModule}
           onClose={onCloseAddModule}
           onSubmit={(questionIds) => {
-            void editor
-              .addModuleWithQuestions(
-                selectedModule.id,
-                questionIds,
-                addModuleTargetIndex ?? template.modules.length,
-              )
-              .then((isSuccess) => {
-                if (isSuccess) {
-                  onCloseAddModule();
-                }
-              });
+            void addModuleWithQuestions(
+              selectedModule.id,
+              questionIds,
+              addModuleTargetIndex ?? template.modules.length,
+            ).then((isSuccess) => {
+              if (isSuccess) {
+                onCloseAddModule();
+              }
+            });
           }}
-          questions={editor.questions.filter(
+          questions={questions.filter(
             (question) => question.checklistModuleId === selectedModule.id,
           )}
         />
@@ -105,17 +122,17 @@ export function ChecklistTemplateEditorModals({
 
       {addQuestionModule ? (
         <AddQuestionModal
-          isSaving={editor.isSaving}
+          isSaving={isSaving}
           module={addQuestionModule}
           onClose={onCloseAddQuestion}
           onSubmit={(questionIds) => {
-            void editor
-              .addQuestions(addQuestionModule.id, questionIds)
-              .then((isSuccess) => {
+            void addQuestions(addQuestionModule.id, questionIds).then(
+              (isSuccess) => {
                 if (isSuccess) {
                   onCloseAddQuestion();
                 }
-              });
+              },
+            );
           }}
           questions={addQuestionQuestions}
         />
@@ -130,11 +147,11 @@ export function ChecklistTemplateEditorModals({
           cancelLabel="Остаться"
           confirmLabel={getTemplateConfirmLabel()}
           description={getTemplateConfirmDescription()}
-          isLoading={editor.isSaving}
+          isLoading={isSaving}
           loadingLabel="Выполняется..."
           onCancel={onCloseConfirm}
           onConfirm={() => {
-            void onConfirmAction(editor, pendingExitHref).then((isSuccess) => {
+            void onConfirmAction().then((isSuccess) => {
               if (isSuccess) {
                 onCloseConfirm();
               }

@@ -1,3 +1,4 @@
+import { getBusinessTodayDate } from '../application/business-date';
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -7,12 +8,14 @@ import {
   throwSetupEmployeeInactive,
   throwSetupEmployeeNotFound,
   throwSetupUsernameAlreadyExists,
+  throwSetupInvalidPayload,
 } from './setup.errors';
 import { lockSetupTransaction } from './setup-lock';
 import {
   type ActiveAdminRow,
   type CreateInitialAdminInput,
   type SetupEmployeeDto,
+  type SetupNewEmployee,
   type SetupEmployeeRow,
   formatSetupEmployeeFullName,
 } from './setup.types';
@@ -54,9 +57,12 @@ export class SetupStateService {
       LIMIT 1
     `;
 
-    await this.logInvalidAdministratorState(tx);
+    const admin = admins[0];
+    if (!admin) {
+      await this.logInvalidAdministratorState(tx);
+    }
 
-    return Boolean(admins[0]);
+    return Boolean(admin);
   }
 
   async listEmployees(): Promise<{ employees: SetupEmployeeDto[] }> {
@@ -66,12 +72,13 @@ export class SetupStateService {
       await this.assertSetupRequired(tx);
 
       const employees = await tx.$queryRaw<SetupEmployeeRow[]>`
-        SELECT id, last_name, first_name, middle_name, position
+        SELECT employee.id, last_name, first_name, middle_name, position.name AS position
         FROM employees employee
+        JOIN positions position ON position.id = employee.position_id
         WHERE employee.is_active = true
           AND employee.last_name <> ''
           AND employee.first_name <> ''
-          AND employee.position <> ''
+          AND position.name <> ''
         ORDER BY last_name ASC, first_name ASC, middle_name ASC NULLS LAST
       `;
 
@@ -108,12 +115,40 @@ export class SetupStateService {
     }
   }
 
+  async createSetupEmployee(
+    input: SetupNewEmployee,
+    tx: Prisma.TransactionClient,
+  ): Promise<SetupEmployeeRow> {
+    const positions = await tx.$queryRaw<Array<{ id: number; name: string }>>`
+      SELECT id, name FROM positions WHERE lower(name) = lower('Админ') AND is_active = true FOR SHARE
+    `;
+    const position = positions[0];
+    if (!position)
+      throwSetupInvalidPayload('Активная должность Админ не найдена.');
+    const employee = await tx.employee.create({
+      data: {
+        ...input,
+        positionId: position.id,
+        positionAssignedAt: getBusinessTodayDate(),
+        isActive: true,
+      },
+    });
+    return {
+      id: employee.id,
+      first_name: employee.firstName,
+      last_name: employee.lastName,
+      middle_name: employee.middleName,
+      position: position.name,
+    };
+  }
+
   async lockSetupEmployee(employeeId: number, tx: Prisma.TransactionClient) {
     const employees = await tx.$queryRaw<LockedSetupEmployeeRow[]>`
-      SELECT id, last_name, first_name, middle_name, position, is_active
-      FROM employees
-      WHERE id = ${employeeId}
-      FOR UPDATE
+      SELECT employee.id, last_name, first_name, middle_name, position.name AS position, employee.is_active
+      FROM employees employee
+      JOIN positions position ON position.id = employee.position_id
+      WHERE employee.id = ${employeeId}
+      FOR UPDATE OF employee
     `;
     const employee = employees[0];
 

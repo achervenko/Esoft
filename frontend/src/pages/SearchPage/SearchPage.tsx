@@ -25,7 +25,7 @@ function replaceSearchQueryInHash(query: string) {
     : "#/search";
 
   if (window.location.hash !== nextHash) {
-    window.history.replaceState(null, "", nextHash);
+    window.history.replaceState(window.history.state, "", nextHash);
   }
 }
 
@@ -67,8 +67,14 @@ export function SearchPage() {
   const isQueryReady = normalizedQuery.length >= MIN_QUERY_LENGTH;
 
   useEffect(() => {
-    replaceSearchQueryInHash(query);
-  }, [query]);
+    const syncQueryFromHash = () => {
+      if (window.location.hash.split("?")[0] === "#/search") {
+        setQuery(getSearchQueryFromHash());
+      }
+    };
+    window.addEventListener("hashchange", syncQueryFromHash);
+    return () => window.removeEventListener("hashchange", syncQueryFromHash);
+  }, []);
 
   useEffect(() => {
     if (!isQueryReady) {
@@ -79,6 +85,9 @@ export function SearchPage() {
     }
 
     let isMounted = true;
+    setResults([]);
+    setIsLoading(true);
+    setError(null);
     const timeoutId = window.setTimeout(() => {
       setIsLoading(true);
       setError(null);
@@ -135,7 +144,11 @@ export function SearchPage() {
             <input
               aria-label="Поиск"
               autoFocus
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                const nextQuery = event.target.value;
+                setQuery(nextQuery);
+                replaceSearchQueryInHash(nextQuery);
+              }}
               placeholder="Название, инвентарный номер, модель, ответственный..."
               type="search"
               value={query}
@@ -149,7 +162,7 @@ export function SearchPage() {
 
         {error ? <p className="admin-form-error">{error}</p> : null}
 
-        {!error && isQueryReady ? (
+        {!error && isQueryReady && !isLoading ? (
           <SearchResults items={results} />
         ) : null}
       </section>

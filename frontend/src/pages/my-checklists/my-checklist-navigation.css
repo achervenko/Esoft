@@ -1,0 +1,23 @@
+.my-checklists-view-header {
+  margin-bottom: 0;
+}
+
+.my-checklists-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #374151;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+@media (max-width: 720px) {
+  .my-checklists-detail-summary dl {
+    grid-template-columns: 1fr;
+  }
+
+  .my-checklists-detail-title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

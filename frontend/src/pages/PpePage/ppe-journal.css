@@ -1,0 +1,137 @@
+.ppe-journal-search {
+  margin-bottom: 16px;
+  padding-right: 6px;
+}
+.ppe-journal-search input {
+  flex: 1;
+}
+.ppe-journal-icon-button {
+  color: #475467;
+  cursor: pointer;
+  background: 0 0;
+  border: 0;
+  border-radius: 6px;
+  flex: 0 0 36px;
+  justify-content: center;
+  align-items: center;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  position: relative;
+}
+.ppe-journal-icon-button:hover {
+  background: #f2f4f7;
+}
+.ppe-journal-icon-button:focus-visible {
+  outline-offset: 2px;
+  outline: 2px solid #475467;
+}
+.ppe-journal-filter-active {
+  color: #fff;
+  background: #111;
+}
+.ppe-journal-filter-active:hover {
+  background: #333;
+}
+.ppe-journal-filter-count {
+  color: #111;
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 9px;
+  min-width: 16px;
+  padding: 1px 4px;
+  font-size: 10px;
+  line-height: 14px;
+  position: absolute;
+  top: -4px;
+  right: -3px;
+}
+.admin-modal.ppe-journal-filter-modal {
+  width: min(620px, 100vw - 32px);
+}
+.ppe-journal-filter-modal .ppe-journal-filters {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 20px;
+  overflow-y: auto;
+}
+.ppe-journal-nomenclature {
+  grid-column: 1/-1;
+}
+.ppe-journal-nomenclature .search-select-field {
+  color: #3f4652;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 750;
+  display: grid;
+  position: relative;
+}
+.ppe-journal-nomenclature input {
+  color: #15171c;
+  width: 100%;
+  min-height: 40px;
+  font: inherit;
+  background: #fff;
+  border: 1px solid #d7dce3;
+  border-radius: 7px;
+  padding: 9px 11px;
+}
+.ppe-journal-nomenclature .search-select-menu {
+  z-index: 5;
+  background: #fff;
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  max-height: 180px;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  overflow-y: auto;
+  box-shadow: 0 12px 24px #18233424;
+}
+.ppe-journal-nomenclature .search-select-option {
+  cursor: pointer;
+  padding: 10px 12px;
+  font-weight: 400;
+}
+.ppe-journal-nomenclature .search-select-option:hover,
+.ppe-journal-nomenclature .search-select-option.active {
+  background: #f4f6f8;
+}
+.ppe-journal-filter-modal .ppe-actions {
+  border-top: 1px solid #eef0f3;
+  grid-column: 1/-1;
+  justify-content: flex-end;
+  margin-top: 4px;
+  padding-top: 16px;
+}
+@media (width<=540px) {
+  .ppe-journal-filter-modal .ppe-journal-filters {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
+  }
+}
+
+.ppe-journal-page {
+  min-height: calc(100dvh - 56px);
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+.ppe-journal-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 18px;
+}
+.ppe-journal-toolbar .ppe-journal-search {
+  margin-bottom: 0;
+}
+.ppe-journal-loading {
+  flex: 1;
+  min-height: 200px;
+}
+@media (max-width: 760px) {
+  .ppe-journal-page {
+    min-height: calc(100dvh - 32px);
+  }
+}

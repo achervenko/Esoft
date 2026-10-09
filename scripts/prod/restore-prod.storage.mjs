@@ -12,7 +12,7 @@ import {
   listObjectKeys,
   summarizeBucket,
 } from './restore-prod.storage-bucket.mjs';
-import { collectBackupObjects } from './restore-prod.storage-files.mjs';
+import { collectBackupObjects } from './backup-storage-files.mjs';
 
 export async function checkStorageBucket({
   config,

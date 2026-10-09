@@ -6,9 +6,9 @@ const {
   validateDistinctPorts,
   validateExistingFile,
   validateExistingOrCreatableDirectory,
-  validateExpectedUrl,
   validateHttpOrigin,
   validateHttpUrl,
+  validateListenerHost,
   validateNodeEnv,
   validateNotPlaceholder,
   validatePort,
@@ -68,11 +68,13 @@ function buildConfig(env) {
   return {
     nodeEnv: env.NODE_ENV,
     backend: {
+      internalUrl: internalHttpUrl(env.BACKEND_HOST, env.BACKEND_PORT),
       host: env.BACKEND_HOST,
       port: toInteger(env.BACKEND_PORT),
       url: env.BACKEND_URL,
     },
     frontend: {
+      internalUrl: internalHttpUrl(env.FRONTEND_HOST, env.FRONTEND_PORT),
       host: env.FRONTEND_HOST,
       port: toInteger(env.FRONTEND_PORT),
       url: env.FRONTEND_URL,
@@ -109,6 +111,14 @@ function buildConfig(env) {
   };
 }
 
+function internalHttpUrl(host, port) {
+  const connectHost = host === '0.0.0.0' ? '127.0.0.1' : host === '::' ? '::1' : host;
+  const urlHost = connectHost.includes(':') && !connectHost.startsWith('[')
+    ? `[${connectHost}]`
+    : connectHost;
+  return `http://${urlHost}:${port}`;
+}
+
 function validateEnvironment(env) {
   const errors = [];
   const warnings = [];
@@ -122,12 +132,14 @@ function validateEnvironment(env) {
     }
   }
 
+  validateListenerHost(env, 'BACKEND_HOST', errors);
+  validateListenerHost(env, 'FRONTEND_HOST', errors);
   validatePort(env, 'BACKEND_PORT', errors);
   validatePort(env, 'FRONTEND_PORT', errors);
   validatePort(env, 'MINIO_PORT', errors);
   validatePort(env, 'MINIO_CONSOLE_PORT', errors);
 
-  validateHttpUrl(env, 'BACKEND_URL', errors);
+  validateHttpOrigin(env, 'BACKEND_URL', errors);
   validateHttpOrigin(env, 'FRONTEND_URL', errors);
   validateHttpUrl(env, 'VITE_API_URL', errors);
   validateHttpOrigin(env, 'BETTER_AUTH_URL', errors);
@@ -143,8 +155,6 @@ function validateEnvironment(env) {
 
   validateNotPlaceholder(env, errors, placeholderValues);
   validateDistinctPorts(env, errors);
-  validateExpectedUrl(env, 'BACKEND_URL', 'BACKEND_HOST', 'BACKEND_PORT', errors);
-  validateExpectedUrl(env, 'FRONTEND_URL', 'FRONTEND_HOST', 'FRONTEND_PORT', errors);
   validateApiUrl(env, warnings);
 
   return {

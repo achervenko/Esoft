@@ -1,0 +1,75 @@
+.equipment-progress-stats-card {
+  display: grid;
+  align-content: center;
+  gap: 0;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.equipment-progress-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 0;
+  background: transparent;
+}
+
+.equipment-progress-stat + .equipment-progress-stat {
+  border-top: 1px solid #eef0f3;
+}
+
+.equipment-progress-stat div {
+  display: contents;
+}
+
+.equipment-progress-stat span {
+  min-width: 0;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.equipment-progress-stat strong {
+  display: block;
+  color: #15171c;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.equipment-progress-bars {
+  height: 270px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+}
+
+.equipment-progress-bar-item {
+  min-width: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: 1fr auto auto;
+  align-items: end;
+  justify-items: center;
+  gap: 6px;
+}
+
+.equipment-progress-bar {
+  width: 100%;
+  max-width: 28px;
+  border-radius: 6px 6px 2px 2px;
+  background: #111827;
+}
+
+.equipment-progress-bar-item strong {
+  color: #15171c;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.equipment-progress-bar-item small {
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 700;
+}

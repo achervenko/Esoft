@@ -10,6 +10,8 @@ async function bootstrap() {
     bodyParser: false,
   });
 
+  app.enableShutdownHooks();
+
   configureApp(app, config);
 
   await app.listen(config.backend.port, config.backend.host);

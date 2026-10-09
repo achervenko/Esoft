@@ -1,3 +1,4 @@
+import type { RequestConfirmation } from "../../shared/ui/useConfirmation";
 import type { Dispatch, SetStateAction } from "react";
 import {
   createAdminEmployee,
@@ -9,6 +10,7 @@ import {
 import type { EmployeeDictionaryFormState } from "./dictionaries-page-types";
 
 type EmployeeDictionaryActionsParams = {
+  confirm: RequestConfirmation;
   employeeForm: EmployeeDictionaryFormState;
   loadData: () => Promise<void>;
   runSavingAction: (action: () => Promise<void>) => Promise<void>;
@@ -17,6 +19,7 @@ type EmployeeDictionaryActionsParams = {
 };
 
 export function createEmployeeDictionaryActions({
+  confirm,
   employeeForm,
   loadData,
   runSavingAction,
@@ -48,9 +51,11 @@ export function createEmployeeDictionaryActions({
     if (
       shouldDisable &&
       employee.activeAccountCount > 0 &&
-      !window.confirm(
-        "Сотрудник будет отключён. Все связанные активные учётные записи пользователей также будут отключены.",
-      )
+      !(await confirm({
+        description:
+          "Сотрудник будет отключён. Все связанные активные учётные записи пользователей также будут отключены.",
+        variant: "danger",
+      }))
     ) {
       return;
     }

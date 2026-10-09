@@ -4,6 +4,7 @@ import { formatError } from '../security/redaction.mjs';
 export async function checkBackendHealth({
   config,
   expectedStatus = undefined,
+  url = config.backend.url,
   fetchImpl = globalThis.fetch,
   requestTimeoutMs = 3_000,
 }) {
@@ -13,7 +14,7 @@ export async function checkBackendHealth({
     );
   }
 
-  const baseUrl = config.backend.url.replace(/\/+$/, '');
+  const baseUrl = url.replace(/\/+$/, '');
 
   try {
     if (typeof fetchImpl !== 'function') {

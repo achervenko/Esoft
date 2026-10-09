@@ -7,7 +7,7 @@ export const equipmentAuditInclude = {
       manufacturer: true,
     },
   },
-  responsibleEmployee: true,
+  responsibleEmployee: { include: { position: true } },
   section: {
     include: {
       workshop: true,

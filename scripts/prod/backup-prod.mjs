@@ -120,7 +120,7 @@ export async function runProductionBackup(options = {}) {
   }
 
   const verifyDatabaseStage = await stage(5, 'Verifying PostgreSQL backup', () =>
-    operations.verifyDatabaseDump({ dumpPath }),
+    operations.verifyDatabaseDump({ config, dumpPath, runCommand: context.runCommand }),
   );
 
   if (!verifyDatabaseStage.result.ok) {

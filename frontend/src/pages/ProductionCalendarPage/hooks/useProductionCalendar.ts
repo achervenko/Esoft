@@ -3,6 +3,7 @@ import { getApiErrorMessage } from "../../../shared/api/api-error";
 import {
   getCalendarRange,
   updateCalendarWorkday,
+  resetCalendarWorkday,
   type CalendarWorkdayDto,
   type CalendarWorkdayUpdatePayload,
 } from "../../../shared/api/calendar";
@@ -14,7 +15,6 @@ import {
   clampCalendarYear,
   createDefaultYearDays,
   createMonths,
-  getDefaultDayType,
 } from "../model/calendar.utils";
 import type { CalendarDayDraft, CalendarDayState, DayType } from "../model/types";
 
@@ -117,9 +117,7 @@ export function useProductionCalendar() {
     setError(null);
 
     try {
-      const updatedDay = await updateCalendarWorkday(
-        buildResetWorkdayPayload(day),
-      );
+      const updatedDay = await resetCalendarWorkday(day.id);
 
       applyUpdatedDay(updatedDay);
       setSelectedDayId(null);
@@ -184,7 +182,7 @@ function mapCalendarDay(day: CalendarWorkdayDto): CalendarDayState {
     comment: day.holidayName ?? "",
     date: parseDateId(day.date),
     id: day.date,
-    isManual: day.source !== "SYSTEM",
+    isManual: day.source === "MANUAL",
     type: resolveDayType(day),
   };
 }
@@ -215,6 +213,7 @@ function buildWorkdayUpdatePayload(
         isHoliday: false,
         isPreholiday: false,
         isWorkingDay: true,
+        workingHours: DEFAULT_WORKING_HOURS,
       };
     case "weekend":
       return {
@@ -241,23 +240,9 @@ function buildWorkdayUpdatePayload(
         isHoliday: false,
         isPreholiday: true,
         isWorkingDay: true,
+        workingHours: DEFAULT_WORKING_HOURS - 1,
       };
   }
-}
-
-function buildResetWorkdayPayload(
-  day: CalendarDayState,
-): CalendarWorkdayUpdatePayload {
-  const isWorkingDay = getDefaultDayType(day.date) === "working";
-
-  return {
-    date: day.id,
-    holidayName: null,
-    isHoliday: false,
-    isPreholiday: false,
-    isWorkingDay,
-    workingHours: isWorkingDay ? DEFAULT_WORKING_HOURS : 0,
-  };
 }
 
 function parseDateId(value: string): Date {

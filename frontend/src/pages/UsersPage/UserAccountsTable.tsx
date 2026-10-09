@@ -59,6 +59,7 @@ const userColumns = ({
   },
   {
     key: "actions",
+    className: "admin-table-actions-column",
     label: "",
     render: (user) => (
       <div className="admin-table-actions">

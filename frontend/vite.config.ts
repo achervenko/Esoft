@@ -15,7 +15,7 @@ type ConfigCore = {
   }): {
     config: {
       backend: {
-        url: string
+        internalUrl: string
       }
       frontend: {
         host: string
@@ -37,7 +37,7 @@ export default defineConfig(() => {
   })
   const apiProxy = {
     '/api': {
-      target: config.backend.url,
+      target: config.backend.internalUrl,
       changeOrigin: true,
     },
   }

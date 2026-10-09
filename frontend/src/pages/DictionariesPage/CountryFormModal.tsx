@@ -50,17 +50,19 @@ export function CountryFormModal({
 
   return (
     <AdminModal
+      isCloseDisabled={isSaving}
       onClose={onClose}
       title={country ? "Редактирование страны" : "Новая страна"}
     >
       <form className="admin-form" onSubmit={handleSubmit}>
         <label className="form-field">
-          <span>
+          <span className="form-field-label">
             Страна<b aria-hidden="true">*</b>
           </span>
           <input
             autoFocus
             maxLength={128}
+            required
             onChange={(event) =>
               setForm((currentForm) => ({
                 ...currentForm,
@@ -71,11 +73,12 @@ export function CountryFormModal({
           />
         </label>
         <label className="form-field">
-          <span>
+          <span className="form-field-label">
             ISO<b aria-hidden="true">*</b>
           </span>
           <input
             maxLength={2}
+            required
             onChange={(event) =>
               setForm((currentForm) => ({
                 ...currentForm,
@@ -91,6 +94,7 @@ export function CountryFormModal({
         <div className="admin-form-actions">
           <button
             className="admin-secondary-button"
+            disabled={isSaving}
             onClick={onClose}
             type="button"
           >

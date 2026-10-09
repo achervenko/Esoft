@@ -1,8 +1,10 @@
+import { AdminFormField } from "./AdminFormField";
 import type { Ref } from "react";
 
 export function AdminTextField({
   autoFocus = false,
   disabled = false,
+  error,
   inputRef,
   label,
   maxLength,
@@ -13,6 +15,7 @@ export function AdminTextField({
 }: {
   autoFocus?: boolean;
   disabled?: boolean;
+  error?: string;
   inputRef?: Ref<HTMLInputElement>;
   label: string;
   maxLength?: number;
@@ -22,11 +25,7 @@ export function AdminTextField({
   value: string;
 }) {
   return (
-    <label className="form-field">
-      <span>
-        {label}
-        {required ? <b aria-hidden="true">*</b> : null}
-      </span>
+    <AdminFormField label={label} required={required} error={error}>
       <input
         autoFocus={autoFocus}
         disabled={disabled}
@@ -41,7 +40,7 @@ export function AdminTextField({
         required={required}
         value={value}
       />
-    </label>
+    </AdminFormField>
   );
 }
 
@@ -63,21 +62,17 @@ export function AdminTextareaField({
   value: string;
 }) {
   return (
-    <label className="form-field">
-      <span>
-        {label}
-        {required ? <b aria-hidden="true">*</b> : null}
-      </span>
+    <AdminFormField label={label} required={required}>
       <textarea
         autoFocus={autoFocus}
-        className="checklist-admin-textarea"
+        className="admin-control-textarea"
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         ref={textareaRef}
         required={required}
         value={value}
       />
-    </label>
+    </AdminFormField>
   );
 }
 
@@ -98,7 +93,11 @@ export function AdminFormActions({
       >
         Отмена
       </button>
-      <button className="admin-primary-button" disabled={isSaving} type="submit">
+      <button
+        className="admin-primary-button"
+        disabled={isSaving}
+        type="submit"
+      >
         {isSaving ? "Сохранение..." : "Сохранить"}
       </button>
     </div>
