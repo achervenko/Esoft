@@ -12,6 +12,12 @@ esoft.config.local.json
 *.log
 backend-runtime.pid
 frontend.pid
+/.local/.production-operation.lock
+/.local/.restore-recovery-required.json
+/.local/.restore-recovery-required.json.*
+/.local/restore-recovery/
+/deploy/windows/certificates/renewal-settings.json
+/deploy/windows/certificates/RegRu.credential.xml
 .DS_Store
 Thumbs.db
 

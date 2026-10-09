@@ -250,6 +250,8 @@ npm run setup
 
 ### Production
 
+Шаблоны Windows-служб, HTTPS proxy, резервного копирования и порядок отката описаны в [WINDOWS-PRODUCTION.md](WINDOWS-PRODUCTION.md). Они требуют адаптации администратором и не устанавливаются npm-командами.
+
 1. Остановите backend и выполните резервное копирование перед обновлением. PostgreSQL и MinIO оставьте работающими.
 2. Получите изменения проекта через `git pull`.
 3. Временно укажите в `DATABASE_URL` реквизиты `esoft_migrator`.

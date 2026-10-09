@@ -1,0 +1,17 @@
+<service>
+  <id>EsoftProxy</id>
+  <name>Esoft HTTPS Proxy</name>
+  <executable>C:\Esoft\tools\caddy.exe</executable>
+  <arguments>run --config "C:\Esoft\services\Caddyfile" --adapter caddyfile</arguments>
+  <workingdirectory>C:\Esoft\services</workingdirectory>
+  <startmode>Automatic</startmode>
+  <stoptimeout>60 sec</stoptimeout>
+  <onfailure action="restart" delay="30 sec" />
+  <onfailure action="restart" delay="60 sec" />
+  <onfailure action="none" />
+  <logpath>C:\Esoft\logs\proxy</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>10</keepFiles>
+  </log>
+</service>

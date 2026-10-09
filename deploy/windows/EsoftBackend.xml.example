@@ -1,0 +1,23 @@
+<service>
+  <id>EsoftBackend</id>
+  <name>Esoft Backend</name>
+  <description>Esoft API; direct Node process, no npm launcher.</description>
+  <executable>C:\Program Files\nodejs\node.exe</executable>
+  <arguments>"C:\Esoft\app\backend\dist\src\main.js"</arguments>
+  <workingdirectory>C:\Esoft\app</workingdirectory>
+  <env name="NODE_ENV" value="production" />
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>true</delayedAutoStart>
+  <!-- Replace with the installed PostgreSQL service ID; omit for remote PG. -->
+  <depend>postgresql-x64-17</depend>
+  <depend>EsoftMinio</depend>
+  <stoptimeout>60 sec</stoptimeout>
+  <onfailure action="restart" delay="30 sec" />
+  <onfailure action="restart" delay="60 sec" />
+  <onfailure action="none" />
+  <logpath>C:\Esoft\logs\backend</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>10</keepFiles>
+  </log>
+</service>

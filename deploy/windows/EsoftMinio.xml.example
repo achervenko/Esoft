@@ -1,0 +1,20 @@
+<service>
+  <id>EsoftMinio</id>
+  <name>Esoft MinIO</name>
+  <executable>C:\Esoft\tools\minio.exe</executable>
+  <arguments>server "D:\EsoftData\minio" --address 127.0.0.1:9000 --console-address 127.0.0.1:9001</arguments>
+  <workingdirectory>C:\Esoft\services</workingdirectory>
+  <!-- In the deployed XML only, add env elements for MINIO_ROOT_USER and
+       MINIO_ROOT_PASSWORD as documented in WINDOWS-PRODUCTION.md.
+       Protect that XML with NTFS ACLs; never commit the populated file. -->
+  <startmode>Automatic</startmode>
+  <stoptimeout>60 sec</stoptimeout>
+  <onfailure action="restart" delay="30 sec" />
+  <onfailure action="restart" delay="60 sec" />
+  <onfailure action="none" />
+  <logpath>C:\Esoft\logs\minio</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>10</keepFiles>
+  </log>
+</service>
