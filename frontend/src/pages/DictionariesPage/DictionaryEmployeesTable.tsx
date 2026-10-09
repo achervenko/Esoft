@@ -1,9 +1,11 @@
-import { Edit2, Power } from "lucide-react";
+import { Edit2 } from "lucide-react";
 import type { AdminEmployee } from "../../shared/api/users-admin-api";
 import { DataTable, type DataTableColumn } from "../../shared/ui/DataTable";
+import { Switch } from "../../shared/ui/Switch";
 
 type DictionaryEmployeesTableProps = {
   employees: AdminEmployee[];
+  isSaving?: boolean;
   onEdit: (employee: AdminEmployee) => void;
   onToggleStatus: (employee: AdminEmployee) => void;
   onSizes?: (employee: AdminEmployee) => void;
@@ -12,6 +14,7 @@ type DictionaryEmployeesTableProps = {
 const employeeColumns = (
   onEdit: (employee: AdminEmployee) => void,
   onToggleStatus: (employee: AdminEmployee) => void,
+  isSaving: boolean,
   onSizes?: (employee: AdminEmployee) => void,
 ): Array<DataTableColumn<AdminEmployee, string>> => [
   {
@@ -27,68 +30,72 @@ const employeeColumns = (
     sortValue: (employee) => employee.position,
   },
   {
+    key: "status",
+    label: "Статус",
+    sortValue: (employee) => Number(employee.isActive),
+    render: (employee) => (
+      <Switch
+        label={`Активность сотрудника ${employee.fullName}`}
+        checked={employee.isActive}
+        disabled={
+          isSaving || (employee.isActive && employee.isLinkedToCurrentUser)
+        }
+        onChange={() => onToggleStatus(employee)}
+        title={
+          employee.isActive && employee.isLinkedToCurrentUser
+            ? "Нельзя отключить сотрудника, связанного с текущей учётной записью"
+            : employee.isActive
+              ? "Отключить сотрудника"
+              : "Включить сотрудника"
+        }
+      />
+    ),
+  },
+  {
     key: "actions",
     className: "admin-table-actions-column",
     label: "",
-    render: (employee) => {
-      const isOwnActiveEmployee =
-        employee.isActive && employee.isLinkedToCurrentUser;
-      const statusTitle = isOwnActiveEmployee
-        ? "Нельзя отключить сотрудника, связанного с текущей учётной записью"
-        : employee.isActive
-          ? "Отключить"
-          : "Включить";
-
-      return (
-        <div className="admin-table-actions">
-          {onSizes && (
-            <button type="button" onClick={() => onSizes(employee)}>
-              Размеры
-            </button>
-          )}
+    render: (employee) => (
+      <div className="admin-table-actions">
+        {onSizes && (
           <button
-            aria-label={`Редактировать сотрудника ${employee.fullName}`}
-            className="admin-icon-button"
-            onClick={() => onEdit(employee)}
-            title="Редактировать"
             type="button"
+            disabled={isSaving}
+            onClick={() => onSizes(employee)}
           >
-            <Edit2 size={17} />
+            Размеры
           </button>
-          <button
-            aria-label={
-              employee.isActive
-                ? `Отключить сотрудника ${employee.fullName}`
-                : `Включить сотрудника ${employee.fullName}`
-            }
-            className={`admin-icon-button admin-status-toggle${
-              employee.isActive ? " active" : " inactive"
-            }`}
-            disabled={isOwnActiveEmployee}
-            onClick={() => onToggleStatus(employee)}
-            title={statusTitle}
-            type="button"
-          >
-            <Power size={17} />
-          </button>
-        </div>
-      );
-    },
+        )}
+        <button
+          aria-label={`Редактировать сотрудника ${employee.fullName}`}
+          className="admin-icon-button"
+          disabled={isSaving}
+          onClick={() => onEdit(employee)}
+          title="Редактировать"
+          type="button"
+        >
+          <Edit2 size={17} />
+        </button>
+      </div>
+    ),
   },
 ];
 
 export function DictionaryEmployeesTable({
   employees,
+  isSaving = false,
   onEdit,
   onToggleStatus,
   onSizes,
 }: DictionaryEmployeesTableProps) {
   return (
     <DataTable
-      columns={employeeColumns(onEdit, onToggleStatus, onSizes)}
+      columns={employeeColumns(onEdit, onToggleStatus, isSaving, onSizes)}
       defaultSort={{ direction: "asc", key: "fullName" }}
       getRowKey={(employee) => employee.id}
       rows={employees}
+      getRowGroup={(employee) => (employee.isActive ? 0 : 1)}
+      animateRowMoves
     />
   );
 }

@@ -49,7 +49,7 @@ function getMaintenanceSettingsErrorByCode(code: string | undefined) {
     case "MAINTENANCE_TYPE_NOT_FOUND":
       return "Вид обслуживания не найден.";
     case "MAINTENANCE_TYPE_INACTIVE":
-      return "Вид обслуживания отключён.";
+      return "Вид обслуживания удалён.";
     case "EXECUTION_TYPE_INVALID":
       return "Укажите корректный способ выполнения.";
     case "CHECKLIST_TEMPLATE_ID_INVALID":

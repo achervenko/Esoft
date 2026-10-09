@@ -18,7 +18,12 @@ export function useDialogBehavior({
     const previous = document.activeElement;
     const target =
       initialFocusRef?.current ??
-      dialog.querySelector<HTMLElement>("[autofocus]") ??
+      dialog.querySelector<HTMLElement>(
+        "[data-dialog-autofocus], [autofocus]",
+      ) ??
+      (previous instanceof HTMLElement && dialog.contains(previous)
+        ? previous
+        : null) ??
       getFocusableElements(dialog)[0] ??
       dialog;
     target.focus();

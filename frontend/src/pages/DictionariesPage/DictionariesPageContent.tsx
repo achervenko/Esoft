@@ -28,9 +28,11 @@ export function DictionariesPageContent({
           onToggleStatus={(item) => void page.togglePositionStatus(item)}
         />
       ) : null}
-      {!page.isLoading && page.activeTab === "employees" ? (
+      {(!page.isLoading || page.employees.length > 0) &&
+      page.activeTab === "employees" ? (
         <DictionaryEmployeesTable
           employees={page.employees}
+          isSaving={page.isSaving}
           onSizes={
             canManageEmployeeSizes(userRole)
               ? (employee) => onOpenEmployeeSizes(employee.id)

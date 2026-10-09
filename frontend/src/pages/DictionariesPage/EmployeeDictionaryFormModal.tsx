@@ -74,6 +74,7 @@ export function EmployeeDictionaryFormModal({
           </span>
           <input
             autoFocus
+            data-dialog-autofocus
             maxLength={64}
             onChange={(event) => updateField("lastName", event.target.value)}
             required
@@ -118,7 +119,7 @@ export function EmployeeDictionaryFormModal({
               .map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
-                  {item.isActive ? "" : " (отключена)"}
+                  {item.isActive ? "" : " (удалена)"}
                 </option>
               ))}
           </AppSelect>

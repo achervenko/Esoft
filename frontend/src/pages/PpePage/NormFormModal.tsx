@@ -212,7 +212,7 @@ export function NormFormModal({
                       }
                     >
                       {item.article} — {item.name}
-                      {!item.isActive ? " (отключён)" : ""}
+                      {!item.isActive ? " (удалён)" : ""}
                     </option>
                   ))}
               </AppSelect>

@@ -6,6 +6,7 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { Auth } from '../auth/auth.config';
@@ -23,8 +24,11 @@ export class EquipmentController {
   }
 
   @Get('create-options')
-  getCreateOptions() {
-    return this.equipmentService.getCreateOptions();
+  getCreateOptions(
+    @Query('visibleId', new ParseIntPipe({ optional: true }))
+    visibleId?: number,
+  ) {
+    return this.equipmentService.getCreateOptions(visibleId);
   }
 
   @Get(':visibleId')

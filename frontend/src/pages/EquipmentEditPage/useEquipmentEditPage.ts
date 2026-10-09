@@ -81,7 +81,10 @@ export function useEquipmentEditPage({
     setFieldErrors({});
     setError(null);
 
-    Promise.all([getEquipmentCreateOptions(), getEquipmentCard(visibleId)])
+    Promise.all([
+      getEquipmentCreateOptions(visibleId),
+      getEquipmentCard(visibleId),
+    ])
       .then(([optionsData, equipment]) => {
         if (!isMounted) {
           return;
@@ -96,7 +99,10 @@ export function useEquipmentEditPage({
         if (isMounted) {
           const errorMessage = getApiErrorMessage(requestError);
           setError(errorMessage);
-          notifyError("Не удалось загрузить карточку оборудования", errorMessage);
+          notifyError(
+            "Не удалось загрузить карточку оборудования",
+            errorMessage,
+          );
         }
       })
       .finally(() => {

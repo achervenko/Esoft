@@ -57,6 +57,7 @@ export function createLocationDictionaryActions({
     if (
       !(await confirm({
         description: `Удалить объект «${object.name}»?`,
+        confirmLabel: "Удалить",
         variant: "danger",
       }))
     ) {
@@ -89,6 +90,7 @@ export function createLocationDictionaryActions({
     if (
       !(await confirm({
         description: `Удалить местонахождение «${location.name}»?`,
+        confirmLabel: "Удалить",
         variant: "danger",
       }))
     ) {

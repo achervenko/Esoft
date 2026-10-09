@@ -34,7 +34,7 @@ export function SizeListTable({
             >
               <td>{size.value}</td>
               {item.type === "BODY" && <td>{size.heightValue}</td>}
-              <td>{size.isActive ? "Активен" : "Отключён"}</td>
+              <td>{size.isActive ? "Активен" : "Удалён"}</td>
               <td className="admin-table-actions-column">
                 {manage && (
                   <div className="admin-table-actions">
@@ -42,7 +42,7 @@ export function SizeListTable({
                       Изменить
                     </button>
                     <button disabled={saving} onClick={() => onToggle(size)}>
-                      {size.isActive ? "Отключить" : "Включить"}
+                      {size.isActive ? "Удалить" : "Включить"}
                     </button>
                   </div>
                 )}

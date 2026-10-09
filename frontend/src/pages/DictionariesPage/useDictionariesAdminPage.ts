@@ -1,5 +1,5 @@
 import { useConfirmation } from "../../shared/ui/useConfirmation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   saveAdminPosition,
   setAdminPositionStatus,
@@ -42,8 +42,34 @@ export function useDictionariesAdminPage({
   userRole,
 }: UseDictionariesAdminPageParams) {
   const confirm = useConfirmation();
-  const [activeTab, setActiveTab] =
-    useState<ActiveDictionariesTab>("employees");
+  const isAdmin = userRole === "admin";
+  const [selectedTab, setActiveTab] = useState<ActiveDictionariesTab>(() => {
+    try {
+      const saved = sessionStorage.getItem("esoft:dictionaries:tab");
+      return saved === "positions" ||
+        saved === "manufacturers" ||
+        saved === "countries" ||
+        saved === "locations"
+        ? saved
+        : "employees";
+    } catch {
+      return "employees";
+    }
+  });
+  const activeTab =
+    isAdmin || selectedTab === "employees" || selectedTab === "positions"
+      ? selectedTab
+      : "employees";
+  useEffect(() => {
+    if (selectedTab !== activeTab) setActiveTab(activeTab);
+  }, [selectedTab, activeTab]);
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("esoft:dictionaries:tab", activeTab);
+    } catch {
+      // The page remains usable when browser storage is unavailable.
+    }
+  }, [activeTab]);
   const [positionForm, setPositionForm] = useState<PositionFormState>(null);
   const [countryForm, setCountryForm] = useState<CountryFormState>(null);
   const [employeeForm, setEmployeeForm] =
@@ -54,7 +80,6 @@ export function useDictionariesAdminPage({
   const [modelForm, setModelForm] = useState<EquipmentModelFormState>(null);
   const [objectForm, setObjectForm] = useState<ObjectFormState>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const isAdmin = userRole === "admin";
   const { notifyError, notifySuccess } = useNotifications();
 
   const data = useDictionariesAdminData(activeTab, isAdmin);
@@ -129,14 +154,24 @@ export function useDictionariesAdminPage({
         await loadData(["positions", "employees"]);
         showSuccessMessage("Должность сохранена.");
       }),
-    togglePositionStatus: (position: AdminPosition) =>
-      runSavingAction(async () => {
+    togglePositionStatus: async (position: AdminPosition) => {
+      if (
+        position.isActive &&
+        !(await confirm({
+          description: `Удалить должность «${position.name}»?`,
+          confirmLabel: "Удалить",
+          variant: "danger",
+        }))
+      )
+        return;
+      await runSavingAction(async () => {
         await setAdminPositionStatus(position.id, !position.isActive);
         await loadData(["positions", "employees"]);
         showSuccessMessage(
-          position.isActive ? "Должность отключена." : "Должность включена.",
+          position.isActive ? "Должность удалена." : "Должность включена.",
         );
-      }),
+      });
+    },
     countries: data.countries,
     countryForm,
     employees: data.employees,

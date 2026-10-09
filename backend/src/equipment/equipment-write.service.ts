@@ -100,17 +100,6 @@ export class EquipmentWriteService {
     const data = buildEquipmentData(dto);
 
     const updatedEquipment = await this.runEquipmentWrite(async (tx) => {
-      await this.referenceValidator.assertEquipmentModelExists(
-        tx,
-        data.modelId,
-      );
-      await this.referenceValidator.assertSectionExists(tx, data.sectionId);
-      await this.referenceValidator.assertCountryExists(tx, data.countryId);
-      await this.referenceValidator.assertResponsibleEmployeeIsActive(
-        tx,
-        data.responsibleEmployeeId,
-      );
-
       const lockedEquipment = await tx.$queryRaw<Array<{ id: number }>>`
         SELECT id
         FROM equipment
@@ -131,6 +120,27 @@ export class EquipmentWriteService {
       if (!currentEquipment) {
         throw new NotFoundException('Оборудование не найдено.');
       }
+
+      await this.referenceValidator.assertEquipmentModelExists(
+        tx,
+        data.modelId,
+        currentEquipment.modelId,
+      );
+      await this.referenceValidator.assertSectionExists(
+        tx,
+        data.sectionId,
+        currentEquipment.sectionId,
+      );
+      await this.referenceValidator.assertCountryExists(
+        tx,
+        data.countryId,
+        currentEquipment.countryId,
+      );
+      await this.referenceValidator.assertResponsibleEmployeeIsActive(
+        tx,
+        data.responsibleEmployeeId,
+        currentEquipment.responsibleEmployeeId,
+      );
 
       if (nextVisibleId && nextVisibleId !== currentEquipment.visibleId) {
         const existingEquipment = await tx.equipment.findUnique({

@@ -32,19 +32,52 @@ export class PositionsAdminService {
     }
     try {
       return await this.prisma.$transaction(async (tx) => {
-        const previous = id === null ? null : await this.lockPosition(tx, id);
+        const previous =
+          id === null
+            ? ((
+                await tx.$queryRaw<
+                  Array<{ id: number; name: string; isActive: boolean }>
+                >`
+              SELECT id, name, is_active AS "isActive" FROM positions
+              WHERE lower(name) = lower(${name}) FOR UPDATE
+            `
+              )[0] ?? null)
+            : await this.lockPosition(tx, id);
+        if (id === null && previous?.isActive) {
+          throwBadRequest(
+            'POSITION_ALREADY_EXISTS',
+            'Такая должность уже существует.',
+          );
+        }
+        const isRestoring = id === null && previous !== null;
         const position =
           id === null
-            ? await tx.position.create({ data: { name } })
+            ? previous
+              ? await tx.position.update({
+                  where: { id: previous.id },
+                  data: { isActive: true },
+                })
+              : await tx.position.create({ data: { name } })
             : await tx.position.update({ where: { id }, data: { name } });
         await this.audit.writeFieldChanges({
           module: AuditModule.USERS,
-          action: previous ? AuditAction.UPDATE : AuditAction.CREATE,
+          action: isRestoring
+            ? AuditAction.STATUS_CHANGE
+            : previous
+              ? AuditAction.UPDATE
+              : AuditAction.CREATE,
           entityType: 'position',
           entityId: position.id,
           userId: actorUserId,
-          fields:
-            previous?.name === name
+          fields: isRestoring
+            ? [
+                {
+                  fieldName: 'Статус должности',
+                  oldValue: 'удалена',
+                  newValue: 'активна',
+                },
+              ]
+            : previous?.name === name
               ? []
               : [
                   {
@@ -89,8 +122,8 @@ export class PositionsAdminService {
           fields: [
             {
               fieldName: 'Статус должности',
-              oldValue: previous.isActive ? 'включена' : 'отключена',
-              newValue: isActive ? 'включена' : 'отключена',
+              oldValue: previous.isActive ? 'активна' : 'удалена',
+              newValue: isActive ? 'активна' : 'удалена',
             },
           ],
           tx,

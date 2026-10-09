@@ -164,7 +164,7 @@ export function getProfilePermissionAccess(role: string | null | undefined) {
       allowed: canManagePpeCatalog(role),
       title: "Управление каталогом СИЗ",
       description:
-        "Создание, изменение и отключение позиций СИЗ и их размеров.",
+        "Создание, изменение и удаление позиций СИЗ и их размеров.",
     },
     {
       allowed: canManagePpeNorms(role),

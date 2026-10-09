@@ -107,7 +107,9 @@ export function UserAccountFormModal({
             label="Сотрудник"
             error={fieldErrors.employeeId}
             onChange={(value) => updateField("employeeId", value)}
-            options={employees.map((employee) => ({
+            options={employees.filter((employee) =>
+              employee.isActive || employee.id === user?.employee?.id
+            ).map((employee) => ({
               disabled:
                 !employee.isActive && String(employee.id) !== form.employeeId,
               label: `${employee.fullName} — ${employee.position}${

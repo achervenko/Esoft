@@ -82,6 +82,7 @@ export function ParentNameDictionaryFormModal({
           </span>
           <input
             autoFocus
+            data-dialog-autofocus
             maxLength={128}
             required
             onChange={(event) =>

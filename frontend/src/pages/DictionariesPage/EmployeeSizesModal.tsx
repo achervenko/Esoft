@@ -124,6 +124,7 @@ function EmployeeSizesForm({
       ).map(([key, label]) => (
         <Field key={key} label={label}>
           <input
+            autoFocus={key === "clothingSize" && employee.isActive}
             type={key === "shoeSize" ? "number" : "text"}
             min={key === "shoeSize" ? 15 : undefined}
             max={key === "shoeSize" ? 60 : undefined}

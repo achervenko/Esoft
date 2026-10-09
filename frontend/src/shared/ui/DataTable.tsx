@@ -1,6 +1,7 @@
 import { AppTable } from "./AppTable";
 import type { ReactNode, MouseEvent } from "react";
 import { useMemo, useState } from "react";
+import { useTableRowAnimation } from "./useTableRowAnimation";
 import { sortDataTableRows } from "./data-table-model";
 
 export type DataTableSortDirection = "asc" | "desc";
@@ -21,6 +22,8 @@ type DataTableProps<Row, SortKey extends string> = {
     key: SortKey;
   };
   getRowKey: (row: Row) => string | number;
+  getRowGroup?: (row: Row) => number;
+  animateRowMoves?: boolean;
   onRowClick?: (row: Row) => void;
   onRowDoubleClick?: (row: Row) => void;
   onRowContextMenu?: (row: Row, position: { x: number; y: number }) => void;
@@ -31,6 +34,8 @@ export function DataTable<Row, SortKey extends string>({
   columns,
   defaultSort,
   getRowKey,
+  getRowGroup,
+  animateRowMoves = false,
   onRowClick,
   onRowDoubleClick,
   onRowContextMenu,
@@ -39,9 +44,11 @@ export function DataTable<Row, SortKey extends string>({
   const [sort, setSort] = useState(defaultSort);
 
   const sortedRows = useMemo(
-    () => sortDataTableRows(rows, columns, sort),
-    [columns, rows, sort],
+    () => sortDataTableRows(rows, columns, sort, getRowGroup),
+    [columns, rows, sort, getRowGroup],
   );
+
+  const bodyRef = useTableRowAnimation(sortedRows, animateRowMoves);
 
   const toggleSort = (key: SortKey) => {
     setSort((currentSort) => {
@@ -92,7 +99,7 @@ export function DataTable<Row, SortKey extends string>({
           })}
         </tr>
       </thead>
-      <tbody>
+      <tbody ref={bodyRef}>
         {sortedRows.map((row) => (
           <tr
             className={
@@ -101,6 +108,7 @@ export function DataTable<Row, SortKey extends string>({
                 : undefined
             }
             key={getRowKey(row)}
+            data-row-key={getRowKey(row)}
             onContextMenu={(event: MouseEvent<HTMLTableRowElement>) => {
               if (!onRowContextMenu) return;
               event.preventDefault();
@@ -149,7 +157,9 @@ export function DataTable<Row, SortKey extends string>({
             }
           >
             {columns.map((column) => (
-              <td key={column.key} className={column.className}>{column.render(row)}</td>
+              <td key={column.key} className={column.className}>
+                {column.render(row)}
+              </td>
             ))}
           </tr>
         ))}

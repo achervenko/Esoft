@@ -150,7 +150,7 @@ describe("PPE issue form", () => {
     });
     open();
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Все размеры отключены",
+      "Все размеры удалены",
     );
     expect(
       screen.getByRole("button", { name: "Подтвердить выдачу" }),

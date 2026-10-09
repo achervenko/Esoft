@@ -8,8 +8,10 @@ import type {
   UpdateEquipmentPayload,
 } from "./equipment.types";
 
-export function getEquipmentCreateOptions() {
-  return request<EquipmentCreateOptions>("/api/equipment/create-options");
+export function getEquipmentCreateOptions(visibleId?: number) {
+  return request<EquipmentCreateOptions>(
+    `/api/equipment/create-options${visibleId === undefined ? "" : `?visibleId=${visibleId}`}`,
+  );
 }
 
 export function getEquipmentRegistry() {

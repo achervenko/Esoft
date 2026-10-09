@@ -16,8 +16,8 @@ export class EquipmentService {
     return this.query.findAll();
   }
 
-  getCreateOptions() {
-    return this.query.getCreateOptions();
+  getCreateOptions(visibleId?: number) {
+    return this.query.getCreateOptions(visibleId);
   }
 
   findOneByVisibleId(visibleId: number) {

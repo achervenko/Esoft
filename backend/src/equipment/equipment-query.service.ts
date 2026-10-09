@@ -40,7 +40,22 @@ export class EquipmentQueryService {
     return equipment.map(toEquipmentListItem);
   }
 
-  async getCreateOptions() {
+  async getCreateOptions(visibleId?: number) {
+    const current =
+      visibleId === undefined
+        ? null
+        : await this.prisma.equipment.findUnique({
+            where: { visibleId },
+            select: {
+              modelId: true,
+              countryId: true,
+              sectionId: true,
+              responsibleEmployeeId: true,
+              model: { select: { manufacturerId: true } },
+            },
+          });
+    if (visibleId !== undefined && !current)
+      throw new NotFoundException('Оборудование не найдено.');
     const [
       manufacturers,
       models,
@@ -49,19 +64,50 @@ export class EquipmentQueryService {
       employees,
       nextVisibleId,
     ] = await Promise.all([
-      this.prisma.manufacturer.findMany({ orderBy: { name: 'asc' } }),
+      this.prisma.manufacturer.findMany({
+        where: {
+          OR: [
+            { isActive: true },
+            ...(current ? [{ id: current.model.manufacturerId }] : []),
+          ],
+        },
+        orderBy: { name: 'asc' },
+      }),
       this.prisma.equipmentModel.findMany({
+        where: {
+          OR: [
+            { isActive: true, manufacturer: { isActive: true } },
+            ...(current ? [{ id: current.modelId }] : []),
+          ],
+        },
         orderBy: [{ manufacturer: { name: 'asc' } }, { name: 'asc' }],
       }),
-      this.prisma.country.findMany({ orderBy: { name: 'asc' } }),
+      this.prisma.country.findMany({
+        where: {
+          OR: [
+            { isActive: true },
+            ...(current?.countryId ? [{ id: current.countryId }] : []),
+          ],
+        },
+        orderBy: { name: 'asc' },
+      }),
       this.prisma.section.findMany({
+        where: {
+          OR: [
+            { isActive: true, workshop: { isActive: true } },
+            ...(current ? [{ id: current.sectionId }] : []),
+          ],
+        },
         include: { workshop: true },
         orderBy: [{ workshop: { name: 'asc' } }, { name: 'asc' }],
       }),
       this.prisma.employee.findMany({
         include: { position: true },
         where: {
-          isActive: true,
+          OR: [
+            { isActive: true },
+            ...(current ? [{ id: current.responsibleEmployeeId }] : []),
+          ],
         },
         orderBy: [
           { lastName: 'asc' },

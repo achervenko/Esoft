@@ -45,6 +45,7 @@ export function createCountryDictionaryActions({
     if (
       !(await confirm({
         description: `Удалить страну «${country.name}»?`,
+        confirmLabel: "Удалить",
         variant: "danger",
       }))
     ) {

@@ -36,7 +36,7 @@ const columns = (
     render: (setting) => (
       <strong>
         {setting.maintenanceType.name}
-        {!setting.maintenanceType.isActive ? <small>Отключён</small> : null}
+        {!setting.maintenanceType.isActive ? <small>Удалён</small> : null}
       </strong>
     ),
     sortValue: (setting) => setting.maintenanceType.name,

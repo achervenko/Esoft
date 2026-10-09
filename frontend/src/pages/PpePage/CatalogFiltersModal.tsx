@@ -65,7 +65,7 @@ export function CatalogFiltersModal({
           >
             <option value="">Все</option>
             <option value="true">Активные</option>
-            <option value="false">Отключённые</option>
+            <option value="false">Удалённые</option>
           </AppSelect>
         </Field>
         <Field label="Размер">

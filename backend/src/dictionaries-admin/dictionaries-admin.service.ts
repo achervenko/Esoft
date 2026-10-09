@@ -1,269 +1,117 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
-import { throwDictionaryPrismaError } from './dictionaries-admin.errors';
-import {
-  parseCountryPayload,
-  parseDictionaryName,
-  parseEquipmentModelPayload,
-  parseLocationPayload,
-} from './dictionaries-admin.validation';
+import { Injectable } from '@nestjs/common';
+import { ManufacturersAdminService } from './manufacturers-admin.service';
+import { EquipmentModelsAdminService } from './equipment-models-admin.service';
+import { CountriesAdminService } from './countries-admin.service';
+import { ObjectsAdminService } from './objects-admin.service';
+import { LocationsAdminService } from './locations-admin.service';
 
 @Injectable()
 export class DictionariesAdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly manufacturers: ManufacturersAdminService,
+    private readonly equipmentModels: EquipmentModelsAdminService,
+    private readonly countries: CountriesAdminService,
+    private readonly objects: ObjectsAdminService,
+    private readonly locations: LocationsAdminService,
+  ) {}
 
   getOverview() {
-    return {
-      dictionaries: [],
-    };
+    return { dictionaries: [] };
   }
 
-  listManufacturers() {
-    return this.prisma.manufacturer.findMany({ orderBy: { name: 'asc' } });
-  }
-
-  async createManufacturer(payload: { name?: unknown }) {
-    try {
-      return await this.prisma.manufacturer.create({
-        data: { name: parseDictionaryName(payload) },
-      });
-    } catch (error) {
-      throwDictionaryPrismaError(error, 'MANUFACTURER_NOT_FOUND');
-    }
-  }
-
-  async updateManufacturer(id: number, payload: { name?: unknown }) {
-    try {
-      return await this.prisma.manufacturer.update({
-        data: { name: parseDictionaryName(payload) },
-        where: { id },
-      });
-    } catch (error) {
-      throwDictionaryPrismaError(error, 'MANUFACTURER_NOT_FOUND');
-    }
-  }
-
-  async deleteManufacturer(id: number) {
-    try {
-      await this.prisma.manufacturer.delete({ where: { id } });
-      return { ok: true };
-    } catch (error) {
-      throwDictionaryPrismaError(error, 'MANUFACTURER_NOT_FOUND');
-    }
-  }
-
-  listEquipmentModels() {
-    return this.prisma.equipmentModel.findMany({
-      include: { manufacturer: true },
-      orderBy: [{ manufacturer: { name: 'asc' } }, { name: 'asc' }],
-    });
-  }
-
-  async createEquipmentModel(payload: {
-    manufacturerId?: unknown;
-    name?: unknown;
-  }) {
-    const data = parseEquipmentModelPayload(payload);
-
-    try {
-      return await this.prisma.$transaction(async (tx) => {
-        await this.assertManufacturerExists(data.manufacturerId, tx);
-
-        return tx.equipmentModel.create({
-          data,
-          include: { manufacturer: true },
-        });
-      });
-    } catch (error) {
-      throwDictionaryPrismaError(error, 'EQUIPMENT_MODEL_NOT_FOUND');
-    }
-  }
-
-  async updateEquipmentModel(
-    id: number,
-    payload: { manufacturerId?: unknown; name?: unknown },
+  listManufacturers(
+    ...args: Parameters<ManufacturersAdminService['listManufacturers']>
   ) {
-    const data = parseEquipmentModelPayload(payload);
-
-    try {
-      return await this.prisma.$transaction(async (tx) => {
-        await this.assertManufacturerExists(data.manufacturerId, tx);
-
-        return tx.equipmentModel.update({
-          data,
-          include: { manufacturer: true },
-          where: { id },
-        });
-      });
-    } catch (error) {
-      throwDictionaryPrismaError(error, 'EQUIPMENT_MODEL_NOT_FOUND');
-    }
+    return this.manufacturers.listManufacturers(...args);
   }
 
-  async deleteEquipmentModel(id: number) {
-    try {
-      await this.prisma.equipmentModel.delete({ where: { id } });
-      return { ok: true };
-    } catch (error) {
-      throwDictionaryPrismaError(error, 'EQUIPMENT_MODEL_NOT_FOUND');
-    }
-  }
-
-  listCountries() {
-    return this.prisma.country.findMany({ orderBy: { name: 'asc' } });
-  }
-
-  async createCountry(payload: { iso?: unknown; name?: unknown }) {
-    try {
-      return await this.prisma.country.create({
-        data: parseCountryPayload(payload),
-      });
-    } catch (error) {
-      throwDictionaryPrismaError(error, 'COUNTRY_NOT_FOUND');
-    }
-  }
-
-  async updateCountry(id: number, payload: { iso?: unknown; name?: unknown }) {
-    try {
-      return await this.prisma.country.update({
-        data: parseCountryPayload(payload),
-        where: { id },
-      });
-    } catch (error) {
-      throwDictionaryPrismaError(error, 'COUNTRY_NOT_FOUND');
-    }
-  }
-
-  async deleteCountry(id: number) {
-    try {
-      await this.prisma.country.delete({ where: { id } });
-      return { ok: true };
-    } catch (error) {
-      throwDictionaryPrismaError(error, 'COUNTRY_NOT_FOUND');
-    }
-  }
-
-  listObjects() {
-    return this.prisma.workshop.findMany({ orderBy: { name: 'asc' } });
-  }
-
-  async createObject(payload: { name?: unknown }) {
-    try {
-      return await this.prisma.workshop.create({
-        data: { name: parseDictionaryName(payload) },
-      });
-    } catch (error) {
-      throwDictionaryPrismaError(error, 'OBJECT_NOT_FOUND');
-    }
-  }
-
-  async updateObject(id: number, payload: { name?: unknown }) {
-    try {
-      return await this.prisma.workshop.update({
-        data: { name: parseDictionaryName(payload) },
-        where: { id },
-      });
-    } catch (error) {
-      throwDictionaryPrismaError(error, 'OBJECT_NOT_FOUND');
-    }
-  }
-
-  async deleteObject(id: number) {
-    try {
-      await this.prisma.workshop.delete({ where: { id } });
-      return { ok: true };
-    } catch (error) {
-      throwDictionaryPrismaError(error, 'OBJECT_NOT_FOUND');
-    }
-  }
-
-  listLocations() {
-    return this.prisma.section.findMany({
-      include: { workshop: true },
-      orderBy: [{ workshop: { name: 'asc' } }, { name: 'asc' }],
-    });
-  }
-
-  async createLocation(payload: { name?: unknown; objectId?: unknown }) {
-    const data = parseLocationPayload(payload);
-
-    try {
-      return await this.prisma.$transaction(async (tx) => {
-        await this.assertObjectExists(data.workshopId, tx);
-
-        return tx.section.create({
-          data,
-          include: { workshop: true },
-        });
-      });
-    } catch (error) {
-      throwDictionaryPrismaError(error, 'LOCATION_NOT_FOUND');
-    }
-  }
-
-  async updateLocation(
-    id: number,
-    payload: { name?: unknown; objectId?: unknown },
+  createManufacturer(
+    ...args: Parameters<ManufacturersAdminService['createManufacturer']>
   ) {
-    const data = parseLocationPayload(payload);
-
-    try {
-      return await this.prisma.$transaction(async (tx) => {
-        await this.assertObjectExists(data.workshopId, tx);
-
-        return tx.section.update({
-          data,
-          include: { workshop: true },
-          where: { id },
-        });
-      });
-    } catch (error) {
-      throwDictionaryPrismaError(error, 'LOCATION_NOT_FOUND');
-    }
+    return this.manufacturers.createManufacturer(...args);
   }
 
-  async deleteLocation(id: number) {
-    try {
-      await this.prisma.section.delete({ where: { id } });
-      return { ok: true };
-    } catch (error) {
-      throwDictionaryPrismaError(error, 'LOCATION_NOT_FOUND');
-    }
-  }
-
-  private async assertObjectExists(id: number, tx: Prisma.TransactionClient) {
-    const objects = await tx.$queryRaw<Array<{ id: number }>>`
-      SELECT id
-      FROM workshops
-      WHERE id = ${id}
-      FOR SHARE
-    `;
-
-    if (!objects[0]) {
-      throw new NotFoundException({
-        code: 'OBJECT_NOT_FOUND',
-        message: 'Запись не найдена.',
-      });
-    }
-  }
-
-  private async assertManufacturerExists(
-    id: number,
-    tx: Prisma.TransactionClient,
+  updateManufacturer(
+    ...args: Parameters<ManufacturersAdminService['updateManufacturer']>
   ) {
-    const manufacturers = await tx.$queryRaw<Array<{ id: number }>>`
-      SELECT id
-      FROM manufacturers
-      WHERE id = ${id}
-      FOR SHARE
-    `;
+    return this.manufacturers.updateManufacturer(...args);
+  }
 
-    if (!manufacturers[0]) {
-      throw new NotFoundException({
-        code: 'MANUFACTURER_NOT_FOUND',
-        message: 'Запись не найдена.',
-      });
-    }
+  deleteManufacturer(
+    ...args: Parameters<ManufacturersAdminService['deleteManufacturer']>
+  ) {
+    return this.manufacturers.deleteManufacturer(...args);
+  }
+
+  listEquipmentModels(
+    ...args: Parameters<EquipmentModelsAdminService['listEquipmentModels']>
+  ) {
+    return this.equipmentModels.listEquipmentModels(...args);
+  }
+
+  createEquipmentModel(
+    ...args: Parameters<EquipmentModelsAdminService['createEquipmentModel']>
+  ) {
+    return this.equipmentModels.createEquipmentModel(...args);
+  }
+
+  updateEquipmentModel(
+    ...args: Parameters<EquipmentModelsAdminService['updateEquipmentModel']>
+  ) {
+    return this.equipmentModels.updateEquipmentModel(...args);
+  }
+
+  deleteEquipmentModel(
+    ...args: Parameters<EquipmentModelsAdminService['deleteEquipmentModel']>
+  ) {
+    return this.equipmentModels.deleteEquipmentModel(...args);
+  }
+
+  listCountries(...args: Parameters<CountriesAdminService['listCountries']>) {
+    return this.countries.listCountries(...args);
+  }
+
+  createCountry(...args: Parameters<CountriesAdminService['createCountry']>) {
+    return this.countries.createCountry(...args);
+  }
+
+  updateCountry(...args: Parameters<CountriesAdminService['updateCountry']>) {
+    return this.countries.updateCountry(...args);
+  }
+
+  deleteCountry(...args: Parameters<CountriesAdminService['deleteCountry']>) {
+    return this.countries.deleteCountry(...args);
+  }
+
+  listObjects(...args: Parameters<ObjectsAdminService['listObjects']>) {
+    return this.objects.listObjects(...args);
+  }
+
+  createObject(...args: Parameters<ObjectsAdminService['createObject']>) {
+    return this.objects.createObject(...args);
+  }
+
+  updateObject(...args: Parameters<ObjectsAdminService['updateObject']>) {
+    return this.objects.updateObject(...args);
+  }
+
+  deleteObject(...args: Parameters<ObjectsAdminService['deleteObject']>) {
+    return this.objects.deleteObject(...args);
+  }
+
+  listLocations(...args: Parameters<LocationsAdminService['listLocations']>) {
+    return this.locations.listLocations(...args);
+  }
+
+  createLocation(...args: Parameters<LocationsAdminService['createLocation']>) {
+    return this.locations.createLocation(...args);
+  }
+
+  updateLocation(...args: Parameters<LocationsAdminService['updateLocation']>) {
+    return this.locations.updateLocation(...args);
+  }
+
+  deleteLocation(...args: Parameters<LocationsAdminService['deleteLocation']>) {
+    return this.locations.deleteLocation(...args);
   }
 }

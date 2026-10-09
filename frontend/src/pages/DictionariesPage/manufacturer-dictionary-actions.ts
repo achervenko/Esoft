@@ -57,6 +57,7 @@ export function createManufacturerDictionaryActions({
     if (
       !(await confirm({
         description: `Удалить производителя «${manufacturer.name}»?`,
+        confirmLabel: "Удалить",
         variant: "danger",
       }))
     ) {
@@ -89,6 +90,7 @@ export function createManufacturerDictionaryActions({
     if (
       !(await confirm({
         description: `Удалить модель «${model.name}»?`,
+        confirmLabel: "Удалить",
         variant: "danger",
       }))
     ) {

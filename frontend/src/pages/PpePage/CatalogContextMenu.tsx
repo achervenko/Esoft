@@ -24,7 +24,7 @@ export function CatalogContextMenu({
         { id: "edit", label: "Изменить", onSelect: onEdit },
         {
           id: "toggle",
-          label: active ? "Отключить" : "Включить",
+          label: active ? "Удалить" : "Включить",
           onSelect: onToggle,
         },
       ]}

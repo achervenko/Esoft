@@ -40,6 +40,7 @@ describe('PositionsAdminService', () => {
 
   it('records creation in the same transaction', async () => {
     const { service, tx, audit } = createService();
+    tx.$queryRaw.mockResolvedValue([]);
     await service.save(null, { name: ' Инженер ' }, 'admin');
     expect(tx.position.create).toHaveBeenCalledWith({
       data: { name: 'Инженер' },
@@ -56,6 +57,7 @@ describe('PositionsAdminService', () => {
 
   it('rejects duplicate names reported by the database', async () => {
     const { service, tx } = createService();
+    tx.$queryRaw.mockResolvedValue([]);
     tx.position.create.mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError('duplicate', {
         code: 'P2002',
@@ -65,6 +67,38 @@ describe('PositionsAdminService', () => {
     await expect(
       service.save(null, { name: 'Инженер' }, 'admin'),
     ).rejects.toMatchObject({ response: { code: 'POSITION_ALREADY_EXISTS' } });
+  });
+
+  it('restores a deleted position with the original ID and records a status change', async () => {
+    const { service, tx, audit } = createService();
+    tx.$queryRaw.mockResolvedValue([
+      { id: 1, name: 'Инженер', isActive: false },
+    ]);
+    tx.position.update.mockResolvedValue({
+      id: 1,
+      name: 'Инженер',
+      isActive: true,
+    });
+    await expect(
+      service.save(null, { name: 'инженер' }, 'admin'),
+    ).resolves.toMatchObject({ id: 1, isActive: true });
+    expect(tx.position.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { isActive: true },
+    });
+    expect(tx.position.create).not.toHaveBeenCalled();
+    expect(audit.writeFieldChanges).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'STATUS_CHANGE', entityId: 1, tx }),
+    );
+  });
+
+  it('rejects creation when the matching position is already active', async () => {
+    const { service, tx } = createService();
+    await expect(
+      service.save(null, { name: 'Инженер' }, 'admin'),
+    ).rejects.toMatchObject({ response: { code: 'POSITION_ALREADY_EXISTS' } });
+    expect(tx.position.create).not.toHaveBeenCalled();
+    expect(tx.position.update).not.toHaveBeenCalled();
   });
 
   it('rejects renaming a missing position', async () => {
@@ -89,7 +123,8 @@ describe('PositionsAdminService', () => {
   });
 
   it('propagates an audit failure', async () => {
-    const { service, audit } = createService();
+    const { service, tx, audit } = createService();
+    tx.$queryRaw.mockResolvedValue([]);
     audit.writeFieldChanges.mockRejectedValue(new Error('audit failed'));
     await expect(
       service.save(null, { name: 'Инженер' }, 'admin'),

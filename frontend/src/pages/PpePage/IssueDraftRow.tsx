@@ -77,7 +77,7 @@ export function IssueDraftRow({
             .map((item) => (
               <option key={item.id} value={item.id} disabled={!item.isActive}>
                 {item.article} — {item.name}
-                {!item.isActive ? " (отключён)" : ""}
+                {!item.isActive ? " (удалён)" : ""}
               </option>
             ))}
         </AppSelect>
@@ -132,7 +132,7 @@ export function IssueDraftRow({
               </AppSelect>
             </Field>
           ) : data.requiresSelection ? (
-            <Message error="Все размеры отключены. Выдача этой позиции заблокирована до активации или добавления размера. Можно выбрать другой СИЗ." />
+            <Message error="Все размеры удалены. Выдача этой позиции заблокирована до активации или добавления размера. Можно выбрать другой СИЗ." />
           ) : (
             <p>Выдача без размера.</p>
           )}

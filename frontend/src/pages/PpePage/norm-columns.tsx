@@ -22,7 +22,7 @@ export function createNormColumns({
       render: (row) => (
         <>
           {row.name}
-          {!row.isActive && <small>Отключена</small>}
+          {!row.isActive && <small>Удалена</small>}
         </>
       ),
       sortValue: (row) => row.name,

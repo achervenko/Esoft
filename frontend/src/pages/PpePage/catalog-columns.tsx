@@ -31,7 +31,7 @@ export function createCatalogColumns(
         <span
           className={`ppe-badge ${item.isActive ? "ppe-good" : "ppe-muted"}`}
         >
-          {item.isActive ? "Активен" : "Отключён"}
+          {item.isActive ? "Активен" : "Удалён"}
         </span>
       ),
       sortValue: (item) => Number(item.isActive),

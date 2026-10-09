@@ -90,7 +90,7 @@ export function NormCard({
                 <td>{item.article}</td>
                 <td>
                   {item.name}
-                  {!item.isActive && " (отключён)"}
+                  {!item.isActive && " (удалён)"}
                 </td>
                 <td>{formatPpeQuantity(item.quantity, item.unit)}</td>
                 <td>

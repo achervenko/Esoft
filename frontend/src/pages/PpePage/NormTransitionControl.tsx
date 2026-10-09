@@ -1,4 +1,5 @@
 import { CircleHelp } from "lucide-react";
+import { Switch } from "../../shared/ui/Switch";
 
 export function NormTransitionControl({
   hard,
@@ -11,17 +12,12 @@ export function NormTransitionControl({
 }) {
   return (
     <div className="ppe-transition-control">
-      <button
-        type="button"
-        role="switch"
-        aria-label="Жёсткий переход"
-        aria-checked={hard}
+      <Switch
+        label="Жёсткий переход"
+        checked={hard}
         disabled={disabled}
-        className="ppe-transition-switch"
-        onClick={() => onChange(!hard)}
-      >
-        <span />
-      </button>
+        onChange={onChange}
+      />
       <span>Жёсткий переход</span>
       <details className="ppe-transition-help">
         <summary aria-label="Как работают переходы">

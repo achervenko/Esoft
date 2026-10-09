@@ -1598,3 +1598,14 @@ CREATE INDEX "idx_ppe_issues_norm_ppe_item_id" ON "ppe_issues"("norm_item_ppe_it
 CREATE UNIQUE INDEX "uq_ppe_issues_regular_portion" ON "ppe_issues"("employee_id", "norm_item_id", "scheduled_at", "scheduled_portion") WHERE "issue_type" = 'REGULAR' AND "status" = 'ISSUED';
 ALTER TABLE "ppe_issues" ADD CONSTRAINT "fk_ppe_issues_norm_ppe_item" FOREIGN KEY ("norm_item_ppe_item_id") REFERENCES "ppe_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "ppe_issues" ADD CONSTRAINT "fk_ppe_issues_cancelled_by_user" FOREIGN KEY ("cancelled_by_user_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- Equipment dictionary lifecycle.
+ALTER TABLE "manufacturers" ADD COLUMN "is_active" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "equipment_models" ADD COLUMN "is_active" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "countries" ADD COLUMN "is_active" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "workshops" ADD COLUMN "is_active" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "sections" ADD COLUMN "is_active" BOOLEAN NOT NULL DEFAULT true;
+
+CREATE TRIGGER trg_prevent_countries_delete BEFORE DELETE ON "countries" FOR EACH ROW EXECUTE FUNCTION prevent_physical_delete();
+CREATE TRIGGER trg_prevent_workshops_delete BEFORE DELETE ON "workshops" FOR EACH ROW EXECUTE FUNCTION prevent_physical_delete();
+CREATE TRIGGER trg_prevent_sections_delete BEFORE DELETE ON "sections" FOR EACH ROW EXECUTE FUNCTION prevent_physical_delete();

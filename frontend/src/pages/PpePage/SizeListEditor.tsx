@@ -29,7 +29,7 @@ export function SizeListEditor({
   if (toggle)
     return (
       <PpeConfirm
-        title={toggle.isActive ? "Отключить размер?" : "Включить размер?"}
+        title={toggle.isActive ? "Удалить размер?" : "Включить размер?"}
         text={sizeLabel(toggle.value, toggle.heightValue)}
         onClose={() => setToggle(null)}
         onConfirm={async () => {

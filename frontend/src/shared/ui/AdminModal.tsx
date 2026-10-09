@@ -1,5 +1,6 @@
 import "./AdminModal.css";
 import type { ReactNode } from "react";
+import { X } from "lucide-react";
 import { useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useDialogBehavior } from "./useDialogBehavior";
@@ -54,7 +55,7 @@ export function AdminModal({
             onClick={handleClose}
             type="button"
           >
-            ×
+            <X aria-hidden="true" size={20} />
           </button>
         </header>
         {children}

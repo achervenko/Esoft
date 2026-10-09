@@ -22,14 +22,8 @@ export function PositionsDictionaryPanel({
       sortValue: (item) => item.name,
     },
     {
-      key: "status",
-      label: "Статус",
-      render: (item) => (item.isActive ? "Активна" : "Отключена"),
-      sortValue: (item) => (item.isActive ? 1 : 0),
-    },
-    {
-    key: "actions",
-    className: "admin-table-actions-column",
+      key: "actions",
+      className: "admin-table-actions-column",
       label: "",
       render: (item) => (
         <div className="admin-form-actions">
@@ -47,7 +41,7 @@ export function PositionsDictionaryPanel({
             onClick={() => onToggleStatus(item)}
             type="button"
           >
-            {item.isActive ? "Отключить" : "Включить"}
+            Удалить
           </button>
         </div>
       ),
@@ -58,7 +52,7 @@ export function PositionsDictionaryPanel({
       columns={columns}
       defaultSort={{ direction: "asc", key: "name" }}
       getRowKey={(item) => item.id}
-      rows={positions}
+      rows={positions.filter((position) => position.isActive)}
     />
   );
 }

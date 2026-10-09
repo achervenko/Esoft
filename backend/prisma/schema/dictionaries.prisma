@@ -1,4 +1,5 @@
 model Manufacturer {
+  isActive Boolean @default(true) @map("is_active")
   id     Int              @id @default(autoincrement())
   name   String           @unique @db.VarChar(128)
   models EquipmentModel[]
@@ -7,6 +8,7 @@ model Manufacturer {
 }
 
 model EquipmentModel {
+  isActive Boolean @default(true) @map("is_active")
   id                  Int                           @id @default(autoincrement())
   name                String                        @db.VarChar(128)
   manufacturerId      Int                           @map("manufacturer_id")
@@ -63,6 +65,7 @@ model EquipmentMaintenanceSetting {
 }
 
 model Country {
+  isActive Boolean @default(true) @map("is_active")
   id        Int         @id @default(autoincrement())
   name      String      @unique @db.VarChar(128)
   iso       String      @unique @db.Char(2)
@@ -72,6 +75,7 @@ model Country {
 }
 
 model Workshop {
+  isActive Boolean @default(true) @map("is_active")
   id       Int       @id @default(autoincrement())
   name     String    @unique @db.VarChar(128)
   sections Section[]
@@ -80,6 +84,7 @@ model Workshop {
 }
 
 model Section {
+  isActive Boolean @default(true) @map("is_active")
   id         Int         @id @default(autoincrement())
   workshopId Int         @map("workshop_id")
   workshop   Workshop    @relation(fields: [workshopId], references: [id], onDelete: Restrict)

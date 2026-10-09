@@ -6,21 +6,24 @@ export class EquipmentReferenceValidatorService {
   async assertEquipmentModelExists(
     tx: Prisma.TransactionClient,
     modelId: number,
+    currentModelId?: number,
   ) {
     const models = await tx.$queryRaw<
       Array<{
         id: number;
+        is_active: boolean;
       }>
     >`
       SELECT
-        em.id
+        em.id, (em.is_active AND m.is_active) AS is_active
       FROM equipment_models em
+      JOIN manufacturers m ON m.id = em.manufacturer_id
       WHERE em.id = ${modelId}
-      FOR SHARE OF em
+      FOR SHARE OF em, m
     `;
     const model = models[0];
 
-    if (!model) {
+    if (!model || (!model.is_active && modelId !== currentModelId)) {
       throw new BadRequestException('Выберите модель из списка.');
     }
   }
@@ -28,6 +31,7 @@ export class EquipmentReferenceValidatorService {
   async assertResponsibleEmployeeIsActive(
     tx: Prisma.TransactionClient,
     employeeId: number | null | undefined,
+    currentEmployeeId?: number,
   ) {
     if (employeeId == null) {
       return;
@@ -43,7 +47,10 @@ export class EquipmentReferenceValidatorService {
     `;
     const employee = employees[0];
 
-    if (!employee || !employee.is_active) {
+    if (
+      !employee ||
+      (!employee.is_active && employeeId !== currentEmployeeId)
+    ) {
       throw new BadRequestException({
         code: 'RESPONSIBLE_EMPLOYEE_INACTIVE',
         message: 'Выбранный ответственный сотрудник не найден или отключён.',
@@ -51,13 +58,17 @@ export class EquipmentReferenceValidatorService {
     }
   }
 
-  async assertSectionExists(tx: Prisma.TransactionClient, sectionId: number) {
-    const section = await tx.section.findUnique({
-      where: { id: sectionId },
-      select: { id: true },
-    });
-
-    if (!section) {
+  async assertSectionExists(
+    tx: Prisma.TransactionClient,
+    sectionId: number,
+    currentSectionId?: number,
+  ) {
+    const rows = await tx.$queryRaw<Array<{ id: number; is_active: boolean }>>`
+      SELECT s.id, (s.is_active AND w.is_active) AS is_active
+      FROM sections s JOIN workshops w ON w.id = s.workshop_id
+      WHERE s.id = ${sectionId} FOR SHARE OF s, w
+    `;
+    if (!rows[0] || (!rows[0].is_active && sectionId !== currentSectionId)) {
       throw new BadRequestException('Выберите местонахождение из списка.');
     }
   }
@@ -65,17 +76,13 @@ export class EquipmentReferenceValidatorService {
   async assertCountryExists(
     tx: Prisma.TransactionClient,
     countryId: number | null,
+    currentCountryId?: number | null,
   ) {
-    if (countryId == null) {
-      return;
-    }
-
-    const country = await tx.country.findUnique({
-      where: { id: countryId },
-      select: { id: true },
-    });
-
-    if (!country) {
+    if (countryId == null) return;
+    const rows = await tx.$queryRaw<Array<{ id: number; is_active: boolean }>>`
+      SELECT id, is_active FROM countries WHERE id = ${countryId} FOR SHARE
+    `;
+    if (!rows[0] || (!rows[0].is_active && countryId !== currentCountryId)) {
       throw new BadRequestException('Выберите страну производства из списка.');
     }
   }

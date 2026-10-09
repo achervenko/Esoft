@@ -156,7 +156,7 @@ export function CatalogPanel({
       )}
       {toggle && (
         <PpeConfirm
-          title={toggle.isActive ? "Отключить СИЗ?" : "Включить СИЗ?"}
+          title={toggle.isActive ? "Удалить СИЗ?" : "Включить СИЗ?"}
           text={`${toggle.article} — ${toggle.name}. ${toggle.isActive ? "Позиция останется в истории, но её нельзя будет выбрать для новой выдачи." : "Позиция станет доступна для новых выдач."}`}
           onClose={() => setToggle(null)}
           onConfirm={async () => {
