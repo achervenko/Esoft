@@ -33,8 +33,14 @@ export function createProductionRestoreReporter({ output = console } = {}) {
       output.log(`Stage: ${redactSensitiveText(result.details.failedStage)}`);
       output.log(`Code: ${redactSensitiveText(result.details.failedCode)}`);
 
-      if (result.details.postgresRestored) {
+      if (result.details.rollback?.ok) {
+        output.log('Original PostgreSQL and MinIO state restored by automatic rollback.');
+      } else if (result.details.postgresRestored) {
         output.log('PostgreSQL has already been restored.');
+      }
+      if (result.details.recoveryBackupPath) {
+        output.log(`Pre-restore recovery backup: ${redactSensitiveText(result.details.recoveryBackupPath)}`);
+        if (result.details.recoveryRequired) output.log('Backend remains blocked until recovery is completed.');
       }
     },
     info(message) {
@@ -100,11 +106,15 @@ export function finishProductionRestoreFailure({
     failedCode: result.code,
     failedStage,
     postgresRestored: Boolean(restoreState?.postgresRestored),
+    recoveryBackupPath: restoreState?.recoveryBackupPath,
+    rollback: restoreState?.rollback,
+    recoveryRequired: Boolean(restoreState?.recoveryRequired),
     results,
   });
 
-  reporter.failure?.(finalResult);
-  return finalResult;
+  const safeResult = redactSecrets(finalResult);
+  reporter.failure?.(safeResult);
+  return safeResult;
 }
 
 function defaultSelectResult(value) {

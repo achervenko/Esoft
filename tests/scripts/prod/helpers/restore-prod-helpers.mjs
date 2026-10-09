@@ -128,6 +128,14 @@ export function createPgRestoreRunner({ calls = [], result = null } = {}) {
       return { ok: true, stdout: '; Archive table of contents', stderr: '' };
     }
 
+    const fileArg = args.find((arg) => arg.startsWith('--file='));
+    if (fileArg) {
+      const path = fileArg.slice('--file='.length);
+      await mkdir(dirname(path), { recursive: true });
+      await writeFile(path, 'current-database-dump');
+      return { ok: true, stdout: '', stderr: '' };
+    }
+
     if (result) {
       return result;
     }
@@ -165,8 +173,10 @@ export function createS3Runtime({
   headError = null,
   objects = new Map(),
   pages = null,
+  putErrorAt = null,
 } = {}) {
   const calls = [];
+  let putCount = 0;
 
   class HeadBucketCommand {
     constructor(input) {
@@ -178,6 +188,10 @@ export function createS3Runtime({
     constructor(input) {
       this.input = input;
     }
+  }
+
+  class GetObjectCommand {
+    constructor(input) { this.input = input; }
   }
 
   class DeleteObjectCommand {
@@ -220,6 +234,12 @@ export function createS3Runtime({
         };
       }
 
+      if (command instanceof GetObjectCommand) {
+        calls.push({ input: command.input, type: 'get' });
+        if (!objects.has(command.input.Key)) throw new Error('Object not found');
+        return { Body: Readable.from([objects.get(command.input.Key)]) };
+      }
+
       if (command instanceof DeleteObjectCommand) {
         calls.push({ input: command.input, type: 'delete' });
         objects.delete(command.input.Key);
@@ -229,6 +249,8 @@ export function createS3Runtime({
       if (command instanceof PutObjectCommand) {
         calls.push({ input: command.input, type: 'put' });
         objects.set(command.input.Key, await readBody(command.input.Body));
+        putCount += 1;
+        if (Array.isArray(putErrorAt) ? putErrorAt.includes(putCount) : putCount === putErrorAt) throw new Error('Simulated upload failure');
         return {};
       }
 
@@ -249,6 +271,7 @@ export function createS3Runtime({
     objects,
     runtimeDependencies: {
       DeleteObjectCommand,
+      GetObjectCommand,
       HeadBucketCommand,
       ListObjectsV2Command,
       PutObjectCommand,

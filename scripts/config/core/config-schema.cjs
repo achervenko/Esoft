@@ -15,30 +15,7 @@ const {
   validatePostgresUrl,
 } = require('./validators.cjs');
 
-const requiredVariables = [
-  'NODE_ENV',
-  'BACKEND_HOST',
-  'BACKEND_PORT',
-  'BACKEND_URL',
-  'FRONTEND_HOST',
-  'FRONTEND_PORT',
-  'FRONTEND_URL',
-  'VITE_API_URL',
-  'DATABASE_URL',
-  'BETTER_AUTH_SECRET',
-  'BETTER_AUTH_URL',
-  'MINIO_HOST',
-  'MINIO_PORT',
-  'MINIO_CONSOLE_PORT',
-  'MINIO_USE_SSL',
-  'MINIO_ROOT_USER',
-  'MINIO_ROOT_PASSWORD',
-  'MINIO_ACCESS_KEY',
-  'MINIO_SECRET_KEY',
-  'MINIO_BUCKET',
-  'MINIO_EXECUTABLE',
-  'MINIO_DATA_DIR',
-];
+const { requiredVariables, getValidationProfile } = require('./validation-profiles.cjs');
 
 const secretVariables = new Set([
   'DATABASE_URL',
@@ -61,7 +38,10 @@ const placeholderValues = new Map([
 const booleanValues = new Set(['true', 'false']);
 const nodeEnvValues = new Set(['development', 'test', 'production']);
 
-function buildConfig(env) {
+function buildConfig(source, { profile = 'local' } = {}) {
+  const selection = getValidationProfile(profile);
+  if (!selection) throw new Error('Unknown configuration profile');
+  const env = Object.fromEntries(Object.entries(source).filter(([name]) => selection.variables.has(name) || name === 'MINIO_REGION'));
   const minioUseSsl = env.MINIO_USE_SSL === 'true';
   const minioProtocol = minioUseSsl ? 'https' : 'http';
 
@@ -76,7 +56,7 @@ function buildConfig(env) {
     frontend: {
       internalUrl: internalHttpUrl(env.FRONTEND_HOST, env.FRONTEND_PORT),
       host: env.FRONTEND_HOST,
-      port: toInteger(env.FRONTEND_PORT),
+      port: hasValue(env.FRONTEND_PORT) ? toInteger(env.FRONTEND_PORT) : undefined,
       url: env.FRONTEND_URL,
       apiUrl: env.VITE_API_URL,
     },
@@ -90,13 +70,13 @@ function buildConfig(env) {
     minio: {
       accessKey: env.MINIO_ACCESS_KEY,
       bucket: env.MINIO_BUCKET,
-      consolePort: toInteger(env.MINIO_CONSOLE_PORT),
-      consoleUrl: `${minioProtocol}://${env.MINIO_HOST}:${env.MINIO_CONSOLE_PORT}`,
+      consolePort: hasValue(env.MINIO_CONSOLE_PORT) ? toInteger(env.MINIO_CONSOLE_PORT) : undefined,
+      consoleUrl: hasValue(env.MINIO_CONSOLE_PORT) ? `${minioProtocol}://${env.MINIO_HOST}:${env.MINIO_CONSOLE_PORT}` : undefined,
       dataDir: env.MINIO_DATA_DIR,
-      endpoint: `${minioProtocol}://${env.MINIO_HOST}:${env.MINIO_PORT}`,
+      endpoint: hasValue(env.MINIO_HOST) && hasValue(env.MINIO_PORT) ? `${minioProtocol}://${env.MINIO_HOST}:${env.MINIO_PORT}` : undefined,
       executable: env.MINIO_EXECUTABLE,
       host: env.MINIO_HOST,
-      port: toInteger(env.MINIO_PORT),
+      port: hasValue(env.MINIO_PORT) ? toInteger(env.MINIO_PORT) : undefined,
       region: env.MINIO_REGION?.trim() || 'us-east-1',
       rootPassword: env.MINIO_ROOT_PASSWORD,
       rootUser: env.MINIO_ROOT_USER,
@@ -112,6 +92,7 @@ function buildConfig(env) {
 }
 
 function internalHttpUrl(host, port) {
+  if (!hasValue(host) || !hasValue(port)) return undefined;
   const connectHost = host === '0.0.0.0' ? '127.0.0.1' : host === '::' ? '::1' : host;
   const urlHost = connectHost.includes(':') && !connectHost.startsWith('[')
     ? `[${connectHost}]`
@@ -119,11 +100,14 @@ function internalHttpUrl(host, port) {
   return `http://${urlHost}:${port}`;
 }
 
-function validateEnvironment(env) {
+function validateEnvironment(source, { profile = 'local' } = {}) {
+  const selection = getValidationProfile(profile);
+  if (!selection) return { valid: false, errors: [{ variable: 'CONFIG_PROFILE', message: 'Неизвестный профиль конфигурации.' }], warnings: [] };
+  const env = Object.fromEntries(Object.entries(source).filter(([name]) => selection.variables.has(name)));
   const errors = [];
   const warnings = [];
 
-  for (const variable of requiredVariables) {
+  for (const variable of selection.required) {
     if (!hasValue(env[variable])) {
       errors.push({
         variable,
@@ -154,7 +138,7 @@ function validateEnvironment(env) {
   validateExistingFile(env, 'PG_RESTORE_PATH', errors);
 
   validateNotPlaceholder(env, errors, placeholderValues);
-  validateDistinctPorts(env, errors);
+  if (profile === 'local' || profile === 'frontend') validateDistinctPorts(env, errors);
   validateApiUrl(env, warnings);
 
   return {

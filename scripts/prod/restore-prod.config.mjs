@@ -2,7 +2,10 @@ import { failure, success } from '../infrastructure/result.mjs';
 import { loadProductionConfig } from './setup-prod.config.mjs';
 
 export async function loadProductionRestoreConfig(options = {}) {
-  const loaded = await loadProductionConfig(options);
+  const loaded = await loadProductionConfig({
+    ...options,
+    profile: 'storage-operation',
+  });
 
   if (!loaded.result.ok) {
     return {

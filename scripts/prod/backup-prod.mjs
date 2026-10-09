@@ -1,6 +1,8 @@
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { withProductionOperationLock } from './production-operation-lock.mjs';
+
 import { success } from '../infrastructure/result.mjs';
 import {
   createDefaultProductionBackupContext,
@@ -56,6 +58,15 @@ export async function runProductionBackup(options = {}) {
   }
 
   const { config, projectRoot } = configStage.value;
+  return withProductionOperationLock({
+    projectRoot: configStage.value.projectRoot ?? context.projectRoot,
+    operation: 'backup',
+    onFailure: (result) => fail({ backupState, failedStage: 'Production operation lock', operations, reporter, result, results }),
+    run: () => executeProductionBackup({ config, projectRoot, backupState, operations, context, stage, reporter, results }),
+  });
+}
+
+export async function executeProductionBackup({ config, projectRoot, backupState, operations, context, stage, reporter, results }) {
   const backupRoot = config.backup.dir;
   const createdAt = context.clock();
 

@@ -50,6 +50,7 @@ test('restore completes PostgreSQL and MinIO replacement', async () => {
       s3Runtime.objects.get('equipment/equipment_card/42/equipment_photo/photo.webp'),
       'photo-bytes',
     );
+    const databaseRestore = commandCalls.find((call) => call.args.includes('--clean'));
     for (const argument of [
       '--clean',
       '--if-exists',
@@ -58,11 +59,11 @@ test('restore completes PostgreSQL and MinIO replacement', async () => {
       '--exit-on-error',
       '--single-transaction',
     ]) {
-      assert.equal(commandCalls[2].args.includes(argument), true);
+      assert.equal(databaseRestore.args.includes(argument), true);
     }
 
-    assert.equal(commandCalls[2].args.some((arg) => arg.includes(SECRET_MARKERS[0])), false);
-    assert.equal(commandCalls[2].options.env.PGPASSWORD, SECRET_MARKERS[0]);
+    assert.equal(databaseRestore.args.some((arg) => arg.includes(SECRET_MARKERS[0])), false);
+    assert.equal(databaseRestore.options.env.PGPASSWORD, SECRET_MARKERS[0]);
     assertNoSecretLeak(result);
   } finally {
     await project.remove();

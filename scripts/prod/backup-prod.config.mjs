@@ -4,6 +4,7 @@ import { loadProductionConfig } from './setup-prod.config.mjs';
 export async function loadProductionBackupConfig(params) {
   const loaded = await loadProductionConfig({
     ...params,
+    profile: 'storage-operation',
     applyToProcessEnv: false,
   });
 

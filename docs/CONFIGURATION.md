@@ -62,10 +62,28 @@ KEY="value with spaces"
 npm run config:validate
 ```
 
-Проверка не подключается к PostgreSQL или MinIO. Она валидирует только наличие и
-формат переменных.
+Проверка не подключается к PostgreSQL или MinIO. Она валидирует наличие и формат переменных, а для используемых локальных инструментов — доступность файлов и каталогов.
+
+### Профили проверки
+
+Профиль можно указать явно: `npm run config:validate -- --profile backend`. CLI без аргумента выбирает `production` при `NODE_ENV=production`, иначе `local`. Программные загрузчики выбирают профиль своего сценария.
+
+| Профиль | Что проверяет | Где используется |
+| --- | --- | --- |
+| `local` | Полную конфигурацию, локальные MinIO-файлы, root-реквизиты и конфликты портов | `dev`, локальные `doctor` и `setup` |
+| `backend` | Backend, PostgreSQL, авторизацию, публичный frontend origin для CORS и S3-реквизиты | Запуск backend |
+| `frontend` | Адреса backend/proxy, frontend listener и API URL; без PostgreSQL, авторизации и S3 | Vite build/dev/preview |
+| `production` | Runtime-настройки и заданные backup-пути; без локального MinIO и frontend listener | `doctor:prod`, `setup:prod` |
+| `storage-operation` | PostgreSQL, S3 и заданные `BACKUP_DIR` / `PG_DUMP_PATH` / `PG_RESTORE_PATH`; без адресов приложения и секретов авторизации | backup и restore |
+| `database` | `NODE_ENV` и `DATABASE_URL` | Prisma CLI, адаптер PostgreSQL и seed |
+
+`MINIO_EXECUTABLE`, `MINIO_DATA_DIR`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD` и `MINIO_CONSOLE_PORT` обязательны только для `local`. Backend и production-операции используют `MINIO_HOST`, `MINIO_PORT`, `MINIO_USE_SSL`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET` и необязательный `MINIO_REGION`, подключаясь к уже работающему S3-серверу. Совпадение порта внешнего S3 с локальным listener не считается конфликтом. Неизвестный профиль отклоняется.
+
+В production используйте `npm run setup:prod`; `npm run setup` относится к локальному запуску и может поднимать MinIO.
 
 ## Переменные
+
+Ниже описан полный набор локальной конфигурации. Для остальных сценариев обязательность определяется таблицей профилей выше.
 
 ### Режим приложения
 

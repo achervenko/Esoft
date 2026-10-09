@@ -45,7 +45,7 @@ function loadEnvironment(options = {}) {
 
 function loadConfig(options = {}) {
   const loadedEnvironment = loadEnvironment(options);
-  const validation = validateEnvironment(loadedEnvironment.env);
+  const validation = validateEnvironment(loadedEnvironment.env, { profile: options.profile });
 
   if (!validation.valid) {
     const error = new Error('Esoft configuration is invalid.');
@@ -58,7 +58,7 @@ function loadConfig(options = {}) {
 
   return {
     ...loadedEnvironment,
-    config: buildConfig(loadedEnvironment.env),
+    config: buildConfig(loadedEnvironment.env, { profile: options.profile }),
   };
 }
 

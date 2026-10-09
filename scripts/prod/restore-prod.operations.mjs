@@ -10,6 +10,10 @@ import {
   validateRestoreArtifacts,
 } from './restore-prod.filesystem.mjs';
 import { readRestoreManifest } from './restore-prod.manifest.mjs';
+import { createRestoreRecoveryBackup } from './restore-prod.recovery.mjs';
+import { rollbackProductionRestore } from './restore-prod.rollback.mjs';
+import { verifyRestoredStorageContents } from './restore-prod.storage-integrity.mjs';
+import { writeRestoreRecoveryState, clearRestoreRecoveryState } from './restore-prod.recovery-state.mjs';
 import {
   checkPgRestoreAvailable,
   checkProductionPostgres,
@@ -35,15 +39,21 @@ export function createDefaultProductionRestoreOperations() {
     verifyPostgresArchive,
     checkProductionPostgres,
     checkStorageBucket,
+    createRestoreRecoveryBackup,
+    rollbackProductionRestore,
+    writeRestoreRecoveryState,
+    clearRestoreRecoveryState,
     restorePostgresDatabase,
     replaceStorageBucket,
     verifyRestoredStorage,
+    verifyRestoredStorageContents,
   };
 }
 
 export function createDefaultProductionRestoreContext(options = {}) {
   return {
     argv: options.argv ?? process.argv.slice(2),
+    clock: options.clock ?? (() => new Date()),
     projectRoot: options.projectRoot ?? defaultProjectRoot,
     runCommand: options.runCommand ?? runCommand,
     ...options.runtimeDependencies,
@@ -56,6 +66,7 @@ export function loadRuntimeDependencies(projectRoot = defaultProjectRoot) {
   );
   const {
     DeleteObjectCommand,
+    GetObjectCommand,
     HeadBucketCommand,
     ListObjectsV2Command,
     PutObjectCommand,
@@ -65,6 +76,7 @@ export function loadRuntimeDependencies(projectRoot = defaultProjectRoot) {
 
   return {
     DeleteObjectCommand,
+    GetObjectCommand,
     HeadBucketCommand,
     ListObjectsV2Command,
     PgClient,

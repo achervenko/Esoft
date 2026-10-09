@@ -10,6 +10,7 @@ const result = loadValidatedConfig({
   applyToProcessEnv: true,
   overrideProcessEnv: true,
   projectRoot,
+  profile: 'database',
 });
 
 if (!result.ok) {

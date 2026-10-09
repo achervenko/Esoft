@@ -8,12 +8,14 @@ export async function loadProductionConfig({
   loadConfig: loadConfigImpl = loadConfig,
   overrideProcessEnv = true,
   projectRoot,
+  profile = 'production',
   validateConfig: validateConfigImpl = validateConfig,
 }) {
   const validation = validateConfigImpl({
     applyToProcessEnv,
     overrideProcessEnv,
     projectRoot,
+    profile,
   });
 
   if (!validation.valid) {
@@ -37,6 +39,7 @@ export async function loadProductionConfig({
       applyToProcessEnv,
       overrideProcessEnv,
       projectRoot,
+      profile,
     });
   } catch (error) {
     return {

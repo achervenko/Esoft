@@ -18,24 +18,24 @@ export type EsoftConfig = {
     url: string;
   };
   frontend: {
-    apiUrl: string;
-    host: string;
-    port: number;
+    apiUrl?: string;
+    host?: string;
+    port?: number;
     url: string;
   };
   minio: {
     accessKey: string;
     bucket: string;
-    consolePort: number;
-    consoleUrl: string;
-    dataDir: string;
+    consolePort?: number;
+    consoleUrl?: string;
+    dataDir?: string;
     endpoint: string;
-    executable: string;
+    executable?: string;
     host: string;
     port: number;
     region: string;
-    rootPassword: string;
-    rootUser: string;
+    rootPassword?: string;
+    rootUser?: string;
     secretKey: string;
     useSsl: boolean;
   };
@@ -51,6 +51,7 @@ type LoadedConfig = {
 
 type ConfigCore = {
   loadConfig(options?: {
+    profile?: 'backend' | 'database';
     applyToProcessEnv?: boolean;
     overrideProcessEnv?: boolean;
   }): LoadedConfig;
@@ -59,13 +60,26 @@ type ConfigCore = {
 let configCore: ConfigCore | null = null;
 
 export function loadRootConfig(): EsoftConfig {
+  return loadRootEnvironment().config;
+}
+
+export function loadRootDatabaseUrl(): string {
+  return getConfigCore().loadConfig({
+    profile: 'database',
+    applyToProcessEnv: true,
+    overrideProcessEnv: true,
+  }).config.database.url;
+}
+
+export function loadRootEnvironment(): LoadedConfig {
   const core = getConfigCore();
   const loadedConfig = core.loadConfig({
+    profile: 'backend',
     applyToProcessEnv: true,
     overrideProcessEnv: true,
   });
 
-  return loadedConfig.config;
+  return loadedConfig;
 }
 
 function getConfigCore(): ConfigCore {

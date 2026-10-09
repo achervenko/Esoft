@@ -7,7 +7,7 @@ const { validateEnvironment } = require('./config-schema.cjs');
 function validateConfig(options = {}) {
   try {
     const loadedEnvironment = loadEnvironment(options);
-    const result = validateEnvironment(loadedEnvironment.env);
+    const result = validateEnvironment(loadedEnvironment.env, { profile: options.profile });
 
     return {
       ...result,

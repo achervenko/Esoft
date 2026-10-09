@@ -10,6 +10,7 @@ const envDir = path.resolve(__dirname, '..')
 
 type ConfigCore = {
   loadConfig(options?: {
+    profile?: 'frontend'
     applyToProcessEnv?: boolean
     overrideProcessEnv?: boolean
   }): {
@@ -32,6 +33,7 @@ const configCore = requireConfigModule(
 // https://vite.dev/config/
 export default defineConfig(() => {
   const { config } = configCore.loadConfig({
+    profile: 'frontend',
     applyToProcessEnv: true,
     overrideProcessEnv: true,
   })

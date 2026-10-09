@@ -9,6 +9,7 @@ export function loadValidatedConfig({
   applyToProcessEnv = false,
   overrideProcessEnv = true,
   projectRoot,
+  profile = 'local',
 } = {}) {
   try {
     const loadedEnvironment = configCore.loadEnvironment({
@@ -16,7 +17,7 @@ export function loadValidatedConfig({
       overrideProcessEnv,
       projectRoot,
     });
-    const validation = configCore.validateEnvironment(loadedEnvironment.env);
+    const validation = configCore.validateEnvironment(loadedEnvironment.env, { profile });
 
     if (!validation.valid) {
       return failure('CONFIG_INVALID', 'Configuration is invalid', {
@@ -34,7 +35,7 @@ export function loadValidatedConfig({
     }
 
     return success('CONFIG_VALID', 'Configuration is valid', {
-      config: configCore.buildConfig(loadedEnvironment.env),
+      config: configCore.buildConfig(loadedEnvironment.env, { profile }),
       envPath: loadedEnvironment.envPath,
       projectRoot: loadedEnvironment.projectRoot,
       warnings: validation.warnings,

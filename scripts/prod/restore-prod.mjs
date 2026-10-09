@@ -1,7 +1,9 @@
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { success } from '../infrastructure/result.mjs';
+import { withProductionOperationLock } from './production-operation-lock.mjs';
+
+import { executeProductionRestore } from './restore-prod.execute.mjs';
 import {
   createDefaultProductionRestoreContext,
   createDefaultProductionRestoreOperations,
@@ -13,11 +15,12 @@ import {
   finishProductionRestoreFailure,
 } from './restore-prod.reporter.mjs';
 
-const STAGE_COUNT = 10;
+const STAGE_COUNT = 13;
 
 export async function runProductionRestore(options = {}) {
   const output = options.output ?? console;
-  const reporter = options.reporter ?? createProductionRestoreReporter({ output });
+  const reporter =
+    options.reporter ?? createProductionRestoreReporter({ output });
   const operations = {
     ...createDefaultProductionRestoreOperations(),
     ...(options.operations ?? {}),
@@ -70,178 +73,34 @@ export async function runProductionRestore(options = {}) {
   }
 
   const { config } = configStage.value;
+  const projectRoot = configStage.value.projectRoot ?? context.projectRoot;
 
-  const manifestStage = await stage(3, 'Reading backup manifest', () =>
-    operations.readRestoreManifest({
-      backupPath: restoreState.backupPath,
-      config,
-    }),
-  );
-
-  if (!manifestStage.result.ok) {
-    return fail({
-      failedStage: 'Reading backup manifest',
-      reporter,
-      restoreState,
-      result: manifestStage.result,
-      results,
-    });
-  }
-
-  const manifest = manifestStage.result.details.manifest;
-
-  const artifactsStage = await stage(4, 'Validating backup artifacts', () =>
-    operations.validateRestoreArtifacts({
-      backupPath: restoreState.backupPath,
-      manifest,
-      expectedObjectCount: manifest.storage.objectCount,
-      expectedTotalBytes: manifest.storage.totalBytes,
-    }),
-  );
-
-  if (!artifactsStage.result.ok) {
-    return fail({
-      failedStage: 'Validating backup artifacts',
-      reporter,
-      restoreState,
-      result: artifactsStage.result,
-      results,
-    });
-  }
-
-  const { dumpPath, storagePath } = artifactsStage.result.details;
-
-  const pgRestoreStage = await stage(5, 'Checking pg_restore and archive', async () => {
-    const available = await operations.checkPgRestoreAvailable({
-      config,
-      runCommand: context.runCommand,
-    });
-    if (!available.ok) return available;
-    return operations.verifyPostgresArchive({ config, dumpPath, runCommand: context.runCommand });
+  return withProductionOperationLock({
+    projectRoot,
+    operation: 'restore',
+    onFailure: (result) =>
+      fail({
+        restoreState,
+        failedStage: 'Production operation lock',
+        reporter,
+        result,
+        results,
+      }),
+    run: () =>
+      executeProductionRestore({
+        config,
+        projectRoot,
+        restoreState,
+        operations,
+        context,
+        stage,
+        reporter,
+        results,
+      }),
   });
-
-  if (!pgRestoreStage.result.ok) {
-    return fail({
-      failedStage: 'Checking pg_restore and archive',
-      reporter,
-      restoreState,
-      result: pgRestoreStage.result,
-      results,
-    });
-  }
-
-  const postgresStage = await stage(6, 'Checking PostgreSQL connection', () =>
-    operations.checkProductionPostgres({
-      config,
-      PgClient: context.PgClient,
-    }),
-  );
-
-  if (!postgresStage.result.ok) {
-    return fail({
-      failedStage: 'Checking PostgreSQL connection',
-      reporter,
-      restoreState,
-      result: postgresStage.result,
-      results,
-    });
-  }
-
-  const bucketStage = await stage(7, 'Checking MinIO bucket', () =>
-    operations.checkStorageBucket({
-      config,
-      HeadBucketCommand: context.HeadBucketCommand,
-      S3Client: context.S3Client,
-    }),
-  );
-
-  if (!bucketStage.result.ok) {
-    return fail({
-      failedStage: 'Checking MinIO bucket',
-      reporter,
-      restoreState,
-      result: bucketStage.result,
-      results,
-    });
-  }
-
-  const restorePostgresStage = await stage(8, 'Restoring PostgreSQL', () =>
-    operations.restorePostgresDatabase({
-      config,
-      dumpPath,
-      runCommand: context.runCommand,
-    }),
-  );
-
-  if (!restorePostgresStage.result.ok) {
-    return fail({
-      failedStage: 'Restoring PostgreSQL',
-      reporter,
-      restoreState,
-      result: restorePostgresStage.result,
-      results,
-    });
-  }
-
-  restoreState.postgresRestored = true;
-
-  const storageStage = await stage(9, 'Replacing MinIO objects', () =>
-    operations.replaceStorageBucket({
-      config,
-      DeleteObjectCommand: context.DeleteObjectCommand,
-      ListObjectsV2Command: context.ListObjectsV2Command,
-      PutObjectCommand: context.PutObjectCommand,
-      S3Client: context.S3Client,
-      storagePath,
-    }),
-  );
-
-  if (!storageStage.result.ok) {
-    return fail({
-      failedStage: 'Replacing MinIO objects',
-      reporter,
-      restoreState,
-      result: storageStage.result,
-      results,
-    });
-  }
-
-  const verifyStage = await stage(10, 'Verifying restore', () =>
-    operations.verifyRestoredStorage({
-      config,
-      expectedObjectCount: manifest.storage.objectCount,
-      expectedTotalBytes: manifest.storage.totalBytes,
-      ListObjectsV2Command: context.ListObjectsV2Command,
-      S3Client: context.S3Client,
-    }),
-  );
-
-  if (!verifyStage.result.ok) {
-    return fail({
-      failedStage: 'Verifying restore',
-      reporter,
-      restoreState,
-      result: verifyStage.result,
-      results,
-    });
-  }
-
-  const finalResult = success('RESTORE_OK', 'Production restore completed', {
-    backupPath: restoreState.backupPath,
-    results,
-  });
-  reporter.success(finalResult);
-
-  return finalResult;
 }
 
-function fail({
-  failedStage,
-  reporter,
-  restoreState,
-  result,
-  results,
-}) {
+function fail({ failedStage, reporter, restoreState, result, results }) {
   return finishProductionRestoreFailure({
     failedStage,
     reporter,

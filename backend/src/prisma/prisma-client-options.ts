@@ -1,12 +1,12 @@
 import { PrismaPg } from '@prisma/adapter-pg';
-import { loadRootConfig } from '../config/root-environment';
+import { loadRootDatabaseUrl } from '../config/root-environment';
 
 export const createPrismaClientOptions = () => {
-  const config = loadRootConfig();
+  const connectionString = loadRootDatabaseUrl();
 
   return {
     adapter: new PrismaPg({
-      connectionString: config.database.url,
+      connectionString,
     }),
   };
 };
