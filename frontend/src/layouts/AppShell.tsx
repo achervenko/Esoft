@@ -176,7 +176,7 @@ class AppShellRouteBoundary extends Component<
 
 function AppShellPageFallback() {
   return (
-    <div className="app-page-loading" role="status" aria-live="polite">
+    <div className="app-page-loading app-page-loading--section" role="status" aria-live="polite">
       Загрузка раздела...
     </div>
   );
@@ -257,7 +257,7 @@ export function AppShell({
                 currentUserId={user?.id ?? null}
               />
             ) : null}
-            {appRoute.kind === "search" ? <SearchPage /> : null}
+            {appRoute.kind === "search" ? <SearchPage userRole={user?.role ?? null} /> : null}
             {appRoute.kind === "profile" ? <ProfilePage user={user} /> : null}
             {appRoute.kind === "production-calendar" ? (
               <ProductionCalendarPage userRole={user?.role ?? null} />

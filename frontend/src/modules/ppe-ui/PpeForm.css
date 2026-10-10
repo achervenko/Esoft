@@ -18,3 +18,56 @@
 .ppe-size-summary strong {
   color: #3f4652;
 }
+
+.ppe-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  padding-bottom: 12px;
+}
+
+.ppe-delete-icon-button {
+  display: grid;
+  place-items: center;
+  height: 40px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-danger, #b42318);
+  cursor: pointer;
+}
+.ppe-delete-icon-button:hover:not(:disabled) {
+  background: #fff1f0;
+}
+.ppe-delete-icon-button:focus-visible {
+  outline: 2px solid var(--color-danger, #b42318);
+  outline-offset: 2px;
+}
+
+.ppe-employee-sizes-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-block: 4px 6px;
+}
+.ppe-employee-sizes-heading {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+.ppe-employee-sizes-heading p {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 400;
+}
+.ppe-employee-sizes-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.admin-modal.admin-modal-resizing > .ppe-form {
+  overflow-y: hidden;
+}

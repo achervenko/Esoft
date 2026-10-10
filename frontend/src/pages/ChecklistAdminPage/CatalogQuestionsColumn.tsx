@@ -1,3 +1,4 @@
+import { LoadingIndicator } from "../../shared/ui/LoadingIndicator";
 import { Plus } from "lucide-react";
 import {
   Fragment,
@@ -10,9 +11,13 @@ import {
 } from "../../shared/api/checklists";
 import { CatalogQuestionCard } from "./CatalogQuestionCard";
 import type { SelectedQuestionGroup } from "./checklist-catalog.types";
-import type { CatalogDragItem, CatalogDragState } from "./catalog-reorder.types";
+import type {
+  CatalogDragItem,
+  CatalogDragState,
+} from "./catalog-reorder.types";
 
 type CatalogQuestionsColumnProps = {
+  isLoading?: boolean;
   activeQuestionIds: number[];
   dragOverIndex: number | null;
   dragState: CatalogDragState;
@@ -36,6 +41,7 @@ type CatalogQuestionsColumnProps = {
 };
 
 export function CatalogQuestionsColumn({
+  isLoading = false,
   activeQuestionIds,
   dragOverIndex,
   dragState,
@@ -85,61 +91,71 @@ export function CatalogQuestionsColumn({
           value={questionSearch}
         />
       </div>
-      {isQuestionSearchActive && selectedGroup.kind === "module" ? (
-        <p className="admin-state">Очистите поиск, чтобы изменить порядок.</p>
-      ) : null}
+      <LoadingIndicator loading={isLoading} />
+      {!isLoading && (
+        <>
+          {isQuestionSearchActive && selectedGroup.kind === "module" ? (
+            <p className="admin-state">
+              Очистите поиск, чтобы изменить порядок.
+            </p>
+          ) : null}
 
-      {groupQuestions.length === 0 ? (
-        <p className="admin-state">
-          {isQuestionSearchActive
-            ? "Вопросы не найдены."
-            : selectedGroup.kind === "unassigned"
-            ? "Вопросов без модуля пока нет."
-            : "В этом модуле пока нет вопросов."}
-        </p>
-      ) : (
-        <div
-          className={`checklist-order-list${isSavingQuestions ? " saving" : ""}`}
-          ref={questionListRef}
-        >
-          {groupQuestions.map((question) => {
-            const canReorder =
-              selectedGroup.kind === "module" &&
-              isSelectedModuleActive &&
-              question.isActive &&
-              !isQuestionSearchActive;
-            const activeQuestionIndex = activeQuestionIds.indexOf(question.id);
+          {groupQuestions.length === 0 ? (
+            <p className="admin-state">
+              {isQuestionSearchActive
+                ? "Вопросы не найдены."
+                : selectedGroup.kind === "unassigned"
+                  ? "Вопросов без модуля пока нет."
+                  : "В этом модуле пока нет вопросов."}
+            </p>
+          ) : (
+            <div
+              className={`checklist-order-list${isSavingQuestions ? " saving" : ""}`}
+              ref={questionListRef}
+            >
+              {groupQuestions.map((question) => {
+                const canReorder =
+                  selectedGroup.kind === "module" &&
+                  isSelectedModuleActive &&
+                  question.isActive &&
+                  !isQuestionSearchActive;
+                const activeQuestionIndex = activeQuestionIds.indexOf(
+                  question.id,
+                );
 
-            return (
-              <Fragment key={question.id}>
-                <CatalogQuestionCard
-                  activeQuestionIndex={activeQuestionIndex}
-                  canActivate={canActivateQuestion}
-                  canReorder={canReorder}
-                  dragOverIndex={dragOverIndex}
-                  dragProps={getQuestionDragProps({
-                    id: question.id,
-                    kind: "question",
-                    subtitle: checklistAnswerTypeLabels[question.answerType],
-                    title: question.questionText,
-                  })}
-                  dragState={dragState}
-                  onEdit={onEditQuestion}
-                  onReorder={onReorderQuestions}
-                  onToggleStatus={onToggleQuestionStatus}
-                  pendingQuestionIds={pendingQuestionIds}
-                  question={question}
-                  selectedGroup={selectedGroup}
-                />
-                {dragState?.kind === "question" &&
-                dragOverIndex === activeQuestionIds.length &&
-                activeQuestionIndex === activeQuestionIds.length - 1 ? (
-                  <span className="checklist-order-drop-line after" />
-                ) : null}
-              </Fragment>
-            );
-          })}
-        </div>
+                return (
+                  <Fragment key={question.id}>
+                    <CatalogQuestionCard
+                      activeQuestionIndex={activeQuestionIndex}
+                      canActivate={canActivateQuestion}
+                      canReorder={canReorder}
+                      dragOverIndex={dragOverIndex}
+                      dragProps={getQuestionDragProps({
+                        id: question.id,
+                        kind: "question",
+                        subtitle:
+                          checklistAnswerTypeLabels[question.answerType],
+                        title: question.questionText,
+                      })}
+                      dragState={dragState}
+                      onEdit={onEditQuestion}
+                      onReorder={onReorderQuestions}
+                      onToggleStatus={onToggleQuestionStatus}
+                      pendingQuestionIds={pendingQuestionIds}
+                      question={question}
+                      selectedGroup={selectedGroup}
+                    />
+                    {dragState?.kind === "question" &&
+                    dragOverIndex === activeQuestionIds.length &&
+                    activeQuestionIndex === activeQuestionIds.length - 1 ? (
+                      <span className="checklist-order-drop-line after" />
+                    ) : null}
+                  </Fragment>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </section>
   );

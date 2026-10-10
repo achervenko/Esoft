@@ -2,17 +2,38 @@ import { describe, expect, it } from "vitest";
 import { resolveAppRoute } from "./app-router";
 
 describe("resolveAppRoute", () => {
-  it.each(["issue", "journal", "norms", "catalog"] as const)(
+  it("accepts preserved search routes on PPE detail links", () => {
+    const query = "?returnTo=" + encodeURIComponent("#/search?q=сок&module=ppe");
+    expect(resolveAppRoute("#/ppe/employees/1" + query)).toEqual({ kind: "ppe", tab: "issue", employeeId: 1 });
+    expect(resolveAppRoute("#/ppe/positions/1" + query)).toEqual({ kind: "ppe", tab: "norms", positionId: 1 });
+  });
+  it("resolves the employee PPE card", () => {
+    expect(resolveAppRoute("#/ppe/employees/1")).toEqual({
+      kind: "ppe", tab: "issue", employeeId: 1,
+    });
+  });
+  it("resolves position PPE norms", () => {
+    expect(resolveAppRoute("#/ppe/positions/1")).toEqual({
+      kind: "ppe", tab: "norms", positionId: 1,
+    });
+  });
+  it.each([
+    "#/ppe/employees/0", "#/ppe/employees/abc",
+    "#/ppe/positions/0", "#/ppe/positions/abc",
+  ])("rejects invalid PPE route %s", (route) => {
+    expect(resolveAppRoute(route)).toEqual({ kind: "unknown" });
+  });
+  it.each(["journal", "norms", "catalog"] as const)(
     "resolves PPE tab %s",
     (tab) => {
       expect(resolveAppRoute(`#/ppe?tab=${tab}`)).toEqual({ kind: "ppe", tab });
     },
   );
   it("defaults unknown PPE tabs and rejects unrelated PPE paths", () => {
-    expect(resolveAppRoute("#/ppe")).toEqual({ kind: "ppe", tab: "issue" });
+    expect(resolveAppRoute("#/ppe")).toEqual({ kind: "ppe", tab: "norms" });
     expect(resolveAppRoute("#/ppe?tab=unknown")).toEqual({
       kind: "ppe",
-      tab: "issue",
+      tab: "norms",
     });
     expect(resolveAppRoute("#/ppe-other")).toEqual({ kind: "unknown" });
   });

@@ -24,6 +24,7 @@ export type SearchResultDto = {
   entityType: string;
   entityId: number;
   title: string;
+  searchText?: string;
   subtitle: string | null;
   score: number;
   targetUrl: string | null;

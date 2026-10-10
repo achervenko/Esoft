@@ -72,11 +72,11 @@ export function NormCard({
           )}
       </header>
       <div className="ppe-table-wrap">
-        <AppTable>
+        <AppTable className="ppe-norm-items-table">
           <thead>
             <tr>
               <th>Артикул</th>
-              <th>Наименование</th>
+              <th className="ppe-norm-name-column">Наименование</th>
               <th>Количество</th>
               <th>Период</th>
             </tr>
@@ -88,7 +88,7 @@ export function NormCard({
                 className={!item.isActive ? "ppe-inactive" : undefined}
               >
                 <td>{item.article}</td>
-                <td>
+                <td className="ppe-norm-name-column">
                   {item.name}
                   {!item.isActive && " (удалён)"}
                 </td>
@@ -97,9 +97,6 @@ export function NormCard({
                   {formatPpePeriod(item.periodCount, item.periodUnit)}
                   {item.calculationMode === "MONTHLY" && (
                     <small>Месячный объём</small>
-                  )}
-                  {item.calculationMode === "INTERVAL" && (
-                    <small>По сроку носки</small>
                   )}
                 </td>
               </tr>

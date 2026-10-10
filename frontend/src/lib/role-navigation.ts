@@ -23,6 +23,7 @@ export function getDefaultAuthRoute(role: unknown) {
 export function canAccessWorkspaceRoute(role: unknown, route: string) {
   const path = route.split("?")[0];
   const knownRole = typeof role === "string" ? role : null;
+  if (path === "#/search") return canReadEquipment(role) || canReadPpe(role);
   if (path === "#/profile") return true;
   if (
     path === "#/ppe" ||

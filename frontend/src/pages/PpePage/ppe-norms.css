@@ -6,20 +6,6 @@
   justify-content: space-between;
 }
 
-.ppe-norm-form-modal .ppe-draft-row {
-  grid-template-columns: minmax(170px, 1fr) 86px 66px 94px 88px;
-}
-.ppe-norm-form-modal .ppe-draft-row > button {
-  height: 40px;
-}
-@media (max-width: 700px) {
-  .ppe-norm-form-modal .ppe-draft-row {
-    grid-template-columns: 1fr 1fr;
-  }
-  .ppe-norm-form-modal .ppe-draft-row .ppe-field:first-of-type {
-    grid-column: 1 / -1;
-  }
-}
 .ppe-norm-invalid {
   color: #b45309;
   background: #fff3df;
@@ -68,4 +54,41 @@
 }
 .ppe-transition-tip p + p {
   margin-top: 8px;
+}
+
+.ppe-norms-empty {
+  min-height: min(360px, 45dvh);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding-block: 24px;
+}
+
+.ppe-employee-page:has(.ppe-norms-empty) {
+  min-height: calc(100svh - 56px);
+}
+.ppe-employee-content:has(> .ppe-norms-empty) {
+  display: flex;
+  flex-direction: column;
+}
+.ppe-employee-content > .ppe-norms-empty {
+  flex: 1;
+  min-height: 0;
+}
+@media (max-width: 760px) {
+  .ppe-employee-page:has(.ppe-norms-empty) {
+    min-height: calc(100svh - 32px);
+  }
+}
+
+.ppe-norm-items-table th,
+.ppe-norm-items-table td {
+  text-align: center;
+}
+.ppe-norm-items-table .ppe-norm-name-column {
+  text-align: left;
+}
+
+.ppe-norm-search-toolbar .ppe-journal-search {
+  margin-bottom: 0;
 }

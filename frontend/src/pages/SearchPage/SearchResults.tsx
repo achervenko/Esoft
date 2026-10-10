@@ -1,10 +1,9 @@
-import { memo } from "react";
-import { EquipmentStatusBadge } from "../../modules/equipment-status";
+import { memo, useCallback, useState } from "react";
 import type { SearchResultItem } from "../../shared/api/search-api";
 import { buildHashRoute } from "../../shared/lib/hash-navigation";
 
 function getResultHref(item: SearchResultItem) {
-  if (item.targetUrl?.startsWith("#/equipment/")) {
+  if (item.targetUrl && (item.targetUrl.startsWith("#/equipment/") || item.targetUrl.startsWith("#/ppe"))) {
     return buildHashRoute(item.targetUrl, {
       returnTo: window.location.hash,
     });
@@ -26,75 +25,55 @@ function getEntityLabel(entityType: string) {
     return "Оборудование";
   }
 
+  if (entityType === "ppe_norm") return "Нормы";
+  if (entityType === "ppe_item") return "СИЗ";
+  if (entityType === "employee") return "Сотрудник";
   return entityType;
 }
 
-function getEquipmentStatusLabel(status: string | null) {
-  const labels: Record<string, string> = {
-    active: "В эксплуатации",
-    maintenance: "На обслуживании",
-    repair: "В ремонте",
-    reserve: "Резерв",
-    written_off: "Списано",
-  };
+const SearchResultCard = memo(function SearchResultCard({ item, href, visited, onVisit }: { item: SearchResultItem; href: string; visited: boolean; onVisit: (key: string) => void }) {
+  return (
+    <li>
+      <a href={href} className={visited ? "search-result-visited" : undefined} onClick={() => onVisit(`${item.entityType}:${item.entityId}`)}>
+        <span className="search-result-title">{item.title}</span>
+        <span className="search-result-type">{getEntityLabel(item.entityType)}</span>
+        {item.subtitle && <small>{item.subtitle}</small>}
+      </a>
+    </li>
+  );
+});
 
-  return status ? labels[status] ?? status : null;
+const VISITED_KEY = "search-viewed-results";
+function searchVisitKey(hash: string) {
+  const [path, query = ""] = hash.split("?");
+  const params = new URLSearchParams(query);
+  params.sort();
+  return path + (params.size ? `?${params}` : "");
 }
-
-function getEquipmentMeta(item: SearchResultItem) {
-  return [
-    item.details.manufacturer
-      ? `Производитель: ${item.details.manufacturer}`
-      : null,
-    item.details.model ? `Модель: ${item.details.model}` : null,
-    item.details.serialNumber
-      ? `Заводской номер: ${item.details.serialNumber}`
-      : null,
-  ].filter((value): value is string => Boolean(value));
-}
-
 function SearchResultsComponent({ items }: { items: SearchResultItem[] }) {
+  const route = searchVisitKey(window.location.hash);
+  const [visited, setVisited] = useState<{ route: string; keys: string[] }>(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(VISITED_KEY) ?? "null");
+      return saved && typeof saved.route === "string" && Array.isArray(saved.keys)
+        ? { route: searchVisitKey(saved.route), keys: saved.keys } : { route, keys: [] };
+    }
+    catch { return { route, keys: [] }; }
+  });
+  const onVisit = useCallback((key: string) => {
+    const next = { route, keys: [...new Set([...(visited.route === route ? visited.keys : []), key])] };
+    // Persist before navigation can unmount the search page.
+    try { sessionStorage.setItem(VISITED_KEY, JSON.stringify(next)); } catch { /* Browsing still works without storage. */ }
+    setVisited(next);
+  }, [route, visited]);
   if (items.length === 0) {
-    return <p className="admin-state">Ничего не найдено.</p>;
+    return <p className="search-empty-state">Ничего не найдено.</p>;
   }
 
   return (
     <ul className="search-results">
       {items.map((item) => (
-        <li key={`${item.entityType}:${item.entityId}`}>
-          <a href={getResultHref(item)}>
-            <div className="search-result-header">
-              <div>
-                <span className="search-result-type">
-                  {getEntityLabel(item.entityType)}
-                </span>
-                <strong>{item.title}</strong>
-              </div>
-
-              {item.details.status ? (
-                <EquipmentStatusBadge
-                  label={getEquipmentStatusLabel(item.details.status) ?? ""}
-                  status={item.details.status}
-                />
-              ) : null}
-            </div>
-
-            <div className="search-result-meta">
-              {getEquipmentMeta(item).map((meta) => (
-                <span key={meta}>{meta}</span>
-              ))}
-            </div>
-
-            <div className="search-result-details">
-              {item.details.location ? (
-                <span>Местонахождение: {item.details.location}</span>
-              ) : null}
-              {item.details.responsible ? (
-                <span>Ответственный: {item.details.responsible}</span>
-              ) : null}
-            </div>
-          </a>
-        </li>
+        <SearchResultCard key={`${item.entityType}:${item.entityId}`} item={item} href={getResultHref(item)} visited={visited.route === route && visited.keys.includes(`${item.entityType}:${item.entityId}`)} onVisit={onVisit} />
       ))}
     </ul>
   );

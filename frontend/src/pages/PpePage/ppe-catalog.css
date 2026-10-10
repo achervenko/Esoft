@@ -1,7 +1,7 @@
-.ppe-catalog-toolbar {
+.admin-card.ppe-catalog-toolbar {
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 0;
   display: flex;
 }
 .ppe-catalog-toolbar .ppe-journal-search {
@@ -23,13 +23,42 @@
 .ppe-item-fields {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
+  gap: 14px;
 }
 .admin-modal.ppe-item-form-modal {
   max-height: calc(100dvh - 24px);
 }
 .ppe-item-form-modal > .ppe-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 20px;
+  padding-bottom: 24px;
+}
+.ppe-item-form-modal fieldset.ppe-form {
+  display: grid;
   gap: 12px;
-  padding-top: 12px;
-  padding-bottom: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.ppe-item-form-modal fieldset.ppe-form > legend {
+  padding: 0 0 12px;
+}
+.ppe-item-form-modal fieldset.ppe-form > button {
+  justify-self: start;
+}
+.ppe-item-form-modal .ppe-form-actions {
+  margin-top: 4px;
+  padding-bottom: 0;
+}
+
+.ppe-item-form-modal fieldset.ppe-form > .ppe-actions {
+  align-items: center;
+}
+.ppe-item-form-modal fieldset.ppe-form .admin-icon-button {
+  display: grid;
+  place-items: center;
+  height: 40px;
+  flex-shrink: 0;
 }

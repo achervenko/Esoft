@@ -104,3 +104,12 @@
     padding: 78px 18px 22px;
   }
 }
+
+.app-page-loading--section {
+  min-height: calc(100svh - 56px);
+}
+@media (max-width: 760px) {
+  .app-page-loading--section {
+    min-height: calc(100svh - 32px);
+  }
+}

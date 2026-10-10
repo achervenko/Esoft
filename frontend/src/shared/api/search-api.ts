@@ -16,16 +16,21 @@ export type SearchResultItem = {
   subtitle: string | null;
   targetUrl: string | null;
   title: string;
+  searchText?: string;
 };
 
 export async function searchApp(params: {
   entityType?: string;
+  module?: string;
   limit?: number;
   offset?: number;
   query: string;
+  signal?: AbortSignal;
 }) {
   const searchParams = new URLSearchParams();
   searchParams.set("q", params.query);
+
+  if (params.module) searchParams.set("module", params.module);
 
   if (params.entityType) {
     searchParams.set("entityType", params.entityType);
@@ -39,5 +44,5 @@ export async function searchApp(params: {
     searchParams.set("offset", String(params.offset));
   }
 
-  return request<SearchResultItem[]>(`/api/search?${searchParams}`);
+  return request<SearchResultItem[]>(`/api/search?${searchParams}`, { signal: params.signal });
 }

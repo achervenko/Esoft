@@ -1,24 +1,37 @@
-import "./ShoeSizeRange.css";
+import "./SizeRange.css";
 import { Slider } from "@chakra-ui/react";
 import { ChevronRight, X } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { Field } from "../../modules/ppe-ui/ppe-ui";
 
-export function ShoeSizeRange({
+export const shoeSizeRange = { min: 30, max: 60, defaultRange: [36, 46] as [number, number], sizeName: "обуви" };
+export const gloveSizeRange = { min: 6, max: 15, defaultRange: [7, 11] as [number, number], sizeName: "перчаток" };
+
+export const headSizeRange = { min: 54, max: 65, defaultRange: [55, 62] as [number, number], sizeName: "головного убора" };
+
+export function SizeRange({
   values,
   onChange,
   disabled = false,
+  min,
+  max,
+  defaultRange,
+  sizeName,
 }: {
   values: string[];
   onChange: (values: string[]) => void;
   disabled?: boolean;
+  min: number;
+  max: number;
+  defaultRange: [number, number];
+  sizeName: string;
 }) {
   const numericSizes = values
     .map(Number)
-    .filter((size) => Number.isInteger(size) && size >= 30 && size <= 60);
+    .filter((size) => Number.isInteger(size) && size >= min && size <= max);
   const range = numericSizes.length
     ? [Math.min(...numericSizes), Math.max(...numericSizes)]
-    : [36, 46];
+    : defaultRange;
   const present = new Set(numericSizes);
   const gaps: { from: number; to: number }[] = [];
   for (let size = range[0] + 1; size < range[1]; size++) {
@@ -64,7 +77,7 @@ export function ShoeSizeRange({
   };
   const add = () => {
     const size = Number(manual);
-    if (!manual || !Number.isInteger(size) || size < 30 || size > 60) return;
+    if (!manual || !Number.isInteger(size) || size < min || size > max) return;
     onChange(
       [...new Set([...values, String(size)])].sort(
         (a, b) => Number(a) - Number(b),
@@ -75,13 +88,13 @@ export function ShoeSizeRange({
   return (
     <div className="ppe-shoe-range">
       <Slider.Root
-        min={30}
-        max={60}
+        min={min}
+        max={max}
         step={1}
         minStepsBetweenThumbs={0}
         value={range}
         disabled={disabled}
-        aria-label={["Минимальный размер обуви", "Максимальный размер обуви"]}
+        aria-label={[`Минимальный размер ${sizeName}`, `Максимальный размер ${sizeName}`]}
         onValueChange={({ value }) => fill(value)}
         colorPalette="gray"
       >
@@ -93,8 +106,8 @@ export function ShoeSizeRange({
         </div>
         <Slider.Control>
           <div className="ppe-shoe-range-ticks" aria-hidden="true">
-            {Array.from({ length: 31 }, (_, index) => {
-              const size = 30 + index;
+            {Array.from({ length: max - min + 1 }, (_, index) => {
+              const size = min + index;
               return (
                 <span
                   key={size}
@@ -105,7 +118,7 @@ export function ShoeSizeRange({
                         ? "ppe-tick-medium"
                         : undefined
                   }
-                  style={{ left: `${(index / 30) * 100}%` }}
+                  style={{ left: `${(index / (max - min)) * 100}%` }}
                 />
               );
             })}
@@ -116,8 +129,8 @@ export function ShoeSizeRange({
               <span
                 key={from}
                 style={{
-                  left: `${((from - 30) / 30) * 100}%`,
-                  width: `${((to - from) / 30) * 100}%`,
+                  left: `${((from - min) / (max - min)) * 100}%`,
+                  width: `${((to - from) / (max - min)) * 100}%`,
                 }}
               />
             ))}
@@ -131,10 +144,10 @@ export function ShoeSizeRange({
                 }
                 style={
                   from === to
-                    ? { left: `${((from - 30) / 30) * 100}%` }
+                    ? { left: `${((from - min) / (max - min)) * 100}%` }
                     : {
-                        left: `${((from - 1 - 30) / 30) * 100}%`,
-                        width: `${((to - from + 2) / 30) * 100}%`,
+                        left: `${((from - 1 - min) / (max - min)) * 100}%`,
+                        width: `${((to - from + 2) / (max - min)) * 100}%`,
                       }
                 }
               />
@@ -176,8 +189,8 @@ export function ShoeSizeRange({
           <Field label="Размер вручную">
             <input
               type="number"
-              min={30}
-              max={60}
+              min={min}
+              max={max}
               step={1}
               value={manual}
               disabled={disabled}
@@ -197,8 +210,8 @@ export function ShoeSizeRange({
               disabled ||
               !manual ||
               !Number.isInteger(Number(manual)) ||
-              Number(manual) < 30 ||
-              Number(manual) > 60
+              Number(manual) < min ||
+              Number(manual) > max
             }
             onClick={add}
           >

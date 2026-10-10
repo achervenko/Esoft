@@ -47,6 +47,30 @@
   font-size: 14px;
   font-weight: 750;
 }
-.ppe-clothing-custom .ppe-actions {
-  margin-top: 12px;
+.ppe-clothing-custom {
+  margin-top: 8px;
 }
+.ppe-clothing-custom .ppe-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  margin-top: 16px;
+}
+.ppe-clothing-custom .ppe-actions > .ppe-field {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.ppe-clothing-custom .ppe-actions > button {
+  flex-shrink: 0;
+}
+.ppe-employee-sizes-form > fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.ppe-employee-sizes-form > fieldset > legend {
+  margin-bottom: 12px;
+}
+

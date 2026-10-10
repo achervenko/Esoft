@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const { resolve } = require('node:path');
 
 // Atomic, installation-wide lease. Never remove a lock owned by another process.
-function acquireInstallationLock({ projectRoot, operation, filesystem = fs }) {
+function acquireInstallationLock({ projectRoot, operation, filesystem = fs, recoverBackend = false, probeProcess = (pid) => process.kill(pid, 0) }) {
   const {
     mkdirSync,
     openSync,
@@ -18,7 +18,28 @@ function acquireInstallationLock({ projectRoot, operation, filesystem = fs }) {
   const lockPath = resolve(root, '.production-operation.lock');
   mkdirSync(root, { recursive: true });
   const token = randomUUID();
-  const fd = openSync(lockPath, 'wx', 0o600);
+  let fd;
+  try {
+    fd = openSync(lockPath, 'wx', 0o600);
+  } catch (error) {
+    if (error.code !== 'EEXIST' || operation !== 'backend' || !recoverBackend) throw error;
+    const identity = lstatSync(lockPath);
+    const raw = readFileSync(lockPath, 'utf8');
+    const owner = JSON.parse(raw);
+    if (identity.isSymbolicLink() || owner.operation !== 'backend' ||
+        !Number.isSafeInteger(owner.pid) || owner.pid <= 0 || !owner.token) throw error;
+    try {
+      probeProcess(owner.pid);
+      throw error;
+    } catch (probeError) {
+      if (probeError.code !== 'ESRCH') throw error;
+    }
+    const current = lstatSync(lockPath);
+    if (current.dev !== identity.dev || current.ino !== identity.ino ||
+        readFileSync(lockPath, 'utf8') !== raw) throw error;
+    unlinkSync(lockPath);
+    fd = openSync(lockPath, 'wx', 0o600);
+  }
   let identity;
   let initializationError;
   try {

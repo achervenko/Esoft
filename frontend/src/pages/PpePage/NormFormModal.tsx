@@ -1,3 +1,4 @@
+import { Trash2 } from "lucide-react";
 import { NormTransitionControl } from "./NormTransitionControl";
 import { AppSelect } from "../../shared/ui/SelectDropdown/AppSelect";
 import { useState } from "react";
@@ -217,7 +218,7 @@ export function NormFormModal({
                   ))}
               </AppSelect>
             </Field>
-            <Field label="Количество">
+            <Field label="Кол-во">
               <input
                 required
                 type="number"
@@ -254,7 +255,9 @@ export function NormFormModal({
               </AppSelect>
             </label>
             <button
-              className="admin-secondary-button ppe-danger-button"
+              className="admin-icon-button ppe-delete-icon-button"
+              aria-label="Удалить"
+              title="Удалить позицию нормы"
               type="button"
               onClick={() =>
                 setRows((current) =>
@@ -262,35 +265,37 @@ export function NormFormModal({
                 )
               }
             >
-              Удалить
+              <Trash2 aria-hidden="true" size={17} />
             </button>
           </fieldset>
         ))}
-        <button
-          className="admin-secondary-button"
-          type="button"
-          disabled={saving}
-          onClick={() => {
-            setRows((current) => [
-              ...current,
-              {
-                key: nextKey,
-                ppeItemId: "",
-                quantity: "1",
-                periodCount: "1",
-                periodUnit: "YEAR",
-                calculationMode: "INTERVAL",
-              },
-            ]);
-            setNextKey((key) => key + 1);
-          }}
-        >
-          Добавить
-        </button>
         <Message error={error} />
-        <button className="admin-primary-button" disabled={saving}>
-          {saving ? "Сохранение..." : "Сохранить норму"}
-        </button>
+        <div className="ppe-norm-form-actions">
+          <button
+            className="admin-secondary-button"
+            type="button"
+            disabled={saving}
+            onClick={() => {
+              setRows((current) => [
+                ...current,
+                {
+                  key: nextKey,
+                  ppeItemId: "",
+                  quantity: "1",
+                  periodCount: "1",
+                  periodUnit: "YEAR",
+                  calculationMode: "INTERVAL",
+                },
+              ]);
+              setNextKey((key) => key + 1);
+            }}
+          >
+            Добавить
+          </button>
+          <button className="admin-primary-button" disabled={saving}>
+            {saving ? "Сохранение..." : "Сохранить норму"}
+          </button>
+        </div>
       </form>
     </GuardedAdminModal>
   );

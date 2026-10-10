@@ -43,7 +43,7 @@ export function EmployeeNorms({
               [...norms.data]
                 .sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom))
                 .map((norm) => (
-                  <section className="ppe-form" key={norm.id}>
+                  <section className="ppe-form ppe-employee-norm-block" key={norm.id}>
                     <div className="ppe-actions">
                       <span>
                         {norm.effectiveFrom <= businessToday() &&

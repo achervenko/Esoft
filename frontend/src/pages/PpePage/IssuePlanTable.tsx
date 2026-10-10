@@ -1,6 +1,6 @@
 import type { PpePlan, PlanRow } from "../../shared/api/ppe";
 import { AppTable } from "../../shared/ui/AppTable";
-import { Checkbox } from "../../shared/ui/Checkbox";
+import { Checkbox } from "@chakra-ui/react";
 import {
   formatPpeQuantity,
   formatPpePeriod,
@@ -39,8 +39,9 @@ export function IssuePlanTable({
           <AppTable className="ppe-plan-table">
             <thead>
               <tr>
-                {allowed && <th>Выбрать</th>}
-                <th>Название</th>
+                {allowed && <th className="ppe-plan-selection-column" aria-label="Выбрать" />}
+                <th>Артикул</th>
+                <th className="ppe-plan-name-column">Название</th>
                 <th>Периодичность</th>
                 <th>Количество</th>
                 <th>Состояние</th>
@@ -51,18 +52,20 @@ export function IssuePlanTable({
               {dueItems.map((row) => (
                 <tr key={row.normItemId}>
                   {allowed && (
-                    <td>
-                      <Checkbox
-                        label={
-                          <span className="ppe-visually-hidden">{`Выбрать ${row.name}`}</span>
-                        }
+                    <td className="ppe-plan-selection-column">
+                      <Checkbox.Root
+                        className="ppe-plan-checkbox"
                         checked={selected.includes(row.normItemId)}
                         disabled={!allowed || !row.available}
-                        onChange={(checked) => onChoose(row, checked)}
-                      />
+                        onCheckedChange={({ checked }) => onChoose(row, checked === true)}
+                      >
+                        <Checkbox.HiddenInput aria-label={`Выбрать ${row.name}`} />
+                        <Checkbox.Control />
+                      </Checkbox.Root>
                     </td>
                   )}
-                  <td>
+                  <td>{row.article}</td>
+                  <td className="ppe-plan-name-column">
                     <strong>{row.name}</strong>
                   </td>
                   <td>
@@ -109,11 +112,19 @@ export function IssuePlanTable({
           </AppTable>
         </div>
       )}
-      {allowed && hasSelection && (
-        <div className="ppe-actions ppe-issue-actions">
-          <button className="admin-primary-button" onClick={onIssue}>
-            Выдать
-          </button>
+      {allowed && (
+        <div
+          className={`ppe-plan-confirm-reveal${hasSelection ? " is-visible" : ""}`}
+          aria-hidden={!hasSelection}
+          inert={!hasSelection}
+        >
+          <div className="ppe-plan-confirm-clip">
+            <div className="ppe-actions ppe-issue-actions">
+              <button type="button" className="admin-primary-button" onClick={onIssue} disabled={!hasSelection}>
+                Подтвердить
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </section>

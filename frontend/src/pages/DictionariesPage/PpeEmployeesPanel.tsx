@@ -5,7 +5,8 @@ import { useState } from "react";
 import { ppeApi } from "../../shared/api/ppe";
 import { usePpeQuery } from "../../modules/ppe-ui/usePpeQuery";
 import { PpeQueryState } from "../../modules/ppe-ui/PpeQueryState";
-import { Field } from "../../modules/ppe-ui/ppe-ui";
+import { Search } from "lucide-react";
+import "../../shared/ui/SearchInput.css";
 import { employeeName } from "../../modules/ppe-ui/ppe-presentation";
 import { EmployeeSizesModal, EmployeeSizeSummary } from "./EmployeeSizesModal";
 export function PpeEmployeesPanel() {
@@ -14,10 +15,12 @@ export function PpeEmployeesPanel() {
   );
   const [search, setSearch] = useState("");
   const [id, setId] = useState<number | null>(null);
-  const filtered = employees.data?.filter((item) =>
-    `${employeeName(item)} ${item.position}`
-      .toLocaleLowerCase("ru")
-      .includes(search.toLocaleLowerCase("ru")),
+  const filtered = employees.data?.filter(
+    (item) =>
+      item.isActive &&
+      `${employeeName(item)} ${item.position}`
+        .toLocaleLowerCase("ru")
+        .includes(search.toLocaleLowerCase("ru")),
   );
   return (
     <section className="admin-page ppe-page">
@@ -25,11 +28,16 @@ export function PpeEmployeesPanel() {
         <h1>Сотрудники</h1>
       </header>
       <section className="admin-card">
-        <Field label="Поиск сотрудника">
-          <input value={search} onChange={(e) => setSearch(e.target.value)} />
-        </Field>
-        <PpeQueryState {...employees} />
-        {filtered &&
+        <div className="search-input-shell">
+          <Search size={18} aria-hidden="true" />
+          <input
+            aria-label="Поиск сотрудника"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <PpeQueryState {...employees} page />
+        {!employees.loading && filtered &&
           (filtered.length ? (
             <div className="ppe-table-wrap">
               <AppTable>
@@ -43,14 +51,8 @@ export function PpeEmployeesPanel() {
                 </thead>
                 <tbody>
                   {filtered.map((item) => (
-                    <tr
-                      key={item.id}
-                      className={!item.isActive ? "ppe-inactive" : undefined}
-                    >
-                      <td>
-                        {employeeName(item)}
-                        {!item.isActive && " (отключён)"}
-                      </td>
+                    <tr key={item.id}>
+                      <td>{employeeName(item)}</td>
                       <td>{item.position}</td>
                       <td>
                         <EmployeeSizeSummary employee={item} />

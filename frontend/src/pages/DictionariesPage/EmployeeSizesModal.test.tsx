@@ -19,11 +19,11 @@ it("patches only changed size fields and clears empty values as null", async () 
   vi.spyOn(ppeApi, "employee").mockResolvedValue(employee);
   vi.spyOn(ppeApi, "employeeSizes").mockResolvedValue(employee);
   render(<EmployeeSizesModal id={1} onClose={vi.fn()} />);
-  const clothing = await screen.findByLabelText("Размер одежды");
+  const clothing = await screen.findByRole("button", { name: `${employee.clothingSize};${employee.clothingHeight}` });
   expect(
     screen.getByRole("button", { name: "Сохранить размеры" }),
   ).toBeDisabled();
-  fireEvent.change(clothing, { target: { value: "" } });
+  fireEvent.click(clothing);
   fireEvent.change(screen.getByLabelText("Размер обуви"), {
     target: { value: "42.5" },
   });
@@ -31,6 +31,7 @@ it("patches only changed size fields and clears empty values as null", async () 
   await waitFor(() =>
     expect(ppeApi.employeeSizes).toHaveBeenCalledWith(1, {
       clothingSize: null,
+      clothingHeight: null,
       shoeSize: 42.5,
     }),
   );
@@ -52,4 +53,31 @@ it("shows all five dimensions for specialists without employee administrative ac
   expect(
     screen.queryByRole("button", { name: "Добавить" }),
   ).not.toBeInTheDocument();
+});
+
+it("replaces the employee clothing pair with one selected option", async () => {
+  vi.spyOn(ppeApi, "employee").mockResolvedValue(employee);
+  vi.spyOn(ppeApi, "employeeSizes").mockResolvedValue(employee);
+  render(<EmployeeSizesModal id={1} onClose={vi.fn()} />);
+  const pair = await screen.findByRole("button", { name: "96–100;182–188" });
+  fireEvent.click(pair);
+  expect(document.querySelectorAll('button[aria-pressed="true"]')).toHaveLength(1);
+  fireEvent.click(screen.getByRole("button", { name: "Сохранить размеры" }));
+  await waitFor(() => expect(ppeApi.employeeSizes).toHaveBeenCalledWith(1, { clothingSize: "96–100", clothingHeight: "182–188" }));
+});
+
+it.each([
+  { clothingSize: "88–92", clothingHeight: null },
+  { clothingSize: null, clothingHeight: "170–176" },
+])("does not create an empty grid axis for incomplete clothing fields %j", async (sizes) => {
+  vi.spyOn(ppeApi, "employee").mockResolvedValue({ ...employee, ...sizes });
+  render(<EmployeeSizesModal id={1} onClose={vi.fn()} />);
+  await screen.findByRole("button", { name: "88–92;170–176" });
+  const cells = document.querySelectorAll<HTMLButtonElement>(".ppe-clothing-height-options button");
+  expect(cells).toHaveLength(24);
+  for (const cell of cells) {
+    expect(cell.getAttribute("aria-label")).toMatch(/^.+;.+$/);
+    expect(cell).toHaveAttribute("aria-pressed", "false");
+  }
+  expect(screen.getByRole("button", { name: "Сохранить размеры" })).toBeDisabled();
 });

@@ -1,3 +1,4 @@
+import { LoadingIndicator } from "../../shared/ui/LoadingIndicator";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import { JournalFiltersModal } from "./JournalFiltersModal";
 import { createJournalColumns } from "./journal-columns";
@@ -17,6 +18,7 @@ import { usePpeQuery } from "../../modules/ppe-ui/usePpeQuery";
 import { PpeQueryState } from "../../modules/ppe-ui/PpeQueryState";
 import { IssueDetailsModal } from "./IssueDetailsModal";
 export function JournalPanel({
+  autoFocusSearch = true,
   employees,
   positions,
   items,
@@ -26,6 +28,7 @@ export function JournalPanel({
   onOpenFilters,
   onChanged,
 }: {
+  autoFocusSearch?: boolean;
   employees: PpeEmployee[];
   positions: PpePosition[];
   items: PpeItem[];
@@ -50,11 +53,11 @@ export function JournalPanel({
   const columns = createJournalColumns(setDetail);
   return (
     <>
-      <div className="admin-card ppe-journal-toolbar">
+      <div className="admin-card ppe-search-toolbar ppe-journal-toolbar">
         <div className="ppe-journal-search search-input-shell">
           <Search size={18} aria-hidden="true" />
           <input
-            autoFocus
+            autoFocus={autoFocusSearch}
             aria-label="Поиск по журналу"
             value={search}
             onChange={(e) => {
@@ -122,11 +125,7 @@ export function JournalPanel({
             }}
           />
         ))}
-      {isLoading && (
-        <div className="app-page-loading ppe-journal-loading" role="status">
-          Загрузка...
-        </div>
-      )}
+      <LoadingIndicator loading={isLoading} />
       <PpeQueryState
         loading={false}
         error={journal.error}

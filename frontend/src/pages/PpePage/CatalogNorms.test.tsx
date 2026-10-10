@@ -13,7 +13,7 @@ import { CatalogPanel } from "./CatalogPanel";
 import { SizeCatalogModal } from "./SizeCatalogModal";
 import { NormFormModal } from "./NormFormModal";
 import { item, norm } from "./ppe-test-fixtures";
-import { defaultClothingSizes } from "./ppe-size-options";
+import { defaultClothingSizes, defaultHeadSizes } from "../../modules/ppe-ui/ppe-size-options";
 vi.stubGlobal(
   "ResizeObserver",
   class {
@@ -101,7 +101,7 @@ describe("PPE catalogue", () => {
         name: "Каска",
         unit: "шт",
         type: "HEAD",
-        sizes: [],
+        sizes: defaultHeadSizes().map((value) => ({ value })),
       }),
     );
     expect(onChanged).toHaveBeenCalledOnce();

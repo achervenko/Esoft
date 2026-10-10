@@ -25,3 +25,9 @@ export const defaultClothingSizes = (): ClothingSize[] =>
 
 export const defaultShoeSizes = () =>
   Array.from({ length: 11 }, (_, i) => String(36 + i));
+
+export const defaultGloveSizes = () =>
+  Array.from({ length: 5 }, (_, i) => String(7 + i));
+
+export const defaultHeadSizes = () =>
+  Array.from({ length: 8 }, (_, i) => String(55 + i));

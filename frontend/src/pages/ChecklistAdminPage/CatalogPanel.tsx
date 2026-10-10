@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
-import type { ChecklistModule, ChecklistQuestion } from "../../shared/api/checklists";
+import type {
+  ChecklistModule,
+  ChecklistQuestion,
+} from "../../shared/api/checklists";
 import { CatalogDragOverlay } from "./CatalogDragOverlay";
 import { CatalogModulesColumn } from "./CatalogModulesColumn";
 import { CatalogQuestionsColumn } from "./CatalogQuestionsColumn";
@@ -76,7 +79,9 @@ export function CatalogPanel({
   const activeQuestionIds = useMemo(
     () =>
       groupQuestions
-        .filter((question) => question.isActive && selectedGroup.kind === "module")
+        .filter(
+          (question) => question.isActive && selectedGroup.kind === "module",
+        )
         .map((question) => question.id),
     [groupQuestions, selectedGroup.kind],
   );
@@ -93,13 +98,10 @@ export function CatalogPanel({
     onReorderQuestions,
   });
 
-  if (isLoading) {
-    return <p className="admin-state">Загрузка...</p>;
-  }
-
   return (
     <div className="checklist-catalog-panel">
       <CatalogModulesColumn
+        isLoading={isLoading}
         activeModules={activeModules}
         dragOverIndex={drag.dragOverIndex}
         dragState={drag.dragState}
@@ -123,6 +125,7 @@ export function CatalogPanel({
       />
 
       <CatalogQuestionsColumn
+        isLoading={isLoading}
         activeQuestionIds={activeQuestionIds}
         dragOverIndex={drag.dragOverIndex}
         dragState={drag.dragState}
@@ -140,7 +143,10 @@ export function CatalogPanel({
         questionSearch={questionSearch}
         selectedGroup={selectedGroup}
         selectedModuleId={selectedModuleId}
-        title={getCatalogQuestionsTitle(selectedGroup, selectedModule?.name ?? null)}
+        title={getCatalogQuestionsTitle(
+          selectedGroup,
+          selectedModule?.name ?? null,
+        )}
       />
 
       <CatalogDragOverlay

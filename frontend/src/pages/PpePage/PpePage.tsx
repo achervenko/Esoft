@@ -1,10 +1,8 @@
 import { useState } from "react";
-import { navigateWithViewTransition } from "../../shared/lib/view-transition-navigation";
 import { ppeApi } from "../../shared/api/ppe";
 import { canReadPpe } from "../../modules/ppe-permissions/ppe-permissions";
 import { Message } from "../../modules/ppe-ui/ppe-ui";
 import { usePpeQuery } from "../../modules/ppe-ui/usePpeQuery";
-import { PpeQueryState } from "../../modules/ppe-ui/PpeQueryState";
 import { CatalogPanel } from "./CatalogPanel";
 import { NormsPanel } from "./NormsPanel";
 import { IssuePanel } from "./IssuePanel";
@@ -12,16 +10,15 @@ import { JournalPanel } from "./JournalPanel";
 import "../../shared/ui/AdminPage.css";
 import "./PpePage.css";
 const ppeTabs = {
-  issue: "Карточка сотрудника",
   norms: "Нормы",
   catalog: "Номенклатура",
   journal: "Журнал",
 } as const;
-export type PpeTab = keyof typeof ppeTabs;
+export type PpeTab = keyof typeof ppeTabs | "issue";
 
 export function PpePage({
   userRole,
-  initialTab = "issue",
+  initialTab: requestedTab = "norms",
   employeeId,
   positionId,
 }: {
@@ -30,6 +27,9 @@ export function PpePage({
   employeeId?: number;
   positionId?: number;
 }) {
+  const returnTo = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("returnTo");
+  const searchReturnTo = returnTo === "#/search" || returnTo?.startsWith("#/search?") ? returnTo : null;
+  const initialTab = employeeId ? "issue" : requestedTab === "issue" ? "norms" : requestedTab;
   const [revision, setRevision] = useState(0);
   const allowed = canReadPpe(userRole);
   const [journalFiltersRequested, setJournalFiltersRequested] = useState(false);
@@ -70,7 +70,6 @@ export function PpePage({
         .filter((query) => query.error || !query.data)
         .forEach((query) => query.reload()),
   };
-  const ready = required.every((query) => query.data !== null);
   const changed = () => setRevision((value) => value + 1);
   const catalogChanged = () => {
     items.reload();
@@ -84,7 +83,7 @@ export function PpePage({
     );
   return (
     <section
-      className={`admin-page ppe-page ${initialTab === "journal" ? "ppe-journal-page" : ""} ${employeeId || positionId ? "ppe-employee-page equipment-view-page" : ""}`}
+      className={`admin-page ppe-page ${!employeeId && !positionId ? "ppe-list-page" : ""} ${employeeId || positionId ? "ppe-employee-page" : ""}`}
     >
       {!employeeId && !positionId && (
         <header className="admin-page-header">
@@ -101,6 +100,10 @@ export function PpePage({
           {Object.entries(ppeTabs).map(([key, label]) => (
             <a
               key={key}
+              onMouseDown={(event) => {
+                // Keep search focused until the new tab's search takes over.
+                if (event.button === 0) event.preventDefault();
+              }}
               href={`#/ppe?tab=${key}`}
               aria-current={initialTab === key ? "page" : undefined}
               className={initialTab === key ? "active" : undefined}
@@ -114,30 +117,29 @@ export function PpePage({
         className={
           employeeId || positionId
             ? "ppe-employee-content"
-            : initialTab === "journal"
-              ? "ppe-journal-content"
-              : "admin-card"
+            : "ppe-list-content"
         }
       >
-        {initialTab !== "journal" && <PpeQueryState {...reference} />}
-        {ready && (
+        {
           <>
             {initialTab === "catalog" && (
               <CatalogPanel
                 items={items.data ?? []}
+                referenceState={reference}
                 role={userRole}
                 onChanged={catalogChanged}
               />
             )}
             {initialTab === "norms" && (
               <NormsPanel
+                referenceState={reference}
                 positions={positions.data ?? []}
                 key={positionId ?? "positions"}
                 initialPositionId={positionId}
                 onOpenPosition={(id) =>
-                  navigateWithViewTransition(`#/ppe/positions/${id}`)
+                  (window.location.hash = `#/ppe/positions/${id}`)
                 }
-                onBack={() => navigateWithViewTransition("#/ppe?tab=norms")}
+                onBack={() => (window.location.hash = searchReturnTo ?? "#/ppe?tab=norms")}
                 items={items.data ?? []}
                 role={userRole}
                 revision={revision}
@@ -146,14 +148,12 @@ export function PpePage({
             )}
             {initialTab === "issue" && (
               <IssuePanel
+                referenceState={reference}
                 employees={employees.data ?? []}
                 key={employeeId ?? "search"}
                 initialEmployeeId={employeeId}
-                onOpenEmployee={(id) => {
-                  navigateWithViewTransition(`#/ppe/employees/${id}`);
-                }}
                 onBack={() => {
-                  navigateWithViewTransition("#/ppe");
+                  window.location.hash = searchReturnTo ?? "#/search";
                 }}
                 items={items.data ?? []}
                 role={userRole}
@@ -162,7 +162,7 @@ export function PpePage({
               />
             )}
           </>
-        )}
+        }
         {initialTab === "journal" && (
           <JournalPanel
             employees={employees.data ?? []}

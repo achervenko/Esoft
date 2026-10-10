@@ -1,7 +1,7 @@
+import type { ComponentProps } from "react";
 import { EmployeeIssueCard } from "./EmployeeIssueCard";
 import { IssuePlanTable } from "./IssuePlanTable";
-import { IssueResultMessage } from "./IssueResultMessage";
-import { EmployeeSearch } from "./EmployeeSearch";
+import { useNotifications } from "../../shared/ui/notifications";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import {
@@ -25,18 +25,18 @@ export function IssuePanel({
   items,
   role,
   revision,
+  referenceState,
   onChanged,
   initialEmployeeId,
-  onOpenEmployee,
   onBack,
 }: {
   employees: PpeEmployee[];
   items: PpeItem[];
+  referenceState?: ComponentProps<typeof PpeQueryState>;
   role: string | null;
   revision: number;
   onChanged: () => void;
   initialEmployeeId?: number;
-  onOpenEmployee?: (id: number) => void;
   onBack?: () => void;
 }) {
   const [employeeId, setEmployeeId] = useState(
@@ -45,7 +45,7 @@ export function IssuePanel({
   const [on, setOn] = useState(businessToday);
   const [selected, setSelected] = useState<number[]>([]);
   const [form, setForm] = useState<{ rows: PlanRow[] | null } | null>(null);
-  const [result, setResult] = useState<IssueResult[] | null>(null);
+  const { notifySuccess, notifyWarning } = useNotifications();
   const employee = employees.find((item) => String(item.id) === employeeId);
   const backdate = canBackdatePpeIssue(role);
   const issuedAt = backdate ? on : undefined;
@@ -57,7 +57,6 @@ export function IssuePanel({
   const changeEmployee = (id: string) => {
     setEmployeeId(id);
     setSelected([]);
-    setResult(null);
   };
   const choose = (row: PlanRow, checked: boolean) =>
     setSelected((current) =>
@@ -72,7 +71,12 @@ export function IssuePanel({
       (row) => row.available && selected.includes(row.normItemId),
     ) ?? [];
   const created = (rows: IssueResult[]) => {
-    setResult(rows);
+    notifySuccess(`Сохранено выдач: ${rows.length}.`);
+    rows.forEach((issue) => {
+      issue.warnings.forEach((warning) => {
+        notifyWarning(issue.article, warning.message);
+      });
+    });
     setSelected([]);
     onChanged();
   };
@@ -82,15 +86,6 @@ export function IssuePanel({
     (!backdate || Boolean(on && on <= businessToday()));
   return (
     <>
-      {!employee && !initialEmployeeId && (
-        <EmployeeSearch
-          employees={employees}
-          onSelect={(id) => {
-            if (onOpenEmployee) onOpenEmployee(id);
-            else changeEmployee(String(id));
-          }}
-        />
-      )}
       {(employee || initialEmployeeId) && (
         <button
           type="button"
@@ -106,9 +101,10 @@ export function IssuePanel({
           <ArrowLeft size={18} aria-hidden="true" /> Назад
         </button>
       )}
-      {initialEmployeeId && !employee && (
-        <Message error="Сотрудник не найден." />
-      )}
+      {initialEmployeeId &&
+        !employee &&
+        !referenceState?.loading &&
+        !referenceState?.error && <Message error="Сотрудник не найден." />}
       {employee && (
         <EmployeeIssueCard
           employee={employee}
@@ -122,23 +118,32 @@ export function IssuePanel({
           onDateChange={(date) => {
             setOn(date);
             setSelected([]);
-            setResult(null);
-          }}
+                  }}
         />
       )}
-      {result && <IssueResultMessage result={result} />}
-      <PpeQueryState {...plan} />
-      {plan.data && (!plan.data.norm || dueItems.length > 0) && (
-        <IssuePlanTable
-          plan={plan.data}
-          dueItems={dueItems}
-          allowed={allowed}
-          selected={selected}
-          hasSelection={eligible.length > 0}
-          onChoose={choose}
-          onIssue={() => setForm({ rows: eligible })}
-        />
-      )}
+      <PpeQueryState
+        loading={Boolean(referenceState?.loading || plan.loading)}
+        error={referenceState?.error ?? plan.error}
+        reload={() => {
+          referenceState?.reload();
+          plan.reload();
+        }}
+        page
+      />
+      {!plan.loading &&
+        !referenceState?.loading &&
+        plan.data &&
+        (!plan.data.norm || dueItems.length > 0) && (
+          <IssuePlanTable
+            plan={plan.data}
+            dueItems={dueItems}
+            allowed={allowed}
+            selected={selected}
+            hasSelection={eligible.length > 0}
+            onChoose={choose}
+            onIssue={() => setForm({ rows: eligible })}
+          />
+        )}
       {form && employee && (
         <IssueFormModal
           employee={employee}

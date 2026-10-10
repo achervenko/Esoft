@@ -35,7 +35,7 @@ describe("PPE issue details", () => {
     await screen.findByRole("heading", { name: /Историческое имя сотрудника/ });
     expect(screen.getByText("Историческая должность")).toBeInTheDocument();
     expect(screen.getByText("ACT-01 / Выданный костюм")).toBeInTheDocument();
-    expect(screen.getByText("88–92 / 170–176")).toBeInTheDocument();
+    expect(screen.getByText("88–92; 170–176")).toBeInTheDocument();
     expect(screen.getByText("Отменивший сотрудник")).toBeInTheDocument();
     expect(screen.getByText("Ошибка выбора")).toBeInTheDocument();
     expect(

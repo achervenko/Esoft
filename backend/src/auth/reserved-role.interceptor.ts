@@ -17,6 +17,11 @@ export class ReservedRoleInterceptor implements NestInterceptor {
     }>();
     const user = request.session?.user;
     if (user?.role === 'accounting_specialist') {
+      if (
+        request.method === 'GET' &&
+        (request.path === '/api/setup/status' || request.path === '/api/search')
+      )
+        return next.handle();
       if (request.path.startsWith('/api/ppe/')) return next.handle();
       const ownProfile = `/api/users/${encodeURIComponent(user.id)}/profile`;
       const ownPhoto = `/api/users/${encodeURIComponent(user.id)}/photo/`;

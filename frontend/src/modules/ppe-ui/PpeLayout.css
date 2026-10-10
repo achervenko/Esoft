@@ -11,3 +11,29 @@
   background: #f8f9fb;
   color: #727985;
 }
+
+.ppe-list-content > .ppe-search-toolbar {
+  padding: 18px;
+  min-height: 86px;
+  box-sizing: border-box;
+}
+.ppe-list-content > .ppe-list-table-card {
+  padding: 18px;
+}
+.ppe-list-table-card .data-table thead tr {
+  height: 44px;
+}
+.ppe-list-table-card .data-table tbody tr {
+  height: 56px;
+}
+.ppe-list-table-card .data-table th,
+.ppe-list-table-card .data-table td {
+  padding: 10px 8px;
+  vertical-align: middle;
+  font-size: 14px;
+  line-height: 20px;
+}
+.ppe-list-table-card .admin-secondary-button {
+  min-height: 36px;
+  padding-block: 7px;
+}

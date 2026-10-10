@@ -28,6 +28,7 @@ import { markCurrentHashHistoryEntry } from "./shared/lib/hash-history-marker";
 function App() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [isCheckingSetup, setIsCheckingSetup] = useState(true);
+  const [setupCheckRevision, setSetupCheckRevision] = useState(0);
   const [route, setRouteState] = useState(getHashRoute);
   const routeRef = useRef(route);
   const [setupError, setSetupError] = useState<string | null>(null);
@@ -68,6 +69,8 @@ function App() {
   useEffect(() => {
     let isMounted = true;
 
+    setIsCheckingSetup(true);
+    setSetupError(null);
     getSetupStatus()
       .then((status) => {
         if (!isMounted) {
@@ -77,10 +80,10 @@ function App() {
         setSetupRequired(status.setupRequired);
         setSetupError(null);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (isMounted) {
           setSetupError(
-            "Не удалось проверить состояние первоначальной настройки.",
+            `Не удалось проверить состояние первоначальной настройки. ${error instanceof Error ? error.message : "Неизвестная ошибка."}`,
           );
         }
       })
@@ -93,7 +96,7 @@ function App() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [setupCheckRevision]);
 
   useEffect(() => {
     return subscribeSessionExpired(() => {
@@ -228,7 +231,10 @@ function App() {
         className="empty-page"
         aria-label="Ошибка проверки первоначальной настройки"
       >
-        {setupError}
+        <p role="alert">{setupError}</p>
+        <button onClick={() => setSetupCheckRevision((value) => value + 1)}>
+          Повторить проверку
+        </button>
       </main>
     );
   }

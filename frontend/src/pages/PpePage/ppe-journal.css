@@ -113,11 +113,11 @@
   }
 }
 
-.ppe-journal-page {
+.ppe-list-page {
   min-height: calc(100dvh - 56px);
   grid-template-rows: auto auto minmax(0, 1fr);
 }
-.ppe-journal-content {
+.ppe-list-content {
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -131,7 +131,11 @@
   min-height: 200px;
 }
 @media (max-width: 760px) {
-  .ppe-journal-page {
+  .ppe-list-page {
     min-height: calc(100dvh - 32px);
   }
+}
+
+.ppe-list-content > .admin-card {
+  flex-shrink: 0;
 }

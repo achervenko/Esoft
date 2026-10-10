@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ppeApi } from "../../shared/api/ppe";
 import { render } from "./ppe-ui-test-utils";
@@ -36,6 +36,7 @@ describe("PPE plan and permissions", () => {
     const onChanged = vi.fn();
     render(
       <IssuePanel
+        initialEmployeeId={1}
         employees={[employee]}
         items={[item]}
         role="ppe_specialist"
@@ -46,10 +47,6 @@ describe("PPE plan and permissions", () => {
     expect(
       screen.queryByLabelText("Дата плана и выдачи"),
     ).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Поиск по ФИО"), {
-      target: { value: "Червенко" },
-    });
-    fireEvent.click(screen.getByRole("option", { name: /Червенко/ }));
     await screen.findByText("Просрочено");
     expect(ppeApi.plan).toHaveBeenCalledWith(
       1,
@@ -58,7 +55,7 @@ describe("PPE plan and permissions", () => {
     );
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Выдать" }),
+      screen.queryByRole("button", { name: "Подтвердить" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Дополнительная выдача" }),
@@ -72,6 +69,7 @@ describe("PPE plan and permissions", () => {
     vi.spyOn(ppeApi, "issue").mockResolvedValue([{ ...issue, warnings: [] }]);
     render(
       <IssuePanel
+        initialEmployeeId={1}
         employees={[employee]}
         items={[item]}
         role="admin"
@@ -82,10 +80,6 @@ describe("PPE plan and permissions", () => {
     expect(
       screen.queryByLabelText("Дата плана и выдачи"),
     ).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Поиск по ФИО"), {
-      target: { value: "Червенко" },
-    });
-    fireEvent.click(screen.getByRole("option", { name: /Червенко/ }));
     await screen.findByText("Просрочено");
     expect(ppeApi.plan).toHaveBeenCalledWith(
       1,
@@ -103,14 +97,14 @@ describe("PPE plan and permissions", () => {
       ),
     );
     await screen.findByText("Просрочено");
-    fireEvent.click(screen.getByRole("checkbox", { name: /Выбрать/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Выдать" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Выбрать/ }).closest("label")!);
+    fireEvent.click(await screen.findByRole("button", { name: "Подтвердить" }));
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "Подтвердить выдачу" }),
+        within(screen.getByRole("dialog")).getByRole("button", { name: "Подтвердить" }),
       ).toBeEnabled(),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Подтвердить выдачу" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Подтвердить" }));
     await waitFor(() =>
       expect(ppeApi.issue).toHaveBeenCalledWith(
         true,
@@ -126,6 +120,7 @@ describe("PPE plan and permissions", () => {
     });
     const view = render(
       <IssuePanel
+        initialEmployeeId={1}
         employees={[employee]}
         items={[item]}
         role="admin"
@@ -133,10 +128,6 @@ describe("PPE plan and permissions", () => {
         onChanged={vi.fn()}
       />,
     );
-    fireEvent.change(screen.getByLabelText("Поиск по ФИО"), {
-      target: { value: "Червенко" },
-    });
-    fireEvent.click(screen.getByRole("option", { name: /Червенко/ }));
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     await screen.findByText(/На эту дату для должности нет действующей нормы/);
     expect(
@@ -144,6 +135,7 @@ describe("PPE plan and permissions", () => {
     ).toBeEnabled();
     view.rerender(
       <IssuePanel
+        initialEmployeeId={1}
         employees={[{ ...employee, isActive: false }]}
         items={[item]}
         role="admin"

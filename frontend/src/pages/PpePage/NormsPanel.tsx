@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { NormCard } from "./NormCard";
 import { NormPositionHeader } from "./NormPositionHeader";
 import { createNormColumns } from "./norm-columns";
@@ -24,17 +25,21 @@ import { PpeQueryState } from "../../modules/ppe-ui/PpeQueryState";
 import { NormFormModal } from "./NormFormModal";
 import { NormLifecycleDialog } from "./NormLifecycleDialog";
 export function NormsPanel({
+  autoFocusSearch = true,
   positions,
   items,
   role,
   revision,
+  referenceState,
   onChanged,
   initialPositionId,
   onOpenPosition,
   onBack,
 }: {
+  autoFocusSearch?: boolean;
   positions: PpePosition[];
   items: PpeItem[];
+  referenceState?: ComponentProps<typeof PpeQueryState>;
   role: string | null;
   revision: number;
   onChanged: () => void;
@@ -69,10 +74,11 @@ export function NormsPanel({
   return (
     <>
       {!position && (
+        <div className="admin-card ppe-search-toolbar ppe-norm-search-toolbar">
         <div className="ppe-journal-search search-input-shell">
           <Search size={18} aria-hidden="true" />
           <input
-            autoFocus
+            autoFocus={autoFocusSearch}
             aria-label="Поиск по должностям"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -88,6 +94,7 @@ export function NormsPanel({
             </button>
           )}
         </div>
+        </div>
       )}
       {position && (
         <NormPositionHeader
@@ -99,10 +106,22 @@ export function NormsPanel({
           onCreate={() => setForm({ mode: "create", norm: null })}
         />
       )}
-      <PpeQueryState {...norms} />
+      <PpeQueryState
+        page
+        loading={Boolean(referenceState?.loading || norms.loading)}
+        error={referenceState?.error ?? norms.error}
+        reload={() => {
+          referenceState?.reload();
+          norms.reload();
+        }}
+      />
       {!position &&
+        !referenceState?.loading &&
+        !norms.loading &&
+        !referenceState?.error &&
         norms.data &&
         (visiblePositions.length ? (
+          <div className="admin-card ppe-table-wrap ppe-list-table-card">
           <DataTable
             columns={columns}
             rows={visiblePositions}
@@ -110,6 +129,7 @@ export function NormsPanel({
             defaultSort={{ key: "position", direction: "asc" }}
             onRowClick={(row) => openPosition(row.id)}
           />
+          </div>
         ) : (
           <p className="admin-state">
             {positions.length
@@ -117,10 +137,17 @@ export function NormsPanel({
               : "Должности пока не заведены."}
           </p>
         ))}
-      {position && selectedNorms?.length === 0 && (
-        <p className="admin-state">Для этой должности нормы пока не созданы.</p>
-      )}
       {position &&
+        !norms.loading &&
+        !referenceState?.loading &&
+        selectedNorms?.length === 0 && (
+          <p className="admin-state ppe-norms-empty">
+            Для этой должности нормы пока не созданы.
+          </p>
+        )}
+      {position &&
+        !norms.loading &&
+        !referenceState?.loading &&
         selectedNorms?.map((norm) => (
           <NormCard
             key={norm.id}

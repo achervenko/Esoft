@@ -35,3 +35,66 @@
   -webkit-appearance: none;
   margin: 0;
 }
+
+.admin-modal > .ppe-issue-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+}
+.ppe-issue-form .ppe-issue-row {
+  margin: 0;
+  padding: 18px;
+  gap: 16px;
+}
+.ppe-issue-form-actions {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.ppe-issue-form-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.ppe-issue-form-employee {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+.ppe-issue-form-employee p {
+  font-size: 13px;
+  font-weight: 400;
+  color: #6b7280;
+}
+.ppe-issue-form-date {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.ppe-issue-form-date > span {
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+.ppe-issue-form-date > input {
+  width: 130px;
+}
+@media (max-width: 540px) {
+  .ppe-issue-form-heading {
+    flex-wrap: wrap;
+  }
+}
+
+.ppe-issue-size-block {
+  display: grid;
+  align-content: start;
+}
+.ppe-issue-size-block:empty {
+  display: none;
+}

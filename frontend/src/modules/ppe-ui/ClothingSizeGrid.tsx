@@ -1,7 +1,7 @@
 import "./ClothingSizeGrid.css";
 import { normalizePpeSizeText } from "../../shared/lib/ppe-size-text";
 import { useLayoutEffect, useRef, useState } from "react";
-import { Field } from "../../modules/ppe-ui/ppe-ui";
+import { Field } from "./ppe-ui";
 
 import {
   clothingSizes as sizes,
@@ -13,10 +13,12 @@ export function ClothingSizeGrid({
   values,
   onChange,
   disabled = false,
+  selectionMode = "multiple",
 }: {
   values: ClothingSize[];
   onChange: (values: ClothingSize[]) => void;
   disabled?: boolean;
+  selectionMode?: "single" | "multiple";
 }) {
   const [manualSize, setManualSize] = useState("");
   const [manualHeight, setManualHeight] = useState("");
@@ -59,7 +61,7 @@ export function ClothingSizeGrid({
         ? values.filter(
             (pair) => pair.value !== value || pair.heightValue !== heightValue,
           )
-        : [...values, { value, heightValue }],
+        : selectionMode === "single" ? [{ value, heightValue }] : [...values, { value, heightValue }],
     );
   };
   return (
@@ -147,7 +149,7 @@ export function ClothingSizeGrid({
                     pair.value === value && pair.heightValue === heightValue,
                 )
               )
-                onChange([...values, { value, heightValue }]);
+                onChange(selectionMode === "single" ? [{ value, heightValue }] : [...values, { value, heightValue }]);
               setManualSize("");
               setManualHeight("");
             }}

@@ -1,6 +1,6 @@
 import { IssueDraftRow } from "./IssueDraftRow";
 import { buildIssuePayload, comparable, type Draft } from "./issue-form-model";
-import { formatPpeDate } from "../../modules/ppe-ui/ppe-presentation";
+import { businessToday, formatPpeDate } from "../../modules/ppe-ui/ppe-presentation";
 import { useCallback, useState } from "react";
 import {
   ppeApi,
@@ -84,7 +84,7 @@ export function IssueFormModal({
       className="ppe-wide-modal"
     >
       <form
-        className="ppe-form"
+        className="ppe-form ppe-issue-form"
         onSubmit={(e) => {
           e.preventDefault();
           if (!canSubmit) {
@@ -108,16 +108,16 @@ export function IssueFormModal({
             .finally(() => setSaving(false));
         }}
       >
-        <p>
-          <strong>{employeeName(employee)}</strong>
-        </p>
-        <p className="admin-form-hint">
-          {issuedAt
-            ? `Дата выдачи: ${formatPpeDate(issuedAt)}`
-            : "Дата выдачи будет установлена системой."}
-          {regularRows &&
-            " Весь набор сохранится одной операцией; при ошибке ни одна выдача не будет записана."}
-        </p>
+        <div className="ppe-issue-form-heading">
+          <div className="ppe-issue-form-employee">
+            <strong>{employeeName(employee)}</strong>
+            <p>{employee.position}</p>
+          </div>
+          <label className="ppe-issue-form-date">
+            <span>Дата выдачи</span>
+            <input type="text" readOnly value={formatPpeDate(issuedAt ?? businessToday())} />
+          </label>
+        </div>
         {drafts.map((row) => (
           <IssueDraftRow
             key={row.key}
@@ -129,16 +129,14 @@ export function IssueFormModal({
           />
         ))}
         <Message error={error} />
+        <div className="ppe-issue-form-actions">
         <button
           className="admin-primary-button"
           disabled={saving || !canSubmit}
         >
-          {saving
-            ? "Сохранение..."
-            : regularRows && regularRows.length > 1
-              ? `Выдать выбранное (${regularRows.length})`
-              : "Подтвердить выдачу"}
+          {saving ? "Сохранение..." : "Подтвердить"}
         </button>
+        </div>
       </form>
     </GuardedAdminModal>
   );

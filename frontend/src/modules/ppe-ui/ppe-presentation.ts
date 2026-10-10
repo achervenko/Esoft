@@ -41,7 +41,7 @@ export const employeeName = (employee: PpeEmployee) =>
     .filter(Boolean)
     .join(" ");
 export const sizeLabel = (value: string | null, height: string | null) =>
-  [value, height].filter(Boolean).join(" / ") || "Без размера";
+  [value, height].filter(Boolean).join("; ") || "Без размера";
 const errorMessages: Record<string, string> = {
   PPE_ITEM_IN_NORM:
     "СИЗ уже включён в норму. Для изменения единицы или типа создайте новую позицию и новую редакцию нормы.",

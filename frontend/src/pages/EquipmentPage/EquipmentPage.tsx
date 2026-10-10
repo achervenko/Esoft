@@ -1,3 +1,4 @@
+import { LoadingIndicator } from "../../shared/ui/LoadingIndicator";
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { canCreateEquipment } from "../../modules/equipment-permissions";
@@ -70,9 +71,7 @@ export function EquipmentPage({ userRole }: EquipmentPageProps) {
         className="equipment-table-section"
         aria-label="Реестр оборудования"
       >
-        {isLoading ? (
-          <p className="equipment-state-message">Загрузка реестра...</p>
-        ) : null}
+        <LoadingIndicator loading={isLoading}>Загрузка реестра...</LoadingIndicator>
         {error ? (
           <p className="equipment-state-message error">{error}</p>
         ) : null}

@@ -1,3 +1,4 @@
+import { ClothingSizeGrid } from "../../modules/ppe-ui/ClothingSizeGrid";
 import { normalizePpeSizeText } from "../../shared/lib/ppe-size-text";
 import {
   employeeSizeLabels,
@@ -48,6 +49,7 @@ export function EmployeeSizesModal({
     <GuardedAdminModal
       hasChanges={hasChanges}
       title="Размеры сотрудника"
+      className="ppe-clothing-modal"
       onClose={onClose}
       isCloseDisabled={saving}
     >
@@ -95,7 +97,7 @@ function EmployeeSizesForm({
   }, [hasChanges, onChangesChange]);
   return (
     <form
-      className="ppe-form"
+      className="ppe-form ppe-employee-sizes-form"
       onSubmit={(e) => {
         e.preventDefault();
         if (!Object.keys(changed).length) return;
@@ -115,13 +117,26 @@ function EmployeeSizesForm({
           });
       }}
     >
-      <p>
-        <strong>{employeeName(employee)}</strong> · {employee.position}
-      </p>
-      <p className="admin-form-hint">Пустое поле очищает размер.</p>
+      <div className="ppe-employee-sizes-heading">
+        <strong>{employeeName(employee)}</strong>
+        <p>{employee.position}</p>
+      </div>
+      <fieldset className="ppe-form" disabled={saving || !employee.isActive}>
+        <legend>Размер одежды и ростовка</legend>
+        <ClothingSizeGrid
+          selectionMode="single"
+          values={draft.clothingSize && draft.clothingHeight ? [{ value: draft.clothingSize, heightValue: draft.clothingHeight }] : []}
+          disabled={saving || !employee.isActive}
+          onChange={(values) => setDraft((current) => ({
+            ...current,
+            clothingSize: values[0]?.value ?? "",
+            clothingHeight: values[0]?.heightValue ?? "",
+          }))}
+        />
+      </fieldset>
       {(
         Object.entries(employeeSizeLabels) as [keyof EmployeeSizes, string][]
-      ).map(([key, label]) => (
+      ).filter(([key]) => key !== "clothingSize" && key !== "clothingHeight").map(([key, label]) => (
         <Field key={key} label={label}>
           <input
             autoFocus={key === "clothingSize" && employee.isActive}
@@ -148,12 +163,14 @@ function EmployeeSizesForm({
         <Message error="Размеры отключённого сотрудника изменить нельзя." />
       )}
       <Message error={error} />
+      <div className="ppe-employee-sizes-actions">
       <button
         className="admin-primary-button"
         disabled={saving || !employee.isActive || !Object.keys(changed).length}
       >
         {saving ? "Сохранение..." : "Сохранить размеры"}
       </button>
+      </div>
     </form>
   );
 }

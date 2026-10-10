@@ -1,8 +1,8 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { useState } from "react";
-import { ClothingSizeGrid } from "./ClothingSizeGrid";
-import { defaultClothingSizes } from "./ppe-size-options";
+import { ClothingSizeGrid } from "../../modules/ppe-ui/ClothingSizeGrid";
+import { defaultClothingSizes } from "../../modules/ppe-ui/ppe-size-options";
 afterEach(cleanup);
 it("replaces pasted and typed dashes immediately in both inputs", () => {
   render(

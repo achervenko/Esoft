@@ -6,6 +6,7 @@ import type { OptionItem } from "../api/equipment/equipment.types";
 
 type SearchSelectProps = {
   autoFocus?: boolean;
+  disabled?: boolean;
   appearance?: "field" | "search";
   error?: string;
   filterOption?: (option: OptionItem, query: string) => boolean;
@@ -26,6 +27,7 @@ type SearchSelectProps = {
 
 export function SearchSelect({
   autoFocus = false,
+  disabled = false,
   appearance = "field",
   error,
   filterOption,
@@ -88,6 +90,7 @@ export function SearchSelect({
   }, [filteredOptions.length]);
 
   const selectOption = (option: OptionItem) => {
+    if (disabled) return;
     isInternalClearRef.current = false;
     setQuery(option.name);
     setIsOpen(false);
@@ -144,6 +147,7 @@ export function SearchSelect({
         {icon}
         <input
           autoFocus={autoFocus}
+          disabled={disabled}
           aria-activedescendant={isOpen ? activeOptionId : undefined}
           aria-autocomplete="list"
           aria-controls={listboxId}
@@ -193,7 +197,7 @@ export function SearchSelect({
           value={query}
         />
       </div>
-      {isOpen &&
+      {!disabled && isOpen &&
       query.trim().length >= minQueryLength &&
       filteredOptions.length > 0 ? (
         <div className="search-select-menu" id={listboxId} role="listbox">
@@ -215,7 +219,7 @@ export function SearchSelect({
           ))}
         </div>
       ) : null}
-      {isOpen &&
+      {!disabled && isOpen &&
       query.trim().length >= minQueryLength &&
       filteredOptions.length === 0 &&
       emptyMessage ? (

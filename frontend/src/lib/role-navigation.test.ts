@@ -26,6 +26,7 @@ it("allows only PPE, limited employees and profile for PPE specialists", () => {
   for (const path of [
     "#/ppe",
     "#/ppe?tab=journal",
+    "#/search",
     "#/dictionaries",
     "#/profile",
   ])
@@ -35,7 +36,6 @@ it("allows only PPE, limited employees and profile for PPE specialists", () => {
     "#/equipment",
     "#/equipment/1",
     "#/calendar",
-    "#/search",
     "#/my-checklists",
     "#/users",
     "#/production-calendar",
@@ -48,6 +48,9 @@ it("allows only PPE, limited employees and profile for PPE specialists", () => {
 });
 it("keeps the reserved accounting specialist role out of workspace modules", () => {
   expect(getDefaultAuthRoute("accounting_specialist")).toBe("#/ppe");
+  expect(
+    canAccessWorkspaceRoute("accounting_specialist", "#/search"),
+  ).toBe(true);
   expect(canAccessWorkspaceRoute("accounting_specialist", "#/ppe")).toBe(true);
   expect(canAccessWorkspaceRoute("accounting_specialist", "#/profile")).toBe(
     true,

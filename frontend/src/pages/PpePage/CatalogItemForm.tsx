@@ -1,3 +1,4 @@
+import "../../modules/ppe-ui/PpeForm.css";
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { normalizePpeSizeText } from "../../shared/lib/ppe-size-text";
@@ -7,10 +8,10 @@ import { GuardedAdminModal } from "../../shared/ui/GuardedAdminModal";
 import { useDraftChanges } from "../../shared/lib/use-draft-changes";
 import { Field, Message } from "../../modules/ppe-ui/ppe-ui";
 import { ppeError, typeLabels, ppeUnits } from "../../modules/ppe-ui/ppe-presentation";
-import { ShoeSizeRange } from "./ShoeSizeRange";
-import { defaultShoeSizes } from "./ppe-size-options";
-import { ClothingSizeGrid } from "./ClothingSizeGrid";
-import { defaultClothingSizes } from "./ppe-size-options";
+import { SizeRange, shoeSizeRange, gloveSizeRange, headSizeRange } from "./SizeRange";
+import { defaultShoeSizes, defaultGloveSizes, defaultHeadSizes } from "../../modules/ppe-ui/ppe-size-options";
+import { ClothingSizeGrid } from "../../modules/ppe-ui/ClothingSizeGrid";
+import { defaultClothingSizes } from "../../modules/ppe-ui/ppe-size-options";
 
 export function CatalogItemForm({
   item,
@@ -100,9 +101,9 @@ export function CatalogItemForm({
                   type,
                   unit: type === "FEET" || type === "HANDS" ? "пары" : "шт",
                 });
-                if (!item && type === "FEET") {
+                if (!item && (type === "FEET" || type === "HANDS" || type === "HEAD")) {
                   setSizeRows(
-                    defaultShoeSizes().map((value) => ({
+                    (type === "FEET" ? defaultShoeSizes() : type === "HANDS" ? defaultGloveSizes() : defaultHeadSizes()).map((value) => ({
                       value,
                       heightValue: "",
                     })),
@@ -135,8 +136,9 @@ export function CatalogItemForm({
             </AppSelect>
           </Field>
         </div>
-        {!item && data.type === "FEET" && (
-          <ShoeSizeRange
+        {!item && (data.type === "FEET" || data.type === "HANDS" || data.type === "HEAD") && (
+          <SizeRange
+            {...(data.type === "FEET" ? shoeSizeRange : data.type === "HANDS" ? gloveSizeRange : headSizeRange)}
             values={sizeRows.map((size) => size.value)}
             disabled={saving}
             onChange={(values) =>
@@ -154,6 +156,8 @@ export function CatalogItemForm({
         {!item &&
           data.type !== "OTHER" &&
           data.type !== "FEET" &&
+          data.type !== "HANDS" &&
+          data.type !== "HEAD" &&
           data.type !== "BODY" && (
             <fieldset disabled={saving} className="ppe-form">
               <legend>Доступные размеры</legend>
@@ -180,7 +184,7 @@ export function CatalogItemForm({
                   </Field>
                   <button
                     type="button"
-                    className="admin-icon-button"
+                    className="admin-icon-button ppe-delete-icon-button"
                     aria-label={`Удалить размер ${index + 1}`}
                     title="Удалить размер"
                     onClick={() =>
@@ -209,9 +213,11 @@ export function CatalogItemForm({
           </Message>
         )}
         <Message error={error} />
-        <button className="admin-primary-button" disabled={saving}>
-          {saving ? "Сохранение..." : "Сохранить"}
-        </button>
+        <div className="ppe-form-actions">
+          <button className="admin-primary-button" disabled={saving}>
+            {saving ? "Сохранение..." : "Сохранить"}
+          </button>
+        </div>
       </form>
     </GuardedAdminModal>
   );

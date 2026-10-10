@@ -1,3 +1,4 @@
+import { LoadingIndicator } from "../../shared/ui/LoadingIndicator";
 import { Copy, FilePlus2, Trash2 } from "lucide-react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { useCallback, useMemo } from "react";
@@ -141,7 +142,7 @@ export function TemplatesPanel({
           value={state}
         />
       </Filters>
-      {isLoading ? <p className="admin-state">Загрузка...</p> : null}
+      <LoadingIndicator loading={isLoading} />
       {!isLoading && templates.length === 0 ? (
         <p className="admin-state">
           {hasActiveFilters

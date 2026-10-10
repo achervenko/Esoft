@@ -1,3 +1,5 @@
+import { PpeQueryState } from "../../modules/ppe-ui/PpeQueryState";
+import type { ComponentProps } from "react";
 import { CatalogFiltersModal } from "./CatalogFiltersModal";
 import { createCatalogColumns } from "./catalog-columns";
 import {
@@ -7,9 +9,9 @@ import {
   type CatalogFilters,
 } from "./catalog-filtering";
 import "../../shared/ui/SearchInput.css";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowLeft, Search, SlidersHorizontal, X } from "lucide-react";
 import { CatalogContextMenu } from "./CatalogContextMenu";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ppeApi, type PpeItem } from "../../shared/api/ppe";
 import { DataTable } from "../../shared/ui/DataTable";
 import { canManagePpeCatalog } from "../../modules/ppe-permissions/ppe-permissions";
@@ -18,15 +20,19 @@ import { SizeCatalogModal } from "./SizeCatalogModal";
 import { CatalogItemForm } from "./CatalogItemForm";
 
 export function CatalogPanel({
+  autoFocusSearch = true,
   items,
   role,
+  referenceState,
   onChanged,
 }: {
+  autoFocusSearch?: boolean;
   items: PpeItem[];
+  referenceState?: ComponentProps<typeof PpeQueryState>;
   role: string | null;
   onChanged: () => void;
 }) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("q") ?? "");
   const [filters, setFilters] = useState<CatalogFilters>({
     ...emptyCatalogFilters,
   });
@@ -42,16 +48,37 @@ export function CatalogPanel({
     y: number;
   } | null>(null);
   const manage = canManagePpeCatalog(role);
+  const returnTo = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("returnTo");
+  const searchReturnTo = returnTo === "#/search" || returnTo?.startsWith("#/search?") ? returnTo : null;
   const selected = items.find((item) => item.id === sizes);
   const columns = createCatalogColumns(setSizes);
   const rows = filterCatalogItems(items, search, filters);
+  useEffect(() => {
+    const syncSearchFromHash = () => {
+      const [path, query = ""] = window.location.hash.split("?");
+      if (path !== "#/ppe") return;
+      const params = new URLSearchParams(query);
+      if (params.get("tab") !== "catalog") return;
+      const target = items.find((item) => String(item.id) === params.get("itemId"));
+      setSearch(target ? target.article : params.get("q") ?? "");
+    };
+    syncSearchFromHash();
+    window.addEventListener("hashchange", syncSearchFromHash);
+    return () => window.removeEventListener("hashchange", syncSearchFromHash);
+  }, [items]);
+
   return (
     <>
-      <div className="ppe-catalog-toolbar">
+      {searchReturnTo && (
+        <button type="button" className="ppe-search-back" onClick={() => { window.location.hash = searchReturnTo; }}>
+          <ArrowLeft size={18} aria-hidden="true" /> Назад
+        </button>
+      )}
+      <div className="admin-card ppe-search-toolbar ppe-catalog-toolbar">
         <div className="ppe-journal-search search-input-shell">
           <Search size={18} aria-hidden="true" />
           <input
-            autoFocus
+            autoFocus={autoFocusSearch}
             aria-label="Поиск по номенклатуре"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -108,21 +135,26 @@ export function CatalogPanel({
           }}
         />
       )}
-      {rows.length ? (
-        <DataTable
-          columns={columns}
-          rows={rows}
-          getRowKey={(item) => item.id}
-          defaultSort={{ key: "article", direction: "asc" }}
-          onRowContextMenu={
-            manage
-              ? (item, position) => setMenu({ item, ...position })
-              : undefined
-          }
-        />
-      ) : items.length ? (
-        <p className="admin-state">Ничего не найдено. Измените фильтры.</p>
-      ) : null}
+      {referenceState && <PpeQueryState {...referenceState} page />}
+      {!referenceState?.loading &&
+        !referenceState?.error &&
+        (rows.length ? (
+          <div className="admin-card ppe-table-wrap ppe-list-table-card">
+            <DataTable
+              columns={columns}
+              rows={rows}
+              getRowKey={(item) => item.id}
+              defaultSort={{ key: "article", direction: "asc" }}
+              onRowContextMenu={
+                manage
+                  ? (item, position) => setMenu({ item, ...position })
+                  : undefined
+              }
+            />
+          </div>
+        ) : items.length ? (
+          <p className="admin-state">Ничего не найдено. Измените фильтры.</p>
+        ) : null)}
       {menu && manage && (
         <CatalogContextMenu
           x={menu.x}

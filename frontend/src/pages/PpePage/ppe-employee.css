@@ -162,10 +162,23 @@
 .ppe-employee-page .ppe-search-back {
   margin-bottom: 0;
 }
-.ppe-plan-section .ppe-plan-table th:first-child,
-.ppe-plan-section .ppe-plan-table td:first-child {
+.ppe-plan-section .ppe-plan-table .ppe-plan-selection-column {
   text-align: center;
-  width: 80px;
+  width: 44px;
+  min-width: 44px;
+  padding-inline: 12px;
+}
+.ppe-plan-section .ppe-plan-table .ppe-plan-name-column {
+  width: 100%;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.ppe-plan-section .ppe-plan-table th:not(.ppe-plan-name-column):not(.ppe-plan-selection-column),
+.ppe-plan-section .ppe-plan-table td:not(.ppe-plan-name-column):not(.ppe-plan-selection-column) {
+  width: 1%;
+  text-align: center;
+  white-space: nowrap;
 }
 .ppe-plan-section .ppe-plan-table input[type="checkbox"] {
   vertical-align: middle;
@@ -188,4 +201,86 @@
   margin-top: 0;
   font-size: 16px;
   font-weight: 750;
+}
+
+.ppe-employee-search .search-select-menu {
+  position: static;
+  max-height: none;
+  overflow: visible;
+  margin-top: 6px;
+  box-shadow: none;
+}
+
+.ppe-search-toolbar:has(.ppe-employee-search) {
+  overflow: visible;
+}
+.ppe-employee-search .search-select-menu[role="status"] {
+  position: absolute;
+  top: calc(100% + 36px);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.ppe-plan-checkbox [data-part="control"] {
+  border-color: #b9b0b0;
+}
+.ppe-plan-checkbox [data-part="control"][data-state="checked"] {
+  border-color: #111111;
+  background: #111111;
+}
+
+.ppe-employee-norm-block {
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ppe-plan-confirm-reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  margin-top: -14px;
+  transition: grid-template-rows 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ppe-plan-confirm-reveal.is-visible {
+  grid-template-rows: 1fr;
+}
+.ppe-plan-confirm-clip {
+  min-height: 0;
+  overflow: hidden;
+}
+.ppe-plan-confirm-clip > .ppe-issue-actions {
+  padding-top: 14px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ppe-plan-confirm-reveal {
+    transition: none;
+  }
+}
+
+.ppe-plan-confirm-reveal .admin-primary-button {
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease, visibility 0s linear;
+}
+.ppe-plan-confirm-reveal.is-visible .admin-primary-button {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 240ms ease-out 240ms, transform 240ms cubic-bezier(0.22, 1, 0.36, 1) 240ms, visibility 0s linear 240ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ppe-plan-confirm-reveal .admin-primary-button,
+  .ppe-plan-confirm-reveal.is-visible .admin-primary-button {
+    transition: none;
+  }
 }

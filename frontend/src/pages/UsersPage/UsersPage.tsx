@@ -1,3 +1,4 @@
+import { LoadingIndicator } from "../../shared/ui/LoadingIndicator";
 import { Plus } from "lucide-react";
 import "../../shared/ui/AdminPage.css";
 import { Notice } from "../../shared/ui/Notice";
@@ -57,7 +58,7 @@ export function UsersPage({
           </button>
         </header>
 
-        {page.isLoading ? <p className="admin-state">Загрузка...</p> : null}
+        <LoadingIndicator loading={page.isLoading} />
         {!page.isLoading ? (
           <UserAccountsTable
             currentUserId={currentUserId}

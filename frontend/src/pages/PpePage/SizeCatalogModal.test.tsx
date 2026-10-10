@@ -10,35 +10,42 @@ import { afterEach, expect, it, vi } from "vitest";
 import { ppeApi } from "../../shared/api/ppe";
 import { SizeCatalogModal } from "./SizeCatalogModal";
 import { item } from "./ppe-test-fixtures";
-import { defaultClothingSizes } from "./ppe-size-options";
+import { defaultClothingSizes } from "../../modules/ppe-ui/ppe-size-options";
 
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
-it("saves an individual glove size without invoking bulk replacement", async () => {
-  const save = vi.spyOn(ppeApi, "saveSize").mockResolvedValue(item.sizes[0]);
+it("edits glove sizes through the shared range and replaces the size set", async () => {
+  vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
+  const save = vi.spyOn(ppeApi, "saveSize");
   const replace = vi.spyOn(ppeApi, "replaceSizes").mockResolvedValue([]);
   const onChanged = vi.fn();
+  const onClose = vi.fn();
   render(
     <ChakraProvider value={defaultSystem}>
       <SizeCatalogModal
         item={{ ...item, type: "HANDS", sizes: [] }}
         manage
-        onClose={vi.fn()}
+        onClose={onClose}
         onChanged={onChanged}
       />
     </ChakraProvider>,
   );
+  const sliders = await screen.findAllByRole("slider");
+  expect(sliders[0]).toHaveAttribute("aria-valuemin", "6");
+  expect(sliders[1]).toHaveAttribute("aria-valuemax", "15");
+  fireEvent.click(screen.getByText("Редактировать размеры (0)"));
+  fireEvent.change(screen.getByLabelText("Размер вручную"), { target: { value: "9" } });
   fireEvent.click(screen.getByRole("button", { name: "Добавить размер" }));
-  fireEvent.change(screen.getByLabelText("Размер"), { target: { value: "9" } });
-  fireEvent.click(screen.getByRole("button", { name: "Сохранить размер" }));
-  await waitFor(() =>
-    expect(save).toHaveBeenCalledWith(item.id, null, { value: "9" }),
-  );
-  await waitFor(() => expect(onChanged).toHaveBeenCalledOnce());
-  expect(replace).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "Удалить размер 9" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Сохранить размеры" }));
+  await waitFor(() => expect(replace).toHaveBeenCalledExactlyOnceWith(item.id, [{ value: "9" }]));
+  expect(onChanged).toHaveBeenCalledOnce();
+  expect(onClose).toHaveBeenCalledOnce();
+  expect(save).not.toHaveBeenCalled();
 });
 
 it("shows clothing sizes as a read-only table without a bulk editor", () => {

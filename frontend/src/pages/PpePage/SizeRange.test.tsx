@@ -8,8 +8,8 @@ import {
 } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { ShoeSizeRange } from "./ShoeSizeRange";
-import { defaultShoeSizes } from "./ppe-size-options";
+import { SizeRange, shoeSizeRange, gloveSizeRange, headSizeRange } from "./SizeRange";
+import { defaultShoeSizes, defaultGloveSizes, defaultHeadSizes } from "../../modules/ppe-ui/ppe-size-options";
 
 afterEach(() => {
   cleanup();
@@ -28,7 +28,7 @@ it("generates integer sizes and allows removing and manually adding sizes", asyn
     const [values, setValues] = useState<string[]>(defaultShoeSizes);
     return (
       <ChakraProvider value={defaultSystem}>
-        <ShoeSizeRange values={values} onChange={setValues} />
+        <SizeRange {...shoeSizeRange} values={values} onChange={setValues} />
       </ChakraProvider>
     );
   }
@@ -111,4 +111,31 @@ it("generates integer sizes and allows removing and manually adding sizes", asyn
   expect(
     screen.getByRole("button", { name: "Удалить размер 42" }),
   ).toBeInTheDocument();
+});
+
+it("uses glove defaults and limits for the shared range", async () => {
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  render(<ChakraProvider value={defaultSystem}><SizeRange {...gloveSizeRange} values={defaultGloveSizes()} onChange={() => {}} /></ChakraProvider>);
+  expect(defaultGloveSizes()).toEqual(["7", "8", "9", "10", "11"]);
+  const sliders = await screen.findAllByRole("slider");
+  expect(sliders[0]).toHaveAttribute("aria-valuemin", "6");
+  expect(sliders[1]).toHaveAttribute("aria-valuemax", "15");
+  expect(sliders[0]).toHaveAttribute("aria-valuenow", "7");
+  expect(sliders[1]).toHaveAttribute("aria-valuenow", "11");
+  const input = screen.getByLabelText("Размер вручную");
+  for (const value of ["5", "16", "7.5"]) {
+    fireEvent.change(input, { target: { value } });
+    expect(screen.getByRole("button", { name: "Добавить размер" })).toBeDisabled();
+  }
+});
+
+it("uses headwear defaults and bounds", async () => {
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  render(<ChakraProvider value={defaultSystem}><SizeRange {...headSizeRange} values={defaultHeadSizes()} onChange={() => {}} /></ChakraProvider>);
+  expect(defaultHeadSizes()).toEqual(["55", "56", "57", "58", "59", "60", "61", "62"]);
+  const sliders = await screen.findAllByRole("slider");
+  expect(sliders[0]).toHaveAttribute("aria-valuemin", "54");
+  expect(sliders[1]).toHaveAttribute("aria-valuemax", "65");
+  expect(sliders[0]).toHaveAttribute("aria-valuenow", "55");
+  expect(sliders[1]).toHaveAttribute("aria-valuenow", "62");
 });

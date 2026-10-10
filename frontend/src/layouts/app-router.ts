@@ -68,12 +68,12 @@ function parsePositiveParamId(value: string | null) {
 
 export function resolveAppRoute(route: string): AppRoute {
   const ppePositionId = parsePositiveRouteId(
-    route.match(/^#\/ppe\/positions\/(\d+)$/),
+    route.match(/^#\/ppe\/positions\/(\d+)(?:\?.*)?$/),
   );
   if (ppePositionId !== null)
     return { kind: "ppe", tab: "norms", positionId: ppePositionId };
   const ppeEmployeeId = parsePositiveRouteId(
-    route.match(/^#\/ppe\/employees\/(\d+)$/),
+    route.match(/^#\/ppe\/employees\/(\d+)(?:\?.*)?$/),
   );
   if (ppeEmployeeId !== null)
     return { kind: "ppe", tab: "issue", employeeId: ppeEmployeeId };
@@ -84,7 +84,7 @@ export function resolveAppRoute(route: string): AppRoute {
       tab:
         tab === "journal" || tab === "norms" || tab === "catalog"
           ? tab
-          : "issue",
+          : "norms",
     };
   }
   if (route === "#/dashboard") {

@@ -1,16 +1,16 @@
 import { useState } from "react";
-import { ShoeSizeRange } from "./ShoeSizeRange";
-import { ClothingSizeGrid } from "./ClothingSizeGrid";
+import { SizeRange, shoeSizeRange, gloveSizeRange, headSizeRange } from "./SizeRange";
+import { ClothingSizeGrid } from "../../modules/ppe-ui/ClothingSizeGrid";
 import { Message } from "../../modules/ppe-ui/ppe-ui";
 import { ppeError } from "../../modules/ppe-ui/ppe-presentation";
 import { ppeApi, type PpeItem } from "../../shared/api/ppe";
 import { GuardedAdminModal } from "../../shared/ui/GuardedAdminModal";
 import { useDraftChanges } from "../../shared/lib/use-draft-changes";
-import { defaultClothingSizes } from "./ppe-size-options";
+import { defaultClothingSizes } from "../../modules/ppe-ui/ppe-size-options";
 
 type GridDraft =
   | { type: "BODY"; values: { value: string; heightValue: string }[] }
-  | { type: "FEET"; values: string[] };
+  | { type: "FEET" | "HANDS" | "HEAD"; values: string[] };
 
 function initialDraft(item: PpeItem): GridDraft {
   const active = item.sizes.filter((size) => size.isActive);
@@ -24,7 +24,7 @@ function initialDraft(item: PpeItem): GridDraft {
             }))
           : defaultClothingSizes(),
       }
-    : { type: "FEET", values: active.map((size) => size.value) };
+    : { type: item.type === "HEAD" ? "HEAD" : item.type === "HANDS" ? "HANDS" : "FEET", values: active.map((size) => size.value) };
 }
 
 export function SizeGridEditor({
@@ -73,11 +73,12 @@ export function SizeGridEditor({
       className={draft.type === "BODY" ? "ppe-clothing-modal" : undefined}
     >
       <div className="ppe-form">
-        {draft.type === "FEET" ? (
-          <ShoeSizeRange
+        {draft.type !== "BODY" ? (
+          <SizeRange
+            {...(draft.type === "FEET" ? shoeSizeRange : draft.type === "HANDS" ? gloveSizeRange : headSizeRange)}
             values={draft.values}
             disabled={saving}
-            onChange={(values) => setDraft({ type: "FEET", values })}
+            onChange={(values) => setDraft({ type: draft.type, values })}
           />
         ) : (
           <ClothingSizeGrid

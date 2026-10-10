@@ -8,6 +8,6 @@
 @import "./ppe-employee.css";
 @import "./ppe-journal.css";
 @import "./ppe-catalog.css";
-@import "./ShoeSizeRange.css";
-@import "./ClothingSizeGrid.css";
+@import "./SizeRange.css";
+@import "../../modules/ppe-ui/ClothingSizeGrid.css";
 @import "./ppe-norms.css";

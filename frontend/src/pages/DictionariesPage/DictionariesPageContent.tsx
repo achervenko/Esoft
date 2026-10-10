@@ -1,3 +1,4 @@
+import { LoadingIndicator } from "../../shared/ui/LoadingIndicator";
 import { canManageEmployeeSizes } from "../../modules/ppe-permissions/ppe-permissions";
 import { PositionsDictionaryPanel } from "./PositionsDictionaryPanel";
 import { DictionaryEmployeesTable } from "./DictionaryEmployeesTable";
@@ -19,7 +20,7 @@ export function DictionariesPageContent({
 }: DictionariesPageContentProps) {
   return (
     <>
-      {page.isLoading ? <p className="admin-state">Загрузка...</p> : null}
+      <LoadingIndicator loading={page.isLoading} />
       {!page.isLoading && page.activeTab === "positions" ? (
         <PositionsDictionaryPanel
           positions={page.positions}

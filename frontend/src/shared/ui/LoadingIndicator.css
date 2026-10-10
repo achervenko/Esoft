@@ -1,0 +1,47 @@
+.loading-indicator {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  color: #5f6b7a;
+  font-size: 15px;
+  font-weight: 600;
+}
+.loading-indicator > span {
+  animation: loading-enter 180ms ease both;
+}
+.loading-indicator > span.leaving {
+  animation: loading-leave 180ms ease both;
+}
+@keyframes loading-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes loading-leave {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loading-indicator > span,
+  .loading-indicator > span.leaving {
+    animation: none;
+  }
+}
+.equipment-table-section:has(> .loading-indicator),
+.checklist-catalog-column:has(> .loading-indicator),
+.admin-card:has(> .loading-indicator),
+.admin-card:has(> .ppe-query-state > .loading-indicator) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}

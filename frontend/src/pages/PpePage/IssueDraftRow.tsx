@@ -1,4 +1,6 @@
-import { useEffect } from "react";
+import { Search } from "lucide-react";
+import { SearchSelect } from "../../shared/ui/SearchSelect";
+import { useLayoutEffect } from "react";
 import { AppSelect } from "../../shared/ui/SelectDropdown/AppSelect";
 import { ppeApi, type PpeItem } from "../../shared/api/ppe";
 import {
@@ -28,7 +30,7 @@ export function IssueDraftRow({
     (signal) => ppeApi.recommendSize(employeeId, row.ppeItemId, signal),
     Boolean(row.ppeItemId),
   );
-  useEffect(() => {
+  useLayoutEffect(() => {
     const data = recommendation.data;
     onChange(
       row.key,
@@ -54,34 +56,26 @@ export function IssueDraftRow({
           · нормативная дата {formatPpeDate(row.norm.available?.scheduledAt)}
         </p>
       )}
-      <Field label="Выдаём фактически" hideLabel={!row.norm}>
-        <AppSelect
-          required
-          value={row.ppeItemId || ""}
-          onChange={(e) =>
-            onChange(row.key, {
-              ppeItemId: Number(e.target.value),
-              sizeId: "",
-              ready: false,
-            })
-          }
-        >
-          <option value="">Выберите СИЗ</option>
-          {items
-            .filter(
-              (item) =>
-                (item.isActive || item.id === row.ppeItemId) &&
-                (!row.norm ||
-                  (item.type === row.norm.type && item.unit === row.norm.unit)),
-            )
-            .map((item) => (
-              <option key={item.id} value={item.id} disabled={!item.isActive}>
-                {item.article} — {item.name}
-                {!item.isActive ? " (удалён)" : ""}
-              </option>
-            ))}
-        </AppSelect>
-      </Field>
+      <SearchSelect
+        label={row.norm ? "Выдаём фактически" : "СИЗ"}
+        hideLabel={!row.norm}
+        required
+        disabled={disabled}
+        icon={<Search size={18} aria-hidden="true" />}
+        placeholder="Артикул или название СИЗ"
+        emptyMessage="СИЗ не найдены"
+        maxResults={null}
+        value={row.ppeItemId || null}
+        options={items
+          .filter((item) => item.isActive && (!row.norm ||
+            (item.type === row.norm.type && item.unit === row.norm.unit)))
+          .map((item) => ({ id: item.id, name: `${item.article} — ${item.name}` }))}
+        onChange={(id) => onChange(row.key, {
+          ppeItemId: id ?? 0,
+          sizeId: "",
+          ready: false,
+        })}
+      />
       {!row.norm && (
         <Field label="Количество">
           <input
@@ -95,18 +89,10 @@ export function IssueDraftRow({
           />
         </Field>
       )}
+      <div className="ppe-issue-size-block" aria-busy={recommendation.loading}>
       <PpeQueryState {...recommendation} />
       {data && (
         <>
-          <p className="admin-form-hint">
-            Рекомендуемый размер:{" "}
-            {data.recommendedSizeId
-              ? sizeLabel(
-                  data.recommendedSizeValue,
-                  data.recommendedHeightValue,
-                )
-              : "подходящего активного размера нет"}
-          </p>
           {data.type !== "OTHER" && data.activeSizes.length > 0 ? (
             <Field
               label={
@@ -136,12 +122,9 @@ export function IssueDraftRow({
           ) : (
             <p>Выдача без размера.</p>
           )}
-          <p className="admin-form-hint">
-            Можно выбрать другой активный размер. Если он отличается от размера
-            сотрудника, система покажет предупреждение после выдачи.
-          </p>
         </>
       )}
+      </div>
       <Field label="Комментарий">
         <textarea
           maxLength={2000}
