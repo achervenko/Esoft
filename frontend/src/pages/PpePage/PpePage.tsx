@@ -41,8 +41,11 @@ export function PpePage({
     allowed && (initialTab !== "journal" || loadJournalReferences),
   );
   const employees = usePpeQuery(
-    `ppe-employees:${userRole}`,
-    (signal) => ppeApi.employees(signal),
+    `ppe-employees:${userRole}:${employeeId ?? "all"}`,
+    (signal) =>
+      employeeId
+        ? ppeApi.employee(employeeId, signal).then((employee) => [employee])
+        : ppeApi.employees(signal),
     allowed && (initialTab === "issue" || loadJournalReferences),
   );
   const positions = usePpeQuery(

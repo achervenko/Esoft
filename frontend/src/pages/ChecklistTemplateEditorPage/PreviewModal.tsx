@@ -1,3 +1,4 @@
+import { RequiredMark } from "../../shared/ui/RequiredMark";
 import type {
   ChecklistTemplateDetail,
   ChecklistTemplateQuestion,
@@ -33,7 +34,7 @@ export function PreviewModal({
                   <span>
                     {questionIndex + 1}. {question.questionText}
                     {question.isRequired ? (
-                      <b aria-label="Обязательный вопрос">*</b>
+                      <RequiredMark label="Обязательный вопрос" />
                     ) : null}
                   </span>
                 </div>

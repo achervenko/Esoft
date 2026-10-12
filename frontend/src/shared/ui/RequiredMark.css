@@ -1,0 +1,9 @@
+@import "./tokens.css";
+
+.required-mark {
+  display: inline-block;
+  margin-left: 3px;
+  color: var(--color-danger);
+  font-size: 13px;
+  font-weight: 700;
+}

@@ -1,6 +1,7 @@
 import { request } from "./api-client";
 
 export type SearchResultItem = {
+  matches?: Array<{ field: string; value: string }>;
   details: {
     location: string | null;
     manufacturer: string | null;

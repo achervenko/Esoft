@@ -43,7 +43,7 @@ export function ContextMenu({
   useEffect(() => {
     const previous = document.activeElement;
     const menu = ref.current!;
-    menu.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
+    menu.focus();
     const outside = (event: PointerEvent) => {
       if (!menu.contains(event.target as Node)) closeRef.current();
     };
@@ -67,6 +67,7 @@ export function ContextMenu({
     <div
       ref={ref}
       role="menu"
+      tabIndex={-1}
       aria-label={label}
       className="app-context-menu"
       style={position}

@@ -95,9 +95,7 @@ export function NormCard({
                 <td>{formatPpeQuantity(item.quantity, item.unit)}</td>
                 <td>
                   {formatPpePeriod(item.periodCount, item.periodUnit)}
-                  {item.calculationMode === "MONTHLY" && (
-                    <small>Месячный объём</small>
-                  )}
+
                 </td>
               </tr>
             ))}

@@ -43,10 +43,6 @@
   overflow-wrap: anywhere;
 }
 
-.my-checklists-required {
-  color: #b91c1c;
-}
-
 .my-checklists-question textarea,
 .my-checklists-question input,
 .my-checklists-question select {

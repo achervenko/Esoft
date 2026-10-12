@@ -22,7 +22,6 @@ const itemLabels = {
   quantity: 'Количество',
   periodCount: 'Период',
   periodUnit: 'Единица периода',
-  calculationMode: 'Способ расчёта выдачи',
 };
 
 @Injectable()
@@ -71,7 +70,6 @@ export class PpeNormsAuditService {
       quantity: item.quantity.toNumber(),
       periodCount: item.periodCount,
       periodUnit: item.periodUnit,
-      calculationMode: item.calculationMode,
     };
   }
 

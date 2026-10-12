@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
+import { useModalResizeAnimation } from "../useModalResizeAnimation";
 import { createPortal } from "react-dom";
 import { downloadFileById } from "../../api/files-api";
 import "./PdfPreviewModal.css";
@@ -24,6 +25,8 @@ export function PdfPreviewModal({
   visibleId,
 }: PdfPreviewModalProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const dialogRef = useRef<HTMLElement | null>(null);
+  useModalResizeAnimation(dialogRef, open);
   const [isPrinting, setIsPrinting] = useState(false);
   const resolvedFileName = fileName || pdfPreviewText.unnamed;
   const { error, fileUrl, isLoading, loadPreview, setError } = usePdfPreview({
@@ -105,6 +108,7 @@ export function PdfPreviewModal({
         aria-label={resolvedFileName}
         aria-modal="true"
         className="pdf-preview-modal"
+        ref={dialogRef}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >

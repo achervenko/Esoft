@@ -1,3 +1,4 @@
+import { RequiredMark } from "./RequiredMark";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import "./FormField.css";
 import "./SearchInput.css";
@@ -67,16 +68,20 @@ export function SearchSelect({
     const normalizedQuery = query.trim().toLowerCase();
 
     if (normalizedQuery.length < minQueryLength) return [];
-    const matches = normalizedQuery
-      ? options.filter((option) =>
-          filterOption
-            ? filterOption(option, normalizedQuery)
-            : (option.name + " " + (option.position ?? ""))
-                .toLowerCase()
-                .includes(normalizedQuery),
-        )
-      : options;
-    return maxResults === null ? matches : matches.slice(0, maxResults);
+    const limit = maxResults === null ? Infinity : Math.max(0, Math.trunc(maxResults));
+    if (!normalizedQuery) return maxResults === null ? options : options.slice(0, limit);
+    const matches: OptionItem[] = [];
+    if (limit === 0) return matches;
+    for (const option of options) {
+      const matchesQuery = filterOption
+        ? filterOption(option, normalizedQuery)
+        : (option.name + " " + (option.position ?? "")).toLowerCase().includes(normalizedQuery);
+      if (matchesQuery) {
+        matches.push(option);
+        if (matches.length >= limit) break;
+      }
+    }
+    return matches;
   }, [options, query, filterOption, maxResults, minQueryLength]);
 
   useEffect(() => {
@@ -130,10 +135,10 @@ export function SearchSelect({
     >
       <label
         htmlFor={inputId}
-        className={hideLabel ? "search-select-label-hidden" : undefined}
+        className={`form-field-label${hideLabel ? " search-select-label-hidden" : ""}`}
       >
         {label}
-        {required ? <b aria-hidden="true">*</b> : null}
+        {required ? <RequiredMark /> : null}
       </label>
       <div
         className={

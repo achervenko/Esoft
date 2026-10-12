@@ -1,4 +1,5 @@
 enum PpePeriodUnit {
+  DAY
   MONTH
   YEAR
 
@@ -51,7 +52,8 @@ model PpeNorm {
   effectiveFrom DateTime      @map("effective_from") @db.Date
   effectiveTo   DateTime?     @map("effective_to") @db.Date
   items         PpeNormItem[]
-  transitionMode String @default("LEGACY") @map("transition_mode")
+  // DB-only ck_ppe_norm_transition_mode: TEXT CHECK IN ('SOFT', 'HARD'), not a PostgreSQL enum.
+  transitionMode String @default("SOFT") @map("transition_mode")
   previousNormId Int? @map("previous_norm_id")
   previousNorm PpeNorm? @relation("PpeNormRevisions", fields: [previousNormId], references: [id], onDelete: SetNull, onUpdate: Cascade, map: "ppe_norms_previous_norm_id_fkey")
   revisions PpeNorm[] @relation("PpeNormRevisions")
@@ -73,7 +75,6 @@ model PpeNormItem {
   quantity    Decimal       @db.Decimal(12, 3)
   periodCount Int           @map("period_count")
   periodUnit  PpePeriodUnit @map("period_unit")
-  calculationMode String @default("LEGACY") @map("calculation_mode")
   issues      PpeIssue[]
 
   @@unique([normId, ppeItemId], map: "uq_ppe_norm_items_norm_ppe_item")
@@ -83,6 +84,9 @@ model PpeNormItem {
 }
 
 model PpeItemSize {
+  // DB-only uq_ppe_item_sizes_item_value in init SQL:
+  // UNIQUE NULLS NOT DISTINCT (ppe_item_id, value, height_value).
+  // A regular @@unique would not preserve the NULL equality semantics.
   id          Int     @id @default(autoincrement())
   ppeItemId   Int     @map("ppe_item_id")
   ppeItem     PpeItem @relation(fields: [ppeItemId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "fk_ppe_item_sizes_ppe_item")
@@ -94,6 +98,12 @@ model PpeItemSize {
 }
 
 model PpeIssue {
+  // DB-only uq_ppe_issues_regular_obligation in init SQL:
+  // UNIQUE (employee_id, norm_item_id, scheduled_at)
+  // WHERE issue_type = 'REGULAR' AND status = 'ISSUED'.
+  // An unconditional @@unique would also restrict cancelled and extra issues.
+  // PostgreSQL maintains this generated column; application writes never set it.
+  journalSearchText       String         @default(dbgenerated()) @map("journal_search_text") @ignore
   id                      Int            @id @default(autoincrement())
   employeeId              Int            @map("employee_id")
   employee                Employee       @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_ppe_issues_employee")
@@ -118,7 +128,6 @@ model PpeIssue {
   sizeValue               String?        @map("size_value")
   clothingHeightSnapshot  String?        @map("clothing_height_snapshot")
   scheduledAt             DateTime?      @map("scheduled_at") @db.Date
-  scheduledPortion        Int?           @map("scheduled_portion")
   issuedAt                DateTime       @map("issued_at") @db.Date
   issuedByUserId          String         @map("issued_by_user_id")
   issuedByUser            User           @relation("PpeIssuedBy", fields: [issuedByUserId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_ppe_issues_issued_by_user")
@@ -131,7 +140,8 @@ model PpeIssue {
   cancelledByNameSnapshot String?        @map("cancelled_by_name_snapshot")
   cancellationReason      String?        @map("cancellation_reason")
 
-  @@index([employeeId, issuedAt], map: "idx_ppe_issues_employee_issued_at")
+  @@index([employeeId, issuedAt(sort: Desc), id(sort: Desc)], map: "idx_ppe_journal_employee_page")
+  @@index([issuedAt(sort: Desc), id(sort: Desc)], map: "idx_ppe_journal_date")
   @@index([normItemId, issuedAt], map: "idx_ppe_issues_norm_item_issued_at")
   @@index([ppeItemId], map: "idx_ppe_issues_ppe_item_id")
   @@index([positionId], map: "idx_ppe_issues_position_id")

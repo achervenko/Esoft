@@ -38,7 +38,6 @@ export function toPpeNormDto(norm: PpeNormRecord) {
       quantity: item.quantity.toNumber(),
       periodCount: item.periodCount,
       periodUnit: item.periodUnit,
-      calculationMode: item.calculationMode,
     })),
   };
 }

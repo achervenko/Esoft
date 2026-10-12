@@ -40,6 +40,9 @@ export function usePdfActiveMatch({
     }
 
     onPageChange(activeMatch.pageNumber);
+    if (!pageElement.querySelector('.react-pdf__Page')) {
+      pageElement.scrollIntoView({ block: 'start' });
+    }
 
     let animationFrameId = 0;
     let attempt = 0;
@@ -125,9 +128,15 @@ export function usePdfActiveMatch({
     animationFrameId = window.requestAnimationFrame(
       scrollToActiveMatch,
     );
+    const observer = new MutationObserver(() => {
+      window.cancelAnimationFrame(animationFrameId);
+      animationFrameId = window.requestAnimationFrame(scrollToActiveMatch);
+    });
+    observer.observe(pageElement, { childList: true, subtree: true });
 
     return () => {
       isCancelled = true;
+      observer.disconnect();
       window.cancelAnimationFrame(animationFrameId);
 
       activeMatchElement.current?.classList.remove(

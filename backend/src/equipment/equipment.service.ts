@@ -12,8 +12,8 @@ export class EquipmentService {
     private readonly write: EquipmentWriteService,
   ) {}
 
-  findAll() {
-    return this.query.findAll();
+  findAll(query: import('./equipment-list-query').EquipmentListQuery = {}) {
+    return this.query.findAll(query);
   }
 
   getCreateOptions(visibleId?: number) {

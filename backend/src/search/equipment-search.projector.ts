@@ -62,12 +62,11 @@ export class EquipmentSearchProjector {
       .join(' ');
 
     const subtitle = [
-      equipment.inventoryNumber,
+      equipment.serialNumber ? `№ ${equipment.serialNumber}` : null,
       equipment.section.name,
-      equipment.serialNumber,
     ]
       .filter(Boolean)
-      .join(' · ');
+      .join(' ');
 
     const searchText = normalizeSearchText([
       equipment.name,

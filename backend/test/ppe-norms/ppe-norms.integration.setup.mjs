@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { after } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -83,14 +83,14 @@ export async function createPpeNormTestEnvironment() {
     const bootstrap = new pg.Client({ connectionString: testUrl.toString() });
     try {
       await bootstrap.connect();
-      const sql = await readFile(
-        new URL(
-          '../../prisma/migrations/20260725000000_init/migration.sql',
-          import.meta.url,
-        ),
-        'utf8',
-      );
-      await bootstrap.query(sql);
+      const migrations = new URL('../../prisma/migrations/', import.meta.url);
+      for (const name of (await readdir(migrations))
+        .filter((name) => /^\d/.test(name))
+        .sort()) {
+        await bootstrap.query(
+          await readFile(new URL(`${name}/migration.sql`, migrations), 'utf8'),
+        );
+      }
     } finally {
       await bootstrap.end();
     }

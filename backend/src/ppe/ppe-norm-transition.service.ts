@@ -1,13 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma, PpeIssue, PpeNormItem } from '@prisma/client';
-import { PpeIssueScheduleService } from './ppe-issue-schedule.service';
 import {
   PpeNormPositionService,
   type NormItemChain,
   type PositionNorm,
 } from './ppe-norm-position.service';
 import { PpeNormIntervalTransitionService } from './ppe-norm-interval-transition.service';
-import { PpeNormMonthlyTransitionService } from './ppe-norm-monthly-transition.service';
 
 type Norm = PositionNorm;
 type Context = Map<number, Norm>;
@@ -15,10 +13,8 @@ type Context = Map<number, Norm>;
 @Injectable()
 export class PpeNormTransitionService {
   constructor(
-    private readonly legacy: PpeIssueScheduleService,
     private readonly positions: PpeNormPositionService,
     private readonly interval: PpeNormIntervalTransitionService,
-    private readonly monthly: PpeNormMonthlyTransitionService,
   ) {}
 
   async prepare(
@@ -88,32 +84,10 @@ export class PpeNormTransitionService {
           issue.normItemId !== null &&
           itemIds.has(issue.normItemId) &&
           issue.issueType === 'REGULAR' &&
-          issue.status === 'ISSUED' &&
           issue.issuedAt <= on,
       )
       .sort((a, b) => Number(a.issuedAt) - Number(b.issuedAt) || a.id - b.id);
-    if (item.calculationMode === 'LEGACY' && chain.length === 1) {
-      const empty = this.legacy.build(norm, item, on);
-      const fulfilled = history.filter(
-        (issue) =>
-          issue.normItemId === item.id &&
-          issue.scheduledAt !== null &&
-          issue.scheduledAt >= empty.cycleFrom &&
-          (!empty.cycleTo || issue.scheduledAt <= empty.cycleTo),
-      );
-      return {
-        state: this.legacy.build(
-          norm,
-          item,
-          on,
-          new Set(fulfilled.map((issue) => issue.scheduledPortion!)),
-        ),
-        fulfilled,
-      };
-    }
-    if (item.calculationMode === 'MONTHLY')
-      return this.monthly.evaluate(chain, norm, item, on, history);
-    return this.interval.evaluate(chain, norm, item, on, history);
+    return this.interval.evaluate(chain, norm, item, on, history, assignedAt);
   }
 
   private itemChain(

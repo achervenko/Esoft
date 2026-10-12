@@ -53,11 +53,7 @@ export class PpeNormPositionService {
     }
     const assignmentTransition =
       carried.length > 0 && (!assignment || norm.effectiveFrom <= assignment);
-    const transitionMode =
-      item.calculationMode === 'MONTHLY' &&
-      carried[0]?.item.calculationMode === 'MONTHLY'
-        ? 'HARD'
-        : 'SOFT';
+    const transitionMode = 'SOFT';
     const adjustEntry = (entry: NormItemEntry): NormItemEntry => {
       if (
         !carried.length ||

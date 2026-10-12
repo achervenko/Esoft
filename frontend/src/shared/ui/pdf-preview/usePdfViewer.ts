@@ -17,6 +17,7 @@ import type { PdfSearchMatch } from "./usePdfSearch";
 import { usePdfViewerControls } from "./usePdfViewerControls";
 
 type UsePdfViewerOptions = {
+  searchOpen?: boolean;
   fileUrl: string;
   activeMatch?: PdfSearchMatch;
   resetSearch: () => void;
@@ -36,8 +37,11 @@ export function usePdfViewer({
   resetSearch,
   indexDocument,
   renderText,
+  searchOpen = false,
 }: UsePdfViewerOptions) {
   const [numberOfPages, setNumberOfPages] = useState(0);
+  const [document, setDocument] = useState<PdfDocumentForViewer | null>(null);
+  const indexedDocument = useRef<PdfDocumentForViewer | null>(null);
 
   const pageElements = useRef<Array<HTMLDivElement | null>>([]);
   const documentScrollElement = useRef<HTMLDivElement | null>(null);
@@ -79,9 +83,17 @@ export function usePdfViewer({
     pageElements.current = [];
 
     setNumberOfPages(0);
+    setDocument(null);
+    indexedDocument.current = null;
     resetControls();
     resetSearch();
   }, [fileUrl, resetControls, resetSearch]);
+
+  useEffect(() => {
+    if (!searchOpen || !document || indexedDocument.current === document) return;
+    indexedDocument.current = document;
+    void indexDocument(document);
+  }, [document, searchOpen, indexDocument]);
 
   usePdfActiveMatch({
     activeMatch,
@@ -104,9 +116,9 @@ export function usePdfViewer({
       setNumberOfPages(pdfDocument.numPages);
       setCurrentPage(1);
 
-      void indexDocument(pdfDocument);
+      setDocument(pdfDocument);
     },
-    [indexDocument, setCurrentPage],
+    [setCurrentPage],
   );
 
   const handleFirstPageLoadSuccess = useCallback(

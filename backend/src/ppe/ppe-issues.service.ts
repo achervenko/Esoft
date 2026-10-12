@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PpeIssueStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ppeNotFound } from './ppe.errors';
@@ -14,6 +14,7 @@ import {
 } from './ppe-issues.validation';
 import { parseNormId } from './ppe-norms.validation';
 import { runPpeIssueTransaction } from './ppe-issues.transaction';
+import { loadJournalPage } from './ppe-journal-query';
 
 @Injectable()
 export class PpeIssuesService {
@@ -27,6 +28,7 @@ export class PpeIssuesService {
   async list(query: unknown) {
     const filter = parseIssueListQuery(query);
     const issues = await this.prisma.ppeIssue.findMany({
+      take: 101,
       where: {
         employeeId: filter.employeeId,
         positionId: filter.positionId,
@@ -39,7 +41,14 @@ export class PpeIssuesService {
       },
       orderBy: [{ issuedAt: 'desc' }, { id: 'desc' }],
     });
+    if (issues.length > 100)
+      throw new BadRequestException(
+        'Для больших журналов используйте /api/ppe/issues/page.',
+      );
     return issues.map(toPpeIssueDto);
+  }
+  listPage(query: unknown) {
+    return loadJournalPage(this.prisma, query);
   }
 
   async findOne(id: number) {

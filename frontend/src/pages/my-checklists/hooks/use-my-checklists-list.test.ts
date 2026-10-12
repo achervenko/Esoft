@@ -15,14 +15,17 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-it("loads tasks beyond the first 100 using offsets", async () => {
+it("loads only the selected page and replaces rows on navigation", async () => {
   const first = Array.from({ length: 100 }, (_, id) => item(id));
   const request = vi.spyOn(api, "getChecklistWorkItems")
     .mockResolvedValueOnce(response(first, 101))
     .mockResolvedValueOnce(response([item(100)], 101));
   const hook = renderHook(() => useMyChecklistsList({ activeTab: "in-progress" }));
   await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
-  expect(hook.result.current.items).toHaveLength(101);
+  expect(hook.result.current.items).toHaveLength(100);
+  expect(request).toHaveBeenCalledOnce();
+  act(() => hook.result.current.setPage(1));
+  await waitFor(() => expect(hook.result.current.items).toEqual([item(100)]));
   expect(hook.result.current.total).toBe(101);
   expect(request).toHaveBeenNthCalledWith(2, { limit: 100, offset: 100, status: ["IN_PROGRESS"] });
 });

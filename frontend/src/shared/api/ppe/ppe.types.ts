@@ -34,7 +34,6 @@ export type PpeEmployee = EmployeeSizes & {
   isActive: boolean;
 };
 export type NormRow = {
-  calculationMode?: "LEGACY" | "INTERVAL" | "MONTHLY";
   id: number;
   ppeItemId: number;
   article: string;
@@ -43,10 +42,10 @@ export type NormRow = {
   isActive: boolean;
   quantity: number;
   periodCount: number;
-  periodUnit: "MONTH" | "YEAR";
+  periodUnit: "DAY" | "MONTH" | "YEAR";
 };
 export type PpeNorm = {
-  transitionMode?: "LEGACY" | "SOFT" | "HARD";
+  transitionMode: "SOFT" | "HARD";
   id: number;
   positionId: number;
   position: string;
@@ -60,7 +59,7 @@ export type NormPayload = {
   effectiveTo: string | null;
   items: Pick<
     NormRow,
-    "ppeItemId" | "quantity" | "periodCount" | "periodUnit" | "calculationMode"
+    "ppeItemId" | "quantity" | "periodCount" | "periodUnit"
   >[];
 };
 export type PpeIssue = {
@@ -83,7 +82,6 @@ export type PpeIssue = {
   sizeValue: string | null;
   clothingHeight: string | null;
   scheduledAt: string | null;
-  scheduledPortion: number | null;
   issuedAt: string;
   issuedByUserId: string;
   issuedByName: string;
@@ -107,12 +105,13 @@ export type SizeRecommendation = {
   requiresSelection: boolean;
   activeSizes: Pick<PpeSize, "id" | "value" | "heightValue">[];
 };
-export type Portion = {
+export type Obligation = {
   scheduledAt: string;
-  scheduledPortion: number;
   quantity: number;
 };
 export type PlanRow = {
+  normId: number;
+  normEffectiveFrom: string;
   normItemId: number;
   ppeItemId: number;
   article: string;
@@ -122,15 +121,12 @@ export type PlanRow = {
   isActive: boolean;
   normQuantity: number;
   periodCount: number;
-  periodUnit: "MONTH" | "YEAR";
-  cycleFrom: string;
-  cycleTo: string | null;
-  available: Portion | null;
-  nextFuture: Portion | null;
-  totalPortions: number;
-  duePortions: number;
-  fulfilledPortions: number;
-  dueUnissued: number;
+  periodUnit: "DAY" | "MONTH" | "YEAR";
+  plannedDate: string | null;
+  availableFrom: string | null;
+  obligationStatus: "NOT_AVAILABLE" | "EARLY" | "DUE" | "OVERDUE" | "FINISHED";
+  available: Obligation | null;
+  nextFuture: Obligation | null;
   overdue: number;
   fulfilled: PpeIssue[];
   sizes: SizeRecommendation;

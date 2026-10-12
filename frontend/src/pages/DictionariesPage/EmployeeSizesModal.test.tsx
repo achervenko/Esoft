@@ -19,6 +19,7 @@ it("patches only changed size fields and clears empty values as null", async () 
   vi.spyOn(ppeApi, "employee").mockResolvedValue(employee);
   vi.spyOn(ppeApi, "employeeSizes").mockResolvedValue(employee);
   render(<EmployeeSizesModal id={1} onClose={vi.fn()} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Изменить" }));
   const clothing = await screen.findByRole("button", { name: `${employee.clothingSize};${employee.clothingHeight}` });
   expect(
     screen.getByRole("button", { name: "Сохранить размеры" }),
@@ -44,9 +45,13 @@ it("shows all five dimensions for specialists without employee administrative ac
     </ChakraProvider>,
   );
   await screen.findByText("Червенко Алехандро");
-  expect(screen.getByText("Ростовка:")).toBeInTheDocument();
+  expect(screen.getByText(`${employee.clothingSize}; ${employee.clothingHeight}`)).toBeInTheDocument();
+  expect(screen.queryByText("Ростовка:")).not.toBeInTheDocument();
   expect(screen.getByText("Размер перчаток:")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Размеры" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Изменить" })).toBeInTheDocument();
+  expect(screen.queryByText("Действия")).not.toBeInTheDocument();
+  fireEvent.contextMenu(screen.getByText("Червенко Алехандро"));
+  expect(screen.getByRole("menuitem", { name: "Изменить" })).toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "Отключить" }),
   ).not.toBeInTheDocument();
@@ -59,9 +64,16 @@ it("replaces the employee clothing pair with one selected option", async () => {
   vi.spyOn(ppeApi, "employee").mockResolvedValue(employee);
   vi.spyOn(ppeApi, "employeeSizes").mockResolvedValue(employee);
   render(<EmployeeSizesModal id={1} onClose={vi.fn()} />);
+  const toggle = await screen.findByRole("button", { name: "Изменить" });
+  expect(screen.queryByRole("button", { name: "96–100;182–188" })).not.toBeInTheDocument();
+  fireEvent.click(toggle);
   const pair = await screen.findByRole("button", { name: "96–100;182–188" });
   fireEvent.click(pair);
-  expect(document.querySelectorAll('button[aria-pressed="true"]')).toHaveLength(1);
+  expect(screen.getByText("96–100; 182–188")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "96–100;182–188" })).not.toBeInTheDocument();
+  expect(toggle).toHaveFocus();
+  fireEvent.click(screen.getByRole("button", { name: "Изменить" }));
+  expect(screen.getByRole("button", { name: "96–100;182–188" })).toHaveAttribute("aria-pressed", "true");
   fireEvent.click(screen.getByRole("button", { name: "Сохранить размеры" }));
   await waitFor(() => expect(ppeApi.employeeSizes).toHaveBeenCalledWith(1, { clothingSize: "96–100", clothingHeight: "182–188" }));
 });

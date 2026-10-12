@@ -7,6 +7,7 @@ import {
   type ChecklistWorkStatus,
 } from "../../shared/api/checklists";
 import "../../shared/ui/AdminPage.css";
+import { PageNavigation } from "../../shared/ui/PageNavigation";
 import { Notice } from "../../shared/ui/Notice";
 import { MyChecklistsList } from "./components/MyChecklistsList";
 import { MyChecklistsTabs } from "./components/MyChecklistsTabs";
@@ -123,6 +124,7 @@ export function MyChecklistsPage({ route }: MyChecklistsPageProps) {
           onStartChecklist={startChecklist}
           startingChecklistId={startingChecklistId}
         />
+        <PageNavigation page={checklistList.page} pageSize={checklistList.pageSize} total={checklistList.total} loading={checklistList.isLoading} onChange={checklistList.setPage} />
       </section>
     </div>
   );

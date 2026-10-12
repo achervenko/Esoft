@@ -4,6 +4,7 @@ import { Checkbox } from "@chakra-ui/react";
 import {
   formatPpeQuantity,
   formatPpePeriod,
+  formatPpeDate,
   sizeLabel,
 } from "../../modules/ppe-ui/ppe-presentation";
 
@@ -45,6 +46,7 @@ export function IssuePlanTable({
                 <th>Периодичность</th>
                 <th>Количество</th>
                 <th>Состояние</th>
+                <th>Плановая дата</th>
                 <th>Размер</th>
               </tr>
             </thead>
@@ -67,15 +69,16 @@ export function IssuePlanTable({
                   <td>{row.article}</td>
                   <td className="ppe-plan-name-column">
                     <strong>{row.name}</strong>
+                    {row.normEffectiveFrom > plan.on && (
+                      <small className="ppe-plan-available-from">Норма с {formatPpeDate(row.normEffectiveFrom)}</small>
+                    )}
                   </td>
                   <td>
                     {formatPpeQuantity(row.normQuantity, row.unit)} /{" "}
                     {formatPpePeriod(row.periodCount, row.periodUnit)}
                   </td>
                   <td>
-                    {row.available
-                      ? formatPpeQuantity(row.available.quantity, row.unit)
-                      : "—"}
+                    {formatPpeQuantity(row.available?.quantity ?? row.normQuantity, row.unit)}
                   </td>
                   <td>
                     <span
@@ -84,13 +87,19 @@ export function IssuePlanTable({
                       {row.available
                         ? row.overdue
                           ? "Просрочено"
-                          : "К выдаче"
+                          : row.obligationStatus === "EARLY"
+                            ? "Можно выдать"
+                            : "К выдаче"
                         : row.nextFuture
-                          ? "Не наступил срок"
-                          : row.fulfilledPortions > 0
-                            ? "Выдано"
+                          ? "Ещё рано"
+                          : row.obligationStatus === "FINISHED"
+                            ? "Норма завершена"
                             : "Нет выдачи"}
                     </span>
+                  </td>
+                  <td>
+                    {formatPpeDate(row.plannedDate)}
+                    {row.availableFrom && <small className="ppe-plan-available-from">Можно выдать с {formatPpeDate(row.availableFrom)}</small>}
                   </td>
                   <td>
                     {row.type === "OTHER"

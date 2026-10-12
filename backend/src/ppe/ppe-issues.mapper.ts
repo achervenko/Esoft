@@ -22,7 +22,6 @@ export function toPpeIssueDto(issue: PpeIssue) {
     sizeValue: issue.sizeValue,
     clothingHeight: issue.clothingHeightSnapshot,
     scheduledAt: issue.scheduledAt ? normDateString(issue.scheduledAt) : null,
-    scheduledPortion: issue.scheduledPortion,
     issuedAt: normDateString(issue.issuedAt),
     issuedByUserId: issue.issuedByUserId,
     issuedByName: issue.issuedByNameSnapshot,

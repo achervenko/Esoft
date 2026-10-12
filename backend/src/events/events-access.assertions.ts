@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { EQUIPMENT_RESPONSIBLE_ROLES } from './events-responsible-policy';
 import { throwEventBadRequest, throwEventForbidden } from './events.errors';
 
 @Injectable()
@@ -75,6 +76,7 @@ export class EventsAccessAssertions {
       JOIN employees e ON e.id = eu.employee_id
       WHERE u.id IN (${Prisma.join(uniqueUserIds)})
         AND COALESCE(u.banned, false) = false
+        AND u.role IN (${Prisma.join([...EQUIPMENT_RESPONSIBLE_ROLES])})
         AND e.is_active = true
       FOR SHARE OF u, eu, e
     `;
@@ -82,7 +84,7 @@ export class EventsAccessAssertions {
     if (users.length !== uniqueUserIds.length) {
       throwEventBadRequest(
         'RESPONSIBLE_USER_INACTIVE',
-        'Один или несколько ответственных не найдены или отключены.',
+        'Ответственными могут быть только активные пользователи с доступом к оборудованию, кроме администратора.',
       );
     }
   }

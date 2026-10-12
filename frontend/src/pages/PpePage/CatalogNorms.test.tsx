@@ -174,7 +174,7 @@ describe("PPE catalogue", () => {
   });
 });
 describe("PPE norm editor", () => {
-  it("saves a hard transition with explicit monthly calculation", async () => {
+  it("saves a hard transition and a daily period without a mode selector", async () => {
     vi.spyOn(ppeApi, "saveNorm").mockResolvedValue(norm);
     render(
       <NormFormModal
@@ -191,9 +191,8 @@ describe("PPE norm editor", () => {
     expect(toggle).toBeChecked();
     fireEvent.click(screen.getByLabelText("Как работают переходы"));
     expect(screen.getByText(/Выключено — мягкий переход/)).toBeVisible();
-    fireEvent.change(screen.getByLabelText("Расчёт выдачи"), {
-      target: { value: "MONTHLY" },
-    });
+    expect(screen.queryByLabelText("Расчёт выдачи")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Единица периода"), { target: { value: "DAY" } });
     fireEvent.click(screen.getByRole("button", { name: "Сохранить норму" }));
     await waitFor(() =>
       expect(ppeApi.saveNorm).toHaveBeenCalledWith(
@@ -202,7 +201,7 @@ describe("PPE norm editor", () => {
         2,
         expect.objectContaining({
           transitionMode: "HARD",
-          items: [expect.objectContaining({ calculationMode: "MONTHLY" })],
+          items: [expect.objectContaining({ periodUnit: "DAY" })],
         }),
       ),
     );
@@ -233,7 +232,6 @@ describe("PPE norm editor", () => {
             quantity: 2,
             periodCount: 1,
             periodUnit: "YEAR",
-            calculationMode: "INTERVAL",
           },
         ],
       }),

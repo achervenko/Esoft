@@ -1,5 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { StorageOwnerModule } from '@prisma/client';
+import { Prisma, StorageOwnerModule } from '@prisma/client';
+import {
+  parseEquipmentListQuery,
+  type EquipmentListQuery,
+} from './equipment-list-query';
 import { IdentityNumberingService } from '../application/numbering/identity-numbering.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EQUIPMENT_IDENTITY_TARGET } from './equipment.constants';
@@ -14,8 +18,19 @@ export class EquipmentQueryService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async findAll() {
+  async findAll(query: EquipmentListQuery = {}) {
+    const { page, limit, skip, order } = parseEquipmentListQuery(query);
+    const total = await this.prisma.equipment.count();
+    if (skip >= total) return { items: [], total, page, limit };
+    const ids = await this.prisma.$queryRaw<Array<{ id: number }>>(Prisma.sql`
+      SELECT e.id FROM equipment e
+      JOIN equipment_models model ON model.id = e.model_id
+      JOIN manufacturers manufacturer ON manufacturer.id = model.manufacturer_id
+      ORDER BY ${order} LIMIT ${limit} OFFSET ${skip}
+    `);
+    if (ids.length === 0) return { items: [], total, page, limit };
     const equipment = await this.prisma.equipment.findMany({
+      where: { id: { in: ids.map((item) => item.id) } },
       select: {
         id: true,
         inventoryNumber: true,
@@ -34,10 +49,20 @@ export class EquipmentQueryService {
         status: true,
         visibleId: true,
       },
-      orderBy: [{ visibleId: 'asc' }],
     });
 
-    return equipment.map(toEquipmentListItem);
+    const byId = new Map(
+      equipment.map((item) => [item.id, toEquipmentListItem(item)]),
+    );
+    return {
+      items: ids.flatMap(({ id }) => {
+        const item = byId.get(id);
+        return item ? [item] : [];
+      }),
+      total,
+      page,
+      limit,
+    };
   }
 
   async getCreateOptions(visibleId?: number) {
@@ -115,7 +140,9 @@ export class EquipmentQueryService {
           { middleName: 'asc' },
         ],
       }),
-      this.numbering.getNextId(EQUIPMENT_IDENTITY_TARGET),
+      visibleId === undefined
+        ? this.numbering.getNextId(EQUIPMENT_IDENTITY_TARGET)
+        : Promise.resolve(visibleId),
     ]);
 
     return toEquipmentCreateOptions({

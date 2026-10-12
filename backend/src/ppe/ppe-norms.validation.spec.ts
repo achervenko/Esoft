@@ -25,17 +25,17 @@ function expectCode(action: () => unknown, code: string) {
 }
 
 describe('PPE norm validation', () => {
-  it('accepts both transition policies and explicit monthly calculation', () => {
+  it('accepts both transition policies and interval calculation', () => {
     for (const transitionMode of ['SOFT', 'HARD'])
       expect(
         parseCreateNorm({
           ...payload,
           transitionMode,
-          items: [{ ...item, calculationMode: 'MONTHLY' }],
+          items: [item],
         }),
       ).toMatchObject({
         transitionMode,
-        items: [{ calculationMode: 'MONTHLY' }],
+        items: [item],
       });
   });
   it('rejects unknown transition and calculation policies', () => {
@@ -49,7 +49,7 @@ describe('PPE norm validation', () => {
           ...payload,
           items: [{ ...item, calculationMode: 'AUTO' }],
         }),
-      'INVALID_NORM_CALCULATION_MODE',
+      'UNKNOWN_FIELDS',
     );
     expectCode(
       () => parseCreateNorm({ ...payload, transitionMode: ['SOFT'] }),
@@ -61,7 +61,7 @@ describe('PPE norm validation', () => {
           ...payload,
           items: [{ ...item, calculationMode: ['MONTHLY'] }],
         }),
-      'INVALID_NORM_CALCULATION_MODE',
+      'UNKNOWN_FIELDS',
     );
   });
   it('parses a complete norm without changing periodicity', () => {
@@ -73,7 +73,14 @@ describe('PPE norm validation', () => {
       positionId: 1,
       effectiveFrom: new Date('2027-01-01T00:00:00Z'),
       effectiveTo: null,
-      items: [{ ...item, quantity: 12, periodCount: 2, periodUnit: 'MONTH' }],
+      items: [
+        {
+          ...item,
+          quantity: 12,
+          periodCount: 2,
+          periodUnit: 'MONTH',
+        },
+      ],
     });
   });
 
@@ -179,7 +186,7 @@ describe('PPE norm validation', () => {
       );
     },
   );
-  it.each(['DAY', 'year', ' YEAR ', true, 1, null, undefined])(
+  it.each(['WEEK', 'year', ' YEAR ', true, 1, null, undefined])(
     'rejects invalid unit %p',
     (periodUnit) => {
       expectCode(
@@ -246,3 +253,23 @@ describe('PPE norm validation', () => {
     expectCode(() => parseEffectiveNormQuery({ extra: 'x' }), 'UNKNOWN_FIELDS');
   });
 });
+
+it.each(['DAY', 'MONTH', 'YEAR'])(
+  'accepts period unit %s',
+  (periodUnit) => {
+    expect(
+      parseCreateNorm({ ...payload, items: [{ ...item, periodUnit }] })
+        .items[0],
+    ).toMatchObject({ periodUnit });
+  },
+);
+it.each(['INTERVAL', 'LEGACY', 'MONTHLY'])(
+  'rejects removed calculation mode %s',
+  (calculationMode) => {
+    expectCode(
+      () =>
+        parseCreateNorm({ ...payload, items: [{ ...item, calculationMode }] }),
+      'UNKNOWN_FIELDS',
+    );
+  },
+);

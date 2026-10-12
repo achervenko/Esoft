@@ -3,8 +3,8 @@ import { test } from 'node:test';
 
 export function registerTests(env) {
   const on = env.day();
-  const oldDate = env.day(-240);
-  const oldExpiry = env.date(-240);
+  const oldDate = env.day(-5);
+  const oldExpiry = env.date(-5);
   const expiryYear = oldExpiry.getUTCFullYear() + 1;
   const expiryMonth = oldExpiry.getUTCMonth();
   const expiryDay = Math.min(
@@ -36,9 +36,8 @@ export function registerTests(env) {
             {
               ppeItemId: f.ppe.id,
               quantity: 2,
-              periodCount: 1,
-              periodUnit: 'YEAR',
-              calculationMode: 'INTERVAL',
+              periodCount: 6,
+              periodUnit: 'MONTH',
             },
           ],
         },
@@ -59,7 +58,9 @@ export function registerTests(env) {
           env.errorCode('PPE_NORM_NOT_DUE'),
         );
       } else {
-        assert.equal(row.available.quantity, 1);
+        assert.equal(row.plannedDate, on);
+        assert.equal(row.availableFrom, env.day(-30));
+        assert.equal(row.available.quantity, 2);
         const results = await Promise.allSettled([
           env.issues.createRegular(request(f, revision), env.adminActor),
           env.issues.createRegular(request(f, revision), env.adminActor),
@@ -70,7 +71,8 @@ export function registerTests(env) {
         );
         const created = results.find((result) => result.status === 'fulfilled')
           .value[0];
-        assert.equal(created.quantity, 1);
+        assert.equal(created.quantity, 2);
+        assert.equal(created.scheduledAt, on);
         assert.equal(
           (await env.issues.plan(f.employee.id, env.date())).items[0].available,
           null,
@@ -83,93 +85,8 @@ export function registerTests(env) {
         assert.equal(
           (await env.issues.plan(f.employee.id, env.date())).items[0].available
             .quantity,
-          1,
+          2,
         );
       }
     });
-  test(
-    'monthly hard transition tops up the current month and creates no old yearly debt',
-    {
-      skip: on.endsWith('-01')
-        ? 'No earlier issue in the transition month exists on its first day'
-        : false,
-    },
-    async () => {
-      const monthStart = `${on.slice(0, 7)}-01`;
-      const f = await env.issueFixture({ from: monthStart, quantity: 60 });
-      await env.prisma.ppeNormItem.update({
-        where: { id: f.norm.items[0].id },
-        data: { calculationMode: 'MONTHLY' },
-      });
-      const [old] = await env.issues.createRegular(
-        { ...f.request, issuedAt: monthStart },
-        env.adminActor,
-      );
-      assert.equal(old.quantity, 5);
-      const revision = await env.service.createRevision(
-        f.norm.id,
-        {
-          effectiveFrom: on,
-          effectiveTo: null,
-          transitionMode: 'HARD',
-          items: [
-            {
-              ppeItemId: f.ppe.id,
-              quantity: 120,
-              periodCount: 1,
-              periodUnit: 'YEAR',
-              calculationMode: 'MONTHLY',
-            },
-          ],
-        },
-        env.actor,
-      );
-      const row = (await env.issues.plan(f.employee.id, env.date())).items[0];
-      assert.equal(row.available.quantity, 5);
-      assert.equal(row.dueUnissued, 1);
-      const [topup] = await env.issues.createRegular(
-        request(f, revision),
-        env.adminActor,
-      );
-      assert.equal(topup.quantity, 5);
-      assert.equal(
-        (await env.issues.plan(f.employee.id, env.date())).items[0].available,
-        null,
-      );
-      await assert.rejects(
-        env.issues.createRegular(request(f, revision), env.adminActor),
-        env.errorCode('PPE_NORM_NOT_DUE'),
-      );
-      await env.issues.cancel(
-        topup.id,
-        { reason: 'Top-up cancellation test' },
-        env.actor,
-      );
-      assert.equal(
-        (await env.issues.plan(f.employee.id, env.date())).items[0].available
-          .quantity,
-        5,
-      );
-      await env.issues.createRegular(request(f, revision), env.adminActor);
-      await env.issues.cancel(
-        old.id,
-        { reason: 'Cancel old credited volume' },
-        env.actor,
-      );
-      const afterOldCancellation = (
-        await env.issues.plan(f.employee.id, env.date())
-      ).items[0];
-      assert.equal(afterOldCancellation.available.quantity, 5);
-      assert.equal(afterOldCancellation.available.scheduledPortion, 1);
-      const [secondTopup] = await env.issues.createRegular(
-        request(f, revision),
-        env.adminActor,
-      );
-      assert.equal(secondTopup.quantity, 5);
-      assert.equal(
-        (await env.issues.plan(f.employee.id, env.date())).items[0].available,
-        null,
-      );
-    },
-  );
 }

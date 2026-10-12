@@ -14,8 +14,9 @@ export function getEquipmentCreateOptions(visibleId?: number) {
   );
 }
 
-export function getEquipmentRegistry() {
-  return request<EquipmentRegistryItem[]>("/api/equipment");
+export function getEquipmentRegistry(query: { page: number; sort: string; direction: string }, signal?: AbortSignal) {
+  const params = new URLSearchParams({ page: String(query.page), limit: '100', sort: query.sort, direction: query.direction });
+  return request<{ items: EquipmentRegistryItem[]; total: number; page: number; limit: number }>(`/api/equipment?${params}`, { signal });
 }
 
 export function getEquipmentCard(visibleId: number) {

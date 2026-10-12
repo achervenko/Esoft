@@ -3,10 +3,12 @@ import {
   lazy,
   Suspense,
   useEffect,
+  useRef,
   type ComponentType,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { useModalResizeAnimation } from "../../shared/ui/useModalResizeAnimation";
 import { Save } from "lucide-react";
 import { Notice } from "../../shared/ui/Notice";
 import { UnsavedChangesGuard } from "../../shared/ui/UnsavedChangesGuard";
@@ -92,6 +94,8 @@ function PdfPreviewModalFallback({
   onClose,
   tone = "loading",
 }: PdfPreviewModalFallbackProps) {
+  const dialogRef = useRef<HTMLElement | null>(null);
+  useModalResizeAnimation(dialogRef);
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -119,6 +123,7 @@ function PdfPreviewModalFallback({
         aria-label={fileName || "PDF"}
         aria-modal="true"
         className="pdf-preview-modal"
+        ref={dialogRef}
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >

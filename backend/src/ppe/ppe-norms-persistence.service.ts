@@ -27,8 +27,7 @@ export class PpeNormsPersistenceService {
         positionId,
         effectiveFrom: data.effectiveFrom,
         effectiveTo: data.effectiveTo,
-        transitionMode:
-          data.transitionMode ?? (previousNormId ? 'SOFT' : 'LEGACY'),
+        transitionMode: data.transitionMode ?? 'SOFT',
         previousNormId,
       },
       include: normInclude,

@@ -106,6 +106,9 @@ export type UseChecklistWorkParams = {
 };
 
 export type MyChecklistsListState = {
+  page: number;
+  pageSize: number;
+  setPage: (page: number) => void;
   error: string | null;
   isLoading: boolean;
   items: ChecklistWorkListItem[];

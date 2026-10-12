@@ -290,6 +290,7 @@ describe('EventsQueryService', () => {
     expect(prisma.user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
+          role: { in: ['chief_engineer', 'engineer', 'operator', 'auditor'] },
           employeeUser: {
             is: {
               employee: {

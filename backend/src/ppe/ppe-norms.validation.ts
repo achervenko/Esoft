@@ -43,7 +43,6 @@ function parseNormItem(payload: unknown) {
     'quantity',
     'periodCount',
     'periodUnit',
-    'calculationMode',
   ]);
   const ppeItemId = parseNormId(values.ppeItemId, 'INVALID_PPE_ITEM_ID');
   const quantity = values.quantity;
@@ -61,29 +60,21 @@ function parseNormItem(payload: unknown) {
   }
   const periodCount = parseNormId(values.periodCount, 'INVALID_NORM_PERIOD');
   const periodUnit = values.periodUnit;
-  if (periodUnit !== PpePeriodUnit.MONTH && periodUnit !== PpePeriodUnit.YEAR) {
+  if (
+    periodUnit !== PpePeriodUnit.DAY &&
+    periodUnit !== PpePeriodUnit.MONTH &&
+    periodUnit !== PpePeriodUnit.YEAR
+  ) {
     badPpeRequest(
       'INVALID_NORM_PERIOD',
-      'Единица периода должна быть MONTH или YEAR.',
+      'Единица периода должна быть DAY, MONTH или YEAR.',
     );
   }
-  if (
-    values.calculationMode !== undefined &&
-    (typeof values.calculationMode !== 'string' ||
-      !['LEGACY', 'INTERVAL', 'MONTHLY'].includes(values.calculationMode))
-  )
-    badPpeRequest(
-      'INVALID_NORM_CALCULATION_MODE',
-      'Выберите расчёт по сроку носки или месячный объём.',
-    );
   return {
     ppeItemId,
     quantity,
     periodCount,
     periodUnit,
-    ...(values.calculationMode !== undefined
-      ? { calculationMode: values.calculationMode as string }
-      : {}),
   };
 }
 
@@ -126,7 +117,7 @@ function parseNormContent(values: Record<string, unknown>) {
     effectiveTo,
     items,
     ...(values.transitionMode !== undefined
-      ? { transitionMode: values.transitionMode as string }
+      ? { transitionMode: values.transitionMode }
       : {}),
   };
 }

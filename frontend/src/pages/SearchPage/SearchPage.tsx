@@ -10,7 +10,7 @@ import "./SearchPage.css";
 import { SearchResults } from "./SearchResults";
 import { availableSearchModules, permittedModuleFilter } from "./search-modules";
 import { SearchFiltersModal } from "./SearchFiltersModal";
-import "../PpePage/ppe-journal.css";
+import "../../shared/ui/SearchToolbar.css";
 
 const SEARCH_LIMIT = 20;
 const SEARCH_MAX_OFFSET = 1000;
@@ -229,7 +229,7 @@ export function SearchPage({ userRole = null }: { userRole?: string | null }) {
           }} />
         )}
         {isQueryReady && (results.length > 0 || (!isLoading && !error)) ? (
-          <SearchResults items={results} />
+          <SearchResults items={results} query={settledQuery} />
         ) : null}
         <div className="search-loading-footer" ref={sentinel}>
           <LoadingIndicator loading={isLoading} />

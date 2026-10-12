@@ -32,6 +32,7 @@ export function PdfPreviewViewer({
 
   const viewer = usePdfViewer({
     activeMatch: search.activeMatch,
+    searchOpen: search.isOpen,
     fileUrl,
     indexDocument: search.indexDocument,
     renderText: search.renderText,
@@ -71,6 +72,7 @@ export function PdfPreviewViewer({
       />
 
       <PdfPreviewDocument
+        currentPage={viewer.currentPage}
         documentScrollRef={viewer.documentScrollRef}
         fileUrl={fileUrl}
         numberOfPages={viewer.numberOfPages}

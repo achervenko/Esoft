@@ -18,8 +18,7 @@ type DraftRow = {
   ppeItemId: string;
   quantity: string;
   periodCount: string;
-  periodUnit: "MONTH" | "YEAR";
-  calculationMode: "LEGACY" | "INTERVAL" | "MONTHLY";
+  periodUnit: "DAY" | "MONTH" | "YEAR";
 };
 export function NormFormModal({
   state,
@@ -44,7 +43,13 @@ export function NormFormModal({
           .slice(0, 10)
       : today;
   const minFrom =
-    state.mode === "revision" && revisionFrom > today ? revisionFrom : today;
+    state.mode === "edit"
+      ? new Date(Date.parse(`${today}T00:00:00Z`) + 86_400_000)
+          .toISOString()
+          .slice(0, 10)
+      : state.mode === "revision" && revisionFrom > today
+        ? revisionFrom
+        : today;
   const [from, setFrom] = useState(
     state.mode === "edit" ? state.norm.effectiveFrom : minFrom,
   );
@@ -64,12 +69,6 @@ export function NormFormModal({
       quantity: String(item.quantity),
       periodCount: String(item.periodCount),
       periodUnit: item.periodUnit,
-      calculationMode:
-        item.calculationMode === "MONTHLY"
-          ? "MONTHLY"
-          : state.mode === "edit"
-            ? (item.calculationMode ?? "LEGACY")
-            : "INTERVAL",
     })) ?? [
       {
         key: 0,
@@ -77,7 +76,6 @@ export function NormFormModal({
         quantity: "1",
         periodCount: "1",
         periodUnit: "YEAR",
-        calculationMode: "INTERVAL",
       },
     ],
   );
@@ -123,7 +121,6 @@ export function NormFormModal({
               quantity: Number(row.quantity),
               periodCount: Number(row.periodCount),
               periodUnit: row.periodUnit,
-              calculationMode: row.calculationMode,
             })),
           };
           setSaving(true);
@@ -168,25 +165,6 @@ export function NormFormModal({
         )}
         {rows.map((row) => (
           <fieldset className="ppe-draft-row" key={row.key} disabled={saving}>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <Field label="Расчёт выдачи">
-                <AppSelect
-                  value={row.calculationMode}
-                  onChange={(e) =>
-                    update(row.key, {
-                      calculationMode: e.target
-                        .value as DraftRow["calculationMode"],
-                    })
-                  }
-                >
-                  {row.calculationMode === "LEGACY" && (
-                    <option value="LEGACY">Прежний график</option>
-                  )}
-                  <option value="INTERVAL">По сроку носки</option>
-                  <option value="MONTHLY">Месячный объём</option>
-                </AppSelect>
-              </Field>
-            </div>
             <Field label="СИЗ">
               <AppSelect
                 required
@@ -246,12 +224,13 @@ export function NormFormModal({
                 value={row.periodUnit}
                 onChange={(e) =>
                   update(row.key, {
-                    periodUnit: e.target.value as "MONTH" | "YEAR",
+                    periodUnit: e.target.value as "DAY" | "MONTH" | "YEAR",
                   })
                 }
               >
                 <option value="YEAR">Год</option>
                 <option value="MONTH">Месяц</option>
+                <option value="DAY">День</option>
               </AppSelect>
             </label>
             <button
@@ -284,7 +263,6 @@ export function NormFormModal({
                   quantity: "1",
                   periodCount: "1",
                   periodUnit: "YEAR",
-                  calculationMode: "INTERVAL",
                 },
               ]);
               setNextKey((key) => key + 1);

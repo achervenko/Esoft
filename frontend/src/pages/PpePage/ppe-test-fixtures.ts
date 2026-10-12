@@ -5,6 +5,7 @@ import type {
   PlanRow,
   PpeIssue,
   PpeNorm,
+  PpePlan,
 } from "../../shared/api/ppe";
 export const employee: PpeEmployee = {
   id: 1,
@@ -62,6 +63,8 @@ export const recommendation: SizeRecommendation = {
   activeSizes: item.sizes.filter((size) => size.isActive),
 };
 export const planRow: PlanRow = {
+  normId: 5,
+  normEffectiveFrom: "2026-01-01",
   normItemId: 7,
   ppeItemId: 3,
   article: item.article,
@@ -72,14 +75,11 @@ export const planRow: PlanRow = {
   normQuantity: 2,
   periodCount: 1,
   periodUnit: "YEAR",
-  cycleFrom: "2026-01-01",
-  cycleTo: "2026-12-31",
-  available: { scheduledAt: "2026-01-01", scheduledPortion: 0, quantity: 1 },
-  nextFuture: { scheduledAt: "2026-07-01", scheduledPortion: 1, quantity: 1 },
-  totalPortions: 2,
-  duePortions: 1,
-  fulfilledPortions: 0,
-  dueUnissued: 1,
+  plannedDate: "2026-01-01",
+  availableFrom: "2026-01-01",
+  obligationStatus: "OVERDUE",
+  available: { scheduledAt: "2026-01-01", quantity: 2 },
+  nextFuture: null,
   overdue: 1,
   fulfilled: [],
   sizes: recommendation,
@@ -104,7 +104,6 @@ export const issue: PpeIssue = {
   sizeValue: "88–92",
   clothingHeight: "170–176",
   scheduledAt: "2026-01-01",
-  scheduledPortion: 0,
   issuedAt: "2026-10-06",
   issuedByUserId: "user",
   issuedByName: "Выдавший сотрудник",
@@ -116,6 +115,7 @@ export const issue: PpeIssue = {
   cancellationReason: null,
 };
 export const norm: PpeNorm = {
+  transitionMode: "SOFT",
   id: 9,
   positionId: 2,
   position: "Инженер",
@@ -136,12 +136,16 @@ export const norm: PpeNorm = {
   ],
 };
 
-export const plan = {
+export const plan: PpePlan = {
   employeeId: 1,
   employeeName: "Червенко Алехандро",
   positionId: 2,
   position: "Инженер",
   on: "2026-10-06",
-  norm: { id: 9, effectiveFrom: "2026-01-01", effectiveTo: null },
+  norm: {
+    id: planRow.normId,
+    effectiveFrom: planRow.normEffectiveFrom,
+    effectiveTo: null,
+  },
   items: [planRow],
 };

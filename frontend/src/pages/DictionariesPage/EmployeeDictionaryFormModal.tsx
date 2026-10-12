@@ -1,3 +1,4 @@
+import { RequiredMark } from "../../shared/ui/RequiredMark";
 import { AppSelect } from "../../shared/ui/SelectDropdown/AppSelect";
 import { useState } from "react";
 import type {
@@ -70,7 +71,7 @@ export function EmployeeDictionaryFormModal({
       <form className="admin-form" onSubmit={handleSubmit}>
         <label className="form-field">
           <span className="form-field-label">
-            Фамилия<b aria-hidden="true">*</b>
+            Фамилия<RequiredMark />
           </span>
           <input
             autoFocus
@@ -83,7 +84,7 @@ export function EmployeeDictionaryFormModal({
         </label>
         <label className="form-field">
           <span className="form-field-label">
-            Имя<b aria-hidden="true">*</b>
+            Имя<RequiredMark />
           </span>
           <input
             maxLength={64}
@@ -102,7 +103,7 @@ export function EmployeeDictionaryFormModal({
         </label>
         <label className="form-field">
           <span className="form-field-label">
-            Должность<b aria-hidden="true">*</b>
+            Должность<RequiredMark />
           </span>
           <AppSelect
             required

@@ -1,3 +1,4 @@
+import { RequiredMark } from "../../shared/ui/RequiredMark";
 import type { ResponsibleUserOption } from "./equipment-event-form.types";
 import "./EquipmentEventResponsibles.css";
 
@@ -15,7 +16,7 @@ export function EquipmentEventResponsibleFields({
   return (
     <fieldset className="equipment-event-responsibles">
       <legend>
-        Ответственные<b aria-hidden="true">*</b>
+        Ответственные<RequiredMark />
       </legend>
       <div>
         {users.map((user) => {

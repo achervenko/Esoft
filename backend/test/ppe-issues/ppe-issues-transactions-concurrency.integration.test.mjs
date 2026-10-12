@@ -29,7 +29,7 @@ export function registerTests(env) {
   async function issueCount(employeeId) {
     return prisma.ppeIssue.count({ where: { employeeId } });
   }
-  test('database constraints protect regular portion uniqueness and regular/extra/cancellation invariants', async () => {
+  test('database constraints protect regular obligation uniqueness and regular/extra/cancellation invariants', async () => {
     const f = await issueFixture();
     const [issue] = await issues.createRegular(f.request, specialist);
     const original = await prisma.ppeIssue.findUnique({
@@ -62,7 +62,7 @@ export function registerTests(env) {
     );
     await assert.rejects(
       prisma.ppeIssue.create({
-        data: { ...data, scheduledPortion: 1, normItemId: null },
+        data: { ...data, normItemId: null },
       }),
     );
     await assert.rejects(
@@ -159,7 +159,7 @@ export function registerTests(env) {
     assert.deepEqual(await issues.findOne(original.id), original);
     assert.equal(await prisma.auditLog.count(), logs);
   });
-  test('two parallel regular requests wait on the employee lock and cannot close one portion twice', async () => {
+  test('two parallel regular requests wait on the employee lock and cannot close one obligation twice', async () => {
     const f = await issueFixture({ quantity: 1 });
     const blocker = new pg.Client({ connectionString: testUrl.toString() });
     let pending;
@@ -197,7 +197,7 @@ export function registerTests(env) {
     assert.equal(
       results.find((result) => result.status === 'rejected').reason.response
         .code,
-      'PPE_NORM_ALREADY_ISSUED',
+      'PPE_NORM_NOT_DUE',
     );
     assert.equal(await issueCount(f.employee.id), 1);
   });

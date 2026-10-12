@@ -64,7 +64,7 @@ export function EquipmentPhotoGallery({
 
   return (
     <div className="equipment-photo-gallery">
-      <div className="equipment-photo-frame">
+      <div className={`equipment-photo-frame${activePhoto ? "" : " equipment-photo-frame--empty"}`}>
         {activePhoto ? (
           <button
             aria-label="Открыть фото оборудования"
@@ -77,7 +77,7 @@ export function EquipmentPhotoGallery({
               src={getFilePreviewUrl(
                 { fileId: activePhoto.id, visibleId },
                 { size: "medium" },
-              )}
+              ) + "&v=fit2"}
             />
           </button>
         ) : (

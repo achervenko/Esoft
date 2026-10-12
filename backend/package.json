@@ -28,6 +28,9 @@
     "pretest:ppe-norms:integration": "npm run build",
     "test:ppe-norms:integration": "node --test test/ppe-norms/ppe-norms.integration.setup.mjs",
     "pretest:ppe-issues:integration": "npm run build",
+    "pretest:ppe-interval:integration": "npm run build",
+    "test:ppe-interval:integration": "node --test test/ppe-issues/ppe-interval-obligations.integration.test.mjs",
+    "test:numbering:integration": "node --test test/numbering/identity-numbering.integration.test.mjs",
     "test:ppe-issues:integration": "node --test test/ppe-issues/ppe-issues.integration.setup.mjs"
   },
   "dependencies": {

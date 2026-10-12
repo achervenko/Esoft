@@ -37,7 +37,7 @@ describe('StorageImagePreviewService', () => {
       getObjectOrNull: jest.fn().mockResolvedValue(null),
       putObject: jest.fn().mockResolvedValue({
         bucket: 'bucket',
-        key: 'storage-previews/1/medium.webp',
+        key: 'storage-previews/1/medium-fit-v2.webp',
       }),
     };
     service = new StorageImagePreviewService(
@@ -117,10 +117,13 @@ describe('StorageImagePreviewService', () => {
       buffer: Buffer.from('source'),
       mimetype: 'image/jpeg',
     });
+    expect(createVersionsCall?.versions).toEqual([
+      expect.objectContaining({ size: 'medium', fit: 'inside', width: 256, height: 256 }),
+    ]);
     expect(objectStorage.putObject).toHaveBeenCalledWith({
       body: Buffer.from('webp'),
       contentType: 'image/webp',
-      key: 'storage-previews/1/medium.webp',
+      key: 'storage-previews/1/medium-fit-v2.webp',
     });
     expect(result.contentLength).toBe(4);
     expect(result.contentType).toBe('image/webp');

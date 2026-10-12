@@ -21,11 +21,6 @@
   font-weight: var(--field-label-weight, 800);
 }
 
-.form-field-label > b {
-  margin-left: 3px;
-  color: var(--color-danger);
-}
-
 .form-field input,
 .form-field select,
 .form-field textarea {

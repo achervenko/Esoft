@@ -19,7 +19,7 @@ export function registerTests(env) {
     assert.equal(issue.issueType, 'REGULAR');
     assert.equal(issue.scheduledAt, day(-2));
     assert.equal(issue.issuedAt, day());
-    assert.equal(issue.quantity, 1);
+    assert.equal(issue.quantity, 2);
     assert.equal(issue.sizeValue, '42');
     assert.equal(issue.normItemId, f.norm.items[0].id);
     assert.equal(issue.issuedByUserId, actor);
@@ -35,8 +35,8 @@ export function registerTests(env) {
     const plan = await issues.plan(f.employee.id, date());
     assert.equal(plan.items[0].available, null);
     assert.equal(plan.items[0].fulfilled.length, 1);
-    const from = new Date(`${day(-2)}T00:00:00Z`);
-    const targetMonth = from.getUTCMonth() + 6;
+    const from = new Date(`${day()}T00:00:00Z`);
+    const targetMonth = from.getUTCMonth() + 12;
     const lastDay = new Date(
       Date.UTC(from.getUTCFullYear(), targetMonth + 1, 0),
     ).getUTCDate();
@@ -56,13 +56,13 @@ export function registerTests(env) {
       errorCode('PPE_NORM_NOT_DUE'),
     );
   });
-  test('fully issued cycle cannot be closed twice; fractional norm issues one full portion', async () => {
+  test('closed obligation cannot be issued twice; fractional norm issues the full quantity', async () => {
     const f = await issueFixture({ quantity: 1.125 });
     const [issue] = await issues.createRegular(f.request, specialist);
     assert.equal(issue.quantity, 1.125);
     await assert.rejects(
       issues.createRegular(f.request, specialist),
-      errorCode('PPE_NORM_ALREADY_ISSUED'),
+      errorCode('PPE_NORM_NOT_DUE'),
     );
   });
   test('admin backdating chooses the norm effective on issuedAt; specialist cannot provide issuedAt', async () => {
@@ -103,22 +103,21 @@ export function registerTests(env) {
     );
     await assert.rejects(
       issues.createRegular({ ...f.request, issuedAt: day(-61) }, adminActor),
-      errorCode('PPE_NORM_NOT_FOUND'),
+      errorCode('PPE_NORM_ALREADY_ISSUED'),
     );
   });
-  test('only the current normative cycle is considered, without historical debt', async () => {
+  test('closes the nearest outstanding obligation without creating debt for every missed period', async () => {
     const f = await issueFixture({ from: '2024-01-06', quantity: 1 });
-    const now = date();
-    const year =
-      now.getUTCFullYear() -
-      (now < new Date(`${now.getUTCFullYear()}-01-06T00:00:00Z`) ? 1 : 0);
     const plan = await issues.plan(f.employee.id, date());
-    assert.equal(plan.items[0].cycleFrom, `${year}-01-06`);
-    assert.equal(plan.items[0].dueUnissued, 1);
-    const [issue] = await issues.createRegular(f.request, specialist);
-    assert.equal(issue.scheduledAt, `${year}-01-06`);
+    assert.equal(plan.items[0].plannedDate, '2024-01-06');
+    const [issued] = await issues.createRegular(f.request, specialist);
+    assert.equal(issued.scheduledAt, '2024-01-06');
+    assert.equal(
+      (await issues.plan(f.employee.id, date())).items[0].overdue,
+      0,
+    );
   });
-  test('replacement preserves normative and actual PPE and closes the required portion', async () => {
+  test('replacement preserves normative and actual PPE and closes the required obligation', async () => {
     const f = await issueFixture({ quantity: 1 });
     await prisma.ppeItem.update({
       where: { id: f.items[2].id },
@@ -136,7 +135,7 @@ export function registerTests(env) {
     assert.equal(issue.ppeItemId, f.items[2].id);
     assert.equal(issue.article, f.items[2].article);
     assert.equal(
-      (await issues.plan(f.employee.id, date())).items[0].fulfilledPortions,
+      (await issues.plan(f.employee.id, date())).items[0].fulfilled.length,
       1,
     );
     assert.equal(
@@ -218,32 +217,47 @@ export function registerTests(env) {
     assert.notEqual(result[0].id, result[1].id);
     assert.equal(result[0].employeeId, result[1].employeeId);
   });
-  test('same-day unit portions remain distinct by scheduledPortion even in one batch', async () => {
+  test('a weekly batch closes two whole obligations; a third unavailable row rolls back the batch', async () => {
     const f = await issueFixture({
-      quantity: 999_999_999,
-      periodUnit: 'MONTH',
+      from: day(),
+      quantity: 3,
+      periodCount: 7,
+      periodUnit: 'DAY',
     });
+    await assert.rejects(
+      issues.createRegular(
+        {
+          ...f.request,
+          items: [f.request.items[0], f.request.items[0], f.request.items[0]],
+        },
+        specialist,
+      ),
+      errorCode('PPE_NORM_NOT_DUE'),
+    );
+    assert.equal(
+      await prisma.ppeIssue.count({ where: { employeeId: f.employee.id } }),
+      0,
+    );
     const results = await issues.createRegular(
       { ...f.request, items: [f.request.items[0], f.request.items[0]] },
       specialist,
     );
-    assert.equal(results[0].scheduledAt, results[1].scheduledAt);
-    assert.equal(results[0].scheduledPortion, 0);
-    assert.equal(results[1].scheduledPortion, 1);
-    assert.equal(results[0].quantity, 1);
-    assert.equal(results[1].quantity, 1);
+    assert.equal(results[0].scheduledAt, day());
+    assert.equal(results[1].scheduledAt, day(7));
+    assert.equal(results[0].quantity, 3);
+    assert.equal(results[1].quantity, 3);
   });
   test('plan without an effective norm returns an empty plan', async () => {
-    const f = await issueFixture({ from: day(10) });
+    const f = await issueFixture({ from: day(31) });
     const plan = await issues.plan(f.employee.id, date());
     assert.equal(plan.norm, null);
     assert.deepEqual(plan.items, []);
     await assert.rejects(
       issues.createRegular(f.request, specialist),
-      errorCode('PPE_NORM_NOT_FOUND'),
+      errorCode('PPE_NORM_NOT_DUE'),
     );
   });
-  test('cancel reopens the same normative portion and preserves original issue data', async () => {
+  test('cancel reopens the same normative obligation and preserves original issue data', async () => {
     const f = await issueFixture({ quantity: 1 });
     const [original] = await issues.createRegular(f.request, specialist);
     const cancelled = await issues.cancel(

@@ -68,7 +68,6 @@ export function registerTests(env) {
         quantity: 1,
         issuedAt: date(20),
         scheduledAt: date(10),
-        scheduledPortion: 0,
         issuedByUserId: actor,
         issuedByNameSnapshot: 'Norm tester',
       },

@@ -79,7 +79,7 @@ export function registerTests(env) {
           action: 'DELETE',
         },
       }),
-      9,
+      8,
     );
     const logCount = await prisma.auditLog.count();
     const unchanged = await service.updateFuture(

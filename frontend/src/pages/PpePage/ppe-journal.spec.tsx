@@ -11,7 +11,10 @@ import { employee, item, issue } from "./ppe-test-fixtures";
 
 describe("PPE journal", () => {
   it("searches historical names and articles together with applied filters", async () => {
-    vi.spyOn(ppeApi, "journal").mockResolvedValue([issue]);
+    vi.spyOn(ppeApi, "journal").mockImplementation(async (query) => {
+      const items = query.search === 'несуществующий СИЗ' ? [] : [issue];
+      return { items, total: items.length, page: 1, limit: 100 };
+    });
     render(
       <JournalPanel
         employees={[employee]}
@@ -29,15 +32,13 @@ describe("PPE journal", () => {
         value: `${issue.employeeName.split(" ")[0]} ${issue.article.toLowerCase()}`,
       },
     });
-    expect(screen.getByText(issue.employeeName)).toBeInTheDocument();
+    await screen.findByText(issue.employeeName);
     fireEvent.change(search, { target: { value: "несуществующий СИЗ" } });
     expect(
       screen.queryByText("По вашему запросу ничего не найдено."),
     ).not.toBeInTheDocument();
     fireEvent.keyDown(search, { key: "Enter" });
-    expect(
-      screen.getByText("По вашему запросу ничего не найдено."),
-    ).toBeInTheDocument();
+    await screen.findByText("По вашему запросу ничего не найдено.");
     fireEvent.click(screen.getByRole("button", { name: "Очистить поиск" }));
     fireEvent.click(screen.getByRole("button", { name: "Фильтры" }));
     const nomenclature = screen.getByRole("combobox", { name: "Номенклатура" });
@@ -51,17 +52,17 @@ describe("PPE journal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Применить" }));
     await waitFor(() =>
       expect(ppeApi.journal).toHaveBeenLastCalledWith(
-        { status: "ISSUED", ppeItemId: String(item.id) },
+        expect.objectContaining({ status: "ISSUED", ppeItemId: String(item.id) }),
         expect.any(AbortSignal),
       ),
     );
     await screen.findByText(issue.employeeName);
     expect(screen.queryByLabelText("Статус")).not.toBeInTheDocument();
     fireEvent.change(search, { target: { value: issue.article } });
-    expect(screen.getByText(issue.employeeName)).toBeInTheDocument();
+    await screen.findByText(issue.employeeName);
   });
   it("combines backend filters and resets them, including inactive references", async () => {
-    vi.spyOn(ppeApi, "journal").mockResolvedValue([]);
+    vi.spyOn(ppeApi, "journal").mockResolvedValue({ items: [], total: 0, page: 1, limit: 100 });
     render(
       <JournalPanel
         employees={[{ ...employee, isActive: false }]}
@@ -71,13 +72,6 @@ describe("PPE journal", () => {
         revision={0}
         onChanged={vi.fn()}
       />,
-    );
-    expect(
-      screen.queryByText("Выдач по выбранным фильтрам нет."),
-    ).not.toBeInTheDocument();
-    fireEvent.keyDown(
-      screen.getByRole("textbox", { name: "Поиск по журналу" }),
-      { key: "Enter" },
     );
     await screen.findByText("Выдач по выбранным фильтрам нет.");
     expect(screen.queryByLabelText("Сотрудник")).not.toBeInTheDocument();
@@ -94,7 +88,7 @@ describe("PPE journal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Применить" }));
     await waitFor(() =>
       expect(ppeApi.journal).toHaveBeenLastCalledWith(
-        { employeeId: "1", status: "CANCELLED", dateFrom: "2026-01-01" },
+        expect.objectContaining({ employeeId: "1", status: "CANCELLED", dateFrom: "2026-01-01" }),
         expect.any(AbortSignal),
       ),
     );
@@ -106,7 +100,7 @@ describe("PPE journal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Сбросить" }));
     await waitFor(() =>
       expect(ppeApi.journal).toHaveBeenLastCalledWith(
-        {},
+        { page: '1', limit: '100', search: '', sort: 'date', direction: 'desc' },
         expect.any(AbortSignal),
       ),
     );

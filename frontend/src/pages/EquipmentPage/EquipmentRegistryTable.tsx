@@ -13,9 +13,11 @@ const MOBILE_EQUIPMENT_REGISTRY_QUERY = '(max-width: 760px)';
 type EquipmentRegistryTableProps = {
   items: EquipmentRegistryItem[];
   onOpenEquipment: (visibleId: number) => void;
+  sort?: { key: EquipmentSortKey; direction: DataTableSortDirection };
+  onSortChange?: (sort: { key: EquipmentSortKey; direction: DataTableSortDirection }) => void;
 };
 
-type EquipmentSortKey =
+export type EquipmentSortKey =
   | 'inventoryNumber'
   | 'manufacturer'
   | 'model'
@@ -81,15 +83,17 @@ const defaultEquipmentSort = {
 export function EquipmentRegistryTable({
   items,
   onOpenEquipment,
+  sort,
+  onSortChange,
 }: EquipmentRegistryTableProps) {
   const isMobileRegistry = useMobileEquipmentRegistry();
   const [mobileSort] = useState(defaultEquipmentSort);
   const sortedMobileItems = useMemo(
     () =>
-      isMobileRegistry
+      sort ? items : isMobileRegistry
         ? sortDataTableRows(items, equipmentColumns, mobileSort)
         : [],
-    [isMobileRegistry, items, mobileSort],
+    [isMobileRegistry, items, mobileSort, sort],
   );
 
   if (items.length === 0) {
@@ -152,6 +156,9 @@ export function EquipmentRegistryTable({
           getRowKey={(item) => item.id}
           onRowDoubleClick={(item) => onOpenEquipment(item.visibleId)}
           rows={items}
+          sort={sort}
+          onSortChange={onSortChange}
+          serverSorted={Boolean(sort)}
         />
       )}
     </div>

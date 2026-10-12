@@ -1,4 +1,5 @@
 import { useDialogBehavior } from "./useDialogBehavior";
+import { useModalResizeAnimation } from "./useModalResizeAnimation";
 import { TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { useId, useRef } from "react";
@@ -39,6 +40,7 @@ export function ConfirmDialog({
   const confirmText = isLoading && loadingLabel ? loadingLabel : confirmLabel;
   const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLElement | null>(null);
+  useModalResizeAnimation(dialogRef);
   const titleId = useId();
   const { close, onKeyDown: handleKeyDown } = useDialogBehavior({
     dialogRef,

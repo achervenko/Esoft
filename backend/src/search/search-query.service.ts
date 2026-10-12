@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { canReadEquipment } from '../auth/role-permissions';
 import {
   SEARCH_DEFAULT_LIMIT,
   SEARCH_DEFAULT_OFFSET,
@@ -11,6 +12,7 @@ import { normalizeSearchQuery } from './search-normalization.helper';
 import type { SearchResultDto } from './search.types';
 
 type SearchRow = {
+  matched_fields: SearchResultDto['matches'];
   id: string;
   entity_type: string;
   entity_id: number;
@@ -61,10 +63,7 @@ export class SearchQueryService {
       return [];
     const equipmentAllowed =
       (!modules.length || modules.includes('equipment')) &&
-      typeof role === 'string' &&
-      ['admin', 'chief_engineer', 'engineer', 'operator', 'auditor'].includes(
-        role,
-      );
+      canReadEquipment(role);
     const ppeAllowed =
       (!modules.length || modules.includes('ppe')) &&
       typeof role === 'string' &&
@@ -72,7 +71,7 @@ export class SearchQueryService {
     const branches: Prisma.Sql[] = [];
     const contains = `%${this.escapeLike(query)}%`;
     const normalize = (value: Prisma.Sql) =>
-      Prisma.sql`regexp_replace(replace(lower(${value}), chr(1105), chr(1077)), '[[:space:]]+', ' ', 'g')`;
+      Prisma.sql`app_search_normalize(${value})`;
     const score = (
       title: Prisma.Sql,
       text: Prisma.Sql,
@@ -84,21 +83,22 @@ export class SearchQueryService {
         WHEN ${title} LIKE ${contains} ESCAPE '\\' OR ${article} LIKE ${contains} ESCAPE '\\' THEN 200
         WHEN ${text} LIKE ${contains} ESCAPE '\\' OR ${exactWords} THEN 100 ELSE 0 END
       + similarity(${text}, ${query}) AS score`;
-    const fuzzy = (text: Prisma.Sql) =>
+    const fuzzy = (text: Prisma.Sql, indexed = false) =>
       query.length >= 3
-        ? Prisma.sql`OR word_similarity(${query}, ${text}) > 0.45`
+        ? Prisma.sql`OR (${indexed ? Prisma.sql`${text} %> ${query} AND` : Prisma.empty} word_similarity(${query}, ${text}) > 0.45)`
         : Prisma.empty;
-    const emptyDetails = Prisma.sql`NULL::text AS manufacturer, NULL::text AS model, NULL::text AS serial_number, NULL::text AS location, NULL::text AS responsible, NULL::text AS status`;
+    const emptyDetails = Prisma.sql`NULL::text AS manufacturer, NULL::text AS model, NULL::text AS serial_number, NULL::text AS location, NULL::text AS responsible, NULL::text AS status, NULL::text AS workshop`;
     if (equipmentAllowed && (!entityType || entityType === 'equipment')) {
       const title = normalize(Prisma.sql`si.title`);
       const text = normalize(Prisma.sql`si.search_text`);
       branches.push(Prisma.sql`
-        SELECT si.id::text AS id, 'equipment'::text AS entity_type, si.entity_id, si.title, si.subtitle, ${text} AS search_text,
+        SELECT si.id::text AS id, 'equipment'::text AS entity_type, si.entity_id, si.title,
+          concat_ws(' ', CASE WHEN nullif(e.serial_number, '') IS NOT NULL THEN '№ ' || e.serial_number END, s.name) AS subtitle, ${text} AS search_text,
           '#/equipment/' || e.visible_id::text AS target_url,
           m.name AS manufacturer, em.name AS model, e.serial_number,
           CASE WHEN w.name IS NOT NULL AND s.name IS NOT NULL THEN w.name || ' / ' || s.name ELSE NULL END AS location,
           NULLIF(concat_ws(' ', emp.last_name, emp.first_name, emp.middle_name), '') AS responsible,
-          e.status::text AS status, ${score(title, text)}
+          e.status::text AS status, w.name AS workshop, ${score(title, text)}
         FROM search_index si
         JOIN equipment e ON e.id = si.entity_id
         LEFT JOIN equipment_models em ON em.id = e.model_id
@@ -107,7 +107,7 @@ export class SearchQueryService {
         LEFT JOIN workshops w ON w.id = s.workshop_id
         LEFT JOIN employees emp ON emp.id = e.responsible_employee_id
         WHERE si.entity_type = 'equipment' AND si.is_active = true AND
-          (${text} LIKE ${contains} ESCAPE '\\' OR ${title} LIKE ${contains} ESCAPE '\\' ${fuzzy(text)})
+          (${text} LIKE ${contains} ESCAPE '\\' OR ${title} LIKE ${contains} ESCAPE '\\' ${fuzzy(text, true)})
       `);
     }
     if (ppeAllowed && (!entityType || entityType === 'ppe_item')) {
@@ -118,11 +118,11 @@ export class SearchQueryService {
         SELECT 'ppe:' || p.id::text AS id, 'ppe_item'::text AS entity_type, p.id AS entity_id, p.name AS title,
           'Артикул: ' || p.article AS subtitle, ${text} AS search_text, '#/ppe?tab=catalog&itemId=' || p.id::text AS target_url,
           ${emptyDetails}, ${score(title, text, article)}
-        FROM ppe_items p WHERE p.is_active = true AND (${title} LIKE ${contains} ESCAPE '\\' OR ${article} LIKE ${contains} ESCAPE '\\' ${fuzzy(text)})
+        FROM ppe_items p WHERE p.is_active = true AND (${title} LIKE ${contains} ESCAPE '\\' OR ${article} LIKE ${contains} ESCAPE '\\' ${fuzzy(text, true)})
       `);
     }
     if (ppeAllowed && (!entityType || entityType === 'employee')) {
-      const name = Prisma.sql`concat_ws(' ', emp.last_name, emp.first_name, emp.middle_name)`;
+      const name = Prisma.sql`emp.last_name || ' ' || emp.first_name || CASE WHEN emp.middle_name IS NULL THEN '' ELSE ' ' || emp.middle_name END`;
       const title = normalize(name);
       const words = query
         .split(/\s+/)
@@ -135,7 +135,7 @@ export class SearchQueryService {
           ${name} AS title, pos.name AS subtitle, ${title} AS search_text, '#/ppe/employees/' || emp.id::text AS target_url,
           ${emptyDetails}, ${score(title, title, Prisma.sql`NULL::text`, Prisma.sql`(${Prisma.join(words, ' AND ')})`)}
         FROM employees emp JOIN positions pos ON pos.id = emp.position_id
-        WHERE emp.is_active = true AND (${Prisma.join(words, ' AND ')} ${fuzzy(title)})
+        WHERE emp.is_active = true AND (${Prisma.join(words, ' AND ')} ${fuzzy(title, true)})
       `);
     }
     if (ppeAllowed && (!entityType || entityType === 'ppe_norm')) {
@@ -146,21 +146,39 @@ export class SearchQueryService {
           '#/ppe/positions/' || pos.id::text AS target_url,
           ${emptyDetails}, ${score(title, title)}
         FROM positions pos
-        WHERE pos.is_active = true AND (${title} LIKE ${contains} ESCAPE '\\' ${fuzzy(title)})
+        WHERE pos.is_active = true AND (${title} LIKE ${contains} ESCAPE '\\' ${fuzzy(title, true)})
           AND EXISTS (SELECT 1 FROM ppe_norms norm WHERE norm.position_id = pos.id)
       `);
     }
     if (!branches.length) return [];
-    const rows = await this.prisma.$queryRaw<SearchRow[]>(Prisma.sql`
-      SELECT * FROM (${Prisma.join(branches, ' UNION ALL ')}) AS matches
+    const matchedValue = normalize(Prisma.sql`candidate.value`);
+    const statement = Prisma.sql`
+      SELECT matches.*, COALESCE((
+        SELECT jsonb_agg(jsonb_build_object('field', candidate.field, 'value', candidate.value) ORDER BY candidate.ordinal)
+        FROM (VALUES
+          ('manufacturer', matches.manufacturer, 1),
+          ('model', matches.model, 2),
+          ('workshop', matches.workshop, 3),
+          ('responsible', matches.responsible, 4),
+          ('serialNumber', matches.serial_number, 5)
+        ) AS candidate(field, value, ordinal)
+        WHERE candidate.value IS NOT NULL AND candidate.value <> '' AND
+          (${matchedValue} LIKE ${contains} ESCAPE '\\' ${fuzzy(matchedValue)})
+      ), '[]'::jsonb) AS matched_fields
+      FROM (${Prisma.join(branches, ' UNION ALL ')}) AS matches
       ORDER BY score DESC, title COLLATE "C" ASC, entity_type ASC, entity_id ASC
       LIMIT ${limit} OFFSET ${offset}
-    `);
+    `;
+    const rows = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SET LOCAL pg_trgm.word_similarity_threshold = 0.45`;
+      return tx.$queryRaw<SearchRow[]>(statement);
+    });
     return rows.map((row) => ({
       id: row.id.toString(),
       entityType: row.entity_type,
       entityId: row.entity_id,
       title: row.title,
+      matches: row.matched_fields ?? [],
       searchText: row.search_text,
       subtitle: row.subtitle,
       score: Number(row.score ?? 0),

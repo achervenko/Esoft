@@ -1,3 +1,4 @@
+import { RequiredMark } from "../../shared/ui/RequiredMark";
 import { useState } from "react";
 import type {
   CountryPayload,
@@ -57,7 +58,7 @@ export function CountryFormModal({
       <form className="admin-form" onSubmit={handleSubmit}>
         <label className="form-field">
           <span className="form-field-label">
-            Страна<b aria-hidden="true">*</b>
+            Страна<RequiredMark />
           </span>
           <input
             autoFocus
@@ -75,7 +76,7 @@ export function CountryFormModal({
         </label>
         <label className="form-field">
           <span className="form-field-label">
-            ISO<b aria-hidden="true">*</b>
+            ISO<RequiredMark />
           </span>
           <input
             maxLength={2}

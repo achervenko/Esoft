@@ -15,11 +15,13 @@ export function formatPpeDate(value: string | null | undefined) {
   return match ? `${match[3]}.${match[2]}.${match[1]}` : value;
 }
 const quantityPlural = new Intl.PluralRules("ru-RU");
-export function formatPpePeriod(count: number, unit: "MONTH" | "YEAR") {
+export function formatPpePeriod(count: number, unit: "DAY" | "MONTH" | "YEAR") {
   const forms: Record<string, string> =
     unit === "YEAR"
       ? { one: "год", few: "года", many: "лет", other: "года" }
-      : { one: "месяц", few: "месяца", many: "месяцев", other: "месяца" };
+      : unit === "DAY"
+        ? { one: "день", few: "дня", many: "дней", other: "дня" }
+        : { one: "месяц", few: "месяца", many: "месяцев", other: "месяца" };
   return `${count} ${forms[quantityPlural.select(count)]}`;
 }
 export function formatPpeQuantity(quantity: number, unit: string) {
@@ -60,8 +62,8 @@ const errorMessages: Record<string, string> = {
   PPE_NORM_NOT_FOUND: "Норма не найдена. Обновите список норм.",
   PPE_NORM_PERIOD_CONFLICT: "Период нормы пересекается с другой редакцией.",
   PPE_NORM_LOCKED: "Норму уже нельзя изменить.",
-  PPE_NORM_ALREADY_ISSUED: "Эта нормативная порция уже выдана. Обновите план.",
-  PPE_NORM_NOT_DUE: "Срок нормативной выдачи ещё не наступил.",
+  PPE_NORM_ALREADY_ISSUED: "Эта нормативная выдача уже выполнена или больше недоступна. Обновите план.",
+  PPE_NORM_NOT_DUE: "Окно нормативной выдачи ещё не открыто.",
   PPE_EMPLOYEE_NOT_FOUND: "Сотрудник не найден.",
   PPE_EMPLOYEE_INACTIVE: "Сотрудник отключён. Новые выдачи недоступны.",
   PPE_ISSUE_ALREADY_CANCELLED: "Выдача уже отменена. Обновите журнал.",

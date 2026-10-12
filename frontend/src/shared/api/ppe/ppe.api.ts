@@ -100,8 +100,8 @@ export const ppeApi = {
       "POST",
       payload,
     ),
-  journal: (filters: IssueFilters, signal?: AbortSignal) =>
-    request<PpeIssue[]>(`/api/ppe/issues${query(filters)}`, { signal }),
+  journal: (filters: IssueFilters & Partial<Record<'page' | 'limit' | 'search' | 'sort' | 'direction', string>>, signal?: AbortSignal) =>
+    request<{ items: PpeIssue[]; total: number; page: number; limit: number }>(`/api/ppe/issues/page${query(filters)}`, { signal }),
   issueDetails: (id: number, signal?: AbortSignal) =>
     request<PpeIssue>(`/api/ppe/issues/${id}`, { signal }),
   cancel: (id: number, reason: string) =>

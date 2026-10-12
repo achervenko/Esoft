@@ -4,8 +4,9 @@ export type TextRendererParams = {
 };
 
 export type PdfPageForViewer = {
-  getViewport: (options: { scale: number }) => {
+  getViewport: (options: { scale: number; rotation?: number }) => {
     width: number;
+    height?: number;
   };
 };
 

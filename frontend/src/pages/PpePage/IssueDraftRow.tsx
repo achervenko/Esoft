@@ -53,7 +53,7 @@ export function IssueDraftRow({
           <strong>По норме:</strong> {row.norm.article} / {row.norm.name} ·{" "}
           {row.norm.available &&
             formatPpeQuantity(row.norm.available.quantity, row.norm.unit)}{" "}
-          · нормативная дата {formatPpeDate(row.norm.available?.scheduledAt)}
+          · плановая дата {formatPpeDate(row.norm.available?.scheduledAt)}
         </p>
       )}
       <SearchSelect

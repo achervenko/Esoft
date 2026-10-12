@@ -3,16 +3,12 @@ import { date, norm, issue, policy } from './ppe-norm-transition.spec-fixtures';
 
 describe('entitlement after position assignment', () => {
   const assigned = date('2026-10-07');
-  function transfer(
-    calculationMode = 'INTERVAL',
-    oldQuantity = 1,
-    quantity = 2,
-  ) {
+  function transfer(oldQuantity = 1, quantity = 2) {
     const old = {
-      ...norm(10, 'SOFT', '2026-01-01', oldQuantity, calculationMode),
+      ...norm(10, 'SOFT', '2026-01-01', oldQuantity),
       positionId: 2,
     };
-    const current = norm(20, 'HARD', '2026-01-01', quantity, calculationMode);
+    const current = norm(20, 'HARD', '2026-01-01', quantity);
     const context = new Map([
       [old.id, old],
       [current.id, current],
@@ -39,25 +35,25 @@ describe('entitlement after position assignment', () => {
     expect(result.state.nextFuture?.scheduledAt).toEqual(date('2027-06-01'));
     expect(
       f.evaluate([previous], date('2027-06-01')).state.available?.quantity,
-    ).toBe(1);
+    ).toBe(2);
     const latest = issue(20, '2027-06-01', 1, { positionId: 1 });
     expect(
       f.evaluate([previous, latest], date('2027-06-01')).state.nextFuture
         ?.scheduledAt,
-    ).toEqual(date('2027-12-01'));
+    ).toEqual(date('2028-06-01'));
   });
   it('makes missing items due on assignment without importing earlier debt', () => {
-    const f = transfer('MONTHLY', 60, 120);
+    const f = transfer(60, 120);
     const result = f.evaluate([]);
-    expect(result.state.dueUnissued).toBe(1);
+    expect(result.state.available?.quantity).toBe(120);
     expect(result.state.available).toMatchObject({
       scheduledAt: assigned,
-      quantity: 10,
+      quantity: 120,
     });
   });
   it('keeps retained wear through a later soft revision and recalculates it for a hard revision', () => {
     const f = transfer();
-    const next = norm(30, 'SOFT', '2026-11-01', 4, 'INTERVAL', f.current.id);
+    const next = norm(30, 'SOFT', '2026-11-01', 4, f.current.id);
     const context = new Map([
       [f.old.id, f.old],
       [f.current.id, f.current],
@@ -76,17 +72,9 @@ describe('entitlement after position assignment', () => {
     expect(evaluate().available).toBeNull();
     expect(evaluate().nextFuture?.scheduledAt).toEqual(date('2027-06-01'));
     next.transitionMode = 'HARD';
+    next.items[0].periodCount = 6;
+    next.items[0].periodUnit = 'MONTH';
     expect(evaluate().available).not.toBeNull();
-  });
-  it('credits old monthly issues and tops up only the current month', () => {
-    const f = transfer('MONTHLY', 60, 120);
-    const old = issue(10, '2026-10-01', 5, { positionId: 2 });
-    expect(f.evaluate([old]).state.available?.quantity).toBe(5);
-    const topup = issue(20, '2026-10-07', 5, { positionId: 1 });
-    expect(f.evaluate([old, topup]).state.available).toBeNull();
-    expect(
-      f.evaluate([{ ...old, status: 'CANCELLED' }, topup]).state.available,
-    ).toMatchObject({ quantity: 5, index: 1 });
   });
   it('does not count cancelled issues, extras or different catalog items', () => {
     const f = transfer();

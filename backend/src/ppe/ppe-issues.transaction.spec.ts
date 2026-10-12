@@ -22,8 +22,8 @@ function fail(meta?: Record<string, unknown>, code = 'P2002') {
 
 describe('PPE issue transaction errors', () => {
   it.each([
-    'duplicate key value violates unique constraint "uq_ppe_issues_regular_portion"',
-    'повторяющееся значение ключа нарушает ограничение уникальности "uq_ppe_issues_regular_portion"',
+    'duplicate key value violates unique constraint "uq_ppe_issues_regular_obligation"',
+    'повторяющееся значение ключа нарушает ограничение уникальности "uq_ppe_issues_regular_obligation"',
   ])(
     'recognizes the exact index in PostgreSQL adapter metadata: %s',
     async (originalMessage) => {
@@ -42,7 +42,7 @@ describe('PPE issue transaction errors', () => {
       });
     },
   );
-  it.each(['uq_ppe_items_article', 'uq_ppe_issues_regular_portion_other'])(
+  it.each(['uq_ppe_items_article', 'uq_ppe_issues_regular_obligation_other'])(
     'does not map another adapter constraint %s',
     async (name) => {
       const { error, run } = fail({
@@ -58,10 +58,10 @@ describe('PPE issue transaction errors', () => {
     },
   );
   it.each([
-    'uq_ppe_issues_regular_portion',
-    ['employee_id', 'norm_item_id', 'scheduled_at', 'scheduled_portion'],
-    ['scheduledPortion', 'scheduledAt', 'employeeId', 'normItemId'],
-  ])('maps only the regular portion unique target %p', async (target) => {
+    'uq_ppe_issues_regular_obligation',
+    ['employee_id', 'norm_item_id', 'scheduled_at'],
+    ['scheduledAt', 'employeeId', 'normItemId'],
+  ])('maps only the regular obligation unique target %p', async (target) => {
     const { run } = fail({ modelName: 'PpeIssue', target });
     await expect(run()).rejects.toMatchObject({
       response: { code: 'PPE_NORM_ALREADY_ISSUED' },
@@ -74,15 +74,9 @@ describe('PPE issue transaction errors', () => {
     { target: ['article'] },
     { target: ['employee_id', 'norm_item_id'] },
     {
-      target: [
-        'employee_id',
-        'norm_item_id',
-        'scheduled_at',
-        'scheduled_portion',
-        'other',
-      ],
+      target: ['employee_id', 'norm_item_id', 'scheduled_at', 'other'],
     },
-    { modelName: 'OtherModel', target: 'uq_ppe_issues_regular_portion' },
+    { modelName: 'OtherModel', target: 'uq_ppe_issues_regular_obligation' },
   ])('preserves unrelated or unknown unique conflict %p', async (meta) => {
     const { error, run } = fail(meta);
     await expect(run()).rejects.toBe(error);

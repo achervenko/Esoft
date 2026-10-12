@@ -1,6 +1,7 @@
 import "../../shared/ui/AdminPage.css";
 import "../../modules/ppe-ui/PpeLayout.css";
 import { AppTable } from "../../shared/ui/AppTable";
+import { ContextMenu } from "../../shared/ui/ContextMenu";
 import { useState } from "react";
 import { ppeApi } from "../../shared/api/ppe";
 import { usePpeQuery } from "../../modules/ppe-ui/usePpeQuery";
@@ -15,6 +16,7 @@ export function PpeEmployeesPanel() {
   );
   const [search, setSearch] = useState("");
   const [id, setId] = useState<number | null>(null);
+  const [menu, setMenu] = useState<{ id: number; x: number; y: number } | null>(null);
   const filtered = employees.data?.filter(
     (item) =>
       item.isActive &&
@@ -46,12 +48,15 @@ export function PpeEmployeesPanel() {
                     <th>Сотрудник</th>
                     <th>Должность</th>
                     <th>Размеры</th>
-                    <th>Действия</th>
+                    <th aria-label="Действия" />
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((item) => (
-                    <tr key={item.id}>
+                    <tr key={item.id} onContextMenu={(event) => {
+                      event.preventDefault();
+                      setMenu({ id: item.id, x: event.clientX, y: event.clientY });
+                    }}>
                       <td>{employeeName(item)}</td>
                       <td>{item.position}</td>
                       <td>
@@ -62,7 +67,7 @@ export function PpeEmployeesPanel() {
                           className="admin-secondary-button"
                           onClick={() => setId(item.id)}
                         >
-                          Размеры
+                          Изменить
                         </button>
                       </td>
                     </tr>
@@ -74,6 +79,11 @@ export function PpeEmployeesPanel() {
             <p className="admin-state">Сотрудники не найдены.</p>
           ))}
       </section>
+      {menu && (
+        <ContextMenu x={menu.x} y={menu.y} label="Действия с размерами сотрудника"
+          onClose={() => setMenu(null)}
+          items={[{ id: "edit", label: "Изменить", onSelect: () => setId(menu.id) }]} />
+      )}
       {id !== null && (
         <EmployeeSizesModal
           id={id}

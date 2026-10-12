@@ -1,3 +1,4 @@
+import { RequiredMark } from "../../shared/ui/RequiredMark";
 import type { EquipmentEventItem } from "./equipment-events.types";
 import type { ChecklistTemplateListItem } from "../../shared/api/checklists";
 import type { MaintenanceSetting } from "../../shared/api/maintenance/maintenance.types";
@@ -70,7 +71,7 @@ export function EquipmentEventFormModal({
 
         <label className="form-field">
           <span className="form-field-label">
-            Плановая дата<b aria-hidden="true">*</b>
+            Плановая дата<RequiredMark />
           </span>
           <input
             onChange={(inputEvent) =>

@@ -12,6 +12,7 @@ export type SearchIndexEntry = {
 };
 
 export type SearchResultDto = {
+  matches: Array<{ field: string; value: string }>;
   details: {
     location: string | null;
     manufacturer: string | null;

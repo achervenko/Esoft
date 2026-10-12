@@ -1,3 +1,4 @@
+import { RequiredMark } from "../../shared/ui/RequiredMark";
 import { useState } from "react";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import { SelectDropdown } from "../../shared/ui/SelectDropdown";
@@ -78,7 +79,7 @@ export function ParentNameDictionaryFormModal({
         <label className="form-field">
           <span className="form-field-label">
             {nameLabel}
-            <b aria-hidden="true">*</b>
+            <RequiredMark />
           </span>
           <input
             autoFocus

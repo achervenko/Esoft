@@ -1,11 +1,13 @@
+import { useModalResizeAnimation } from "./useModalResizeAnimation";
 import "./AdminModal.css";
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
-import { useLayoutEffect, useId, useRef } from "react";
+import { useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useDialogBehavior } from "./useDialogBehavior";
 
 type AdminModalProps = {
+  animateResize?: boolean;
   children: ReactNode;
   className?: string;
   isCloseDisabled?: boolean;
@@ -14,6 +16,7 @@ type AdminModalProps = {
 };
 
 export function AdminModal({
+  animateResize = true,
   children,
   className,
   isCloseDisabled = false,
@@ -24,34 +27,7 @@ export function AdminModal({
   const dialogId = useId();
   const titleId = useId();
 
-  const previousHeightRef = useRef<number | null>(null);
-  const resizeAnimationRef = useRef<Animation | null>(null);
-
-  useLayoutEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog || !dialog.animate) return;
-    const running = resizeAnimationRef.current;
-    const from = running ? dialog.getBoundingClientRect().height : previousHeightRef.current;
-    running?.cancel();
-    resizeAnimationRef.current = null;
-    dialog.classList.remove("admin-modal-resizing");
-    const height = dialog.getBoundingClientRect().height;
-    previousHeightRef.current = height;
-    if (from === null || Math.abs(height - from) < 2 ||
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    dialog.classList.add("admin-modal-resizing");
-    const animation = dialog.animate(
-      [{ height: `${from}px` }, { height: `${height}px` }],
-      { duration: 240, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
-    );
-    resizeAnimationRef.current = animation;
-    animation.onfinish = () => {
-      dialog.classList.remove("admin-modal-resizing");
-      resizeAnimationRef.current = null;
-    };
-  });
-
-  useLayoutEffect(() => () => { resizeAnimationRef.current?.cancel(); }, []);
+  useModalResizeAnimation(dialogRef, animateResize);
 
   const { close: handleClose, onKeyDown: handleKeyDown } = useDialogBehavior({
     dialogRef,

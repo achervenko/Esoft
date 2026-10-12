@@ -3,7 +3,6 @@ import { getApiErrorMessage } from "../../../shared/api/api-error";
 import {
   getChecklistWorkItems,
   type ChecklistWorkListItem,
-  type ChecklistWorkListResponse,
 } from "../../../shared/api/checklists";
 import { tabConfig } from "../my-checklists.config";
 import type {
@@ -18,6 +17,9 @@ export function useMyChecklistsList({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
+  const [selection, setSelection] = useState({ tab: activeTab, page: 0 });
+  const page = selection.tab === activeTab ? selection.page : 0;
+  const pageSize = 100;
   const [totalsByStatus, setTotalsByStatus] = useState<
     MyChecklistsListState["totalsByStatus"]
   >({});
@@ -30,20 +32,19 @@ export function useMyChecklistsList({
     setTotalsByStatus({});
 
     const load = async () => {
-      const loaded: ChecklistWorkListItem[] = [];
-      let response: ChecklistWorkListResponse;
-      do {
-        response = await getChecklistWorkItems({
-          limit: 100,
-          offset: loaded.length,
+      const response = await getChecklistWorkItems({
+          limit: pageSize,
+          offset: page * pageSize,
           status: tabConfig[activeTab].statuses,
         });
         if (cancelled) return;
-        loaded.push(...response.items);
-        if (response.items.length === 0 && loaded.length < response.total)
+        if (page > 0 && page * pageSize >= response.total) {
+          setSelection({ tab: activeTab, page: Math.max(0, Math.ceil(response.total / pageSize) - 1) });
+          return;
+        }
+        if (response.items.length === 0 && response.total > 0)
           throw new Error("Не удалось загрузить полный список чек-листов.");
-      } while (loaded.length < response.total);
-      setItems(loaded);
+      setItems(response.items);
       setTotal(response.total);
       setTotalsByStatus(response.totalsByStatus);
     };
@@ -67,7 +68,7 @@ export function useMyChecklistsList({
     return () => {
       cancelled = true;
     };
-  }, [activeTab]);
+  }, [activeTab, page]);
 
   return {
     error,
@@ -75,5 +76,8 @@ export function useMyChecklistsList({
     items,
     total,
     totalsByStatus,
+    page,
+    pageSize,
+    setPage: (nextPage) => setSelection({ tab: activeTab, page: Math.max(0, Math.min(nextPage, Math.ceil(total / pageSize) - 1)) }),
   };
 }

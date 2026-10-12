@@ -1,3 +1,4 @@
+import { RequiredMark } from "../../shared/ui/RequiredMark";
 import { useState } from "react";
 import type { DictionaryNamePayload } from "../../shared/api/dictionaries-admin-api";
 import { AdminModal } from "../../shared/ui/AdminModal";
@@ -48,7 +49,7 @@ export function NameDictionaryFormModal({
       <form className="admin-form" onSubmit={handleSubmit}>
         <label className="form-field">
           <span className="form-field-label">
-            Название<b aria-hidden="true">*</b>
+            Название<RequiredMark />
           </span>
           <input
             autoFocus

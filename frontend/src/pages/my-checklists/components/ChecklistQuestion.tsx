@@ -1,3 +1,4 @@
+import { RequiredMark } from "../../../shared/ui/RequiredMark";
 import { useCallback } from "react";
 import { hasDraftValue } from "../my-checklists.answers";
 import type { ChecklistQuestionProps } from "../my-checklists.types";
@@ -27,7 +28,7 @@ export function ChecklistQuestion({
         <div className="my-checklists-question-label">
           <span>{question.text}</span>
           {question.isRequired ? (
-            <span className="my-checklists-required">*</span>
+            <RequiredMark label="Обязательный вопрос" />
           ) : null}
         </div>
       </div>

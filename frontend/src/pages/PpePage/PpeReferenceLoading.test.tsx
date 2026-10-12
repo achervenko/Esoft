@@ -52,7 +52,7 @@ it("keeps journal rows visible when a filter reference fails", async () => {
     .mockRejectedValue(new Error("offline"));
   vi.spyOn(ppeApi, "employees").mockResolvedValue([]);
   vi.spyOn(ppeApi, "positions").mockResolvedValue([]);
-  vi.spyOn(ppeApi, "journal").mockResolvedValue([issue]);
+  vi.spyOn(ppeApi, "journal").mockResolvedValue({ items: [issue], total: 1, page: 1, limit: 100 });
   render(
     <ChakraProvider value={defaultSystem}>
       <PpePage userRole="admin" initialTab="journal" />

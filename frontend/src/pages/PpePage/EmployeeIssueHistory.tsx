@@ -1,5 +1,6 @@
 import { AppTable } from "../../shared/ui/AppTable";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { PageNavigation } from "../../shared/ui/PageNavigation";
 import { ChevronRight } from "lucide-react";
 import { ppeApi } from "../../shared/api/ppe";
 import { usePpeQuery } from "../../modules/ppe-ui/usePpeQuery";
@@ -24,11 +25,17 @@ export function EmployeeIssueHistory({
 }) {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<number | null>(null);
+  const [selection, setSelection] = useState({ employeeId, page: 0 });
+  const page = selection.employeeId === employeeId ? selection.page : 0;
+  const setPage = (page: number) => setSelection({ employeeId, page });
   const history = usePpeQuery(
-    `employee-history:${employeeId}:${revision}`,
-    (signal) => ppeApi.journal({ employeeId: String(employeeId) }, signal),
+    `employee-history:${employeeId}:${revision}:${page}`,
+    (signal) => ppeApi.journal({ employeeId: String(employeeId), page: String(page + 1), limit: '100' }, signal),
     open,
   );
+  useEffect(() => {
+    if (history.data && page > 0 && page * 100 >= history.data.total) setSelection({ employeeId, page: Math.max(0, Math.ceil(history.data.total / 100) - 1) });
+  }, [history.data, page, employeeId]);
   return (
     <details
       className="ppe-employee-section ppe-employee-sizes"
@@ -42,7 +49,7 @@ export function EmployeeIssueHistory({
         <>
           <PpeQueryState {...history} />
           {history.data &&
-            (history.data.length ? (
+            (history.data.items.length ? (
               <div className="ppe-table-wrap">
                 <AppTable>
                   <thead>
@@ -56,11 +63,7 @@ export function EmployeeIssueHistory({
                     </tr>
                   </thead>
                   <tbody>
-                    {[...history.data]
-                      .sort(
-                        (a, b) =>
-                          b.issuedAt.localeCompare(a.issuedAt) || b.id - a.id,
-                      )
+                    {history.data.items
                       .map((issue) => (
                         <tr key={issue.id}>
                           <td>{formatPpeDate(issue.issuedAt)}</td>
@@ -90,6 +93,7 @@ export function EmployeeIssueHistory({
             ) : (
               <p className="admin-state">Выдач пока нет.</p>
             ))}
+          {history.data && !history.error ? <PageNavigation page={page} pageSize={100} total={history.data.total} loading={history.loading} onChange={setPage} /> : null}
         </>
       )}
       {detail !== null && (

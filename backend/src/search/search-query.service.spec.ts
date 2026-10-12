@@ -7,11 +7,33 @@ describe('global search SQL and access', () => {
     const queryRaw = jest
       .fn<Promise<unknown[]>, [Prisma.Sql]>()
       .mockResolvedValue([]);
+    const executeRaw = jest.fn().mockResolvedValue(0);
     const service = new SearchQueryService({
       $queryRaw: queryRaw,
+      $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+        callback({
+          $queryRaw: queryRaw,
+          $executeRaw: executeRaw,
+        }),
     } as unknown as PrismaService);
-    return { service, queryRaw };
+    return { service, queryRaw, executeRaw };
   };
+  it('uses the indexed employee expression and a transaction-local fuzzy prefilter', async () => {
+    const { service, queryRaw, executeRaw } = create();
+    await service.search(
+      { query: 'червнко', entityType: 'employee' },
+      'ppe_specialist',
+    );
+    const sql = queryRaw.mock.calls[0][0].sql;
+    const name =
+      "app_search_normalize(emp.last_name || ' ' || emp.first_name || CASE WHEN emp.middle_name IS NULL THEN '' ELSE ' ' || emp.middle_name END)";
+    expect(sql).toContain(name);
+    expect(sql).toContain(`${name} %> ? AND word_similarity`);
+    expect(sql).not.toContain('regexp_replace');
+    expect(executeRaw.mock.calls[0][0][0]).toBe(
+      'SET LOCAL pg_trgm.word_similarity_threshold = 0.45',
+    );
+  });
   it.each(['chief_engineer', 'engineer', 'operator', 'auditor'])(
     'queries only equipment for %s',
     async (role) => {
@@ -89,7 +111,7 @@ describe('global search SQL and access', () => {
     const { service, queryRaw } = create();
     await service.search({ query: 'инженр', offset: 1200 }, 'admin');
     const statement = queryRaw.mock.calls[0][0];
-    expect(statement.sql.match(/word_similarity/g)).toHaveLength(4);
+    expect(statement.sql.match(/word_similarity/g)).toHaveLength(5);
     expect(statement.values.slice(-2)).toEqual([20, 1000]);
     expect(statement.sql).toContain('THEN 100 ELSE 0 END');
   });
@@ -139,5 +161,34 @@ describe('global search SQL and access', () => {
     );
     expect(queryRaw.mock.calls[0][0].sql).not.toContain('FROM search_index');
     expect(queryRaw.mock.calls[0][0].sql).toContain('FROM ppe_items');
+  });
+  it('returns structured field matches and uses the search fuzzy threshold', async () => {
+    const { service, queryRaw } = create();
+    const matches = [{ field: 'responsible', value: 'Иванов Иван' }];
+    queryRaw.mockResolvedValueOnce([
+      {
+        id: '1',
+        entity_type: 'equipment',
+        entity_id: 1,
+        title: 'Насос',
+        subtitle: 'ИНВ-1',
+        search_text: 'насос иванов иван',
+        score: 100,
+        target_url: '#/equipment/1',
+        matched_fields: matches,
+      },
+    ]);
+    const items = await service.search({ query: 'иванв' }, 'engineer');
+    expect(items[0].matches).toEqual(matches);
+    const sql = queryRaw.mock.calls[0][0].sql;
+    expect(sql).toContain("('workshop', matches.workshop, 3)");
+    expect(sql).toContain('AS matched_fields');
+    expect(sql).toContain('candidate.value');
+    // Every LIKE must use the same single-character escape, including metadata.
+    const escapes = [...sql.matchAll(/ESCAPE '([^']*)'/g)].map(
+      (match) => match[1],
+    );
+    expect(escapes.every((escape) => escape === '\\')).toBe(true);
+    expect(sql.match(/> 0\.45/g)).toHaveLength(2);
   });
 });

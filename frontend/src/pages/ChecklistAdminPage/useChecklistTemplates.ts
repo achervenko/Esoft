@@ -19,6 +19,9 @@ export function useChecklistTemplates({ enabled }: { enabled: boolean }) {
   const [isLoading, setIsLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const pageSize = 100;
 
   const loadTemplates = useCallback(async () => {
     if (!enabled) {
@@ -26,6 +29,7 @@ export function useChecklistTemplates({ enabled }: { enabled: boolean }) {
       setIsLoading(false);
       setError(null);
       setTemplates([]);
+      setTotal(0);
       return;
     }
 
@@ -36,24 +40,21 @@ export function useChecklistTemplates({ enabled }: { enabled: boolean }) {
     setTemplates([]);
 
     try {
-      const loaded: ChecklistTemplateListItem[] = [];
-      let page = 1;
-      let total: number;
-      do {
         const response = await getChecklistTemplates({
-          limit: 200,
-          page,
+          limit: pageSize,
+          page: page + 1,
           search: appliedFilters.search.trim(),
           state: appliedFilters.state,
         });
         if (requestIdRef.current !== requestId) return;
-        loaded.push(...response.items);
-        total = response.total;
-        if (response.items.length === 0 && loaded.length < total)
+        if (page > 0 && page * pageSize >= response.total) {
+          setPage(Math.max(0, Math.ceil(response.total / pageSize) - 1));
+          return;
+        }
+        if (response.items.length === 0 && response.total > 0)
           throw new Error("Не удалось загрузить полный список шаблонов.");
-        page += 1;
-      } while (loaded.length < total);
-      setTemplates(loaded);
+      setTemplates(response.items);
+      setTotal(response.total);
     } catch (requestError) {
       if (requestIdRef.current === requestId) {
         setTemplates([]);
@@ -64,7 +65,7 @@ export function useChecklistTemplates({ enabled }: { enabled: boolean }) {
         setIsLoading(false);
       }
     }
-  }, [appliedFilters.search, appliedFilters.state, enabled]);
+  }, [appliedFilters.search, appliedFilters.state, enabled, page]);
 
   useEffect(() => {
     void loadTemplates();
@@ -74,6 +75,7 @@ export function useChecklistTemplates({ enabled }: { enabled: boolean }) {
   }, [loadTemplates, reloadKey]);
 
   const applyFilters = useCallback(() => {
+    setPage(0);
     setAppliedFilters({ search, state });
     setReloadKey((currentKey) => currentKey + 1);
   }, [search, state]);
@@ -86,6 +88,10 @@ export function useChecklistTemplates({ enabled }: { enabled: boolean }) {
     search,
     state,
     templates,
+    page,
+    total,
+    pageSize,
+    setPage,
     applyFilters,
     reload,
     setSearch,

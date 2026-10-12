@@ -7,7 +7,9 @@ import { getEquipmentRegistry } from "../../shared/api/equipment/equipment.api";
 import type { EquipmentRegistryItem } from "../../shared/api/equipment/equipment.types";
 import { buildHashRoute } from "../../shared/lib/hash-navigation";
 import { useNotifications } from "../../shared/ui/notifications";
-import { EquipmentRegistryTable } from "./EquipmentRegistryTable";
+import { EquipmentRegistryTable, type EquipmentSortKey } from "./EquipmentRegistryTable";
+import { PageNavigation } from "../../shared/ui/PageNavigation";
+import type { DataTableSortDirection } from "../../shared/ui/DataTable";
 import "./EquipmentPage.css";
 
 type EquipmentPageProps = {
@@ -20,14 +22,26 @@ export function EquipmentPage({ userRole }: EquipmentPageProps) {
   const [items, setItems] = useState<EquipmentRegistryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [sort, setSort] = useState<{ key: EquipmentSortKey; direction: DataTableSortDirection }>({ key: 'visibleId', direction: 'asc' });
 
   useEffect(() => {
     let isMounted = true;
+    const controller = new AbortController();
+    setIsLoading(true);
+    setError(null);
+    setItems([]);
 
-    getEquipmentRegistry()
+    getEquipmentRegistry({ page: page + 1, sort: sort.key, direction: sort.direction }, controller.signal)
       .then((data) => {
         if (isMounted) {
-          setItems(data);
+          if (page > 0 && page * 100 >= data.total) {
+            setPage(Math.max(0, Math.ceil(data.total / 100) - 1));
+            return;
+          }
+          setItems(data.items);
+          setTotal(data.total);
         }
       })
       .catch((requestError) => {
@@ -45,8 +59,9 @@ export function EquipmentPage({ userRole }: EquipmentPageProps) {
 
     return () => {
       isMounted = false;
+      controller.abort();
     };
-  }, [notifyError]);
+  }, [notifyError, page, sort]);
 
   const openEquipmentCard = (visibleId: number) => {
     window.location.hash = buildHashRoute(`#/equipment/${visibleId}`, {
@@ -79,8 +94,11 @@ export function EquipmentPage({ userRole }: EquipmentPageProps) {
           <EquipmentRegistryTable
             items={items}
             onOpenEquipment={openEquipmentCard}
+            sort={sort}
+            onSortChange={(nextSort) => { setSort(nextSort); setPage(0); }}
           />
         ) : null}
+        {!error ? <PageNavigation page={page} pageSize={100} total={total} loading={isLoading} onChange={setPage} /> : null}
       </section>
     </div>
   );

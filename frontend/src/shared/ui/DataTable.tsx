@@ -28,6 +28,9 @@ type DataTableProps<Row, SortKey extends string> = {
   onRowDoubleClick?: (row: Row) => void;
   onRowContextMenu?: (row: Row, position: { x: number; y: number }) => void;
   rows: Row[];
+  sort?: { direction: DataTableSortDirection; key: SortKey };
+  onSortChange?: (sort: { direction: DataTableSortDirection; key: SortKey }) => void;
+  serverSorted?: boolean;
 };
 
 export function DataTable<Row, SortKey extends string>({
@@ -40,17 +43,25 @@ export function DataTable<Row, SortKey extends string>({
   onRowDoubleClick,
   onRowContextMenu,
   rows,
+  sort: controlledSort,
+  onSortChange,
+  serverSorted = false,
 }: DataTableProps<Row, SortKey>) {
-  const [sort, setSort] = useState(defaultSort);
+  const [localSort, setSort] = useState(defaultSort);
+  const sort = controlledSort ?? localSort;
 
   const sortedRows = useMemo(
-    () => sortDataTableRows(rows, columns, sort, getRowGroup),
-    [columns, rows, sort, getRowGroup],
+    () => serverSorted ? rows : sortDataTableRows(rows, columns, sort, getRowGroup),
+    [columns, rows, sort, getRowGroup, serverSorted],
   );
 
   const bodyRef = useTableRowAnimation(sortedRows, animateRowMoves);
 
   const toggleSort = (key: SortKey) => {
+    if (onSortChange) {
+      onSortChange({ key, direction: sort.key === key && sort.direction === 'asc' ? 'desc' : 'asc' });
+      return;
+    }
     setSort((currentSort) => {
       if (currentSort.key !== key) {
         return { direction: "asc", key };

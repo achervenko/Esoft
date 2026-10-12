@@ -11,7 +11,7 @@ it("combines journal filters and omits empty parameters", async () => {
     dateTo: "",
   });
   expect(request).toHaveBeenCalledWith(
-    "/api/ppe/issues?employeeId=1&status=CANCELLED&dateFrom=2026-01-01",
+    "/api/ppe/issues/page?employeeId=1&status=CANCELLED&dateFrom=2026-01-01",
     { signal: undefined },
   );
 });

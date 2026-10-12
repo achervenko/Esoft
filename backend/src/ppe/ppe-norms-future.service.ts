@@ -252,8 +252,6 @@ export class PpeNormsFutureService {
           oldItem.quantity.toNumber() !== item.quantity ||
           oldItem.periodCount !== item.periodCount ||
           oldItem.periodUnit !== item.periodUnit ||
-          (item.calculationMode !== undefined &&
-            oldItem.calculationMode !== item.calculationMode) ||
           oldItem.ppeNameSnapshot !== snapshot.ppeNameSnapshot ||
           oldItem.ppeUnitSnapshot !== snapshot.ppeUnitSnapshot ||
           oldItem.ppeItemTypeSnapshot !== snapshot.ppeItemTypeSnapshot
@@ -265,9 +263,6 @@ export class PpeNormsFutureService {
               quantity: item.quantity,
               periodCount: item.periodCount,
               periodUnit: item.periodUnit,
-              ...(item.calculationMode !== undefined
-                ? { calculationMode: item.calculationMode }
-                : {}),
             },
             include: { ppeItem: true },
           });

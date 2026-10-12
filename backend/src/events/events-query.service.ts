@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EQUIPMENT_RESPONSIBLE_ROLES } from './events-responsible-policy';
 import { Prisma } from '@prisma/client';
 import { checklistProgressGroupedByChecklistSql } from '../checklists/checklist-work/checklist-work-progress.sql';
 import { PrismaService } from '../prisma/prisma.service';
@@ -77,6 +78,7 @@ export class EventsQueryService {
         role: true,
       },
       where: {
+        role: { in: [...EQUIPMENT_RESPONSIBLE_ROLES] },
         employeeUser: {
           is: {
             employee: {

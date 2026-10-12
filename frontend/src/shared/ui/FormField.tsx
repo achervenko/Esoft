@@ -1,3 +1,4 @@
+import { RequiredMark } from "./RequiredMark";
 import {
   Children,
   cloneElement,
@@ -32,7 +33,7 @@ export function FormField({
     >
       <span className={`form-field-label${hideLabel ? " admin-control-label-hidden" : ""}`}>
         {label}
-        {required ? <b aria-hidden="true">*</b> : null}
+        {required ? <RequiredMark /> : null}
       </span>
       {Children.map(children, (child) => {
         if (

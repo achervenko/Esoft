@@ -35,7 +35,7 @@ CREATE TYPE "event_status" AS ENUM ('CREATED', 'IN_PROGRESS', 'COMPLETED', 'CANC
 CREATE TYPE "equipment_status" AS ENUM ('active', 'reserve', 'repair', 'maintenance', 'written_off');
 
 -- CreateEnum
-CREATE TYPE "ppe_period_unit" AS ENUM ('MONTH', 'YEAR');
+CREATE TYPE "ppe_period_unit" AS ENUM ('DAY', 'MONTH', 'YEAR');
 
 -- CreateEnum
 CREATE TYPE "ppe_issue_status" AS ENUM ('ISSUED', 'CANCELLED');
@@ -379,11 +379,11 @@ CREATE TABLE "ppe_norms" (
     "position_id" INTEGER NOT NULL,
     "effective_from" DATE NOT NULL,
     "effective_to" DATE,
-    "transition_mode" TEXT NOT NULL DEFAULT 'LEGACY',
+    "transition_mode" TEXT NOT NULL DEFAULT 'SOFT',
     "previous_norm_id" INTEGER,
 
     CONSTRAINT "ppe_norms_pkey" PRIMARY KEY ("id"),
-    CONSTRAINT "ck_ppe_norm_transition_mode" CHECK ("transition_mode" IN ('LEGACY', 'SOFT', 'HARD')),
+    CONSTRAINT "ck_ppe_norm_transition_mode" CHECK ("transition_mode" IN ('SOFT', 'HARD')),
     CONSTRAINT "chk_ppe_norms_effective_period" CHECK ("effective_to" IS NULL OR "effective_to" >= "effective_from")
 );
 
@@ -398,11 +398,9 @@ CREATE TABLE "ppe_norm_items" (
     "quantity" NUMERIC(12,3) NOT NULL,
     "period_count" INTEGER NOT NULL,
     "period_unit" "ppe_period_unit" NOT NULL,
-    "calculation_mode" TEXT NOT NULL DEFAULT 'LEGACY',
 
     CONSTRAINT "ppe_norm_items_pkey" PRIMARY KEY ("id"),
     CONSTRAINT "uq_ppe_norm_items_norm_ppe_item" UNIQUE ("norm_id", "ppe_item_id"),
-    CONSTRAINT "ck_ppe_norm_calculation_mode" CHECK ("calculation_mode" IN ('LEGACY', 'INTERVAL', 'MONTHLY')),
     CONSTRAINT "chk_ppe_norm_items_quantity" CHECK ("quantity" > 0 AND "quantity" <> 'NaN'::numeric),
     CONSTRAINT "chk_ppe_norm_items_period_count" CHECK ("period_count" > 0)
 );
@@ -442,7 +440,6 @@ CREATE TABLE "ppe_issues" (
     "size_value" TEXT,
     "clothing_height_snapshot" TEXT,
     "scheduled_at" DATE,
-    "scheduled_portion" INTEGER,
     "issued_at" DATE NOT NULL,
     "issued_by_user_id" TEXT NOT NULL,
     "issued_by_name_snapshot" TEXT NOT NULL,
@@ -457,9 +454,9 @@ CREATE TABLE "ppe_issues" (
     CONSTRAINT "chk_ppe_issues_type" CHECK (
       ("issue_type" = 'REGULAR' AND "norm_item_id" IS NOT NULL AND "norm_item_ppe_item_id" IS NOT NULL
         AND "norm_ppe_article_snapshot" IS NOT NULL AND "norm_ppe_name_snapshot" IS NOT NULL
-        AND "scheduled_at" IS NOT NULL AND "scheduled_at" <= "issued_at" AND "scheduled_portion" IS NOT NULL AND "scheduled_portion" >= 0)
+        AND "scheduled_at" IS NOT NULL)
       OR ("issue_type" = 'EXTRA' AND "norm_item_id" IS NULL AND "norm_item_ppe_item_id" IS NULL
-        AND "norm_ppe_article_snapshot" IS NULL AND "norm_ppe_name_snapshot" IS NULL AND "scheduled_at" IS NULL AND "scheduled_portion" IS NULL)
+        AND "norm_ppe_article_snapshot" IS NULL AND "norm_ppe_name_snapshot" IS NULL AND "scheduled_at" IS NULL)
     ),
     CONSTRAINT "chk_ppe_issues_cancellation" CHECK (
       ("status" = 'ISSUED' AND "cancelled_at" IS NULL AND "cancelled_by_user_id" IS NULL AND "cancelled_by_name_snapshot" IS NULL AND "cancellation_reason" IS NULL)
@@ -515,7 +512,7 @@ CREATE TABLE "equipment_event_extensions" (
 );
 
 -- CreateSequence
-CREATE SEQUENCE IF NOT EXISTS equipment_visible_id_seq;
+CREATE SEQUENCE IF NOT EXISTS equipment_visible_id_seq INCREMENT BY 1 CACHE 1;
 
 -- CreateTable
 CREATE TABLE "equipment" (
@@ -820,9 +817,6 @@ CREATE INDEX "idx_ppe_norm_items_norm_id" ON "ppe_norm_items"("norm_id");
 
 -- CreateIndex
 CREATE INDEX "idx_ppe_norm_items_ppe_item_id" ON "ppe_norm_items"("ppe_item_id");
-
--- CreateIndex
-CREATE INDEX "idx_ppe_issues_employee_issued_at" ON "ppe_issues"("employee_id", "issued_at");
 
 -- CreateIndex
 CREATE INDEX "idx_ppe_issues_norm_item_issued_at" ON "ppe_issues"("norm_item_id", "issued_at");
@@ -1141,13 +1135,26 @@ CREATE OR REPLACE FUNCTION app_next_identity_id(
 RETURNS BIGINT
 LANGUAGE plpgsql
 AS $$
+DECLARE
+    v_sequence_name TEXT;
+    v_max_id BIGINT;
+    v_last_value BIGINT;
+    v_is_called BOOLEAN;
 BEGIN
-    RETURN app_sync_identity_sequence(p_table, p_column);
+    v_sequence_name := pg_get_serial_sequence(p_table::TEXT, p_column);
+    IF v_sequence_name IS NULL THEN
+        RAISE EXCEPTION 'No serial/identity sequence found for %.%', p_table, p_column;
+    END IF;
+    EXECUTE format('SELECT COALESCE(MAX(%I), 0) FROM %s', p_column, p_table)
+      INTO v_max_id;
+    EXECUTE format('SELECT last_value, is_called FROM %s', v_sequence_name::REGCLASS)
+      INTO v_last_value, v_is_called;
+    RETURN GREATEST(v_max_id + 1, v_last_value + CASE WHEN v_is_called THEN 1 ELSE 0 END);
 END;
 $$;
 
 COMMENT ON FUNCTION app_next_identity_id(REGCLASS, TEXT)
-IS 'Returns the next safe identity value for display in application forms';
+IS 'Reads a suggested next identity value without changing or reserving the sequence';
 
 CREATE OR REPLACE FUNCTION app_sync_identity_after_insert()
 RETURNS TRIGGER
@@ -1179,33 +1186,52 @@ AS $$
 DECLARE
     v_sequence_name TEXT;
     v_max_id        BIGINT;
-    v_has_rows      BOOLEAN;
+    v_last_value    BIGINT;
+    v_is_called     BOOLEAN;
 BEGIN
+    -- Shared with the BEFORE statement trigger; held until commit/rollback.
+    PERFORM pg_advisory_xact_lock(p_table::OID::INTEGER, hashtext(p_column));
     v_sequence_name := pg_get_serial_sequence(p_table::TEXT, p_column);
 
     IF v_sequence_name IS NULL THEN
         RAISE EXCEPTION 'No serial/identity sequence found for %.%', p_table, p_column;
     END IF;
 
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_sequence
+        WHERE seqrelid = v_sequence_name::REGCLASS AND seqincrement = 1 AND seqcache = 1
+    ) THEN
+        RAISE EXCEPTION 'Identity synchronization requires INCREMENT 1 and CACHE 1 for %', v_sequence_name;
+    END IF;
+
     EXECUTE format(
-        'SELECT COALESCE(MAX(%1$I), 1), EXISTS (SELECT 1 FROM %2$s) FROM %2$s',
+        'SELECT COALESCE(MAX(%1$I), 0) FROM %2$s',
         p_column,
         p_table
     )
-    INTO v_max_id, v_has_rows;
-
-    PERFORM setval(v_sequence_name, v_max_id, v_has_rows);
-
-    IF v_has_rows THEN
-        RETURN v_max_id + 1;
-    END IF;
-
-    RETURN 1;
+    INTO v_max_id;
+    EXECUTE format('SELECT last_value, is_called FROM %s', v_sequence_name::REGCLASS)
+      INTO v_last_value, v_is_called;
+    -- Advance using atomic nextval only. Never reset an allocated value, even
+    -- if another transaction reserved it without inserting a committed row.
+    WHILE v_last_value < v_max_id OR (v_last_value = v_max_id AND NOT v_is_called) LOOP
+        v_last_value := nextval(v_sequence_name::REGCLASS);
+        v_is_called := true;
+    END LOOP;
+    RETURN v_last_value + CASE WHEN v_is_called THEN 1 ELSE 0 END;
 END;
 $$;
 
 COMMENT ON FUNCTION app_sync_identity_sequence(REGCLASS, TEXT)
-IS 'Synchronizes an identity/serial sequence with MAX(id) and returns the next safe value';
+IS 'Advances a unit-increment sequence using nextval only; never rewinds allocated values';
+
+CREATE OR REPLACE FUNCTION app_lock_identity_writes()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    PERFORM pg_advisory_xact_lock(TG_RELID::INTEGER, hashtext(TG_ARGV[0]));
+    RETURN NULL;
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION prevent_physical_delete()
 RETURNS trigger
@@ -1504,8 +1530,13 @@ JOIN employees emp
 JOIN positions p
     ON p.id = emp.position_id;
 
+CREATE TRIGGER trg_equipment_lock_identity_writes
+BEFORE INSERT OR UPDATE OF visible_id ON equipment
+FOR EACH STATEMENT
+EXECUTE FUNCTION app_lock_identity_writes('visible_id');
+
 CREATE TRIGGER trg_equipment_sync_identity_after_insert
-AFTER INSERT ON equipment
+AFTER INSERT OR UPDATE OF visible_id ON equipment
 FOR EACH STATEMENT
 EXECUTE FUNCTION app_sync_identity_after_insert('visible_id');
 
@@ -1595,7 +1626,7 @@ EXECUTE FUNCTION app_normalize_equipment_optional_fields();
 
 CREATE INDEX "idx_ppe_issues_cancelled_by_user_id" ON "ppe_issues"("cancelled_by_user_id");
 CREATE INDEX "idx_ppe_issues_norm_ppe_item_id" ON "ppe_issues"("norm_item_ppe_item_id");
-CREATE UNIQUE INDEX "uq_ppe_issues_regular_portion" ON "ppe_issues"("employee_id", "norm_item_id", "scheduled_at", "scheduled_portion") WHERE "issue_type" = 'REGULAR' AND "status" = 'ISSUED';
+CREATE UNIQUE INDEX "uq_ppe_issues_regular_obligation" ON "ppe_issues"("employee_id", "norm_item_id", "scheduled_at") WHERE "issue_type" = 'REGULAR' AND "status" = 'ISSUED';
 ALTER TABLE "ppe_issues" ADD CONSTRAINT "fk_ppe_issues_norm_ppe_item" FOREIGN KEY ("norm_item_ppe_item_id") REFERENCES "ppe_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "ppe_issues" ADD CONSTRAINT "fk_ppe_issues_cancelled_by_user" FOREIGN KEY ("cancelled_by_user_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -1609,3 +1640,55 @@ ALTER TABLE "sections" ADD COLUMN "is_active" BOOLEAN NOT NULL DEFAULT true;
 CREATE TRIGGER trg_prevent_countries_delete BEFORE DELETE ON "countries" FOR EACH ROW EXECUTE FUNCTION prevent_physical_delete();
 CREATE TRIGGER trg_prevent_workshops_delete BEFORE DELETE ON "workshops" FOR EACH ROW EXECUTE FUNCTION prevent_physical_delete();
 CREATE TRIGGER trg_prevent_sections_delete BEFORE DELETE ON "sections" FOR EACH ROW EXECUTE FUNCTION prevent_physical_delete();
+
+-- Registry pagination and indexed search.
+-- Natural Russian ordering: numerical fragments sort as numbers.
+-- This collation is used only for ordering, not uniqueness or pattern matching.
+CREATE COLLATION app_registry_order (provider = icu, locale = 'ru-u-kn-true-ks-level1', deterministic = false);
+
+CREATE INDEX idx_equipment_registry_name ON equipment ((lower(name) COLLATE app_registry_order), id);
+CREATE INDEX idx_equipment_registry_inventory ON equipment ((lower(inventory_number) COLLATE app_registry_order), id);
+CREATE INDEX idx_equipment_registry_serial ON equipment ((lower(coalesce(serial_number, 'б/н')) COLLATE app_registry_order), id);
+
+CREATE FUNCTION app_search_normalize(value text) RETURNS text
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT regexp_replace(replace(lower(value), chr(1105), chr(1077)), '[[:space:]]+', ' ', 'g') $$;
+
+CREATE INDEX idx_search_equipment_text_trgm ON search_index USING gin (app_search_normalize(search_text) gin_trgm_ops) WHERE entity_type = 'equipment' AND is_active = true;
+CREATE INDEX idx_search_equipment_title_trgm ON search_index USING gin (app_search_normalize(title) gin_trgm_ops) WHERE entity_type = 'equipment' AND is_active = true;
+CREATE INDEX idx_search_ppe_name_trgm ON ppe_items USING gin (app_search_normalize(name) gin_trgm_ops) WHERE is_active = true;
+CREATE INDEX idx_search_ppe_article_trgm ON ppe_items USING gin (app_search_normalize(article) gin_trgm_ops) WHERE is_active = true;
+CREATE INDEX idx_search_ppe_text_trgm ON ppe_items USING gin (app_search_normalize(article || ' ' || name) gin_trgm_ops) WHERE is_active = true;
+CREATE INDEX idx_search_employee_name_trgm ON employees USING gin (app_search_normalize(last_name || ' ' || first_name || CASE WHEN middle_name IS NULL THEN '' ELSE ' ' || middle_name END) gin_trgm_ops) WHERE is_active = true;
+CREATE INDEX idx_search_position_name_trgm ON positions USING gin (app_search_normalize(name) gin_trgm_ops) WHERE is_active = true;
+
+CREATE INDEX idx_ppe_journal_date ON ppe_issues (issued_at DESC, id DESC);
+CREATE INDEX idx_ppe_journal_employee_page ON ppe_issues (employee_id, issued_at DESC, id DESC);
+
+-- All concat_ws arguments are text; the date is formatted without locale or
+-- timezone dependent functions. The result is immutable for these argument types.
+CREATE OR REPLACE FUNCTION public.app_ppe_journal_search_text(
+  employee_name text, position_name text, item_name text, article text,
+  norm_name text, norm_article text, issuer_name text, issue_comment text,
+  size text, height text, issue_day date,
+  issue_status ppe_issue_status, issue_kind ppe_issue_type
+) RETURNS text LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
+  SELECT public.app_search_normalize(concat_ws(' ', employee_name, position_name,
+    item_name, article, norm_name, norm_article, issuer_name, issue_comment,
+    coalesce(nullif(concat_ws('; ', nullif(size, ''), nullif(height, '')), ''), 'Без размера'),
+    lpad(extract(day from issue_day)::int::text, 2, '0') || '.' ||
+    lpad(extract(month from issue_day)::int::text, 2, '0') || '.' || lpad(extract(year from issue_day)::int::text, 4, '0'),
+    CASE issue_status WHEN 'ISSUED' THEN 'Выдано' ELSE 'Отменено' END,
+    CASE issue_kind WHEN 'REGULAR' THEN 'Нормативная' ELSE 'Дополнительная' END))
+$$;
+
+
+ALTER TABLE ppe_issues ADD COLUMN journal_search_text text GENERATED ALWAYS AS (
+  public.app_ppe_journal_search_text(employee_name_snapshot, position_name_snapshot,
+    ppe_name_snapshot, ppe_article_snapshot, norm_ppe_name_snapshot,
+    norm_ppe_article_snapshot, issued_by_name_snapshot, comment, size_value,
+    clothing_height_snapshot, issued_at, status, issue_type)
+) STORED;
+
+
+CREATE INDEX idx_ppe_journal_search_trgm ON ppe_issues USING gin (journal_search_text gin_trgm_ops);

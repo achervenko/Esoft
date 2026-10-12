@@ -15,3 +15,18 @@ export function addMonths(date: Date, months: number) {
   target.setUTCDate(Math.min(date.getUTCDate(), last));
   return target;
 }
+
+export function addPeriod(
+  date: Date,
+  item: { periodCount: number; periodUnit: string },
+): Date | null {
+  const max = Date.parse('9999-12-31T00:00:00Z');
+  if (item.periodUnit === 'DAY') {
+    const next = Number(date) + item.periodCount * DAY;
+    return next <= max ? new Date(next) : null;
+  }
+  const months = item.periodCount * (item.periodUnit === 'YEAR' ? 12 : 1);
+  if (date.getUTCFullYear() * 12 + date.getUTCMonth() + months >= 10000 * 12)
+    return null;
+  return addMonths(date, months);
+}

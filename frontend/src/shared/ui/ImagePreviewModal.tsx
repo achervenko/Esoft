@@ -1,6 +1,7 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useModalResizeAnimation } from "./useModalResizeAnimation";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { getFocusableElements } from "./focusable-elements";
 import "./ImagePreviewModal.css";
@@ -26,6 +27,7 @@ export function ImagePreviewModal({
 }: ImagePreviewModalProps) {
   const hasNavigation = Boolean(onNext && onPrevious);
   const dialogRef = useRef<HTMLElement | null>(null);
+  useModalResizeAnimation(dialogRef);
 
   useEffect(() => {
     const dialog = dialogRef.current;

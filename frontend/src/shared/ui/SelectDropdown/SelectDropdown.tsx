@@ -1,3 +1,4 @@
+import { RequiredMark } from "../RequiredMark";
 import { ChevronDown } from "lucide-react";
 import { useId } from "react";
 import { SelectDropdownMenu } from "./SelectDropdownMenu";
@@ -31,7 +32,7 @@ export function SelectDropdown({
       {label ? (
         <span className="form-field-label">
           {label}
-          {required ? <b aria-hidden="true">*</b> : null}
+          {required ? <RequiredMark /> : null}
         </span>
       ) : null}
 

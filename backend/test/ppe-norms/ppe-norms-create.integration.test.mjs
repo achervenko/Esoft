@@ -27,9 +27,9 @@ export function registerTests(env) {
         client.query(
           `INSERT INTO ppe_norm_items
             (norm_id, ppe_item_id, ppe_name_snapshot, ppe_unit_snapshot,
-             ppe_item_type_snapshot, quantity, period_count, period_unit, calculation_mode)
+             ppe_item_type_snapshot, quantity, period_count, period_unit)
            SELECT norm_id, ppe_item_id, ppe_name_snapshot, ppe_unit_snapshot,
-             ppe_item_type_snapshot, quantity, period_count, period_unit, calculation_mode
+             ppe_item_type_snapshot, quantity, period_count, period_unit
            FROM ppe_norm_items WHERE id = $1`,
           [first.items[0].id],
         ),
@@ -72,7 +72,7 @@ export function registerTests(env) {
         ],
       },
     });
-    assert.equal(logs.length, 24);
+    assert.equal(logs.length, 22);
     assert.ok(
       logs.every(
         (log) =>

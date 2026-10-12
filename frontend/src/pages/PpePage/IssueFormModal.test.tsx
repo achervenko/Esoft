@@ -57,7 +57,7 @@ describe("PPE issue form", () => {
     fireEvent.change(screen.getByLabelText("Фактический размер / ростовка"), {
       target: { value: "5" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Подтвердить выдачу" }));
+    fireEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
     await waitFor(() =>
       expect(ppeApi.issue).toHaveBeenCalledWith(true, {
         employeeId: 1,
@@ -69,11 +69,11 @@ describe("PPE issue form", () => {
     open([planRow, { ...planRow, normItemId: 11 }], "2026-01-02");
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "Выдать выбранное (2)" }),
+        screen.getByRole("button", { name: "Подтвердить" }),
       ).toBeEnabled(),
     );
     fireEvent.click(
-      screen.getByRole("button", { name: "Выдать выбранное (2)" }),
+      screen.getByRole("button", { name: "Подтвердить" }),
     );
     await waitFor(() => expect(ppeApi.issue).toHaveBeenCalledTimes(1));
     expect(vi.mocked(ppeApi.issue).mock.calls[0][1]).toEqual({
@@ -101,15 +101,14 @@ describe("PPE issue form", () => {
     );
     open();
     await screen.findByLabelText("Фактический размер / ростовка");
-    fireEvent.change(screen.getByLabelText("Выдаём фактически"), {
-      target: { value: "10" },
-    });
+    fireEvent.change(screen.getByRole("combobox", { name: /Выдаём фактически/ }), { target: { value: "Замена" } });
+    fireEvent.click(await screen.findByRole("option", { name: "B — Замена" }));
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "Подтвердить выдачу" }),
+        screen.getByRole("button", { name: "Подтвердить" }),
       ).toBeEnabled(),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Подтвердить выдачу" }));
+    fireEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
     await waitFor(() =>
       expect(ppeApi.issue).toHaveBeenCalledWith(true, {
         employeeId: 1,
@@ -134,11 +133,11 @@ describe("PPE issue form", () => {
     );
     expect(select).toHaveValue("");
     expect(
-      screen.getByRole("button", { name: "Подтвердить выдачу" }),
+      screen.getByRole("button", { name: "Подтвердить" }),
     ).toBeDisabled();
     fireEvent.change(select, { target: { value: "5" } });
     expect(
-      screen.getByRole("button", { name: "Подтвердить выдачу" }),
+      screen.getByRole("button", { name: "Подтвердить" }),
     ).toBeEnabled();
   });
   it("blocks the item with only inactive sizes", async () => {
@@ -153,7 +152,7 @@ describe("PPE issue form", () => {
       "Все размеры удалены",
     );
     expect(
-      screen.getByRole("button", { name: "Подтвердить выдачу" }),
+      screen.getByRole("button", { name: "Подтвердить" }),
     ).toBeDisabled();
     expect(ppeApi.issue).not.toHaveBeenCalled();
   });
@@ -164,11 +163,11 @@ describe("PPE issue form", () => {
     const callbacks = open();
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "Подтвердить выдачу" }),
+        screen.getByRole("button", { name: "Подтвердить" }),
       ).toBeEnabled(),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Подтвердить выдачу" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("уже выдана");
+    fireEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("уже выполнена или больше недоступна");
     expect(callbacks.onClose).not.toHaveBeenCalled();
     expect(callbacks.onCreated).not.toHaveBeenCalled();
   });
@@ -187,18 +186,17 @@ describe("PPE issue form", () => {
         "Дополнительная выдача не засчитывается как нормативная.",
       ),
     ).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Выдаём фактически"), {
-      target: { value: "3" },
-    });
+    fireEvent.change(screen.getByRole("combobox", { name: /СИЗ/ }), { target: { value: "Костюм" } });
+    fireEvent.click(await screen.findByRole("option", { name: "A-01 — Костюм" }));
     fireEvent.change(screen.getByLabelText("Количество"), {
       target: { value: "2.5" },
     });
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "Подтвердить выдачу" }),
+        screen.getByRole("button", { name: "Подтвердить" }),
       ).toBeEnabled(),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Подтвердить выдачу" }));
+    fireEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
     await waitFor(() =>
       expect(ppeApi.issue).toHaveBeenCalledWith(false, {
         employeeId: 1,

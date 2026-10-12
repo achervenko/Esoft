@@ -20,6 +20,7 @@ const PREVIEW_VERSIONS = [
   },
   {
     height: 256,
+    fit: 'inside',
     quality: 82,
     size: 'medium',
     width: 256,
@@ -88,7 +89,7 @@ function createPreviewObjectKey(
   file: StorageFile,
   size: StorageImagePreviewSize,
 ) {
-  return `storage-previews/${file.id}/${size}.webp`;
+  return `storage-previews/${file.id}/${size === 'medium' ? 'medium-fit-v2' : size}.webp`;
 }
 
 async function streamToBuffer(

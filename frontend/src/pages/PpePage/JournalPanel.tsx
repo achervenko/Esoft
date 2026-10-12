@@ -2,10 +2,9 @@ import { LoadingIndicator } from "../../shared/ui/LoadingIndicator";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import { JournalFiltersModal } from "./JournalFiltersModal";
 import { createJournalColumns } from "./journal-columns";
-import { searchJournalRows } from "./journal-search";
 import "../../shared/ui/SearchInput.css";
 import { Search, SlidersHorizontal, X } from "lucide-react";
-import { useState, type ComponentProps } from "react";
+import { useEffect, useMemo, useState, type ComponentProps } from "react";
 import {
   ppeApi,
   type IssueFilters,
@@ -13,7 +12,8 @@ import {
   type PpeItem,
   type PpePosition,
 } from "../../shared/api/ppe";
-import { DataTable } from "../../shared/ui/DataTable";
+import { DataTable, type DataTableSortDirection } from "../../shared/ui/DataTable";
+import { PageNavigation } from "../../shared/ui/PageNavigation";
 import { usePpeQuery } from "../../modules/ppe-ui/usePpeQuery";
 import { PpeQueryState } from "../../modules/ppe-ui/PpeQueryState";
 import { IssueDetailsModal } from "./IssueDetailsModal";
@@ -39,18 +39,27 @@ export function JournalPanel({
   onChanged: () => void;
 }) {
   const [search, setSearch] = useState("");
-  const [searchConfirmed, setSearchConfirmed] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [applied, setApplied] = useState<IssueFilters>({});
   const [detail, setDetail] = useState<number | null>(null);
+  const [page, setPage] = useState(0);
+  const [settledSearch, setSettledSearch] = useState('');
+  const [sort, setSort] = useState<{ key: string; direction: DataTableSortDirection }>({ key: 'date', direction: 'desc' });
+  useEffect(() => {
+    const timer = window.setTimeout(() => { setSettledSearch(search); setPage(0); }, 200);
+    return () => window.clearTimeout(timer);
+  }, [search]);
   const journal = usePpeQuery(
-    `journal:${JSON.stringify(applied)}:${revision}`,
-    (signal) => ppeApi.journal(applied, signal),
+    `journal:${JSON.stringify(applied)}:${revision}:${page}:${settledSearch}:${sort.key}:${sort.direction}`,
+    (signal) => ppeApi.journal({ ...applied, page: String(page + 1), limit: '100', search: settledSearch, sort: sort.key, direction: sort.direction }, signal),
   );
-  const isLoading = journal.loading;
+  const isLoading = journal.loading || search !== settledSearch;
   const activeFilterCount = Object.values(applied).filter(Boolean).length;
-  const rows = searchJournalRows(journal.data ?? [], search);
-  const columns = createJournalColumns(setDetail);
+  const rows = journal.data?.items ?? [];
+  useEffect(() => {
+    if (journal.data && page > 0 && page * 100 >= journal.data.total) setPage(Math.max(0, Math.ceil(journal.data.total / 100) - 1));
+  }, [journal.data, page]);
+  const columns = useMemo(() => createJournalColumns(setDetail), []);
   return (
     <>
       <div className="admin-card ppe-search-toolbar ppe-journal-toolbar">
@@ -59,15 +68,16 @@ export function JournalPanel({
           <input
             autoFocus={autoFocusSearch}
             aria-label="Поиск по журналу"
+            maxLength={200}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
-              setSearchConfirmed(false);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.nativeEvent.isComposing) {
                 e.preventDefault();
-                setSearchConfirmed(true);
+                setSettledSearch(search);
+                setPage(0);
               }
             }}
           />
@@ -78,7 +88,8 @@ export function JournalPanel({
               aria-label="Очистить поиск"
               onClick={() => {
                 setSearch("");
-                setSearchConfirmed(false);
+                setSettledSearch('');
+                setPage(0);
               }}
             >
               <X size={18} aria-hidden="true" />
@@ -120,7 +131,7 @@ export function JournalPanel({
             onClose={() => setFiltersOpen(false)}
             onApply={(next) => {
               setApplied(next);
-              setSearchConfirmed(false);
+              setPage(0);
               setFiltersOpen(false);
             }}
           />
@@ -143,15 +154,19 @@ export function JournalPanel({
               defaultSort={{ key: "date", direction: "desc" }}
               getRowKey={(row) => row.id}
               onRowClick={(row) => setDetail(row.id)}
+              sort={sort}
+              serverSorted
+              onSortChange={(nextSort) => { setSort(nextSort); setPage(0); }}
             />
           </div>
-        ) : searchConfirmed ? (
+        ) : (
           <p className="admin-state">
-            {search.trim()
+            {settledSearch.trim()
               ? "По вашему запросу ничего не найдено."
               : "Выдач по выбранным фильтрам нет."}
           </p>
-        ) : null)}
+        ))}
+      {journal.data && !journal.error ? <PageNavigation page={page} pageSize={100} total={journal.data.total} loading={isLoading} onChange={setPage} /> : null}
       {detail !== null && (
         <IssueDetailsModal
           id={detail}

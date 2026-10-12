@@ -1,4 +1,5 @@
 .app-context-menu {
+  outline: none;
   position: fixed;
   z-index: 120;
   width: 200px;

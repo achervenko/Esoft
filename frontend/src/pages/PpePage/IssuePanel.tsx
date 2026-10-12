@@ -64,8 +64,6 @@ export function IssuePanel({
         ? [...current, row.normItemId]
         : current.filter((id) => id !== row.normItemId),
     );
-  const dueItems =
-    plan.data?.items.filter((row) => row.available !== null) ?? [];
   const eligible =
     plan.data?.items.filter(
       (row) => row.available && selected.includes(row.normItemId),
@@ -133,10 +131,10 @@ export function IssuePanel({
       {!plan.loading &&
         !referenceState?.loading &&
         plan.data &&
-        (!plan.data.norm || dueItems.length > 0) && (
+        (
           <IssuePlanTable
             plan={plan.data}
-            dueItems={dueItems}
+            dueItems={plan.data.items}
             allowed={allowed}
             selected={selected}
             hasSelection={eligible.length > 0}

@@ -9,6 +9,7 @@ const ROLE_PERMISSIONS = {
     manage: ['admin', 'chief_engineer'],
   },
   equipment: {
+    read: ['admin', 'chief_engineer', 'engineer', 'operator', 'auditor'],
     edit: ['admin', 'chief_engineer', 'engineer'],
   },
   equipmentEvents: {
@@ -35,6 +36,14 @@ const ROLE_PERMISSIONS = {
 } as const;
 
 type PermissionRoles = readonly string[];
+
+export function canReadEquipment(role: unknown) {
+  return isKnownRole(role, ROLE_PERMISSIONS.equipment.read);
+}
+
+export function getEquipmentResponsibleRoles(): string[] {
+  return ROLE_PERMISSIONS.equipment.read.filter((role) => role !== 'admin');
+}
 
 export function canBackdatePpeIssue(role: unknown) {
   return isKnownRole(role, ROLE_PERMISSIONS.ppe.backdate);

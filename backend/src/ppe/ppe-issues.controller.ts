@@ -46,6 +46,12 @@ export class PpeIssuesController {
     return this.issues.list(query);
   }
 
+  @Get('issues/page')
+  listPage(@Query() query: unknown, @Session() session: UserSession<Auth>) {
+    assertCanReadPpe(session.user.role);
+    return this.issues.listPage(query);
+  }
+
   @Get('issues/:issueId')
   findOne(
     @Param('issueId', ParseIntPipe) issueId: number,

@@ -1,3 +1,4 @@
+import { RequiredMark } from "../../shared/ui/RequiredMark";
 import "../../shared/ui/PageActions.css";
 import { Copy, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -212,7 +213,7 @@ export function ChecklistTemplateViewPage({
                       <span className="checklist-template-view-question-text">
                         {question.questionText}
                         {question.isRequired ? (
-                          <b aria-label="Обязательный вопрос">*</b>
+                          <RequiredMark label="Обязательный вопрос" />
                         ) : null}
                       </span>
                     </div>

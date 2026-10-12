@@ -32,11 +32,13 @@ const configCore = requireConfigModule(
 
 // https://vite.dev/config/
 export default defineConfig(() => {
+  const nodeEnvironment = process.env.NODE_ENV
   const { config } = configCore.loadConfig({
     profile: 'frontend',
     applyToProcessEnv: true,
     overrideProcessEnv: true,
   })
+  if (nodeEnvironment === 'test') process.env.NODE_ENV = 'test'
   const apiProxy = {
     '/api': {
       target: config.backend.internalUrl,

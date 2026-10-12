@@ -18,6 +18,8 @@ describe("ContextMenu", () => {
         onClose={vi.fn()}
       />,
     );
+    expect(document.activeElement).toBe(screen.getByRole("menu"));
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowDown" });
     expect(document.activeElement).toBe(
       screen.getByRole("menuitem", { name: "Первое" }),
     );

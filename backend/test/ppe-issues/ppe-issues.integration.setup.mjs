@@ -33,18 +33,12 @@ const {
   PpeIssuesGuardsService,
 } = require('../../dist/src/ppe/ppe-issues-guards.service.js');
 const {
-  PpeIssueScheduleService,
-} = require('../../dist/src/ppe/ppe-issue-schedule.service.js');
-const {
   PpeIssuesAuditService,
 } = require('../../dist/src/ppe/ppe-issues-audit.service.js');
 
 const {
   PpeNormIntervalTransitionService,
 } = require('../../dist/src/ppe/ppe-norm-interval-transition.service.js');
-const {
-  PpeNormMonthlyTransitionService,
-} = require('../../dist/src/ppe/ppe-norm-monthly-transition.service.js');
 
 export async function createPpeIssueTestEnvironment() {
   const env = await createPpeNormTestEnvironment();
@@ -56,10 +50,8 @@ export async function createPpeIssueTestEnvironment() {
     const guards = new PpeIssuesGuardsService();
     const interval = new PpeNormIntervalTransitionService();
     const schedule = new PpeNormTransitionService(
-      new PpeIssueScheduleService(),
       new PpeNormPositionService(),
       interval,
-      new PpeNormMonthlyTransitionService(interval),
     );
     const history = new PpeIssueHistoryService();
     return new PpeIssuesService(
@@ -71,7 +63,7 @@ export async function createPpeIssueTestEnvironment() {
     );
   }
   const issues = createIssuesService();
-  const specialist = { userId: actor, role: 'ppe_specialist' };
+  const specialist = { userId: actor, role: 'accounting_specialist' };
   const adminActor = { userId: actor, role: 'admin' };
   async function issueFixture({
     from = day(-2),

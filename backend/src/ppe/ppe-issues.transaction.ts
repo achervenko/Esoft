@@ -3,11 +3,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PpeIssuesGuardsService } from './ppe-issues-guards.service';
 import { ppeNotFound } from './ppe.errors';
 
-function isRegularPortionConflict(error: Prisma.PrismaClientKnownRequestError) {
+function isRegularObligationConflict(
+  error: Prisma.PrismaClientKnownRequestError,
+) {
   const target: unknown = error.meta?.target;
   if (error.meta?.modelName && error.meta.modelName !== 'PpeIssue')
     return false;
-  if (target === 'uq_ppe_issues_regular_portion') return true;
+  if (target === 'uq_ppe_issues_regular_obligation') return true;
   if (target === undefined) {
     const adapter: unknown = error.meta?.driverAdapterError;
     if (adapter && typeof adapter === 'object' && 'cause' in adapter) {
@@ -23,15 +25,15 @@ function isRegularPortionConflict(error: Prisma.PrismaClientKnownRequestError) {
           cause.originalCode === '23505' &&
           cause.kind === 'UniqueConstraintViolation' &&
           typeof cause.originalMessage === 'string' &&
-          cause.originalMessage.includes('"uq_ppe_issues_regular_portion"')
+          cause.originalMessage.includes('"uq_ppe_issues_regular_obligation"')
         );
       }
     }
   }
-  if (!Array.isArray(target) || target.length !== 4) return false;
+  if (!Array.isArray(target) || target.length !== 3) return false;
   return [
-    ['employee_id', 'norm_item_id', 'scheduled_at', 'scheduled_portion'],
-    ['employeeId', 'normItemId', 'scheduledAt', 'scheduledPortion'],
+    ['employee_id', 'norm_item_id', 'scheduled_at'],
+    ['employeeId', 'normItemId', 'scheduledAt'],
   ].some((fields) => fields.every((field) => target.includes(field)));
 }
 
@@ -47,10 +49,10 @@ export async function runPpeIssueTransaction<T>(
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2002' && isRegularPortionConflict(error))
+      if (error.code === 'P2002' && isRegularObligationConflict(error))
         guards.conflict(
           'PPE_NORM_ALREADY_ISSUED',
-          'Нормативная порция уже выдана.',
+          'Нормативная обязанность уже закрыта.',
         );
       if (error.code === 'P2025') ppeNotFound('PPE_ISSUE_NOT_FOUND');
       if (error.code === 'P2003' || error.code === 'P2034')

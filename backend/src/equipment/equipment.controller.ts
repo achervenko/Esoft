@@ -19,8 +19,8 @@ export class EquipmentController {
   constructor(private readonly equipmentService: EquipmentService) {}
 
   @Get()
-  findAll() {
-    return this.equipmentService.findAll();
+  findAll(@Query() query: import('./equipment-list-query').EquipmentListQuery) {
+    return this.equipmentService.findAll(query);
   }
 
   @Get('create-options')

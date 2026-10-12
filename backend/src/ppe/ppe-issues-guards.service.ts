@@ -90,6 +90,57 @@ export class PpeIssuesGuardsService {
     });
   }
 
+  async lockFutureNorm(
+    tx: Prisma.TransactionClient,
+    positionId: number,
+    date: Date,
+  ) {
+    const candidate = await tx.ppeNorm.findFirst({
+      where: {
+        positionId,
+        effectiveFrom: {
+          gt: date,
+          lte: new Date(Number(date) + 30 * 86_400_000),
+        },
+      },
+      orderBy: { effectiveFrom: 'asc' },
+      select: { id: true },
+    });
+    if (!candidate) return null;
+    await tx.$queryRaw`SELECT id FROM ppe_norms WHERE id = ${candidate.id} FOR UPDATE`;
+    await tx.$queryRaw`SELECT id FROM ppe_norm_items WHERE norm_id = ${candidate.id} ORDER BY id FOR UPDATE`;
+    return tx.ppeNorm.findUnique({
+      where: { id: candidate.id },
+      include: issueNormInclude,
+    });
+  }
+
+  async lockRequestedFutureNorms(
+    tx: Prisma.TransactionClient,
+    positionId: number,
+    date: Date,
+    itemIds: number[],
+  ) {
+    const candidates = await tx.ppeNorm.findMany({
+      where: {
+        positionId,
+        effectiveFrom: { gt: date },
+        items: { some: { id: { in: itemIds } } },
+      },
+      select: { id: true },
+      orderBy: { id: 'asc' },
+    });
+    if (!candidates.length) return [];
+    const ids = candidates.map((norm) => norm.id);
+    await tx.$queryRaw`SELECT id FROM ppe_norms WHERE id IN (${Prisma.join(ids)}) ORDER BY id FOR UPDATE`;
+    await tx.$queryRaw`SELECT id FROM ppe_norm_items WHERE norm_id IN (${Prisma.join(ids)}) ORDER BY id FOR UPDATE`;
+    return tx.ppeNorm.findMany({
+      where: { id: { in: ids } },
+      include: issueNormInclude,
+      orderBy: { id: 'asc' },
+    });
+  }
+
   async lockCatalog(
     tx: Prisma.TransactionClient,
     ids: number[],

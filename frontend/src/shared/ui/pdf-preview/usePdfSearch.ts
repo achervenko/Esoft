@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import type { PdfDocumentForViewer } from "./pdfPreview.types";
+import { indexPdfText } from "./indexPdfText";
 
 export type PdfSearchMatch = {
   pageNumber: number;
@@ -37,6 +38,8 @@ export function usePdfSearch() {
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const indexRequestId = useRef(0);
+
+  useEffect(() => () => { indexRequestId.current += 1; }, []);
 
   const normalizedQuery = query.trim();
 
@@ -201,23 +204,9 @@ export function usePdfSearch() {
       setIsIndexLoading(true);
 
       try {
-        const pages = await Promise.all(
-          Array.from(
-            { length: pdfDocument.numPages },
-            async (_, pageIndex) => {
-              const page = await pdfDocument.getPage(pageIndex + 1);
-              const textContent = await page.getTextContent();
+        const pages = await indexPdfText(pdfDocument, () => requestId === indexRequestId.current);
 
-              return textContent.items.map((item) =>
-                "str" in item && typeof item.str === "string"
-                  ? item.str
-                  : "",
-              );
-            },
-          ),
-        );
-
-        if (requestId !== indexRequestId.current) {
+        if (!pages || requestId !== indexRequestId.current) {
           return;
         }
 

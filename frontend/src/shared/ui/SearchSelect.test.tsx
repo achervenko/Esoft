@@ -5,6 +5,22 @@ import { useState } from "react";
 afterEach(cleanup);
 const options = [{ id: 15, name: "Первый" }, { id: 20, name: "Второй" }];
 
+it("stops filtering a large catalog as soon as eight results are available", () => {
+  const filterOption = vi.fn(() => true);
+  render(<SearchSelect label="Каталог" value={null} onChange={vi.fn()} filterOption={filterOption}
+    options={Array.from({ length: 100000 }, (_, id) => ({ id, name: `Модель ${id}` }))} />);
+  fireEvent.change(screen.getByRole("combobox"), { target: { value: "модель" } });
+  expect(filterOption).toHaveBeenCalledTimes(8);
+  expect(screen.getAllByRole("option")).toHaveLength(8);
+});
+
+it("keeps uncapped filtering complete when maxResults is null", () => {
+  render(<SearchSelect label="Каталог" value={null} onChange={vi.fn()} maxResults={null}
+    options={Array.from({ length: 12 }, (_, id) => ({ id, name: `Модель ${id}` }))} />);
+  fireEvent.change(screen.getByRole("combobox"), { target: { value: "модель" } });
+  expect(screen.getAllByRole("option")).toHaveLength(12);
+});
+
 it("preserves typed text when editing a selected option and allows another selection", () => {
   function Controlled() {
     const [value, setValue] = useState<number | null>(15);

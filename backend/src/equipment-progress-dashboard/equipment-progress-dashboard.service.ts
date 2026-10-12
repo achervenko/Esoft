@@ -1,97 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { AuditAction, AuditModule } from '@prisma/client';
+import {
+  equipmentProgressQuery,
+  EQUIPMENT_CONTROLLED_FIELDS_COUNT,
+  type EquipmentProgressSummary,
+} from './equipment-progress-query';
 import { BUSINESS_TIME_ZONE } from '../application/business-date';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   EQUIPMENT_PROGRESS_RECENT_DAYS,
   EQUIPMENT_PROGRESS_TARGET_COUNT,
 } from './equipment-progress-dashboard.constants';
-import type {
-  EquipmentProgressDashboardDto,
-  EquipmentProgressDailyCountDto,
-} from './equipment-progress-dashboard.types';
-
-type EquipmentProgressItem = {
-  commissioningDate: Date | null;
-  countryId: number | null;
-  inventoryNumber: string;
-  issueDate: Date;
-  manufactureYear: number | null;
-  model: { manufacturerId: number | null };
-  modelId: number;
-  name: string;
-  operationText: string | null;
-  responsibleEmployeeId: number;
-  sectionId: number;
-  serialNumber: string | null;
-  specifications: string | null;
-  status: string;
-  visibleId: number;
-};
-
-type MissingFieldRule = {
-  isMissing: (equipment: EquipmentProgressItem) => boolean;
-  label: string;
-};
-
-const missingFieldRules: MissingFieldRule[] = [
-  {
-    label: 'Название оборудования',
-    isMissing: (equipment) => isBlank(equipment.name),
-  },
-  {
-    label: 'Инвентарный номер',
-    isMissing: (equipment) => isBlank(equipment.inventoryNumber),
-  },
-  {
-    label: 'Производитель',
-    isMissing: (equipment) => !equipment.model?.manufacturerId,
-  },
-  {
-    label: 'Модель',
-    isMissing: (equipment) => !equipment.modelId,
-  },
-  {
-    label: 'Серийный номер',
-    isMissing: (equipment) => isBlank(equipment.serialNumber),
-  },
-  {
-    label: 'Технические характеристики',
-    isMissing: (equipment) => isBlank(equipment.specifications),
-  },
-  {
-    label: 'Страна',
-    isMissing: (equipment) => !equipment.countryId,
-  },
-  {
-    label: 'Год изготовления',
-    isMissing: (equipment) => !equipment.manufactureYear,
-  },
-  {
-    label: 'Дата ввода в эксплуатацию',
-    isMissing: (equipment) => !equipment.commissioningDate,
-  },
-  {
-    label: 'Дата выдачи',
-    isMissing: (equipment) => !equipment.issueDate,
-  },
-  {
-    label: 'Местонахождение',
-    isMissing: (equipment) => !equipment.sectionId,
-  },
-  {
-    label: 'Ответственный',
-    isMissing: (equipment) => !equipment.responsibleEmployeeId,
-  },
-  {
-    label: 'Статус',
-    isMissing: (equipment) => isBlank(equipment.status),
-  },
-  {
-    label: 'Эксплуатация',
-    isMissing: (equipment) => isBlank(equipment.operationText),
-  },
-];
+import type { EquipmentProgressDashboardDto } from './equipment-progress-dashboard.types';
 
 @Injectable()
 export class EquipmentProgressDashboardService {
@@ -103,64 +22,16 @@ export class EquipmentProgressDashboardService {
     const periodStart = getBusinessDayStart(recentDates[0]);
     const periodEnd = getBusinessDayStart(addDays(today, 1));
 
-    const [equipment, recentCreateAuditRows] = await Promise.all([
-      this.prisma.equipment.findMany({
-        orderBy: { visibleId: 'asc' },
-        select: {
-          commissioningDate: true,
-          countryId: true,
-          inventoryNumber: true,
-          issueDate: true,
-          manufactureYear: true,
-          model: {
-            select: {
-              manufacturerId: true,
-            },
-          },
-          modelId: true,
-          name: true,
-          operationText: true,
-          responsibleEmployeeId: true,
-          sectionId: true,
-          serialNumber: true,
-          specifications: true,
-          status: true,
-          visibleId: true,
-        },
-      }),
-      this.prisma.auditLog.findMany({
-        orderBy: { createdAt: 'asc' },
-        select: {
-          createdAt: true,
-          entityId: true,
-        },
-        where: {
-          action: AuditAction.CREATE,
-          createdAt: {
-            gte: periodStart,
-            lt: periodEnd,
-          },
-          entityId: {
-            not: null,
-          },
-          entityType: 'equipment',
-          module: AuditModule.EQUIPMENT,
-        },
-      }),
-    ]);
-
-    const incompleteEquipment = equipment
-      .map((item) => ({
-        missingFields: getMissingFields(item),
-        name: item.name,
-        visibleId: item.visibleId,
-      }))
-      .filter((item) => item.missingFields.length > 0);
-
-    const recentDailyCounts = getRecentDailyCounts(
-      recentDates,
-      recentCreateAuditRows,
+    const [summary] = await this.prisma.$queryRaw<EquipmentProgressSummary[]>(
+      equipmentProgressQuery(periodStart, periodEnd),
     );
+    const dailyCounts = new Map(
+      summary.recentDailyCounts.map((item) => [item.date, item.count]),
+    );
+    const recentDailyCounts = recentDates.map((date) => ({
+      date,
+      count: dailyCounts.get(date) ?? 0,
+    }));
     const recentCreatedCount = recentDailyCounts.reduce(
       (sum, item) => sum + item.count,
       0,
@@ -168,22 +39,18 @@ export class EquipmentProgressDashboardService {
     const rawAverageCreatedPerDay =
       recentCreatedCount / EQUIPMENT_PROGRESS_RECENT_DAYS;
     const averageCreatedPerDay = roundToSingleDecimal(rawAverageCreatedPerDay);
-    const createdCount = equipment.length;
+    const createdCount = summary.createdCount;
     const remainingCount = Math.max(
       EQUIPMENT_PROGRESS_TARGET_COUNT - createdCount,
       0,
     );
-    const filledFieldsCount = equipment.reduce(
-      (sum, item) =>
-        sum + missingFieldRules.length - getMissingFields(item).length,
-      0,
-    );
+    const filledFieldsCount = summary.filledFieldsCount;
     const totalExpectedFields =
-      EQUIPMENT_PROGRESS_TARGET_COUNT * missingFieldRules.length;
+      EQUIPMENT_PROGRESS_TARGET_COUNT * EQUIPMENT_CONTROLLED_FIELDS_COUNT;
 
     return {
       averageCreatedPerDay,
-      completedCardsCount: createdCount - incompleteEquipment.length,
+      completedCardsCount: createdCount - summary.incompleteCardsCount,
       createdCount,
       estimatedCompletionDate: getEstimatedCompletionDate({
         rawAverageCreatedPerDay,
@@ -196,8 +63,8 @@ export class EquipmentProgressDashboardService {
           : remainingCount === 0
             ? 0
             : null,
-      incompleteCardsCount: incompleteEquipment.length,
-      incompleteEquipment: incompleteEquipment.slice(0, 10),
+      incompleteCardsCount: summary.incompleteCardsCount,
+      incompleteEquipment: summary.incompleteEquipment,
       progressPercent: getProgressPercent(
         filledFieldsCount,
         totalExpectedFields,
@@ -208,12 +75,6 @@ export class EquipmentProgressDashboardService {
       targetCount: EQUIPMENT_PROGRESS_TARGET_COUNT,
     };
   }
-}
-
-function getMissingFields(equipment: EquipmentProgressItem) {
-  return missingFieldRules
-    .filter((rule) => rule.isMissing(equipment))
-    .map((rule) => rule.label);
 }
 
 function getProgressPercent(
@@ -228,31 +89,6 @@ function getProgressPercent(
     100,
     Math.round((filledFieldsCount / totalExpectedFields) * 100),
   );
-}
-
-function getRecentDailyCounts(
-  dates: string[],
-  auditRows: Array<{ createdAt: Date; entityId: number | null }>,
-): EquipmentProgressDailyCountDto[] {
-  const createdEquipmentIdsByDate = new Map<string, Set<number>>();
-
-  dates.forEach((date) => {
-    createdEquipmentIdsByDate.set(date, new Set());
-  });
-
-  auditRows.forEach((row) => {
-    if (!row.entityId) {
-      return;
-    }
-
-    const dateId = getBusinessDateId(row.createdAt);
-    createdEquipmentIdsByDate.get(dateId)?.add(row.entityId);
-  });
-
-  return dates.map((date) => ({
-    count: createdEquipmentIdsByDate.get(date)?.size ?? 0,
-    date,
-  }));
 }
 
 function getEstimatedCompletionDate(params: {
@@ -345,8 +181,4 @@ function addDays(dateId: string, days: number) {
 
 function roundToSingleDecimal(value: number) {
   return Math.round(value * 10) / 10;
-}
-
-function isBlank(value: string | null | undefined) {
-  return !value || value.trim().length === 0;
 }

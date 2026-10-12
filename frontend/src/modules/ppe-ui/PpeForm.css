@@ -1,19 +1,35 @@
 .admin-modal > .ppe-form {
-  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px 18px 24px;
   min-height: 0;
   overflow-y: auto;
   scrollbar-gutter: stable;
+}
+.admin-modal > .ppe-form > button {
+  align-self: flex-start;
+}
+.admin-modal > .ppe-form > form.ppe-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 .ppe-form p {
   margin: 0;
 }
 
 .ppe-size-summary {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 250px 130px 150px 200px;
+  min-width: 778px;
   gap: 6px 16px;
   color: #6b7280;
-  font-size: 12px;
+  font-size: inherit;
+}
+.ppe-size-summary > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .ppe-size-summary strong {
   color: #3f4652;
@@ -68,6 +84,57 @@
   margin-top: 8px;
 }
 
+.ppe-employee-clothing-summary {
+  border: 1px solid #d7dce3;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.ppe-employee-clothing-picker {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 240ms ease, opacity 180ms ease;
+}
+.ppe-employee-clothing-picker.is-expanded {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.ppe-employee-clothing-picker-clip {
+  min-height: 0;
+  overflow: hidden;
+}
+.ppe-employee-clothing-picker-content {
+  padding-top: 16px;
+}
+.ppe-employee-clothing-picker .ppe-clothing-size-grid {
+  opacity: 0;
+  transform: translateY(-10px) scaleY(0.96);
+  transform-origin: top;
+  transition: transform 240ms ease, opacity 200ms ease;
+}
+.ppe-employee-clothing-picker.is-expanded .ppe-clothing-size-grid {
+  opacity: 1;
+  transform: translateY(0) scaleY(1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ppe-employee-clothing-picker,
+  .ppe-employee-clothing-picker .ppe-clothing-size-grid {
+    transition: none;
+  }
+}
+
 .admin-modal.admin-modal-resizing > .ppe-form {
   overflow-y: hidden;
+}
+
+.ppe-plan-available-from {
+  display: block;
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 12px;
 }

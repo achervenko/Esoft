@@ -1,34 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { PpeIssue, PpeNormItem } from '@prisma/client';
-import type { IssueSchedule } from './ppe-issue-schedule.service';
+import type { IssueSchedule } from './ppe-issue-schedule.types';
 import type { NormItemChain, PositionNorm } from './ppe-norm-position.service';
-import {
-  DAY,
-  addMonths,
-  maxDate,
-  monthStart,
-} from './ppe-norm-transition.dates';
-
-function intervalEnd(date: Date, item: PpeNormItem) {
-  const months = item.periodCount * (item.periodUnit === 'YEAR' ? 12 : 1);
-  const quantity = item.quantity.toNumber();
-  const portions =
-    item.ppeUnitSnapshot !== 'мл' && Number.isInteger(quantity) ? quantity : 1;
-  return months % portions === 0
-    ? addMonths(date, months / portions)
-    : new Date(
-        date.getTime() +
-          Math.max(
-            1,
-            Math.floor(
-              (addMonths(date, months).getTime() - date.getTime()) /
-                portions /
-                DAY,
-            ),
-          ) *
-            DAY,
-      );
-}
+import { DAY, addPeriod, maxDate } from './ppe-norm-transition.dates';
 
 @Injectable()
 export class PpeNormIntervalTransitionService {
@@ -38,58 +12,105 @@ export class PpeNormIntervalTransitionService {
     item: PpeNormItem,
     on: Date,
     history: PpeIssue[],
+    assignedAt?: Date | null,
   ) {
-    const last = history.at(-1);
-    const due = this.deadline(chain, last);
-    const quantity =
-      item.ppeUnitSnapshot !== 'мл' &&
-      Number.isInteger(item.quantity.toNumber())
-        ? 1
-        : item.quantity.toNumber();
-    const inside = !norm.effectiveTo || due <= norm.effectiveTo;
+    const active = history.filter(
+      (issue) =>
+        issue.status === 'ISSUED' &&
+        (norm.transitionMode !== 'HARD' || issue.normItemId === item.id),
+    );
+    const ordered = [...active].sort(
+      (a, b) =>
+        Math.max(Number(a.scheduledAt ?? a.issuedAt), Number(a.issuedAt)) -
+          Math.max(Number(b.scheduledAt ?? b.issuedAt), Number(b.issuedAt)) ||
+        Number(a.issuedAt) - Number(b.issuedAt) ||
+        a.id - b.id,
+    );
+    const last = ordered.at(-1);
+    let due = this.deadline(chain, last);
+    // Retain cancelled current obligations even when later obligations were issued.
+    // A replacement with the same scheduled date closes that obligation again.
+    const reopened = history
+      .filter(
+        (issue) =>
+          issue.status === 'CANCELLED' &&
+          issue.normItemId === item.id &&
+          issue.scheduledAt &&
+          !active.some(
+            (other) =>
+              other.normItemId === item.id &&
+              Number(other.scheduledAt) === Number(issue.scheduledAt),
+          ),
+      )
+      .sort((a, b) => Number(a.scheduledAt) - Number(b.scheduledAt))[0];
+    if (reopened?.scheduledAt && (!due || reopened.scheduledAt < due))
+      due = maxDate(norm.effectiveFrom, reopened.scheduledAt);
+    const inside =
+      due !== null && (!norm.effectiveTo || due <= norm.effectiveTo);
+    const previous = due
+      ? ordered
+          .filter((issue) => (issue.scheduledAt ?? issue.issuedAt) < due)
+          .at(-1)
+      : undefined;
+    const next = due ? addPeriod(due, item) : null;
+    const duration =
+      item.periodUnit === 'DAY'
+        ? item.periodCount
+        : due && next
+          ? Math.max(1, (Number(next) - Number(due)) / DAY)
+          : 30;
+    const availableFrom =
+      inside && due
+        ? maxDate(
+            new Date(Number(due) - Math.min(30, duration) * DAY),
+            ...(assignedAt && assignedAt <= on ? [assignedAt] : []),
+            ...(previous ? [previous.issuedAt] : []),
+          )
+        : null;
     const available =
-      inside && due <= on ? { index: 0, scheduledAt: due, quantity } : null;
+      due && availableFrom && on >= availableFrom
+        ? { scheduledAt: due, quantity: item.quantity.toNumber() }
+        : null;
+    const overdue = available && due! < on ? 1 : 0;
     const state: IssueSchedule = {
-      cycleFrom: due,
-      cycleTo: new Date(
-        Math.min(
-          intervalEnd(due, item).getTime() - DAY,
-          norm.effectiveTo?.getTime() ?? Infinity,
-        ),
-      ),
-      totalPortions: 1,
-      duePortions: available ? 1 : 0,
-      fulfilledPortions: 0,
-      dueUnissued: available ? 1 : 0,
-      overdue: available && due < on ? 1 : 0,
+      plannedDate: inside ? due : null,
+      availableFrom,
+      obligationStatus: !inside
+        ? 'FINISHED'
+        : !available
+          ? 'NOT_AVAILABLE'
+          : due! > on
+            ? 'EARLY'
+            : overdue
+              ? 'OVERDUE'
+              : 'DUE',
+      overdue,
       available,
       nextFuture:
-        inside && due > on ? { index: 0, scheduledAt: due, quantity } : null,
+        inside && due! > on
+          ? { scheduledAt: due!, quantity: item.quantity.toNumber() }
+          : null,
     };
     return {
       state,
-      fulfilled: history.filter((issue) => issue.normItemId === item.id),
+      fulfilled: active.filter((issue) => issue.normItemId === item.id),
     };
   }
 
-  deadline(chain: NormItemChain, last?: PpeIssue): Date {
+  deadline(chain: NormItemChain, last?: PpeIssue): Date | null {
     const [{ norm, item }, ...ancestors] = chain;
     if (!last) return norm.effectiveFrom;
+    if (norm.transitionMode === 'HARD' && last.normItemId !== item.id)
+      return norm.effectiveFrom;
     const previous = ancestors[0];
-    if (
-      last.normItemId === item.id ||
-      norm.transitionMode === 'HARD' ||
-      !previous
-    ) {
-      const end =
-        item.calculationMode === 'MONTHLY'
-          ? addMonths(monthStart(last.issuedAt), 1)
-          : intervalEnd(last.issuedAt, item);
-      return maxDate(norm.effectiveFrom, end);
+    if (last.normItemId === item.id || !previous) {
+      const end = addPeriod(
+        maxDate(last.scheduledAt ?? last.issuedAt, last.issuedAt),
+        item,
+      );
+      return end ? maxDate(norm.effectiveFrom, end) : null;
     }
-    return maxDate(
-      norm.effectiveFrom,
-      this.deadline([previous, ...ancestors.slice(1)], last),
-    );
+    const retained = this.deadline([previous, ...ancestors.slice(1)], last);
+    return retained ? maxDate(norm.effectiveFrom, retained) : null;
   }
 }

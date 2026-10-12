@@ -14,7 +14,6 @@ import { PpeNormsAuditService } from './ppe-norms-audit.service';
 import { PpeIssuesController } from './ppe-issues.controller';
 import { PpeIssuesService } from './ppe-issues.service';
 import { PpeIssuesGuardsService } from './ppe-issues-guards.service';
-import { PpeIssueScheduleService } from './ppe-issue-schedule.service';
 import { PpeIssuesAuditService } from './ppe-issues-audit.service';
 import { PpeIssuePlanService } from './ppe-issue-plan.service';
 import { PpeIssueCreateService } from './ppe-issue-create.service';
@@ -22,7 +21,6 @@ import { PpeIssueHistoryService } from './ppe-issue-history.service';
 import { PpeNormTransitionService } from './ppe-norm-transition.service';
 import { PpeNormPositionService } from './ppe-norm-position.service';
 import { PpeNormIntervalTransitionService } from './ppe-norm-interval-transition.service';
-import { PpeNormMonthlyTransitionService } from './ppe-norm-monthly-transition.service';
 
 @Module({
   imports: [PrismaModule, AuditModule],
@@ -42,11 +40,9 @@ import { PpeNormMonthlyTransitionService } from './ppe-norm-monthly-transition.s
     PpeIssueCreateService,
     PpeIssueHistoryService,
     PpeIssuesGuardsService,
-    PpeIssueScheduleService,
     PpeNormTransitionService,
     PpeNormPositionService,
     PpeNormIntervalTransitionService,
-    PpeNormMonthlyTransitionService,
     PpeIssuesAuditService,
   ],
   exports: [PpeNormsService],

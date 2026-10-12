@@ -10,7 +10,7 @@ const {
 } = require('../../dist/src/ppe/ppe-catalog.service.js');
 
 export function registerTests(env) {
-  test('normalizes API sizes, rejects equivalent duplicates and matches legacy employee ranges', async () => {
+  test('normalizes API sizes, rejects equivalent duplicates and matches normalized employee size ranges', async () => {
     const f = await env.issueFixture({ type: 'BODY' });
     const size = await env.catalog.createSize(
       f.ppe.id,
@@ -64,11 +64,10 @@ export function registerTests(env) {
     assert.equal(issued.normItemPpeItemId, f.ppe.id);
   });
 
-  test('integer and fractional millilitre quantities are issued as one full portion', async () => {
+  test('integer and fractional millilitre quantities are issued in full', async () => {
     for (const quantity of [300, 300.5]) {
       const f = await env.issueFixture({ type: 'OTHER', unit: 'мл', quantity });
       const plan = await env.issues.plan(f.employee.id, env.date());
-      assert.equal(plan.items[0].totalPortions, 1);
       assert.equal(plan.items[0].available.quantity, quantity);
       const [issued] = await env.issues.createRegular(
         f.request,

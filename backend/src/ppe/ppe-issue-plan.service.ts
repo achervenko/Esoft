@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PpeIssuesGuardsService } from './ppe-issues-guards.service';
 import { PpeIssueHistoryService } from './ppe-issue-history.service';
-import { type ScheduledPortion } from './ppe-issue-schedule.service';
+import { type ScheduledObligation } from './ppe-issue-schedule.types';
 import { toPpeIssueDto, ppeEmployeeName } from './ppe-issues.mapper';
 import { normDateString } from './ppe-norms.mapper';
 import { parseNormDate, parseNormId } from './ppe-norms.validation';
@@ -23,7 +23,12 @@ export class PpeIssuePlanService {
     return runPpeIssueTransaction(this.prisma, this.guards, async (tx) => {
       const employee = await this.guards.lockEmployee(tx, employeeId, false);
       const position = await this.guards.lockPosition(tx, employee.positionId);
-      const norm = await this.guards.lockEffectiveNorm(
+      const current = await this.guards.lockEffectiveNorm(
+        tx,
+        employee.positionId,
+        on,
+      );
+      const future = await this.guards.lockFutureNorm(
         tx,
         employee.positionId,
         on,
@@ -35,14 +40,39 @@ export class PpeIssuePlanService {
         position: position.name,
         on: normDateString(on),
       };
-      if (!norm) return { ...base, norm: null, items: [] };
+      if (!current && !future) return { ...base, norm: null, items: [] };
       const catalog = await this.guards.lockCatalog(
         tx,
-        norm.items.map((item) => item.ppeItemId),
+        [current, future].flatMap(
+          (norm) => norm?.items.map((item) => item.ppeItemId) ?? [],
+        ),
         false,
       );
-      const issued = await this.history.relevantIssues(tx, employeeId, norm);
-      const context = await this.transitions.prepare(tx, norm, issued);
+      const prepare = async (norm: NonNullable<typeof current>) => {
+        const issued = await this.history.relevantIssues(tx, employeeId, norm);
+        const context = await this.transitions.prepare(tx, norm, issued);
+        return norm.items.map((item) => ({
+          norm,
+          item,
+          ...this.transitions.evaluate(
+            context,
+            norm,
+            item,
+            on,
+            issued,
+            employee.positionAssignedAt,
+          ),
+        }));
+      };
+      const currentRows = current ? await prepare(current) : [];
+      const futureRows = future ? await prepare(future) : [];
+      const norm = (current ?? future)!;
+      const rows = current
+        ? [
+            ...currentRows,
+            ...futureRows.filter((row) => row.state.available !== null),
+          ]
+        : futureRows;
       return {
         ...base,
         norm: {
@@ -52,17 +82,11 @@ export class PpeIssuePlanService {
             ? normDateString(norm.effectiveTo)
             : null,
         },
-        items: norm.items.map((item) => {
-          const { state, fulfilled } = this.transitions.evaluate(
-            context,
-            norm,
-            item,
-            on,
-            issued,
-            employee.positionAssignedAt,
-          );
+        items: rows.map(({ norm: sourceNorm, item, state, fulfilled }) => {
           const ppe = catalog.get(item.ppeItemId)!;
           return {
+            normId: sourceNorm.id,
+            normEffectiveFrom: normDateString(sourceNorm.effectiveFrom),
             normItemId: item.id,
             ppeItemId: ppe.id,
             article: ppe.article,
@@ -73,15 +97,16 @@ export class PpeIssuePlanService {
             normQuantity: item.quantity.toNumber(),
             periodCount: item.periodCount,
             periodUnit: item.periodUnit,
-            cycleFrom: normDateString(state.cycleFrom),
-            cycleTo: state.cycleTo ? normDateString(state.cycleTo) : null,
-            totalPortions: state.totalPortions,
-            duePortions: state.duePortions,
-            fulfilledPortions: state.fulfilledPortions,
-            dueUnissued: state.dueUnissued,
+            plannedDate: state.plannedDate
+              ? normDateString(state.plannedDate)
+              : null,
+            availableFrom: state.availableFrom
+              ? normDateString(state.availableFrom)
+              : null,
+            obligationStatus: state.obligationStatus,
             overdue: state.overdue,
-            available: this.portionDto(state.available),
-            nextFuture: this.portionDto(state.nextFuture),
+            available: this.obligationDto(state.available),
+            nextFuture: this.obligationDto(state.nextFuture),
             fulfilled: fulfilled.map(toPpeIssueDto),
             sizes: this.guards.recommendSize(employee, ppe),
           };
@@ -90,12 +115,11 @@ export class PpeIssuePlanService {
     });
   }
 
-  private portionDto(portion: ScheduledPortion | null) {
-    return portion
+  private obligationDto(obligation: ScheduledObligation | null) {
+    return obligation
       ? {
-          scheduledAt: normDateString(portion.scheduledAt),
-          scheduledPortion: portion.index,
-          quantity: portion.quantity,
+          scheduledAt: normDateString(obligation.scheduledAt),
+          quantity: obligation.quantity,
         }
       : null;
   }

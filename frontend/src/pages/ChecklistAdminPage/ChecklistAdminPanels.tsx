@@ -1,6 +1,7 @@
 import type { ChecklistModule, ChecklistQuestion } from "../../shared/api/checklists";
 import { CatalogPanel } from "./CatalogPanel";
 import { TemplatesPanel } from "./TemplatesPanel";
+import { PageNavigation } from "../../shared/ui/PageNavigation";
 import type {
   ActiveChecklistAdminTab,
   ChecklistAdminConfirmState,
@@ -30,6 +31,7 @@ export function ChecklistAdminPanels({
 }: ChecklistAdminPanelsProps) {
   if (activeTab === "templates") {
     return (
+      <>
       <TemplatesPanel
         isLoading={templatesState.isLoading}
         onArchive={(template) => setConfirm({ kind: "archive-template", template })}
@@ -46,6 +48,8 @@ export function ChecklistAdminPanels({
         state={templatesState.state}
         templates={templatesState.templates}
       />
+      <PageNavigation page={templatesState.page} pageSize={templatesState.pageSize} total={templatesState.total} loading={templatesState.isLoading} onChange={templatesState.setPage} />
+      </>
     );
   }
 

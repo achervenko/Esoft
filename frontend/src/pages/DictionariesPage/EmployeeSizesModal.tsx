@@ -4,7 +4,7 @@ import {
   employeeSizeLabels,
   changedEmployeeSizes,
 } from "../../modules/ppe-ui/employee-sizes-model";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ppeApi,
   type EmployeeSizes,
@@ -21,7 +21,13 @@ import "../../modules/ppe-ui/PpeForm.css";
 export function EmployeeSizeSummary({ employee }: { employee: EmployeeSizes }) {
   return (
     <div className="ppe-size-summary">
-      {Object.entries(employeeSizeLabels).map(([key, label]) => (
+      <span>
+        Размер одежды:{" "}
+        <strong>{employee.clothingSize ?? "—"}; {employee.clothingHeight ?? "—"}</strong>
+      </span>
+      {Object.entries(employeeSizeLabels)
+        .filter(([key]) => key !== "clothingSize" && key !== "clothingHeight")
+        .map(([key, label]) => (
         <span key={key}>
           {label}:{" "}
           <strong>{employee[key as keyof EmployeeSizes] ?? "—"}</strong>
@@ -50,6 +56,7 @@ export function EmployeeSizesModal({
       hasChanges={hasChanges}
       title="Размеры сотрудника"
       className="ppe-clothing-modal"
+      animateResize={Boolean(employee.data) && !employee.loading}
       onClose={onClose}
       isCloseDisabled={saving}
     >
@@ -90,6 +97,10 @@ function EmployeeSizesForm({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [clothingExpanded, setClothingExpanded] = useState(
+    !employee.clothingSize || !employee.clothingHeight,
+  );
+  const clothingToggle = useRef<HTMLButtonElement>(null);
   const changed = changedEmployeeSizes(employee, draft);
   const hasChanges = Object.keys(changed).length > 0;
   useEffect(() => {
@@ -123,23 +134,54 @@ function EmployeeSizesForm({
       </div>
       <fieldset className="ppe-form" disabled={saving || !employee.isActive}>
         <legend>Размер одежды и ростовка</legend>
+        <div className="ppe-employee-clothing-summary">
+          <span>
+            {draft.clothingSize && draft.clothingHeight
+              ? `${draft.clothingSize}; ${draft.clothingHeight}`
+              : "Размер не выбран"}
+          </span>
+          <button
+            ref={clothingToggle}
+            type="button"
+            className="admin-secondary-button"
+            aria-expanded={clothingExpanded}
+            onClick={() => setClothingExpanded((current) => !current)}
+          >
+            {clothingExpanded ? "Свернуть" : "Изменить"}
+          </button>
+        </div>
+        <div
+          className={`ppe-employee-clothing-picker${clothingExpanded ? " is-expanded" : ""}`}
+          aria-hidden={!clothingExpanded}
+          inert={!clothingExpanded}
+        >
+          <div className="ppe-employee-clothing-picker-clip">
+            <div className="ppe-employee-clothing-picker-content">
         <ClothingSizeGrid
           selectionMode="single"
           values={draft.clothingSize && draft.clothingHeight ? [{ value: draft.clothingSize, heightValue: draft.clothingHeight }] : []}
           disabled={saving || !employee.isActive}
-          onChange={(values) => setDraft((current) => ({
+          onChange={(values) => {
+            setDraft((current) => ({
             ...current,
             clothingSize: values[0]?.value ?? "",
             clothingHeight: values[0]?.heightValue ?? "",
-          }))}
+            }));
+            if (values[0]?.value && values[0]?.heightValue) {
+              setClothingExpanded(false);
+              clothingToggle.current?.focus();
+            }
+          }}
         />
+            </div>
+          </div>
+        </div>
       </fieldset>
       {(
         Object.entries(employeeSizeLabels) as [keyof EmployeeSizes, string][]
       ).filter(([key]) => key !== "clothingSize" && key !== "clothingHeight").map(([key, label]) => (
         <Field key={key} label={label}>
           <input
-            autoFocus={key === "clothingSize" && employee.isActive}
             type={key === "shoeSize" ? "number" : "text"}
             min={key === "shoeSize" ? 15 : undefined}
             max={key === "shoeSize" ? 60 : undefined}
