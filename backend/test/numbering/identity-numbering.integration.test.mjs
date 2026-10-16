@@ -1,23 +1,31 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import packageTools from '../../../scripts/database/packages.cjs';
 import { createRequire } from 'node:module';
 import test from 'node:test';
 import { Client } from 'pg';
 
 const require = createRequire(import.meta.url);
-const { config } =
-  require('../../../scripts/config/config-core.cjs').loadConfig();
+const databaseUrl =
+  process.env.ESOFT_TEST_DATABASE_URL ??
+  require('../../../scripts/config/config-core.cjs').loadConfig().config
+    .database.url;
+if (
+  !['localhost', '127.0.0.1', '[::1]'].includes(new URL(databaseUrl).hostname)
+) {
+  throw new Error('Numbering integration tests require local PostgreSQL');
+}
 
 test('identity preview and concurrent writes never rewind numbering', async () => {
   const database = `esoft_numbering_test_${process.pid}_${Date.now()}`;
-  const admin = new Client({ connectionString: config.database.url });
+  const admin = new Client({ connectionString: databaseUrl });
   const clients = [];
   let created = false;
   try {
     await admin.connect();
     await admin.query(`CREATE DATABASE "${database}"`);
     created = true;
-    const url = new URL(config.database.url);
+    const url = new URL(databaseUrl);
     url.pathname = `/${database}`;
     for (let index = 0; index < 4; index++) {
       const client = new Client({ connectionString: url.toString() });
@@ -44,15 +52,11 @@ test('identity preview and concurrent writes never rewind numbering', async () =
         'Concurrent query did not wait for the uncommitted numbering transaction',
       );
     };
-    await a.query(
-      readFileSync(
-        new URL(
-          '../../prisma/migrations/20260725000000_init/migration.sql',
-          import.meta.url,
-        ),
-        'utf8',
-      ),
-    );
+    for (const migration of packageTools.readPackageSet(
+      resolve(import.meta.dirname, '../../..'),
+    ).migrations) {
+      await a.query(migration.sql.toString('utf8'));
+    }
     await a.query(`CREATE TABLE numbering_probe(id serial PRIMARY KEY);
       CREATE TRIGGER probe_lock BEFORE INSERT OR UPDATE OF id ON numbering_probe
       FOR EACH STATEMENT EXECUTE FUNCTION app_lock_identity_writes('id');

@@ -57,21 +57,3 @@ model EventResponsible {
   @@index([userId, eventId], map: "idx_event_responsibles_user_event")
   @@map("event_responsibles")
 }
-
-model EquipmentEventExtension {
-  eventId              Int                               @id @map("event_id")
-  equipmentId          Int                               @map("equipment_id")
-  eventTypeId          Int                               @map("event_type_id")
-  maintenanceSettingId Int                               @map("maintenance_setting_id")
-  executionType        EquipmentMaintenanceExecutionType @map("execution_type")
-
-  event              Event                       @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  equipment          Equipment                   @relation(fields: [equipmentId], references: [id], onDelete: Restrict)
-  eventType          EquipmentEventType          @relation(fields: [eventTypeId], references: [id], onDelete: Restrict)
-  maintenanceSetting EquipmentMaintenanceSetting @relation(fields: [maintenanceSettingId], references: [id], onDelete: Restrict)
-
-  @@index([equipmentId, eventTypeId], map: "idx_equipment_event_extensions_equipment_type")
-  @@index([eventTypeId], map: "idx_equipment_event_extensions_event_type")
-  @@index([maintenanceSettingId], map: "idx_equipment_event_extensions_maintenance_setting")
-  @@map("equipment_event_extensions")
-}

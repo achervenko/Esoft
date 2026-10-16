@@ -63,34 +63,3 @@ model EquipmentMaintenanceSetting {
   @@index([defaultChecklistTemplateId], map: "idx_equipment_maintenance_settings_default_template_id")
   @@map("equipment_maintenance_settings")
 }
-
-model Country {
-  isActive Boolean @default(true) @map("is_active")
-  id        Int         @id @default(autoincrement())
-  name      String      @unique @db.VarChar(128)
-  iso       String      @unique @db.Char(2)
-  equipment Equipment[]
-
-  @@map("countries")
-}
-
-model Workshop {
-  isActive Boolean @default(true) @map("is_active")
-  id       Int       @id @default(autoincrement())
-  name     String    @unique @db.VarChar(128)
-  sections Section[]
-
-  @@map("workshops")
-}
-
-model Section {
-  isActive Boolean @default(true) @map("is_active")
-  id         Int         @id @default(autoincrement())
-  workshopId Int         @map("workshop_id")
-  workshop   Workshop    @relation(fields: [workshopId], references: [id], onDelete: Restrict)
-  name       String      @db.VarChar(128)
-  equipment  Equipment[]
-
-  @@unique([workshopId, name], map: "uq_sections_workshop_name")
-  @@map("sections")
-}

@@ -6,6 +6,10 @@ import { loadValidatedConfig } from '../scripts/infrastructure/config/validated-
 
 const projectRoot = resolve(__dirname, '..');
 
+if (process.argv.includes('migrate') || (process.argv.includes('db') && process.argv.includes('push'))) {
+  throw new Error('Use npm run db:migrate:deploy or db:migrate:status from the project root. Direct Prisma migration commands bypass database package selection and history checks.');
+}
+
 const result = loadValidatedConfig({
   applyToProcessEnv: true,
   overrideProcessEnv: true,
@@ -21,7 +25,6 @@ export default defineConfig({
   schema: 'prisma/schema',
 
   migrations: {
-    path: 'prisma/migrations',
     seed: 'tsx prisma/seed.ts',
   },
 

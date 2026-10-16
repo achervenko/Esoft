@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { readFile, readdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { after } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
+import packageTools from '../../../scripts/database/packages.cjs';
 
 import pg from 'pg';
 import { PrismaClient } from '@prisma/client';
@@ -49,9 +49,13 @@ function createNormsService(client, audit) {
 }
 
 export async function createPpeNormTestEnvironment() {
-  const configuration = loadValidatedConfig();
-  if (!configuration.ok) throw new Error('Invalid local test configuration');
-  const sourceUrl = new URL(configuration.details.config.database.url);
+  let databaseUrl = process.env.ESOFT_TEST_DATABASE_URL;
+  if (!databaseUrl) {
+    const configuration = loadValidatedConfig();
+    if (!configuration.ok) throw new Error('Invalid local test configuration');
+    databaseUrl = configuration.details.config.database.url;
+  }
+  const sourceUrl = new URL(databaseUrl);
   if (!['localhost', '127.0.0.1', '[::1]'].includes(sourceUrl.hostname)) {
     throw new Error('PPE integration tests require local PostgreSQL');
   }
@@ -83,13 +87,11 @@ export async function createPpeNormTestEnvironment() {
     const bootstrap = new pg.Client({ connectionString: testUrl.toString() });
     try {
       await bootstrap.connect();
-      const migrations = new URL('../../prisma/migrations/', import.meta.url);
-      for (const name of (await readdir(migrations))
-        .filter((name) => /^\d/.test(name))
-        .sort()) {
-        await bootstrap.query(
-          await readFile(new URL(`${name}/migration.sql`, migrations), 'utf8'),
-        );
+      const { migrations } = packageTools.readPackageSet(
+        resolve(import.meta.dirname, '../../..'),
+      );
+      for (const migration of migrations) {
+        await bootstrap.query(migration.sql.toString('utf8'));
       }
     } finally {
       await bootstrap.end();

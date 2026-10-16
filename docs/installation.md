@@ -1,5 +1,7 @@
 # Установка проекта
 
+Разделение SQL на ядро, оборудование и СИЗ, состав новой установки и позднее подключение: [DATABASE-PACKAGES.md](DATABASE-PACKAGES.md).
+
 Это руководство описывает подготовку среды и первый запуск Esoft с нуля.
 Все команды выполняйте из PowerShell.
 
@@ -62,10 +64,14 @@ CREATE ROLE esoft_migrator LOGIN PASSWORD 'replace_migrator_password'
   NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
 CREATE ROLE esoft LOGIN PASSWORD 'replace_application_password'
   NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
-CREATE DATABASE esoft OWNER esoft_migrator;
+CREATE DATABASE esoft OWNER esoft_migrator
+  TEMPLATE template0 ENCODING 'UTF8'
+  LOCALE_PROVIDER icu ICU_LOCALE 'ru-RU' LOCALE 'C';
 ```
 
 Затем подключитесь к базе `esoft` под администратором PostgreSQL и выполните:
+
+Указанная локаль ICU нужна для корректной работы кириллицы в `lower()`, поиске и уникальности названий без учёта регистра. Установщик до SQL проверяет UTF8 и результат `lower('ЁЖИК АБВ') = 'ёжик абв'`. Одна лишь локаль libc `C` эту проверку не проходит. При создании локальной базы через pgAdmin также выберите UTF8 и Unicode-локаль, например ICU `ru-RU`.
 
 ```sql
 REVOKE CONNECT, TEMPORARY ON DATABASE esoft FROM PUBLIC;
@@ -96,7 +102,7 @@ REVOKE ALL PRIVILEGES ON TABLE public._prisma_migrations FROM esoft;
 
 Эти команды предназначены для новой базы. Для существующей базы сначала отдельно перенесите владение объектами на роль миграций; простое создание второй роли не ограничит владельца существующих объектов.
 
-Для `prisma migrate dev` с автоматически создаваемой shadow-базой нужны дополнительные права. Используйте отдельную локальную роль с `CREATEDB` либо заранее подготовленную shadow-базу; production-пользователю backend эти права не выдавайте.
+Новые изменения схемы оформляются SQL-миграциями в пакете-владельце; используйте порядок из [DATABASE-PACKAGES.md](DATABASE-PACKAGES.md). Пользователю backend права на изменение схемы не выдаются.
 
 ### MinIO
 

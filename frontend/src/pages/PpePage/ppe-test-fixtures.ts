@@ -15,11 +15,13 @@ export const employee: PpeEmployee = {
   positionId: 2,
   position: "Инженер",
   isActive: true,
+  ppeSizes: {
   clothingSize: "88–92",
   clothingHeight: "158–164",
   shoeSize: 42,
   gloveSize: "L",
   headwearSize: "58",
+  },
 };
 export const item: PpeItem = {
   id: 3,

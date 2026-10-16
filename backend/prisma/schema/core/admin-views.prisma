@@ -1,0 +1,20 @@
+view AdminAuditLogFull {
+  id               Int
+  createdAt        DateTime    @map("created_at") @db.Timestamptz(6)
+  userId           String?     @map("user_id")
+  username         String?
+  userName         String?     @map("user_name")
+  employeeId       Int?        @map("employee_id")
+  employeeFullName String      @map("employee_full_name")
+  action           AuditAction
+  module           AuditModule
+  entityType       String      @map("entity_type") @db.VarChar(64)
+  entityId         Int?        @map("entity_id")
+  entityStringId   String?     @map("entity_string_id") @db.VarChar(128)
+  fieldName        String?     @map("field_name") @db.VarChar(128)
+  oldValue         String?     @map("old_value") @db.Text
+  newValue         String?     @map("new_value") @db.Text
+  timeZone         String      @map("time_zone") @db.VarChar(32)
+
+  @@map("admin_audit_log_full")
+}

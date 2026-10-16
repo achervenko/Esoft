@@ -15,7 +15,7 @@ Frontend описан в `frontend/src/pages/PpePage/README.md`.
 | Операция                                    | admin | ppe_specialist | accounting_specialist |
 | ------------------------------------------- | ----- | -------------- | --------------------- |
 | Чтение карточек, норм, каталога и журнала   | Да    | Да             | Да                    |
-| Управление каталогом и размерными рядами    | Да    | Да             | Да                    |
+| Управление каталогом и размерными рядами    | Да    | Нет            | Да                    |
 | Изменение размеров сотрудников              | Да    | Да             | Нет                   |
 | Управление нормами и редакциями             | Да    | Да             | Нет                   |
 | Нормативная и дополнительная выдача, отмена | Да    | Нет            | Да                    |
@@ -271,9 +271,14 @@ PpeIssue.cancelledByNameSnapshot. Ошибка аудита откатывает
 
 ### Размеры сотрудников
 
+Размеры хранятся в отдельной таблице `ppe_employee_sizes` со связью один к одному
+на `employees`. Строка создаётся при первом сохранении; без строки API возвращает
+`ppeSizes: null`. Общая модель Employee не содержит scalar-полей СИЗ.
+Пять размеров возвращаются внутри `ppeSizes`; `shoeSize` — число или null.
+
 Чтение использует явный Prisma select только полей:
 `id`, `lastName`, `firstName`, `middleName`, `positionId`, `position`,
-`clothingSize`, `clothingHeight`, `shoeSize`, `gloveSize`, `headwearSize`, `isActive`.
+`ppeSizes` (пять полей размеров), `isActive`.
 `position` возвращается как название должности, `shoeSize` — число или null.
 Учётные записи, роли, email, сессии и фотографии в этот DTO не входят.
 
@@ -478,8 +483,8 @@ originalMessage при коде 23505 и типе UniqueConstraintViolation.
 
 ### Ограничения, управляемые SQL
 
-Следующие объекты намеренно определены в `prisma/migrations/20260725000000_init/migration.sql`,
-а в `prisma/schema/ppe.prisma` отмечены комментариями:
+Следующие объекты намеренно определены в `prisma/packages/ppe/migrations/20260725000002_ppe_init/migration.sql`,
+а в `prisma/schema/ppe/ppe.prisma` отмечены комментариями:
 
 - `uq_ppe_item_sizes_item_value`: `UNIQUE NULLS NOT DISTINCT (ppe_item_id, value, height_value)`.
   Для одной позиции нельзя повторить размер с одинаковой ростовкой, включая `NULL`.

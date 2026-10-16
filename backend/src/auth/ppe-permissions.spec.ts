@@ -70,9 +70,16 @@ describe('PPE permissions', () => {
     'grants PPE capabilities to %s',
     (role) => {
       for (const can of capabilities)
-        expect(can(role)).toBe(role === 'admin' || can !== canIssuePpe);
+        expect(can(role)).toBe(
+          role === 'admin' ||
+            (can !== canIssuePpe && can !== canManagePpeCatalog),
+        );
       for (const assertAllowed of assertions)
-        if (role === 'ppe_specialist' && assertAllowed === assertCanIssuePpe)
+        if (
+          role === 'ppe_specialist' &&
+          (assertAllowed === assertCanIssuePpe ||
+            assertAllowed === assertCanManagePpeCatalog)
+        )
           expect(() => assertAllowed(role)).toThrow(ForbiddenException);
         else expect(() => assertAllowed(role)).not.toThrow();
     },

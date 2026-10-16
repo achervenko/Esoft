@@ -1,26 +1,22 @@
 import { PrismaClient } from '@prisma/client';
 
 import { createPrismaClientOptions } from '../src/prisma/prisma-client-options';
-import { seedCalendar } from './seed/calendar';
-import { seedCountries } from './seed/countries';
-import { seedMaintenanceTypes } from './seed/maintenance-types';
-import { seedPositions } from './seed/positions';
-
-const seeders = [
-  seedCountries,
-  seedCalendar,
-  seedMaintenanceTypes,
-  seedPositions,
-];
+import { seedSelectedDatabase } from './seed/seed-selected';
+import { loadRootDatabaseEnvironment } from '../src/config/root-environment';
+import { createRequire } from 'node:module';
+import { resolve } from 'node:path';
 
 async function runSeed() {
+  const { projectRoot } = loadRootDatabaseEnvironment();
+  const packageTools = createRequire(__filename)(
+    resolve(projectRoot, 'scripts/database/packages.cjs'),
+  );
+  const { packages } = packageTools.readPackageSet(projectRoot);
   const prisma = new PrismaClient(createPrismaClientOptions());
   let seedError: unknown = null;
 
   try {
-    for (const seeder of seeders) {
-      await seeder(prisma);
-    }
+    await seedSelectedDatabase(prisma, packages);
   } catch (error) {
     seedError = error;
   }

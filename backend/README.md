@@ -20,7 +20,8 @@ maintenance tasks.
 Useful backend workspace commands:
 
 ```bash
-npm run prisma:generate --workspace backend
-npm run prisma:migrate --workspace backend
+npm run db:generate
+npm run db:migrate:status
+npm run db:migrate:deploy
 npm run prisma:studio --workspace backend
 ```

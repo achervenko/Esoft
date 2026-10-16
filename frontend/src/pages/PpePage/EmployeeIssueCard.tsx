@@ -1,5 +1,5 @@
 import { ChevronRight } from "lucide-react";
-import type { PpeEmployee } from "../../shared/api/ppe";
+import type { PpeEmployee, EmployeeSizes } from "../../shared/api/ppe";
 import { Field, Message } from "../../modules/ppe-ui/ppe-ui";
 import { employeeName, businessToday } from "../../modules/ppe-ui/ppe-presentation";
 import { employeeSizeLabels } from "../../modules/ppe-ui/employee-sizes-model";
@@ -66,7 +66,7 @@ export function EmployeeIssueCard({
           {Object.entries(employeeSizeLabels).map(([key, label]) => (
             <div key={key}>
               <dt>{label}</dt>
-              <dd>{employee[key as keyof typeof employee] ?? "—"}</dd>
+              <dd>{employee.ppeSizes?.[key as keyof EmployeeSizes] ?? "—"}</dd>
             </div>
           ))}
         </dl>

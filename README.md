@@ -161,11 +161,14 @@ npm run start
 
 ## Prisma
 
+Пакеты БД ядра, оборудования и СИЗ: [docs/DATABASE-PACKAGES.md](docs/DATABASE-PACKAGES.md).
+
 Команды Prisma запускаются через npm workspace `backend`:
 
 ```bash
-npm run prisma:generate --workspace backend
-npm run prisma:migrate --workspace backend
+npm run db:generate
+npm run db:migrate:status
+npm run db:migrate:deploy
 ```
 
 ## Типографика интерфейса

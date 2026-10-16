@@ -99,3 +99,15 @@ it("synchronizes itemId and q changes without remounting the catalog", () => {
   expect(input).toHaveValue("");
   window.history.replaceState(null, "", "#/");
 });
+
+it("keeps the catalog read-only for the occupational safety specialist", () => {
+  render(
+    <ChakraProvider value={defaultSystem}>
+      <CatalogPanel items={[item]} role="ppe_specialist" onChanged={vi.fn()} />
+    </ChakraProvider>,
+  );
+  expect(screen.getByText(item.article)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Добавить СИЗ" })).not.toBeInTheDocument();
+  fireEvent.contextMenu(screen.getByText(item.article).closest("tr")!);
+  expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+});

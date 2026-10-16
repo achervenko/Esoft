@@ -25,7 +25,11 @@ export function registerTests(env) {
     );
     await env.prisma.employee.update({
       where: { id: f.employee.id },
-      data: { clothingSize: '44—46', clothingHeight: '170 - 176' },
+      data: {
+        ppeSizes: {
+          update: { clothingSize: '44—46', clothingHeight: '170 - 176' },
+        },
+      },
     });
     const [issued] = await env.issues.createRegular(f.request, env.adminActor);
     assert.equal(issued.sizeValue, '44–46');

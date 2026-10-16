@@ -32,7 +32,7 @@ describe("PPE access in profile", () => {
       ] as const) {
         expect(
           permissions.find((permission) => permission.title === title),
-        ).toMatchObject({ allowed });
+        ).toMatchObject({ allowed: allowed && !(role === "ppe_specialist" && title === "Управление каталогом СИЗ") });
       }
       const backdatePermission = permissions.find(
         (permission) => permission.title === "Выдача СИЗ задним числом",
@@ -62,7 +62,7 @@ describe("PPE access in profile", () => {
     for (const title of ppePermissionTitles) {
       expect(
         permissions.find((permission) => permission.title === title),
-      ).toMatchObject({ allowed });
+      ).toMatchObject({ allowed: allowed && !(role === "ppe_specialist" && title === "Управление каталогом СИЗ") });
     }
   });
 

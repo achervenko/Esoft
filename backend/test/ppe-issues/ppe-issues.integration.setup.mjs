@@ -107,11 +107,15 @@ export async function createPpeIssueTestEnvironment() {
         lastName: 'Tester',
         firstName: 'PPE',
         positionId: f.position.id,
-        clothingSize: '88–92',
-        clothingHeight: '158–164',
-        shoeSize: 42,
-        gloveSize: 'L',
-        headwearSize: '58',
+        ppeSizes: {
+          create: {
+            clothingSize: '88–92',
+            clothingHeight: '158–164',
+            shoeSize: 42,
+            gloveSize: 'L',
+            headwearSize: '58',
+          },
+        },
       },
     });
     const rows = [{ ppeItemId: ppe.id, quantity, periodCount, periodUnit }];

@@ -15,7 +15,7 @@ it("keeps one sizes section after repeated updates when employee and position ID
   };
   const view = render(<EmployeeIssueCard {...props} />);
   for (let revision = 1; revision <= 8; revision++) {
-    view.rerender(<EmployeeIssueCard {...props} revision={revision} employee={{ ...props.employee, shoeSize: 40 + revision }} />);
+    view.rerender(<EmployeeIssueCard {...props} revision={revision} employee={{ ...props.employee, ppeSizes: { ...props.employee.ppeSizes!, shoeSize: 40 + revision } }} />);
     expect(screen.getAllByText("Размеры сотрудника")).toHaveLength(1);
     expect(screen.getAllByText("Нормы")).toHaveLength(1);
     expect(screen.getAllByText("История выдачи")).toHaveLength(1);

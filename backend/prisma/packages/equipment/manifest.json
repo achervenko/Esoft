@@ -1,0 +1,11 @@
+{
+  "id": "equipment",
+  "version": 1,
+  "requiresCore": 1,
+  "migrations": [
+    {
+      "id": "20260725000001_equipment_init",
+      "sha256": "16373b80814968039394dd93c88e871e4b37c7261f320c4cf90c39d97551db53"
+    }
+  ]
+}

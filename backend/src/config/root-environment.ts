@@ -64,11 +64,15 @@ export function loadRootConfig(): EsoftConfig {
 }
 
 export function loadRootDatabaseUrl(): string {
+  return loadRootDatabaseEnvironment().config.database.url;
+}
+
+export function loadRootDatabaseEnvironment(): LoadedConfig {
   return getConfigCore().loadConfig({
     profile: 'database',
     applyToProcessEnv: true,
     overrideProcessEnv: true,
-  }).config.database.url;
+  });
 }
 
 export function loadRootEnvironment(): LoadedConfig {

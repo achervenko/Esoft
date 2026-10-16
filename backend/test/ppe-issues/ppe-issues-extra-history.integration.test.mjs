@@ -70,7 +70,11 @@ export function registerTests(env) {
     try {
       await prisma.employee.update({
         where: { id: f.employee.id },
-        data: { firstName: 'Renamed', shoeSize: 43, isActive: false },
+        data: {
+          firstName: 'Renamed',
+          isActive: false,
+          ppeSizes: { update: { shoeSize: 43 } },
+        },
       });
       await prisma.position.update({
         where: { id: f.position.id },

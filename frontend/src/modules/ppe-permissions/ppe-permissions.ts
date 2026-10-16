@@ -1,6 +1,6 @@
 const ppePermissionRoles = {
   read: ["admin", "ppe_specialist", "accounting_specialist"],
-  manageCatalog: ["admin", "ppe_specialist", "accounting_specialist"],
+  manageCatalog: ["admin", "accounting_specialist"],
   manageEmployeeSizes: ["admin", "ppe_specialist"],
   manageNorms: ["admin", "ppe_specialist"],
   issue: ["admin", "accounting_specialist"],

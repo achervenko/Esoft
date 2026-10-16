@@ -6,11 +6,7 @@ model Employee {
   positionId           Int            @map("position_id")
   positionAssignedAt   DateTime?      @map("position_assigned_at") @db.Date
   position             Position       @relation(fields: [positionId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_employees_position")
-  clothingSize         String?        @map("clothing_size") @db.VarChar(20)
-  clothingHeight       String?        @map("clothing_height") @db.VarChar(20)
-  shoeSize             Decimal?       @map("shoe_size") @db.Decimal(3, 1)
-  gloveSize            String?        @map("glove_size") @db.VarChar(20)
-  headwearSize         String?        @map("headwear_size") @db.VarChar(20)
+  ppeSizes             PpeEmployeeSizes?
   isActive             Boolean        @default(true) @map("is_active")
   employeeUsers        EmployeeUser[]
   responsibleEquipment Equipment[]    @relation("EquipmentResponsibleEmployee")

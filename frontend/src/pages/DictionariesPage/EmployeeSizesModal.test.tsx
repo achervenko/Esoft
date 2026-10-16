@@ -20,7 +20,7 @@ it("patches only changed size fields and clears empty values as null", async () 
   vi.spyOn(ppeApi, "employeeSizes").mockResolvedValue(employee);
   render(<EmployeeSizesModal id={1} onClose={vi.fn()} />);
   fireEvent.click(await screen.findByRole("button", { name: "Изменить" }));
-  const clothing = await screen.findByRole("button", { name: `${employee.clothingSize};${employee.clothingHeight}` });
+  const clothing = await screen.findByRole("button", { name: `${employee.ppeSizes!.clothingSize};${employee.ppeSizes!.clothingHeight}` });
   expect(
     screen.getByRole("button", { name: "Сохранить размеры" }),
   ).toBeDisabled();
@@ -45,7 +45,7 @@ it("shows all five dimensions for specialists without employee administrative ac
     </ChakraProvider>,
   );
   await screen.findByText("Червенко Алехандро");
-  expect(screen.getByText(`${employee.clothingSize}; ${employee.clothingHeight}`)).toBeInTheDocument();
+  expect(screen.getByText(`${employee.ppeSizes!.clothingSize}; ${employee.ppeSizes!.clothingHeight}`)).toBeInTheDocument();
   expect(screen.queryByText("Ростовка:")).not.toBeInTheDocument();
   expect(screen.getByText("Размер перчаток:")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Изменить" })).toBeInTheDocument();
@@ -82,7 +82,7 @@ it.each([
   { clothingSize: "88–92", clothingHeight: null },
   { clothingSize: null, clothingHeight: "170–176" },
 ])("does not create an empty grid axis for incomplete clothing fields %j", async (sizes) => {
-  vi.spyOn(ppeApi, "employee").mockResolvedValue({ ...employee, ...sizes });
+  vi.spyOn(ppeApi, "employee").mockResolvedValue({ ...employee, ppeSizes: { ...employee.ppeSizes!, ...sizes } });
   render(<EmployeeSizesModal id={1} onClose={vi.fn()} />);
   await screen.findByRole("button", { name: "88–92;170–176" });
   const cells = document.querySelectorAll<HTMLButtonElement>(".ppe-clothing-height-options button");
@@ -92,4 +92,15 @@ it.each([
     expect(cell).toHaveAttribute("aria-pressed", "false");
   }
   expect(screen.getByRole("button", { name: "Сохранить размеры" })).toBeDisabled();
+});
+
+it("edits sizes when the employee has no PPE sizes row", async () => {
+  vi.spyOn(ppeApi, "employee").mockResolvedValue({ ...employee, ppeSizes: null });
+  vi.spyOn(ppeApi, "employeeSizes").mockResolvedValue(employee);
+  render(<EmployeeSizesModal id={1} onClose={vi.fn()} />);
+  await screen.findByLabelText("Размер обуви");
+  expect(screen.getByRole("button", { name: "Сохранить размеры" })).toBeDisabled();
+  fireEvent.change(screen.getByLabelText("Размер обуви"), { target: { value: "42.5" } });
+  fireEvent.click(screen.getByRole("button", { name: "Сохранить размеры" }));
+  await waitFor(() => expect(ppeApi.employeeSizes).toHaveBeenCalledWith(1, { shoeSize: 42.5 }));
 });

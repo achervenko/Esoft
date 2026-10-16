@@ -134,7 +134,7 @@ export function registerTests(env) {
     const f = await issueFixture();
     await prisma.employee.update({
       where: { id: f.employee.id },
-      data: { shoeSize: null },
+      data: { ppeSizes: { update: { shoeSize: null } } },
     });
     const plan = await issues.plan(f.employee.id, date());
     assert.equal(plan.items[0].sizes.requiresSelection, true);
@@ -244,7 +244,7 @@ export function registerTests(env) {
     const other = await issueFixture();
     await prisma.employee.update({
       where: { id: other.employee.id },
-      data: { shoeSize: 44 },
+      data: { ppeSizes: { update: { shoeSize: 44 } } },
     });
     await assert.rejects(
       issues.createRegular(other.request, specialist),

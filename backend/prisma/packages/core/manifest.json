@@ -1,0 +1,11 @@
+{
+  "id": "core",
+  "version": 1,
+  "requiresCore": null,
+  "migrations": [
+    {
+      "id": "20260725000000_core_init",
+      "sha256": "d4b0357f1314b292bc082b0503734390bd2106db88fd125312906da0022a884d"
+    }
+  ]
+}

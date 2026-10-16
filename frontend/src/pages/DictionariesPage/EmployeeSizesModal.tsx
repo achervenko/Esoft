@@ -18,19 +18,19 @@ import { PpeQueryState } from "../../modules/ppe-ui/PpeQueryState";
 import "../../shared/ui/AdminPage.css";
 import "../../modules/ppe-ui/PpeForm.css";
 
-export function EmployeeSizeSummary({ employee }: { employee: EmployeeSizes }) {
+export function EmployeeSizeSummary({ employee }: { employee: PpeEmployee }) {
   return (
     <div className="ppe-size-summary">
       <span>
         Размер одежды:{" "}
-        <strong>{employee.clothingSize ?? "—"}; {employee.clothingHeight ?? "—"}</strong>
+        <strong>{employee.ppeSizes?.clothingSize ?? "—"}; {employee.ppeSizes?.clothingHeight ?? "—"}</strong>
       </span>
       {Object.entries(employeeSizeLabels)
         .filter(([key]) => key !== "clothingSize" && key !== "clothingHeight")
         .map(([key, label]) => (
         <span key={key}>
           {label}:{" "}
-          <strong>{employee[key as keyof EmployeeSizes] ?? "—"}</strong>
+          <strong>{employee.ppeSizes?.[key as keyof EmployeeSizes] ?? "—"}</strong>
         </span>
       ))}
     </div>
@@ -89,19 +89,19 @@ function EmployeeSizesForm({
   onChangesChange: (changed: boolean) => void;
 }) {
   const [draft, setDraft] = useState<Record<keyof EmployeeSizes, string>>({
-    clothingSize: employee.clothingSize ?? "",
-    clothingHeight: employee.clothingHeight ?? "",
-    shoeSize: employee.shoeSize?.toString() ?? "",
-    gloveSize: employee.gloveSize ?? "",
-    headwearSize: employee.headwearSize ?? "",
+    clothingSize: employee.ppeSizes?.clothingSize ?? "",
+    clothingHeight: employee.ppeSizes?.clothingHeight ?? "",
+    shoeSize: employee.ppeSizes?.shoeSize?.toString() ?? "",
+    gloveSize: employee.ppeSizes?.gloveSize ?? "",
+    headwearSize: employee.ppeSizes?.headwearSize ?? "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clothingExpanded, setClothingExpanded] = useState(
-    !employee.clothingSize || !employee.clothingHeight,
+    !employee.ppeSizes?.clothingSize || !employee.ppeSizes?.clothingHeight,
   );
   const clothingToggle = useRef<HTMLButtonElement>(null);
-  const changed = changedEmployeeSizes(employee, draft);
+  const changed = changedEmployeeSizes(employee.ppeSizes, draft);
   const hasChanges = Object.keys(changed).length > 0;
   useEffect(() => {
     onChangesChange(hasChanges);

@@ -6,8 +6,19 @@ import {
 } from './ppe.controller.spec-fixtures';
 
 describe.each(['admin', 'ppe_specialist'])('PPE controller role %s', (role) => {
-  it.each(operations)('allows $name', async ({ invoke }) => {
-    const { controller } = createController();
+  it.each(operations)('enforces access for $name', async ({ name, invoke }) => {
+    const { controller, catalog } = createController();
+    if (
+      role === 'ppe_specialist' &&
+      /^(create PPE|update PPE|change PPE|replace PPE)/.test(name)
+    ) {
+      expect(() => invoke(controller, session(role))).toThrow(
+        ForbiddenException,
+      );
+      for (const mock of Object.values(catalog))
+        expect(mock).not.toHaveBeenCalled();
+      return;
+    }
     await expect(
       Promise.resolve(invoke(controller, session(role))),
     ).resolves.toBeDefined();

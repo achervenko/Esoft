@@ -24,7 +24,8 @@ export type EmployeeSizes = {
   gloveSize: string | null;
   headwearSize: string | null;
 };
-export type PpeEmployee = EmployeeSizes & {
+export type PpeEmployee = {
+  ppeSizes: EmployeeSizes | null;
   id: number;
   firstName: string;
   lastName: string;

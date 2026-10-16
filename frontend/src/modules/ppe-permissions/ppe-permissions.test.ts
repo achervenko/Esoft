@@ -16,7 +16,7 @@ describe.each([
   { name: "issue", check: canIssuePpe },
 ])("PPE permission $name", ({ check }) => {
   it.each(["admin", "ppe_specialist"])("allows %s", (role) => {
-    expect(check(role)).toBe(role === "admin" || check !== canIssuePpe);
+    expect(check(role)).toBe(role === "admin" || (check !== canIssuePpe && check !== canManagePpeCatalog));
   });
 
   it.each([

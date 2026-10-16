@@ -2,14 +2,7 @@ import { Prisma } from '@prisma/client';
 import { PpeEmployeesService } from './ppe-employees.service';
 import { PpeAuditService } from './ppe-audit.service';
 
-const employee = {
-  id: 1,
-  firstName: 'Иван',
-  lastName: 'Иванов',
-  middleName: null,
-  positionId: 2,
-  position: { name: 'Сварщик' },
-  isActive: true,
+const sizes = {
   clothingSize: '50',
   clothingHeight: '170–176',
   shoeSize: new Prisma.Decimal('42'),
@@ -17,15 +10,31 @@ const employee = {
   headwearSize: null,
 };
 
+const storedEmployee = {
+  id: 1,
+  firstName: 'Иван',
+  lastName: 'Иванов',
+  middleName: null,
+  positionId: 2,
+  position: { name: 'Сварщик' },
+  isActive: true,
+  ppeSizes: sizes,
+};
+
 function createService() {
   const tx = {
     $queryRaw: jest.fn().mockResolvedValue([{ id: 1 }]),
     employee: {
-      findUnique: jest.fn().mockResolvedValue(employee),
+      findUnique: jest.fn().mockResolvedValue(storedEmployee),
       findMany: jest
         .fn()
-        .mockResolvedValue([employee, { ...employee, id: 2, isActive: false }]),
-      update: jest.fn().mockResolvedValue({ ...employee, clothingSize: '52' }),
+        .mockResolvedValue([
+          storedEmployee,
+          { ...storedEmployee, id: 2, isActive: false },
+        ]),
+    },
+    ppeEmployeeSizes: {
+      upsert: jest.fn().mockResolvedValue({ ...sizes, clothingSize: '52' }),
     },
     position: { findMany: jest.fn().mockResolvedValue([]) },
   };
@@ -49,9 +58,9 @@ describe('PPE employee access', () => {
     const result = await service.list();
     expect(result[1].isActive).toBe(false);
     expect(result[0]).toEqual({
-      ...employee,
+      ...storedEmployee,
       position: 'Сварщик',
-      shoeSize: 42,
+      ppeSizes: { ...sizes, shoeSize: 42 },
     });
     const [query] = tx.employee.findMany.mock.calls[0] as [
       { select: Record<string, unknown> },
@@ -62,10 +71,13 @@ describe('PPE employee access', () => {
 
   it('reads inactive employee sizes', async () => {
     const { service, tx } = createService();
-    tx.employee.findUnique.mockResolvedValue({ ...employee, isActive: false });
+    tx.employee.findUnique.mockResolvedValue({
+      ...storedEmployee,
+      isActive: false,
+    });
     await expect(service.findOne(1)).resolves.toMatchObject({
       isActive: false,
-      shoeSize: 42,
+      ppeSizes: { ...sizes, shoeSize: 42 },
     });
   });
 
@@ -73,9 +85,13 @@ describe('PPE employee access', () => {
     const { service, tx, auditLog } = createService();
     await expect(
       service.updateSizes(1, { clothingSize: ' 52 ' }, 'ppe-actor'),
-    ).resolves.toMatchObject({ clothingSize: '52' });
-    expect(tx.employee.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { clothingSize: '52' } }),
+    ).resolves.toMatchObject({ ppeSizes: { clothingSize: '52' } });
+    expect(tx.ppeEmployeeSizes.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { employeeId: 1 },
+        create: { employeeId: 1, clothingSize: '52' },
+        update: { clothingSize: '52' },
+      }),
     );
     expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
       tx.employee.findUnique.mock.invocationCallOrder[0],
@@ -101,22 +117,25 @@ describe('PPE employee access', () => {
       ),
     ).rejects.toMatchObject({ response: { code: 'UNKNOWN_FIELDS' } });
     expect(tx.$queryRaw).not.toHaveBeenCalled();
-    expect(tx.employee.update).not.toHaveBeenCalled();
+    expect(tx.ppeEmployeeSizes.upsert).not.toHaveBeenCalled();
   });
 
   it('refuses to change inactive employee sizes', async () => {
     const { service, tx, auditLog } = createService();
-    tx.employee.findUnique.mockResolvedValue({ ...employee, isActive: false });
+    tx.employee.findUnique.mockResolvedValue({
+      ...storedEmployee,
+      isActive: false,
+    });
     await expect(
       service.updateSizes(1, { clothingSize: '52' }, 'ppe-actor'),
     ).rejects.toMatchObject({ response: { code: 'EMPLOYEE_INACTIVE' } });
-    expect(tx.employee.update).not.toHaveBeenCalled();
+    expect(tx.ppeEmployeeSizes.upsert).not.toHaveBeenCalled();
     expect(auditLog.writeFieldChanges).not.toHaveBeenCalled();
   });
 
   it('does not normalize decimal shoe size into a false audit change', async () => {
     const { service, tx, auditLog } = createService();
-    tx.employee.update.mockResolvedValue(employee);
+    tx.ppeEmployeeSizes.upsert.mockResolvedValue(sizes);
     await service.updateSizes(1, { shoeSize: 42 }, 'ppe-actor');
     expect(auditLog.writeFieldChanges).toHaveBeenCalledWith(
       expect.objectContaining({ fields: [] }),
@@ -129,5 +148,16 @@ describe('PPE employee access', () => {
     await expect(
       service.updateSizes(1, { clothingSize: '52' }, 'ppe-actor'),
     ).rejects.toThrow('audit failed');
+  });
+
+  it('returns null sizes for employees without a PPE size row', async () => {
+    const { service, tx } = createService();
+    tx.employee.findUnique.mockResolvedValue({
+      ...storedEmployee,
+      ppeSizes: null,
+    });
+    await expect(service.findOne(1)).resolves.toMatchObject({
+      ppeSizes: null,
+    });
   });
 });

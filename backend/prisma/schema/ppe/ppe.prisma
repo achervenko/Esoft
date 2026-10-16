@@ -1,3 +1,15 @@
+model PpeEmployeeSizes {
+  employeeId     Int      @id @map("employee_id")
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "fk_ppe_employee_sizes_employee")
+  clothingSize   String?  @map("clothing_size") @db.VarChar(20)
+  clothingHeight String?  @map("clothing_height") @db.VarChar(20)
+  shoeSize       Decimal? @map("shoe_size") @db.Decimal(3, 1)
+  gloveSize      String?  @map("glove_size") @db.VarChar(20)
+  headwearSize   String?  @map("headwear_size") @db.VarChar(20)
+
+  @@map("ppe_employee_sizes")
+}
+
 enum PpePeriodUnit {
   DAY
   MONTH

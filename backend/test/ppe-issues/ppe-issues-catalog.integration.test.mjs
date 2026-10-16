@@ -63,7 +63,7 @@ export function registerTests(env) {
     assert.equal(issue.warnings[0].code, 'PPE_SIZE_DIFFERS_FROM_RECOMMENDED');
     await env.prisma.employee.update({
       where: { id: f.employee.id },
-      data: { clothingHeight: '182–188' },
+      data: { ppeSizes: { update: { clothingHeight: '182–188' } } },
     });
     await env.catalog.updateSize(
       f.ppe.id,
@@ -78,7 +78,7 @@ export function registerTests(env) {
     const noMatch = await env.issueFixture({ type: 'BODY' });
     await env.prisma.employee.update({
       where: { id: noMatch.employee.id },
-      data: { clothingHeight: '182–188' },
+      data: { ppeSizes: { update: { clothingHeight: '182–188' } } },
     });
     await assert.rejects(
       env.issues.createRegular(noMatch.request, env.specialist),

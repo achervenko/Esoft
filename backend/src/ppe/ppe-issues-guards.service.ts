@@ -3,6 +3,10 @@ import { Prisma, PpeItemType } from '@prisma/client';
 import { ppeNotFound } from './ppe.errors';
 import { badPpeRequest } from './ppe.validation';
 import { normalizePpeSizeText } from './ppe-size-text';
+import {
+  employeeSizesSelect,
+  type EmployeeSizeValues,
+} from './ppe-employee-sizes';
 
 export const issueNormInclude = {
   items: {
@@ -13,7 +17,9 @@ export const issueNormInclude = {
 export type IssueNorm = Prisma.PpeNormGetPayload<{
   include: typeof issueNormInclude;
 }>;
-export type IssueEmployee = Prisma.EmployeeGetPayload<Record<string, never>>;
+export type IssueEmployee = Prisma.EmployeeGetPayload<Record<string, never>> & {
+  ppeSizes: EmployeeSizeValues | null;
+};
 export type IssueCatalogItem = Prisma.PpeItemGetPayload<{
   include: { sizes: true };
 }>;
@@ -45,7 +51,10 @@ export class PpeIssuesGuardsService {
     requireActive = true,
   ) {
     await tx.$queryRaw`SELECT id FROM employees WHERE id = ${id} FOR UPDATE`;
-    const employee = await tx.employee.findUnique({ where: { id } });
+    const employee = await tx.employee.findUnique({
+      where: { id },
+      include: { ppeSizes: { select: employeeSizesSelect } },
+    });
     if (!employee) ppeNotFound('PPE_EMPLOYEE_NOT_FOUND');
     if (requireActive && !employee.isActive)
       badPpeRequest(
@@ -163,16 +172,16 @@ export class PpeIssuesGuardsService {
     let recommendedValue: string | null = null;
     switch (item.type) {
       case PpeItemType.BODY:
-        recommendedValue = employee.clothingSize;
+        recommendedValue = employee.ppeSizes?.clothingSize ?? null;
         break;
       case PpeItemType.FEET:
-        recommendedValue = employee.shoeSize?.toString() ?? null;
+        recommendedValue = employee.ppeSizes?.shoeSize?.toString() ?? null;
         break;
       case PpeItemType.HANDS:
-        recommendedValue = employee.gloveSize;
+        recommendedValue = employee.ppeSizes?.gloveSize ?? null;
         break;
       case PpeItemType.HEAD:
-        recommendedValue = employee.headwearSize;
+        recommendedValue = employee.ppeSizes?.headwearSize ?? null;
         break;
     }
     const activeSizes = item.sizes.filter((size) => size.isActive);
@@ -183,10 +192,10 @@ export class PpeIssuesGuardsService {
             (size) =>
               matchesRecommendedSize(item.type, size.value, recommendedValue) &&
               (item.type !== PpeItemType.BODY ||
-                (employee.clothingHeight !== null &&
+                (employee.ppeSizes?.clothingHeight != null &&
                   size.heightValue !== null &&
                   normalizePpeSizeText(size.heightValue) ===
-                    normalizePpeSizeText(employee.clothingHeight))),
+                    normalizePpeSizeText(employee.ppeSizes.clothingHeight))),
           );
     return {
       type: item.type,
@@ -195,7 +204,9 @@ export class PpeIssuesGuardsService {
       recommendedSizeValue: matching?.value ?? null,
       recommendedHeightValue: matching?.heightValue ?? null,
       clothingHeight:
-        item.type === PpeItemType.BODY ? employee.clothingHeight : null,
+        item.type === PpeItemType.BODY
+          ? (employee.ppeSizes?.clothingHeight ?? null)
+          : null,
       requiresSelection:
         item.type !== PpeItemType.OTHER && item.sizes.length > 0 && !matching,
       activeSizes: activeSizes.map(({ id, value, heightValue }) => ({
@@ -268,10 +279,10 @@ export class PpeIssuesGuardsService {
             recommendation.recommendedValue,
           )) ||
         (item.type === PpeItemType.BODY &&
-          employee.clothingHeight !== null &&
+          employee.ppeSizes?.clothingHeight != null &&
           (selected.heightValue === null ||
             normalizePpeSizeText(selected.heightValue) !==
-              normalizePpeSizeText(employee.clothingHeight)))
+              normalizePpeSizeText(employee.ppeSizes.clothingHeight)))
           ? ([
               {
                 code: 'PPE_SIZE_DIFFERS_FROM_RECOMMENDED',

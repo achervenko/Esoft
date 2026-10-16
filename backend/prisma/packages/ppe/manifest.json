@@ -1,0 +1,11 @@
+{
+  "id": "ppe",
+  "version": 1,
+  "requiresCore": 1,
+  "migrations": [
+    {
+      "id": "20260725000002_ppe_init",
+      "sha256": "b905dc29b4141fadbb450487d808dff4e0422caba6759fb6f21ee36c4e1eed90"
+    }
+  ]
+}

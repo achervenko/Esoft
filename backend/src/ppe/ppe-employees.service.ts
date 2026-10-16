@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PpeAuditService } from './ppe-audit.service';
 import { ppeNotFound } from './ppe.errors';
 import { badPpeRequest, parseEmployeeSizes } from './ppe.validation';
+import { employeeSizesSelect } from './ppe-employee-sizes';
 
 const employeeSelect = {
   id: true,
@@ -12,11 +13,7 @@ const employeeSelect = {
   middleName: true,
   positionId: true,
   position: { select: { name: true } },
-  clothingSize: true,
-  clothingHeight: true,
-  shoeSize: true,
-  gloveSize: true,
-  headwearSize: true,
+  ppeSizes: { select: employeeSizesSelect },
   isActive: true,
 } satisfies Prisma.EmployeeSelect;
 
@@ -26,7 +23,12 @@ function toPpeEmployee(employee: PpeEmployee) {
   return {
     ...employee,
     position: employee.position.name,
-    shoeSize: employee.shoeSize?.toNumber() ?? null,
+    ppeSizes: employee.ppeSizes
+      ? {
+          ...employee.ppeSizes,
+          shoeSize: employee.ppeSizes.shoeSize?.toNumber() ?? null,
+        }
+      : null,
   };
 }
 
@@ -87,19 +89,22 @@ export class PpeEmployeesService {
           'EMPLOYEE_INACTIVE',
           'Нельзя менять размеры отключённого сотрудника.',
         );
-      const employee = await tx.employee.update({
-        where: { id },
-        data,
-        select: employeeSelect,
+      const ppeSizes = await tx.ppeEmployeeSizes.upsert({
+        where: { employeeId: id },
+        create: { employeeId: id, ...data },
+        update: data,
+        select: employeeSizesSelect,
       });
-      const result = toPpeEmployee(employee);
+      const result = toPpeEmployee({ ...previous, ppeSizes });
       await this.audit.writeChanges({
         action: AuditAction.UPDATE,
         entityType: 'employee',
         entityId: id,
         actorUserId,
-        previous: toPpeEmployee(previous),
-        next: result,
+        previous:
+          toPpeEmployee(previous).ppeSizes ??
+          Object.fromEntries(Object.keys(sizeLabels).map((key) => [key, null])),
+        next: result.ppeSizes!,
         labels: sizeLabels,
         tx,
       });

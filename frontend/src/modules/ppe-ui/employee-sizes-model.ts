@@ -7,7 +7,7 @@ export const employeeSizeLabels: Record<keyof EmployeeSizes, string> = {
   headwearSize: "Размер головного убора",
 };
 export function changedEmployeeSizes(
-  employee: EmployeeSizes,
+  sizes: EmployeeSizes | null,
   draft: Record<keyof EmployeeSizes, string>,
 ) {
   const changed: Partial<EmployeeSizes> = {};
@@ -17,10 +17,10 @@ export function changedEmployeeSizes(
     const text = draft[key].trim();
     if (key === "shoeSize") {
       const value = text ? Number(text) : null;
-      if (value !== employee.shoeSize) changed.shoeSize = value;
+      if (value !== (sizes?.shoeSize ?? null)) changed.shoeSize = value;
     } else {
       const value = text || null;
-      if (value !== employee[key]) changed[key] = value;
+      if (value !== (sizes?.[key] ?? null)) changed[key] = value;
     }
   }
   return changed;
