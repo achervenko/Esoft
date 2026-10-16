@@ -8,7 +8,9 @@ import { acquireBackendInstallationLock } from './infrastructure/installation-lo
 process.on('warning', (warning) => {
   if (
     warning.name === 'DeprecationWarning' &&
-    warning.message.startsWith('Calling client.query() when the client is already executing a query')
+    warning.message.startsWith(
+      'Calling client.query() when the client is already executing a query',
+    )
   ) {
     console.error('[PostgreSQL concurrent query trace]', warning.stack);
   }

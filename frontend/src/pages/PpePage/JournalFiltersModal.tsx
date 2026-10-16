@@ -72,7 +72,6 @@ export function JournalFiltersModal({
         <div className="ppe-journal-nomenclature">
           <SearchSelect
             label="Номенклатура"
-            placeholder="Артикул или название"
             value={filters.ppeItemId ? Number(filters.ppeItemId) : null}
             options={items.map((item) => ({
               id: item.id,

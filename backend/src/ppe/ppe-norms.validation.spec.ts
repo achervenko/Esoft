@@ -254,15 +254,11 @@ describe('PPE norm validation', () => {
   });
 });
 
-it.each(['DAY', 'MONTH', 'YEAR'])(
-  'accepts period unit %s',
-  (periodUnit) => {
-    expect(
-      parseCreateNorm({ ...payload, items: [{ ...item, periodUnit }] })
-        .items[0],
-    ).toMatchObject({ periodUnit });
-  },
-);
+it.each(['DAY', 'MONTH', 'YEAR'])('accepts period unit %s', (periodUnit) => {
+  expect(
+    parseCreateNorm({ ...payload, items: [{ ...item, periodUnit }] }).items[0],
+  ).toMatchObject({ periodUnit });
+});
 it.each(['INTERVAL', 'LEGACY', 'MONTHLY'])(
   'rejects removed calculation mode %s',
   (calculationMode) => {

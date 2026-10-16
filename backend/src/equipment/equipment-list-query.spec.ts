@@ -45,7 +45,9 @@ describe('equipment registry pagination', () => {
   });
   it('uses ascending primary and tie-breaker order for explicit asc', () => {
     const query = parseEquipmentListQuery({ sort: 'name', direction: 'asc' });
-    expect(query.order.sql).toContain('COLLATE app_registry_order ASC, e.id ASC');
+    expect(query.order.sql).toContain(
+      'COLLATE app_registry_order ASC, e.id ASC',
+    );
     expect(query.order.values).toEqual([]);
   });
 });

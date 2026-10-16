@@ -41,7 +41,7 @@ describe('journal page bounds after filtered count', () => {
   const setup = (total: number) => {
     const tx = {
       $queryRaw: jest
-        .fn()
+        .fn<Promise<unknown[]>, [Prisma.Sql]>()
         .mockResolvedValueOnce([{ total: BigInt(total) }])
         .mockResolvedValue([]),
       ppeIssue: { findMany: jest.fn().mockResolvedValue([]) },

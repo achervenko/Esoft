@@ -71,7 +71,6 @@ export function PdfPreviewSearch({
         disabled={isDisabled}
         onChange={handleChange}
         onKeyDown={onKeyDown}
-        placeholder="Найти"
         ref={inputRef}
         spellCheck={false}
         type="text"

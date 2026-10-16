@@ -49,7 +49,7 @@ it("does not delete on cancellation and deletes once after confirmation", async 
   fireEvent.click(screen.getByRole("button", { name: "Назад" }));
   expect(remove).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Удалить страну" }));
-  fireEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
+  fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
   await waitFor(() => expect(remove).toHaveBeenCalledExactlyOnceWith(1));
 });
 it("cancels pending confirmation on route change", async () => {

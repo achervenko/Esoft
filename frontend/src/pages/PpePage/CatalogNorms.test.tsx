@@ -251,9 +251,11 @@ describe("PPE norm editor", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Добавить" }));
-    fireEvent.click(screen.getByRole("button", { name: "Выберите СИЗ" }));
-    expect(screen.getByRole("option", { name: /A-01/ })).toBeDisabled();
-    fireEvent.keyDown(screen.getByRole("option", { name: "Выберите СИЗ" }), {
+    const newItemSearch = screen.getAllByRole("combobox", { name: "СИЗ" })[1];
+    fireEvent.focus(newItemSearch);
+    fireEvent.change(newItemSearch, { target: { value: "A-01" } });
+    expect(screen.queryByRole("option", { name: /A-01/ })).not.toBeInTheDocument();
+    fireEvent.keyDown(newItemSearch, {
       key: "Escape",
     });
     fireEvent.click(screen.getAllByRole("button", { name: "Удалить" })[1]);

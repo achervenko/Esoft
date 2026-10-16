@@ -118,7 +118,12 @@ describe('StorageImagePreviewService', () => {
       mimetype: 'image/jpeg',
     });
     expect(createVersionsCall?.versions).toEqual([
-      expect.objectContaining({ size: 'medium', fit: 'inside', width: 256, height: 256 }),
+      expect.objectContaining({
+        size: 'medium',
+        fit: 'inside',
+        width: 256,
+        height: 256,
+      }),
     ]);
     expect(objectStorage.putObject).toHaveBeenCalledWith({
       body: Buffer.from('webp'),

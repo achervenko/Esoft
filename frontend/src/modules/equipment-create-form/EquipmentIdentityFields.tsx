@@ -66,11 +66,6 @@ export function EquipmentIdentityFields({
         onChange={(value) => onChange("modelId", value)}
         onFocus={() => onFieldFocus("modelId")}
         options={modelOptions}
-        placeholder={
-          form.manufacturerId
-            ? "Выберите модель"
-            : "Сначала выберите производителя"
-        }
         required
         value={form.modelId}
       />

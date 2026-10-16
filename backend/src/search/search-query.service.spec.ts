@@ -7,7 +7,9 @@ describe('global search SQL and access', () => {
     const queryRaw = jest
       .fn<Promise<unknown[]>, [Prisma.Sql]>()
       .mockResolvedValue([]);
-    const executeRaw = jest.fn().mockResolvedValue(0);
+    const executeRaw = jest
+      .fn<Promise<number>, [TemplateStringsArray]>()
+      .mockResolvedValue(0);
     const service = new SearchQueryService({
       $queryRaw: queryRaw,
       $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>

@@ -152,11 +152,12 @@ describe('PPE payload validation', () => {
       value: 'x'.repeat(20),
       heightValue: null,
     });
-    expect(() => parsePpeSize({ value: 'x'.repeat(21) })).toThrow(
-      expect.objectContaining({
-        response: expect.objectContaining({ code: 'VALUE_TOO_LONG' }),
-      }),
-    );
+    try {
+      parsePpeSize({ value: 'x'.repeat(21) });
+      throw new Error('Expected size validation to fail');
+    } catch (error: unknown) {
+      expect(error).toMatchObject({ response: { code: 'VALUE_TOO_LONG' } });
+    }
   });
   it('rejects status injection and malformed catalog payloads', () => {
     expect(() =>

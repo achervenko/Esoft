@@ -94,6 +94,13 @@
   flex-wrap: wrap;
   gap: 12px;
 }
+.ppe-comment-toggle {
+  justify-self: start;
+}
+.ppe-issue-size-missing .select-dropdown-trigger {
+  border-color: #d97706;
+  box-shadow: 0 0 0 1px #d97706;
+}
 .ppe-employee-clothing-picker {
   display: grid;
   grid-template-rows: 0fr;

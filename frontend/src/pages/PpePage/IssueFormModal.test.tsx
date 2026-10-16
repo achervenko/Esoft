@@ -43,20 +43,33 @@ const open = (rows = [planRow], issuedAt?: string) => {
   return { onCreated, onClose };
 };
 describe("PPE issue form", () => {
+  it("lets the user open and hide a regular comment without losing its text", async () => {
+    open();
+    await screen.findByLabelText("Размер / ростовка");
+    fireEvent.click(screen.getByRole("button", { name: "Добавить комментарий" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Комментарий" }), { target: { value: "Примечание" } });
+    fireEvent.click(screen.getByRole("button", { name: "Скрыть комментарий" }));
+    expect(screen.queryByRole("textbox", { name: "Комментарий" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Добавить комментарий" }));
+    expect(screen.getByRole("textbox", { name: "Комментарий" })).toHaveValue("Примечание");
+  });
   it("uses the backend default BODY pair, lets the user choose another and sends only regular fields", async () => {
     open();
     await waitFor(() =>
       expect(
-        screen.getByLabelText("Фактический размер / ростовка"),
+        screen.getByLabelText("Размер / ростовка"),
       ).toHaveValue("4"),
     );
     expect(screen.queryByLabelText("Количество")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Добавить комментарий" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText(/По норме:/)).not.toBeInTheDocument();
     expect(
       screen.queryByRole("option", { name: /96-100/ }),
     ).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Фактический размер / ростовка"), {
+    fireEvent.change(screen.getByLabelText("Размер / ростовка"), {
       target: { value: "5" },
     });
+    expect(screen.getByRole("button", { name: "Скрыть комментарий" })).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
     await waitFor(() =>
       expect(ppeApi.issue).toHaveBeenCalledWith(true, {
@@ -100,9 +113,10 @@ describe("PPE issue form", () => {
             },
     );
     open();
-    await screen.findByLabelText("Фактический размер / ростовка");
+    await screen.findByLabelText("Размер / ростовка");
     fireEvent.change(screen.getByRole("combobox", { name: /Выдаём фактически/ }), { target: { value: "Замена" } });
     fireEvent.click(await screen.findByRole("option", { name: "B — Замена" }));
+    expect(screen.getByRole("button", { name: "Скрыть комментарий" })).toHaveAttribute("aria-expanded", "true");
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: "Подтвердить" }),
@@ -129,13 +143,15 @@ describe("PPE issue form", () => {
     });
     open();
     const select = await screen.findByLabelText(
-      "Фактический размер / ростовка",
+      "Размер / ростовка",
     );
     expect(select).toHaveValue("");
+    expect(select.closest(".ppe-issue-size-block")).toHaveClass("ppe-issue-size-missing");
     expect(
       screen.getByRole("button", { name: "Подтвердить" }),
     ).toBeDisabled();
     fireEvent.change(select, { target: { value: "5" } });
+    expect(select.closest(".ppe-issue-size-block")).not.toHaveClass("ppe-issue-size-missing");
     expect(
       screen.getByRole("button", { name: "Подтвердить" }),
     ).toBeEnabled();
@@ -210,7 +226,7 @@ it("does not treat an automatic size recommendation as an unsaved user edit", as
   const { onClose } = open();
   await waitFor(() =>
     expect(
-      screen.getByLabelText("Фактический размер / ростовка"),
+      screen.getByLabelText("Размер / ростовка"),
     ).toBeInTheDocument(),
   );
   fireEvent.click(screen.getByRole("button", { name: "Закрыть" }));
@@ -223,7 +239,7 @@ it("keeps a manually entered issuance comment when the user stays", async () => 
   const { onClose } = open();
   await waitFor(() =>
     expect(
-      screen.getByLabelText("Фактический размер / ростовка"),
+      screen.getByLabelText("Размер / ростовка"),
     ).toBeInTheDocument(),
   );
   fireEvent.change(screen.getByLabelText("Комментарий"), {

@@ -50,7 +50,7 @@ function optionsOf(
 }
 
 /** Uses the shared dropdown menu while retaining native form values and validation. */
-export function AppSelect(props: SelectHTMLAttributes<HTMLSelectElement>) {
+export function AppSelect({ selectedLabel, ...props }: SelectHTMLAttributes<HTMLSelectElement> & { selectedLabel?: string }) {
   const ariaLabel = props["aria-label"];
   const nativeRef = useRef<HTMLSelectElement>(null);
   const descriptionId = useId();
@@ -125,7 +125,7 @@ export function AppSelect(props: SelectHTMLAttributes<HTMLSelectElement>) {
         onBlur={dropdown.closeOnFocusLeave}
         onKeyDown={dropdown.handleTriggerKeyDown}
       >
-        <span>{dropdown.selectedOption?.label ?? "Выберите значение"}</span>
+        <span>{selectedLabel ?? dropdown.selectedOption?.label ?? "Выберите значение"}</span>
         <ChevronDown aria-hidden="true" size={18} />
       </button>
       <SelectDropdownMenu

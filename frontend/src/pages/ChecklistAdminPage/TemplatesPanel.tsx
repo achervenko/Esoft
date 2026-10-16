@@ -1,7 +1,7 @@
 import { LoadingIndicator } from "../../shared/ui/LoadingIndicator";
-import { Copy, FilePlus2, Trash2 } from "lucide-react";
+import { Copy, FilePlus2, Trash2, Search, SlidersHorizontal, X } from "lucide-react";
 import type { KeyboardEvent, MouseEvent } from "react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import {
   checklistTemplateStateLabels,
   type ChecklistTemplateListItem,
@@ -10,14 +10,16 @@ import { formatQuestionCount } from "../../shared/lib/formatters";
 import { DataTable, type DataTableColumn } from "../../shared/ui/DataTable";
 import { SelectDropdown } from "../../shared/ui/SelectDropdown";
 import { templateStateOptions } from "./checklist-admin.constants";
-import { Filters } from "./checklist-admin-ui";
+import { AdminModal } from "../../shared/ui/AdminModal";
+import "../../shared/ui/SearchInput.css";
+import "../../shared/ui/SearchToolbar.css";
 
 type TemplatesPanelProps = {
   isLoading: boolean;
   onArchive: (template: ChecklistTemplateListItem) => void;
   onCopy: (template: ChecklistTemplateListItem) => void;
   onCreate: () => void;
-  onSearch: () => void;
+  onSearch: (next?: { search?: string; state?: string }) => void;
   search: string;
   setSearch: (value: string) => void;
   setState: (value: string) => void;
@@ -33,10 +35,17 @@ export function TemplatesPanel({
   onSearch,
   search,
   setSearch,
-  setState,
   state,
   templates,
 }: TemplatesPanelProps) {
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const lastSearch = useRef(search);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (lastSearch.current === search) return;
+    timer.current = setTimeout(() => { lastSearch.current = search; onSearch({ search }); }, 200);
+    return () => { if (timer.current) clearTimeout(timer.current); };
+  }, [search, onSearch]);
   const stopRowOpen = useCallback((
     event: KeyboardEvent<HTMLButtonElement> | MouseEvent<HTMLButtonElement>,
   ) => {
@@ -129,19 +138,32 @@ export function TemplatesPanel({
           Создать шаблон
         </button>
       </header>
-      <Filters onSearch={onSearch}>
+      <div className="search-input-shell">
+        <Search size={18} aria-hidden="true" />
         <input
           aria-label="Поиск шаблонов по названию"
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Поиск по названию"
           value={search}
+          onKeyDown={(event) => { if (event.key === "Enter") {
+            event.preventDefault();
+            if (timer.current) clearTimeout(timer.current);
+            lastSearch.current = search;
+            onSearch({ search });
+          } }}
         />
-        <SelectDropdown
-          onChange={setState}
-          options={templateStateOptions}
-          value={state}
-        />
-      </Filters>
+        {search && <button type="button" className="ppe-journal-icon-button" aria-label="Очистить поиск" onClick={() => {
+          if (timer.current) clearTimeout(timer.current);
+          lastSearch.current = "";
+          setSearch(""); onSearch({ search: "" });
+        }}><X size={18} aria-hidden="true" /></button>}
+        <button type="button" className={`ppe-journal-icon-button${state !== "ACTIVE" ? " ppe-journal-filter-active" : ""}`}
+          aria-label="Фильтры шаблонов" aria-haspopup="dialog" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(true)}>
+          <SlidersHorizontal size={20} aria-hidden="true" />
+        </button>
+      </div>
+      {filtersOpen && <TemplateFiltersModal state={state} onClose={() => setFiltersOpen(false)} onApply={(nextState) => {
+        onSearch({ state: nextState }); setFiltersOpen(false);
+      }} />}
       <LoadingIndicator loading={isLoading} />
       {!isLoading && templates.length === 0 ? (
         <p className="admin-state">
@@ -161,4 +183,17 @@ export function TemplatesPanel({
       ) : null}
     </>
   );
+}
+
+function TemplateFiltersModal({ state, onApply, onClose }: { state: string; onApply: (state: string) => void; onClose: () => void }) {
+  const [draft, setDraft] = useState(state);
+  return <AdminModal title="Фильтры шаблонов" onClose={onClose}>
+    <form className="admin-form" onSubmit={(event) => { event.preventDefault(); onApply(draft); }}>
+      <SelectDropdown label="Состояние" value={draft} options={templateStateOptions} onChange={setDraft} />
+      <div className="admin-form-actions">
+        <button type="button" className="admin-secondary-button" onClick={() => setDraft("ACTIVE")}>Сбросить</button>
+        <button type="submit" className="admin-primary-button">Применить</button>
+      </div>
+    </form>
+  </AdminModal>;
 }

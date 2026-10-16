@@ -10,11 +10,6 @@
   grid-template-rows: auto auto minmax(0, 1fr);
 }
 
-.checklist-catalog-search-input,
-.checklist-catalog-question-search {
-  height: 46px;
-}
-
 .checklist-catalog-panel .checklist-order-list {
   display: flex;
   min-height: 0;

@@ -56,7 +56,7 @@ export function EmployeeIssueCard({
       )}
       <details
         className="ppe-employee-section ppe-employee-sizes"
-        key={employee.id}
+        key={`sizes:${employee.id}`}
       >
         <summary>
           <ChevronRight size={16} aria-hidden="true" />
@@ -72,7 +72,7 @@ export function EmployeeIssueCard({
         </dl>
       </details>
       <EmployeeNorms
-        key={employee.positionId}
+        key={`norms:${employee.positionId}`}
         positionId={employee.positionId}
         revision={revision}
       />

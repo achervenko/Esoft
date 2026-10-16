@@ -20,7 +20,6 @@ type SearchSelectProps = {
   label: string;
   onFocus?: () => void;
   options: OptionItem[];
-  placeholder?: string;
   required?: boolean;
   value: number | null;
   onChange: (value: number | null) => void;
@@ -42,7 +41,6 @@ export function SearchSelect({
   onChange,
   onFocus,
   options,
-  placeholder = "Начните вводить",
   required = false,
   value,
 }: SearchSelectProps) {
@@ -196,7 +194,6 @@ export function SearchSelect({
               setActiveOptionIndex(0);
             }
           }}
-          placeholder={placeholder}
           role="combobox"
           type="text"
           value={query}

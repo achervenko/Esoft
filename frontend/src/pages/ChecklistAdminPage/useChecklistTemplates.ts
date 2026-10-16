@@ -74,9 +74,13 @@ export function useChecklistTemplates({ enabled }: { enabled: boolean }) {
     };
   }, [loadTemplates, reloadKey]);
 
-  const applyFilters = useCallback(() => {
+  const applyFilters = useCallback((next?: { search?: string; state?: string }) => {
+    const nextSearch = next?.search ?? search;
+    const nextState = next?.state ?? state;
+    setSearch(nextSearch);
+    setState(nextState);
     setPage(0);
-    setAppliedFilters({ search, state });
+    setAppliedFilters({ search: nextSearch, state: nextState });
     setReloadKey((currentKey) => currentKey + 1);
   }, [search, state]);
 

@@ -56,7 +56,7 @@ describe("EquipmentPhotoGallery", () => {
 
     expect(previewImage).toHaveAttribute(
       "src",
-      getFilePreviewUrl({ fileId: 10, visibleId: 1001 }, { size: "medium" }),
+      `${getFilePreviewUrl({ fileId: 10, visibleId: 1001 }, { size: "medium" })}&v=fit2`,
     );
 
     await user.click(previewButton);

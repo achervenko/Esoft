@@ -1,4 +1,5 @@
-import { Trash2 } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
+import { SearchSelect } from "../../shared/ui/SearchSelect";
 import { NormTransitionControl } from "./NormTransitionControl";
 import { AppSelect } from "../../shared/ui/SelectDropdown/AppSelect";
 import { useState } from "react";
@@ -165,37 +166,20 @@ export function NormFormModal({
         )}
         {rows.map((row) => (
           <fieldset className="ppe-draft-row" key={row.key} disabled={saving}>
-            <Field label="СИЗ">
-              <AppSelect
+              <SearchSelect
+                label="СИЗ"
+                className="ppe-field"
+                icon={<Search size={18} aria-hidden="true" />}
+                emptyMessage="СИЗ не найдены"
                 required
-                value={row.ppeItemId}
-                onChange={(e) => update(row.key, { ppeItemId: e.target.value })}
-              >
-                <option value="">Выберите СИЗ</option>
-                {items
-                  .filter(
-                    (item) =>
-                      item.isActive || String(item.id) === row.ppeItemId,
-                  )
-                  .map((item) => (
-                    <option
-                      key={item.id}
-                      value={item.id}
-                      disabled={
-                        !item.isActive ||
-                        rows.some(
-                          (other) =>
-                            other.key !== row.key &&
-                            other.ppeItemId === String(item.id),
-                        )
-                      }
-                    >
-                      {item.article} — {item.name}
-                      {!item.isActive ? " (удалён)" : ""}
-                    </option>
-                  ))}
-              </AppSelect>
-            </Field>
+                disabled={saving}
+                value={row.ppeItemId ? Number(row.ppeItemId) : null}
+                onChange={(id) => update(row.key, { ppeItemId: id === null ? "" : String(id) })}
+                options={items.filter((item) =>
+                  String(item.id) === row.ppeItemId ||
+                  (item.isActive && !rows.some((other) => other.key !== row.key && other.ppeItemId === String(item.id)))
+                ).map((item) => ({ id: item.id, name: `${item.article} — ${item.name}${!item.isActive ? " (удалён)" : ""}` }))}
+              />
             <Field label="Кол-во">
               <input
                 required
@@ -221,6 +205,8 @@ export function NormFormModal({
             <label className="ppe-field">
               <AppSelect
                 aria-label="Единица периода"
+                className="ppe-period-unit-select"
+                selectedLabel={{ YEAR: "Год", MONTH: "Мес", DAY: "Дн" }[row.periodUnit]}
                 value={row.periodUnit}
                 onChange={(e) =>
                   update(row.key, {

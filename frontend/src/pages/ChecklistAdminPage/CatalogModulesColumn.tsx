@@ -1,5 +1,7 @@
 import { LoadingIndicator } from "../../shared/ui/LoadingIndicator";
-import { Plus } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
+import "../../shared/ui/SearchInput.css";
+import "../../shared/ui/SearchToolbar.css";
 import {
   Fragment,
   type PointerEvent as ReactPointerEvent,
@@ -78,14 +80,20 @@ export function CatalogModulesColumn({
         </button>
       </header>
 
-      <div className="checklist-admin-filters">
+      <div className="search-input-shell">
+        <Search size={18} aria-hidden="true" />
         <input
           aria-label="Поиск по модулям"
-          className="checklist-catalog-search-input"
           onChange={(event) => onModuleSearchChange(event.target.value)}
-          placeholder="Поиск по модулям"
           value={moduleSearch}
         />
+        {moduleSearch && (
+          <button type="button" className="ppe-journal-icon-button"
+            aria-label="Очистить поиск по модулям"
+            onClick={() => onModuleSearchChange("")}>
+            <X size={18} aria-hidden="true" />
+          </button>
+        )}
       </div>
 
       <LoadingIndicator loading={isLoading} />

@@ -31,7 +31,7 @@ it("requests refined results when the previous response reached the limit", asyn
   await waitFor(() => expect(search).toHaveBeenCalledTimes(2));
 });
 
-it("does not mutate an unchanged card after an exact-match response", async () => {
+it("preserves an unchanged card and updates its return route after query refinement", async () => {
   const item = { ...result("Соколкин Алексей"), entityType: "employee", searchText: "соколкин алексей", targetUrl: "#/ppe/employees/1" };
   const search = vi.spyOn(api, "searchApp").mockResolvedValueOnce([item]).mockResolvedValueOnce([{ ...item, score: 400 }]);
   navigate("#/search?q=Со");
@@ -44,7 +44,9 @@ it("does not mutate an unchanged card after an exact-match response", async () =
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Соколкин Алексей" } });
     await waitFor(() => expect(search).toHaveBeenCalledTimes(2));
     expect(screen.getByRole("link", { name: /Соколкин/ })).toBe(link);
-    expect(mutations).toHaveLength(0);
+    expect(mutations.every((record) => record.type === "attributes" && record.attributeName === "href" && record.target === link)).toBe(true);
+    const href = new URL(link.getAttribute("href")!, window.location.href);
+    expect(new URLSearchParams(href.hash.split("?")[1]).get("returnTo")).toBe(window.location.hash);
   } finally { observer.disconnect(); }
 });
 

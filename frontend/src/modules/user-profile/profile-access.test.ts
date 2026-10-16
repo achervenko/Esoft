@@ -89,7 +89,7 @@ describe("PPE access in profile", () => {
       getProfileModuleAccess("accounting_specialist")
         .map((module) => module.title)
         .sort(),
-    ).toEqual(["Профиль", "СИЗ"].sort());
+    ).toEqual(["Поиск", "Профиль", "СИЗ"].sort());
 
     const permissions = getProfilePermissionAccess("accounting_specialist");
     for (const [title, allowed] of [
@@ -102,11 +102,11 @@ describe("PPE access in profile", () => {
       ).toMatchObject({ allowed });
     }
   });
-  it("lists only PPE, employee sizes and profile modules for the specialist", () => {
+  it("lists search, PPE, employee sizes and profile modules for the specialist", () => {
     expect(
       getProfileModuleAccess("ppe_specialist")
         .map((module) => module.title)
         .sort(),
-    ).toEqual(["Профиль", "СИЗ", "Сотрудники"].sort());
+    ).toEqual(["Поиск", "Профиль", "СИЗ", "Сотрудники"].sort());
   });
 });
