@@ -1,3 +1,4 @@
+import { Notice } from "../../shared/ui/Notice";
 import { Pencil } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { MouseEvent } from "react";
@@ -24,6 +25,8 @@ import "./EquipmentCardView.css";
 
 type EquipmentCardViewProps = {
   canEdit?: boolean;
+  canReadFiles?: boolean;
+  canReadEvents?: boolean;
   canManageEquipmentEvents?: boolean;
   canManageMaintenanceSettings?: boolean;
   equipment: EquipmentCard;
@@ -38,6 +41,8 @@ type EquipmentCardViewProps = {
 
 export function EquipmentCardView({
   canEdit = false,
+  canReadFiles = false,
+  canReadEvents = false,
   canManageEquipmentEvents = false,
   canManageMaintenanceSettings = false,
   equipment,
@@ -55,7 +60,7 @@ export function EquipmentCardView({
     isLoading: isPhotosLoading,
     photos,
   } = useEquipmentPhotos({
-    enabled: activeTab === "details",
+    enabled: canReadFiles && activeTab === "details",
     visibleId: equipment.visibleId,
   });
   const editHref = buildHashRoute(`#/equipment/${equipment.visibleId}/edit`, {
@@ -116,8 +121,8 @@ export function EquipmentCardView({
         <EquipmentDetailsTab
           equipment={equipment}
           isPhotosLoading={isPhotosLoading}
-          photos={photos}
-          photosError={photosError}
+          photos={canReadFiles ? photos : []}
+          photosError={canReadFiles ? photosError : null}
         />
       ) : null}
 
@@ -128,10 +133,14 @@ export function EquipmentCardView({
           id={getEquipmentPanelId("documents")}
           role="tabpanel"
         >
-          <EquipmentDocumentsPanel
-            mode="view"
-            visibleId={equipment.visibleId}
-          />
+          {canReadFiles ? (
+            <EquipmentDocumentsPanel
+              mode="view"
+              visibleId={equipment.visibleId}
+            />
+          ) : (
+            <Notice tone="error">Нет доступа к документам оборудования.</Notice>
+          )}
         </section>
       ) : null}
 
@@ -156,12 +165,16 @@ export function EquipmentCardView({
           id={getEquipmentPanelId("events")}
           role="tabpanel"
         >
-          <EquipmentEventsPanel
-            canManageEvents={canManageEquipmentEvents}
-            equipmentStatus={equipment.status}
-            initialEventId={eventId}
-            visibleId={equipment.visibleId}
-          />
+          {canReadEvents ? (
+            <EquipmentEventsPanel
+              canManageEvents={canManageEquipmentEvents}
+              equipmentStatus={equipment.status}
+              initialEventId={eventId}
+              visibleId={equipment.visibleId}
+            />
+          ) : (
+            <Notice tone="error">Нет доступа к событиям оборудования.</Notice>
+          )}
         </section>
       ) : null}
 

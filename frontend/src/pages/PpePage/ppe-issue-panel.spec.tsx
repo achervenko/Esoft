@@ -1,4 +1,11 @@
-import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { permissionsForTest } from "../../test/permission-fixtures";
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ppeApi } from "../../shared/api/ppe";
 import { render } from "./ppe-ui-test-utils";
@@ -12,9 +19,68 @@ import { businessToday } from "../../modules/ppe-ui/ppe-presentation";
 import { employee, item, planRow, issue, plan } from "./ppe-test-fixtures";
 
 describe("PPE plan and permissions", () => {
-  it("does not fetch PPE for an unauthorized role", () => {
+  it("switches employee and clears selected plan rows when the route changes", async () => {
+    const load = vi.spyOn(ppeApi, "plan").mockResolvedValue(plan);
+    const props = {
+      employees: [employee, { ...employee, id: 2, lastName: "Другой" }],
+      items: [item],
+      permissions: ["ppe.read", "ppe.issue"],
+      revision: 0,
+      onChanged: vi.fn(),
+    };
+    const view = render(<IssuePanel {...props} initialEmployeeId={1} />);
+    const checkbox = await screen.findByRole("checkbox", { name: /Выбрать/ });
+    fireEvent.click(checkbox.closest("label")!);
+    expect(checkbox).toBeChecked();
+    view.rerender(<IssuePanel {...props} initialEmployeeId={2} />);
+    await waitFor(() =>
+      expect(load).toHaveBeenLastCalledWith(
+        2,
+        undefined,
+        expect.any(AbortSignal),
+      ),
+    );
+    expect(screen.getByRole("heading", { name: /Другой/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("checkbox", { name: /Выбрать/ }),
+    ).not.toBeChecked();
+    const count = load.mock.calls.length;
+    view.rerender(<IssuePanel {...props} />);
+    expect(
+      screen.queryByRole("heading", { name: /Другой/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("checkbox", { name: /Выбрать/ }),
+    ).not.toBeInTheDocument();
+    expect(load).toHaveBeenCalledTimes(count);
+  });
+  it("closes the issuance form when the employee route changes", async () => {
+    vi.spyOn(ppeApi, "plan").mockResolvedValue(plan);
+    const props = {
+      employees: [employee, { ...employee, id: 2 }],
+      items: [item],
+      permissions: ["ppe.read", "ppe.issue"],
+      revision: 0,
+      onChanged: vi.fn(),
+    };
+    const view = render(<IssuePanel {...props} initialEmployeeId={1} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Дополнительная выдача" }),
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    view.rerender(<IssuePanel {...props} initialEmployeeId={2} />);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(ppeApi.plan).toHaveBeenLastCalledWith(
+        2,
+        undefined,
+        expect.any(AbortSignal),
+      ),
+    );
+  });
+  it("does not fetch PPE for an unauthorized permissions", () => {
     vi.spyOn(ppeApi, "items");
-    render(<PpePage userRole="operator" />);
+    render(<PpePage userPermissions={permissionsForTest("operator")} />);
     expect(screen.getByRole("alert")).toHaveTextContent("Недостаточно прав");
     expect(ppeApi.items).not.toHaveBeenCalled();
   });
@@ -39,7 +105,7 @@ describe("PPE plan and permissions", () => {
         initialEmployeeId={1}
         employees={[employee]}
         items={[item]}
-        role="ppe_specialist"
+        permissions={permissionsForTest("ppe_specialist")}
         revision={0}
         onChanged={onChanged}
       />,
@@ -72,7 +138,7 @@ describe("PPE plan and permissions", () => {
         initialEmployeeId={1}
         employees={[employee]}
         items={[item]}
-        role="admin"
+        permissions={permissionsForTest("admin")}
         revision={0}
         onChanged={vi.fn()}
       />,
@@ -97,14 +163,22 @@ describe("PPE plan and permissions", () => {
       ),
     );
     await screen.findByText("Просрочено");
-    fireEvent.click(screen.getByRole("checkbox", { name: /Выбрать/ }).closest("label")!);
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /Выбрать/ }).closest("label")!,
+    );
     fireEvent.click(await screen.findByRole("button", { name: "Подтвердить" }));
     await waitFor(() =>
       expect(
-        within(screen.getByRole("dialog")).getByRole("button", { name: "Подтвердить" }),
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Подтвердить",
+        }),
       ).toBeEnabled(),
     );
-    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Подтвердить" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Подтвердить",
+      }),
+    );
     await waitFor(() =>
       expect(ppeApi.issue).toHaveBeenCalledWith(
         true,
@@ -123,7 +197,7 @@ describe("PPE plan and permissions", () => {
         initialEmployeeId={1}
         employees={[employee]}
         items={[item]}
-        role="admin"
+        permissions={permissionsForTest("admin")}
         revision={0}
         onChanged={vi.fn()}
       />,
@@ -138,7 +212,7 @@ describe("PPE plan and permissions", () => {
         initialEmployeeId={1}
         employees={[{ ...employee, isActive: false }]}
         items={[item]}
-        role="admin"
+        permissions={permissionsForTest("admin")}
         revision={0}
         onChanged={vi.fn()}
       />,

@@ -1,3 +1,4 @@
+import { ActiveModulesModule } from '../config/active-modules.module';
 import { Module } from '@nestjs/common';
 import { ChecklistsModule } from '../checklists/checklists.module';
 import { EquipmentEventExtensionModule } from '../equipment-event-extension/equipment-event-extension.module';
@@ -15,7 +16,12 @@ import { EventsUpdateInputLoader } from './events-update-input.loader';
 import { EventsUpdateService } from './events-update.service';
 
 @Module({
-  imports: [PrismaModule, ChecklistsModule, EquipmentEventExtensionModule],
+  imports: [
+    ActiveModulesModule,
+    PrismaModule,
+    ChecklistsModule,
+    EquipmentEventExtensionModule,
+  ],
   controllers: [EventsController],
   providers: [
     EventChecklistCreator,

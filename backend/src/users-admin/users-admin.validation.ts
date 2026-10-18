@@ -1,16 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-
-export const userRoles = [
-  'admin',
-  'chief_engineer',
-  'engineer',
-  'operator',
-  'auditor',
-  'ppe_specialist',
-  'accounting_specialist',
-] as const;
-
-export type UserRole = (typeof userRoles)[number];
+import { parseUserRoles } from '../auth/role-module-policy';
 
 type EmployeePayload = {
   firstName?: unknown;
@@ -174,15 +163,8 @@ function parseOptionalText(value: unknown, maxLength: number) {
   return cleanValue;
 }
 
-function parseRole(value: unknown): UserRole {
-  if (
-    typeof value !== 'string' ||
-    !(userRoles as readonly string[]).includes(value)
-  ) {
-    throwBadRequest('INVALID_ROLE', 'Выберите допустимую роль.');
-  }
-
-  return value as UserRole;
+function parseRole(value: unknown): string {
+  return parseUserRoles(value).join(',');
 }
 
 function parseEmployeeId(value: unknown) {

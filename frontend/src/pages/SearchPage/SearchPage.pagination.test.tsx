@@ -53,3 +53,23 @@ it("explains the pagination limit and stops requesting further pages", async () 
   expect(screen.queryByRole("button", { name: "Показать ещё" })).not.toBeInTheDocument();
   expect(search.mock.calls.at(-1)?.[0].offset).toBe(1000);
 }, 30000);
+
+it("keeps matching IDs from different domains and removes duplicate composite identities", async () => {
+  const first = Array.from({ length: 20 }, (_, index) => ({ ...result(`насос ${index + 1}`), id: String(index + 1), entityId: index + 1 }));
+  const ppe = { ...result("СИЗ с тем же ID"), id: "1", entityId: 1, entityType: "ppe_item", targetUrl: "#/ppe?itemId=1" };
+  vi.spyOn(api, "searchApp").mockResolvedValueOnce(first).mockResolvedValueOnce([
+    { ...first[0], id: "another-id", title: "Дубликат оборудования" },
+    ppe,
+    { ...ppe, id: "duplicate-id", title: "Дубликат СИЗ" },
+    { ...result("Норма с тем же ID"), id: "1", entityId: 1, entityType: "ppe_norm", targetUrl: "#/ppe/positions/1" },
+  ]);
+  render(<SearchPage />);
+  await screen.findByText("насос 20");
+  fireEvent.click(screen.getByRole("button", { name: "Показать ещё" }));
+  expect(await screen.findByText("СИЗ с тем же ID")).toBeInTheDocument();
+  expect(screen.getByText("Норма с тем же ID")).toBeInTheDocument();
+  expect(screen.getByText("насос 1")).toBeInTheDocument();
+  expect(screen.queryByText("Дубликат оборудования")).not.toBeInTheDocument();
+  expect(screen.queryByText("Дубликат СИЗ")).not.toBeInTheDocument();
+  expect(screen.getAllByRole("link")).toHaveLength(22);
+});

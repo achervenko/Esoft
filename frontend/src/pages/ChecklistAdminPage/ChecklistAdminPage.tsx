@@ -17,11 +17,11 @@ import { useChecklistCatalog } from "./useChecklistCatalog";
 import { useChecklistTemplates } from "./useChecklistTemplates";
 
 type ChecklistAdminPageProps = {
-  userRole: string | null;
+  userPermissions: readonly string[] | null;
 };
 
-export function ChecklistAdminPage({ userRole }: ChecklistAdminPageProps) {
-  const canManage = canManageChecklists(userRole);
+export function ChecklistAdminPage({ userPermissions }: ChecklistAdminPageProps) {
+  const canManage = canManageChecklists(userPermissions);
   const [activeTab, setActiveTab] = useState<ActiveChecklistAdminTab>(
     getInitialTab(),
   );

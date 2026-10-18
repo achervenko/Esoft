@@ -1,3 +1,4 @@
+import { hasPermission } from "../../shared/lib/permissions";
 import { useConfirmation } from "../../shared/ui/useConfirmation";
 import { useEffect, useState } from "react";
 import {
@@ -35,15 +36,15 @@ export type {
 } from "./dictionaries-page-types";
 
 type UseDictionariesAdminPageParams = {
-  userRole: string | null;
+  userPermissions: readonly string[] | null;
 };
 
 export function useDictionariesAdminPage({
-  userRole,
+  userPermissions,
 }: UseDictionariesAdminPageParams) {
   const confirm = useConfirmation();
-  const isAdmin = userRole === "admin";
-  const [selectedTab, setActiveTab] = useState<ActiveDictionariesTab>(() => {
+  const dictionariesManageable = hasPermission(userPermissions, "dictionaries.manage");
+  const [activeTab, setActiveTab] = useState<ActiveDictionariesTab>(() => {
     try {
       const saved = sessionStorage.getItem("esoft:dictionaries:tab");
       return saved === "positions" ||
@@ -56,13 +57,6 @@ export function useDictionariesAdminPage({
       return "employees";
     }
   });
-  const activeTab =
-    isAdmin || selectedTab === "employees" || selectedTab === "positions"
-      ? selectedTab
-      : "employees";
-  useEffect(() => {
-    if (selectedTab !== activeTab) setActiveTab(activeTab);
-  }, [selectedTab, activeTab]);
   useEffect(() => {
     try {
       sessionStorage.setItem("esoft:dictionaries:tab", activeTab);
@@ -82,7 +76,7 @@ export function useDictionariesAdminPage({
   const [message, setMessage] = useState<string | null>(null);
   const { notifyError, notifySuccess } = useNotifications();
 
-  const data = useDictionariesAdminData(activeTab, isAdmin);
+  const data = useDictionariesAdminData(activeTab, dictionariesManageable);
   const { loadData } = data;
   const { isSaving, runSavingAction } = useDictionariesSaving({
     notifyError,
@@ -178,7 +172,7 @@ export function useDictionariesAdminPage({
     employeeForm,
     error: data.error,
     retry: data.retry,
-    isAdmin,
+    dictionariesManageable,
     isLoading: data.isLoading,
     isSaving,
     locationForm,

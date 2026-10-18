@@ -1,7 +1,8 @@
 import { Logger } from '@nestjs/common';
 import { betterAuth } from 'better-auth';
-import { prismaAdapter } from 'better-auth/adapters/prisma';
-import { admin, username } from 'better-auth/plugins';
+import { roleAwarePrismaAdapter } from './role-aware-prisma-adapter';
+import { admin, username, customSession } from 'better-auth/plugins';
+import { withEffectiveRoles } from './effective-session';
 import { AuthLoginService } from './auth-login.service';
 import {
   ac,
@@ -12,12 +13,19 @@ import {
   operatorRole,
   ppeSpecialistRole,
   accountingSpecialistRole,
+  storekeeperRole,
 } from './better-auth-access';
 import { getFrontendOrigins } from '../config/frontend-origins';
 import { loadRootConfig } from '../config/root-environment';
+import { loadActiveModules } from '../config/active-modules.module';
+import {
+  createRoleAvailabilityHooks,
+  createRoleRequestHook,
+} from './role-availability.hooks';
 import { prismaService } from '../prisma/prisma.service';
 
 const config = loadRootConfig();
+const activeModules = loadActiveModules();
 
 const betterAuthSecret = config.auth.secret;
 const resolvedBetterAuthUrl = config.auth.url;
@@ -32,10 +40,10 @@ export const auth = betterAuth({
   baseURL: resolvedBetterAuthUrl,
   secret: betterAuthSecret,
   trustedOrigins,
-  database: prismaAdapter(prisma, {
-    provider: 'postgresql',
-  }),
+  database: roleAwarePrismaAdapter(prisma, activeModules),
+  hooks: { before: createRoleRequestHook() },
   databaseHooks: {
+    ...createRoleAvailabilityHooks(activeModules),
     session: {
       create: {
         after: async (session) => {
@@ -56,6 +64,9 @@ export const auth = betterAuth({
     disableSignUp: true,
   },
   plugins: [
+    customSession((value) =>
+      Promise.resolve(withEffectiveRoles(value, activeModules)),
+    ),
     username(),
     admin({
       ac,
@@ -67,6 +78,7 @@ export const auth = betterAuth({
         engineer: engineerRole,
         ppe_specialist: ppeSpecialistRole,
         accounting_specialist: accountingSpecialistRole,
+        storekeeper: storekeeperRole,
       },
       defaultRole: 'operator',
       adminRoles: ['admin'],

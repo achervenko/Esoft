@@ -39,6 +39,10 @@ model User {
   issuedPpe                   PpeIssue[]          @relation("PpeIssuedBy")
   cancelledPpe                PpeIssue[]          @relation("PpeCancelledBy")
 
+  createdWarehouseIssueSheets   WarehouseIssueSheet[] @relation("WarehouseIssueSheetCreatedBy")
+  processedWarehouseIssueSheets WarehouseIssueSheet[] @relation("WarehouseIssueSheetProcessedBy")
+  issuedWarehouseIssues         WarehouseIssue[]      @relation("WarehouseIssuedBy")
+
   @@unique([email])
   @@unique([username])
   @@map("user")

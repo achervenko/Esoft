@@ -42,3 +42,5 @@ export const ppeSpecialistRole = ac.newRole({
   session: [],
 });
 export const accountingSpecialistRole = ac.newRole({ user: [], session: [] });
+
+export const storekeeperRole = ac.newRole({ user: [], session: [] });

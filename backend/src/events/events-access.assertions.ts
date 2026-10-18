@@ -1,10 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { EQUIPMENT_RESPONSIBLE_ROLES } from './events-responsible-policy';
+import { hasAnyRoleSql } from '../auth/role-sql';
+import { getEquipmentResponsibleRoles } from '../auth/role-permissions';
+import { ACTIVE_MODULES } from '../config/active-modules.module';
 import { throwEventBadRequest, throwEventForbidden } from './events.errors';
 
 @Injectable()
 export class EventsAccessAssertions {
+  constructor(
+    @Inject(ACTIVE_MODULES) private readonly activeModules: readonly string[],
+  ) {}
   async getCurrentEmployeeId(
     tx: Prisma.TransactionClient,
     userId?: string | null,
@@ -69,6 +74,13 @@ export class EventsAccessAssertions {
       );
     }
 
+    const responsibleRoles = getEquipmentResponsibleRoles(this.activeModules);
+    if (!responsibleRoles.length) {
+      throwEventBadRequest(
+        'RESPONSIBLE_USER_INACTIVE',
+        'Нет доступных ответственных: модуль оборудования отключён.',
+      );
+    }
     const users = await tx.$queryRaw<Array<{ id: string }>>`
       SELECT u.id
       FROM "user" u
@@ -76,7 +88,7 @@ export class EventsAccessAssertions {
       JOIN employees e ON e.id = eu.employee_id
       WHERE u.id IN (${Prisma.join(uniqueUserIds)})
         AND COALESCE(u.banned, false) = false
-        AND u.role IN (${Prisma.join([...EQUIPMENT_RESPONSIBLE_ROLES])})
+        AND ${hasAnyRoleSql(Prisma.sql`u.role`, responsibleRoles)}
         AND e.is_active = true
       FOR SHARE OF u, eu, e
     `;

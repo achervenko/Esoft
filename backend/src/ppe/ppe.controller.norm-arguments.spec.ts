@@ -15,12 +15,8 @@ describe('PPE norm controller arguments', () => {
 
   it('parses list filters and the date for effective norm reads', async () => {
     const { controller, norms } = createController();
-    await controller.listNorms({ positionId: '5' }, session('admin'));
-    await controller.findEffectiveNorm(
-      5,
-      { date: '2027-01-01' },
-      session('admin'),
-    );
+    await controller.listNorms({ positionId: '5' });
+    await controller.findEffectiveNorm(5, { date: '2027-01-01' });
     expect(norms.list).toHaveBeenCalledWith(5);
     expect(norms.findEffectiveNorm).toHaveBeenCalledWith(
       5,

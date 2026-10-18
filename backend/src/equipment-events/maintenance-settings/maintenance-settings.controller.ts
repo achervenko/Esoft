@@ -1,16 +1,17 @@
+import { ParsePositiveIntPipe } from '../../application/pipes/parse-positive-int.pipe';
+import { EQUIPMENT_PERMISSIONS } from '../../equipment/equipment.permissions';
+import { RequirePermission } from '../../auth/require-permission';
 import {
   Body,
   Controller,
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
 } from '@nestjs/common';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { Auth } from '../../auth/auth.config';
-import { assertCanManageEquipmentEvents } from '../../auth/role-permissions';
 import { MaintenanceSettingsService } from './maintenance-settings.service';
 import {
   type CreateMaintenanceSettingDto,
@@ -26,13 +27,15 @@ export class MaintenanceSettingsController {
   ) {}
 
   @Get()
-  getSettings(@Param('visibleId', ParseIntPipe) visibleId: number) {
+  @RequirePermission(EQUIPMENT_PERMISSIONS.READ)
+  getSettings(@Param('visibleId', ParsePositiveIntPipe) visibleId: number) {
     return this.maintenanceSettingsService.getSettings(visibleId);
   }
 
   @Get('available-types')
+  @RequirePermission(EQUIPMENT_PERMISSIONS.READ)
   getAvailableMaintenanceTypes(
-    @Param('visibleId', ParseIntPipe) visibleId: number,
+    @Param('visibleId', ParsePositiveIntPipe) visibleId: number,
   ) {
     return this.maintenanceSettingsService.getAvailableMaintenanceTypes(
       visibleId,
@@ -40,13 +43,12 @@ export class MaintenanceSettingsController {
   }
 
   @Post()
+  @RequirePermission(EQUIPMENT_PERMISSIONS.EVENTS_MANAGE)
   createSetting(
-    @Param('visibleId', ParseIntPipe) visibleId: number,
+    @Param('visibleId', ParsePositiveIntPipe) visibleId: number,
     @Body() dto: CreateMaintenanceSettingDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
-    assertCanManageEquipmentEvents(session.user.role);
-
     return this.maintenanceSettingsService.createSetting(
       visibleId,
       parseCreateMaintenanceSettingDto(dto),
@@ -55,14 +57,13 @@ export class MaintenanceSettingsController {
   }
 
   @Patch(':settingId')
+  @RequirePermission(EQUIPMENT_PERMISSIONS.EVENTS_MANAGE)
   updateSetting(
-    @Param('visibleId', ParseIntPipe) visibleId: number,
-    @Param('settingId', ParseIntPipe) settingId: number,
+    @Param('visibleId', ParsePositiveIntPipe) visibleId: number,
+    @Param('settingId', ParsePositiveIntPipe) settingId: number,
     @Body() dto: UpdateMaintenanceSettingDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
-    assertCanManageEquipmentEvents(session.user.role);
-
     return this.maintenanceSettingsService.updateSetting(
       visibleId,
       settingId,
@@ -72,13 +73,12 @@ export class MaintenanceSettingsController {
   }
 
   @Delete(':settingId')
+  @RequirePermission(EQUIPMENT_PERMISSIONS.EVENTS_MANAGE)
   deleteSetting(
-    @Param('visibleId', ParseIntPipe) visibleId: number,
-    @Param('settingId', ParseIntPipe) settingId: number,
+    @Param('visibleId', ParsePositiveIntPipe) visibleId: number,
+    @Param('settingId', ParsePositiveIntPipe) settingId: number,
     @Session() session: UserSession<Auth>,
   ) {
-    assertCanManageEquipmentEvents(session.user.role);
-
     return this.maintenanceSettingsService.deleteSetting(
       visibleId,
       settingId,

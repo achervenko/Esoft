@@ -1,5 +1,5 @@
 import "../../modules/ppe-ui/PpeForm.css";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { normalizePpeSizeText } from "../../shared/lib/ppe-size-text";
 import { AppSelect } from "../../shared/ui/SelectDropdown/AppSelect";
@@ -8,7 +8,8 @@ import { GuardedAdminModal } from "../../shared/ui/GuardedAdminModal";
 import { useDraftChanges } from "../../shared/lib/use-draft-changes";
 import { Field, Message } from "../../modules/ppe-ui/ppe-ui";
 import { ppeError, typeLabels, ppeUnits } from "../../modules/ppe-ui/ppe-presentation";
-import { SizeRange, shoeSizeRange, gloveSizeRange, headSizeRange } from "./SizeRange";
+import { SizeRange } from "./SizeRange";
+import { shoeSizeRange, gloveSizeRange, headSizeRange } from "./size-range-options";
 import { defaultShoeSizes, defaultGloveSizes, defaultHeadSizes } from "../../modules/ppe-ui/ppe-size-options";
 import { ClothingSizeGrid } from "../../modules/ppe-ui/ClothingSizeGrid";
 import { defaultClothingSizes } from "../../modules/ppe-ui/ppe-size-options";
@@ -29,6 +30,7 @@ export function CatalogItemForm({
     type: item?.type ?? ("BODY" as PpeType),
   });
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [sizeRows, setSizeRows] = useState<
     { value: string; heightValue: string }[]
   >(() => (!item ? defaultClothingSizes() : []));
@@ -49,6 +51,8 @@ export function CatalogItemForm({
         className="ppe-form"
         onSubmit={(e) => {
           e.preventDefault();
+          if (savingRef.current) return;
+          savingRef.current = true;
           setSaving(true);
           setError(null);
           void ppeApi
@@ -73,7 +77,10 @@ export function CatalogItemForm({
               onClose();
             })
             .catch((err) => setError(ppeError(err)))
-            .finally(() => setSaving(false));
+            .finally(() => {
+              savingRef.current = false;
+              setSaving(false);
+            });
         }}
       >
         <div className="ppe-item-fields">

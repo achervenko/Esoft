@@ -1,3 +1,5 @@
+import { USERS_PERMISSIONS } from './users.permissions';
+import { RequirePermission } from '../auth/require-permission';
 import {
   BadRequestException,
   Controller,
@@ -7,13 +9,10 @@ import {
   Res,
   StreamableFile,
 } from '@nestjs/common';
-import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { Response } from 'express';
 import { isUserPhotoSize } from './user-photo-size';
 import { UserPhotoService } from './user-photo.service';
 import { UsersService } from './users.service';
-import type { Auth } from '../auth/auth.config';
-import { assertCanViewUserProfile } from '../auth/role-permissions';
 
 @Controller('api/users')
 export class UsersController {
@@ -23,30 +22,19 @@ export class UsersController {
   ) {}
 
   @Get(':id/profile')
-  findProfile(@Param('id') id: string, @Session() session: UserSession<Auth>) {
-    assertCanViewUserProfile({
-      currentUserId: session.user.id,
-      requestedUserId: id,
-      role: session.user.role,
-    });
-
+  @RequirePermission(USERS_PERMISSIONS.PROFILE_READ)
+  findProfile(@Param('id') id: string) {
     return this.usersService.findProfile(id);
   }
 
   @Get(':id/photo/:size')
+  @RequirePermission(USERS_PERMISSIONS.PROFILE_READ)
   @Header('Cache-Control', 'private, max-age=3600')
   async getPhoto(
     @Param('id') id: string,
     @Param('size') size: string,
-    @Session() session: UserSession<Auth>,
     @Res({ passthrough: true }) response: Response,
   ) {
-    assertCanViewUserProfile({
-      currentUserId: session.user.id,
-      requestedUserId: id,
-      role: session.user.role,
-    });
-
     if (!isUserPhotoSize(size)) {
       throw new BadRequestException({
         code: 'UNSUPPORTED_PHOTO_SIZE',

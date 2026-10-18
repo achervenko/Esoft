@@ -1,19 +1,17 @@
+import { ParsePositiveIntPipe } from '../application/pipes/parse-positive-int.pipe';
+import { EVENTS_PERMISSIONS } from './events.permissions';
+import { RequirePermission } from '../auth/require-permission';
 import {
   Body,
   Controller,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   Query,
 } from '@nestjs/common';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { Auth } from '../auth/auth.config';
-import {
-  assertCanManageEvents,
-  assertCanViewEvents,
-} from '../auth/role-permissions';
 import { EventsService } from './events.service';
 import { parseCreateEventDto } from './events-create.validation';
 import { parseUpdateCreatedEventDto } from './events-update.validation';
@@ -41,12 +39,11 @@ export class EventsController {
   ) {}
 
   @Post('events')
+  @RequirePermission(EVENTS_PERMISSIONS.MANAGE)
   create(
     @Body() dto: CreateEventDto | undefined,
     @Session() session: UserSession<Auth>,
   ): ReturnType<EventsService['create']> {
-    assertCanManageEvents(session.user.role);
-
     return this.eventsService.create(
       parseCreateEventDto(dto, this.extensionRegistry),
       session.user.id,
@@ -54,44 +51,36 @@ export class EventsController {
   }
 
   @Get('events')
+  @RequirePermission(EVENTS_PERMISSIONS.READ)
   findAll(
     @Query() query: EventsListQueryDto | undefined,
-    @Session() session: UserSession<Auth>,
   ): ReturnType<EventsService['findAll']> {
-    assertCanViewEvents(session.user.role);
-
     return this.eventsService.findAll(
       parseEventsListQueryDto(query, this.extensionRegistry),
     );
   }
 
   @Get('events/responsible-users')
-  findResponsibleUsers(
-    @Session() session: UserSession<Auth>,
-  ): ReturnType<EventsService['findResponsibleUsers']> {
-    assertCanManageEvents(session.user.role);
-
+  @RequirePermission(EVENTS_PERMISSIONS.MANAGE)
+  findResponsibleUsers(): ReturnType<EventsService['findResponsibleUsers']> {
     return this.eventsService.findResponsibleUsers();
   }
 
   @Get('events/:id')
+  @RequirePermission(EVENTS_PERMISSIONS.READ)
   findOne(
-    @Param('id', ParseIntPipe) id: number,
-    @Session() session: UserSession<Auth>,
+    @Param('id', ParsePositiveIntPipe) id: number,
   ): ReturnType<EventsService['findOne']> {
-    assertCanViewEvents(session.user.role);
-
     return this.eventsService.findOne(id);
   }
 
   @Patch('events/:id')
+  @RequirePermission(EVENTS_PERMISSIONS.MANAGE)
   updateCreated(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParsePositiveIntPipe) id: number,
     @Body() dto: UpdateCreatedEventDto | undefined,
     @Session() session: UserSession<Auth>,
   ): ReturnType<EventsService['updateCreated']> {
-    assertCanManageEvents(session.user.role);
-
     return this.eventsService.updateCreated(
       id,
       parseUpdateCreatedEventDto(dto, this.extensionRegistry),
@@ -100,13 +89,12 @@ export class EventsController {
   }
 
   @Post('events/:id/start')
+  @RequirePermission(EVENTS_PERMISSIONS.MANAGE)
   start(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParsePositiveIntPipe) id: number,
     @Body() dto: StartEventDto | undefined,
     @Session() session: UserSession<Auth>,
   ): ReturnType<EventsService['start']> {
-    assertCanManageEvents(session.user.role);
-
     return this.eventsService.start(
       id,
       parseStartEventDto(dto),
@@ -115,13 +103,12 @@ export class EventsController {
   }
 
   @Post('events/:id/complete')
+  @RequirePermission(EVENTS_PERMISSIONS.MANAGE)
   complete(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParsePositiveIntPipe) id: number,
     @Body() dto: CompleteEventDto | undefined,
     @Session() session: UserSession<Auth>,
   ): ReturnType<EventsService['complete']> {
-    assertCanManageEvents(session.user.role);
-
     return this.eventsService.complete(
       id,
       parseCompleteEventDto(dto),
@@ -130,13 +117,12 @@ export class EventsController {
   }
 
   @Post('events/:id/cancel')
+  @RequirePermission(EVENTS_PERMISSIONS.MANAGE)
   cancel(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParsePositiveIntPipe) id: number,
     @Body() dto: CancelEventDto | undefined,
     @Session() session: UserSession<Auth>,
   ): ReturnType<EventsService['cancel']> {
-    assertCanManageEvents(session.user.role);
-
     return this.eventsService.cancel(
       id,
       parseCancelEventDto(dto),

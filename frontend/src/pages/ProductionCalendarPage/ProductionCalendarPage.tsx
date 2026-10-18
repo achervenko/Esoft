@@ -9,12 +9,12 @@ import type { ProductionCalendarPageProps } from "./model/types";
 import "./ProductionCalendarPage.css";
 
 export function ProductionCalendarPage({
-  userRole,
+  userPermissions,
 }: ProductionCalendarPageProps) {
-  const isAdmin = canManageProductionCalendar(userRole);
+  const calendarManageable = canManageProductionCalendar(userPermissions);
   const calendar = useProductionCalendar();
 
-  if (!isAdmin) {
+  if (!calendarManageable) {
     return (
       <section className="admin-page production-calendar-page">
         <Notice tone="error">

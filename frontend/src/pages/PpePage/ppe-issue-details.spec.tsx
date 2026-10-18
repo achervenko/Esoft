@@ -1,4 +1,6 @@
+import { permissionsForTest } from "../../test/permission-fixtures";
 import {
+  act,
   cleanup,
   fireEvent,
   screen,
@@ -27,7 +29,7 @@ describe("PPE issue details", () => {
     render(
       <IssueDetailsModal
         id={8}
-        role="admin"
+        permissions={permissionsForTest("admin")}
         onClose={vi.fn()}
         onChanged={vi.fn()}
       />,
@@ -52,7 +54,7 @@ describe("PPE issue details", () => {
     render(
       <IssueDetailsModal
         id={8}
-        role="admin"
+        permissions={permissionsForTest("admin")}
         onClose={vi.fn()}
         onChanged={onChanged}
       />,
@@ -74,4 +76,59 @@ describe("PPE issue details", () => {
     expect(onChanged).toHaveBeenCalledOnce();
     await waitFor(() => expect(ppeApi.issueDetails).toHaveBeenCalledTimes(2));
   });
+  it.each([false, true])(
+    "blocks synchronous duplicate cancellation and permits retry only on failure: %s",
+    async (fails) => {
+      vi.spyOn(ppeApi, "issueDetails").mockResolvedValue(issue);
+      let resolve!: (value: typeof issue) => void;
+      let reject!: (error: Error) => void;
+      const cancel = vi.spyOn(ppeApi, "cancel").mockReturnValue(
+        new Promise<typeof issue>((ok, fail) => {
+          resolve = ok;
+          reject = fail;
+        }),
+      );
+      const onChanged = vi.fn();
+      render(
+        <IssueDetailsModal
+          id={8}
+          permissions={["ppe.issue"]}
+          onClose={vi.fn()}
+          onChanged={onChanged}
+        />,
+      );
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Отменить выдачу" }),
+      );
+      fireEvent.change(screen.getByLabelText("Причина"), {
+        target: { value: " Ошибка " },
+      });
+      const form = screen.getByLabelText("Причина").closest("form")!;
+      act(() => {
+        fireEvent.submit(form);
+        fireEvent.submit(form);
+      });
+      expect(cancel).toHaveBeenCalledTimes(1);
+      expect(cancel).toHaveBeenCalledWith(8, "Ошибка");
+      expect(screen.getByLabelText("Причина")).toBeDisabled();
+      await act(async () => {
+        if (fails) reject(new Error("Ошибка сервера"));
+        else resolve({ ...issue, status: "CANCELLED" });
+      });
+      if (fails) {
+        expect(onChanged).not.toHaveBeenCalled();
+        expect(screen.getByLabelText("Причина")).not.toBeDisabled();
+        cancel.mockReturnValue(new Promise<typeof issue>(() => {}));
+        act(() => {
+          fireEvent.submit(form);
+          fireEvent.submit(form);
+        });
+        expect(cancel).toHaveBeenCalledTimes(2);
+      } else {
+        expect(onChanged).toHaveBeenCalledTimes(1);
+        expect(screen.queryByLabelText("Причина")).not.toBeInTheDocument();
+        expect(cancel).toHaveBeenCalledTimes(1);
+      }
+    },
+  );
 });

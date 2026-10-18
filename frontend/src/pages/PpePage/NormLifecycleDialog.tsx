@@ -1,6 +1,6 @@
 import { UnsavedChangesGuard } from "../../shared/ui/UnsavedChangesGuard";
 import { useDraftChanges } from "../../shared/lib/use-draft-changes";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ppeApi, type PpeNorm } from "../../shared/api/ppe";
 import { ConfirmDialog } from "../../shared/ui/ConfirmDialog";
 import { businessToday, ppeError } from "../../modules/ppe-ui/ppe-presentation";
@@ -24,6 +24,7 @@ export function NormLifecycleDialog({
   const [date, setDate] = useState(businessToday());
   const dateChanged = useDraftChanges(date);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const predecessorLabel =
     previousNorm && previousNorm.effectiveFrom <= businessToday()
@@ -35,6 +36,8 @@ export function NormLifecycleDialog({
       ? `Будущая норма будет удалена. ${predecessorLabel} будет продлена до начала следующей нормы — ${nextNorm.effectiveFrom.split("-").reverse().join(".")}.`
       : `Будущая норма будет удалена. ${predecessorLabel} будет продлена без даты окончания, до введения новой нормы.`;
   const confirm = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setError(null);
     try {
@@ -45,6 +48,7 @@ export function NormLifecycleDialog({
     } catch (err) {
       setError(ppeError(err));
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

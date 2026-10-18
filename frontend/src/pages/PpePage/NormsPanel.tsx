@@ -10,7 +10,7 @@ import {
 } from "./norm-model";
 export type { NormFormState } from "./norm-model";
 import "../../shared/ui/SearchInput.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ppeApi,
   type PpeItem,
@@ -28,7 +28,7 @@ export function NormsPanel({
   autoFocusSearch = true,
   positions,
   items,
-  role,
+  permissions,
   revision,
   referenceState,
   onChanged,
@@ -40,7 +40,7 @@ export function NormsPanel({
   positions: PpePosition[];
   items: PpeItem[];
   referenceState?: ComponentProps<typeof PpeQueryState>;
-  role: string | null;
+  permissions: readonly string[] | null;
   revision: number;
   onChanged: () => void;
   initialPositionId?: number;
@@ -55,10 +55,15 @@ export function NormsPanel({
   const [search, setSearch] = useState("");
   const [form, setForm] = useState<NormFormState | null>(null);
   const [lifecycle, setLifecycle] = useState<PpeNorm | null>(null);
+  useEffect(() => {
+    setPosition(initialPositionId ? String(initialPositionId) : "");
+    setForm(null);
+    setLifecycle(null);
+  }, [initialPositionId]);
   const norms = usePpeQuery(`norms:${revision}`, (signal) =>
     ppeApi.norms(undefined, signal),
   );
-  const manage = canManagePpeNorms(role);
+  const manage = canManagePpeNorms(permissions);
   const selected = positions.find((item) => String(item.id) === position);
   const visiblePositions = searchNormPositions(positions, search);
   const selectedNorms = norms.data?.filter(
@@ -75,25 +80,25 @@ export function NormsPanel({
     <>
       {!position && (
         <div className="admin-card ppe-search-toolbar ppe-norm-search-toolbar">
-        <div className="ppe-journal-search search-input-shell">
-          <Search size={18} aria-hidden="true" />
-          <input
-            autoFocus={autoFocusSearch}
-            aria-label="Поиск по должностям"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search && (
-            <button
-              type="button"
-              className="ppe-journal-icon-button"
-              aria-label="Очистить поиск"
-              onClick={() => setSearch("")}
-            >
-              <X size={18} aria-hidden="true" />
-            </button>
-          )}
-        </div>
+          <div className="ppe-journal-search search-input-shell">
+            <Search size={18} aria-hidden="true" />
+            <input
+              autoFocus={autoFocusSearch}
+              aria-label="Поиск по должностям"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                type="button"
+                className="ppe-journal-icon-button"
+                aria-label="Очистить поиск"
+                onClick={() => setSearch("")}
+              >
+                <X size={18} aria-hidden="true" />
+              </button>
+            )}
+          </div>
         </div>
       )}
       {position && (
@@ -122,13 +127,13 @@ export function NormsPanel({
         norms.data &&
         (visiblePositions.length ? (
           <div className="admin-card ppe-table-wrap ppe-list-table-card">
-          <DataTable
-            columns={columns}
-            rows={visiblePositions}
-            getRowKey={(row) => row.id}
-            defaultSort={{ key: "position", direction: "asc" }}
-            onRowClick={(row) => openPosition(row.id)}
-          />
+            <DataTable
+              columns={columns}
+              rows={visiblePositions}
+              getRowKey={(row) => row.id}
+              defaultSort={{ key: "position", direction: "asc" }}
+              onRowClick={(row) => openPosition(row.id)}
+            />
           </div>
         ) : (
           <p className="admin-state">

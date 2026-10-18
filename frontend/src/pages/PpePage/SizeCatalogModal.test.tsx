@@ -1,5 +1,6 @@
 import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -16,6 +17,35 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+it("blocks concurrent grid saves and allows retry after failure", async () => {
+  let reject!: (error: Error) => void;
+  const replace = vi.spyOn(ppeApi, "replaceSizes")
+    .mockResolvedValue([])
+    .mockReturnValueOnce(new Promise((_, fail) => { reject = fail; }));
+  const onChanged = vi.fn();
+  const onClose = vi.fn();
+  render(
+    <ChakraProvider value={defaultSystem}>
+      <SizeCatalogModal item={item} manage onClose={onClose} onChanged={onChanged} />
+    </ChakraProvider>,
+  );
+  const button = screen.getByRole("button", { name: "Сохранить размеры" });
+  act(() => {
+    button.click();
+    button.click();
+  });
+  expect(replace).toHaveBeenCalledTimes(1);
+  expect(button).toBeDisabled();
+  await act(async () => { reject(new Error("Request failed")); });
+  expect(button).toBeEnabled();
+  expect(onChanged).not.toHaveBeenCalled();
+  expect(onClose).not.toHaveBeenCalled();
+  fireEvent.click(button);
+  await waitFor(() => expect(replace).toHaveBeenCalledTimes(2));
+  expect(onChanged).toHaveBeenCalledOnce();
+  expect(onClose).toHaveBeenCalledOnce();
 });
 
 it("edits glove sizes through the shared range and replaces the size set", async () => {

@@ -3,12 +3,14 @@ import type { EmployeeProfile, UserPhoto } from "../../shared/api/user-profile-a
 import "./ProfilePage.css";
 
 type ProfilePageUser = {
+  assignedRole?: string | null;
   displayUsername?: string | null;
   email?: string | null;
   employee?: EmployeeProfile | null;
   name?: string | null;
   photo?: UserPhoto | null;
   role?: string | null;
+  permissions?: readonly string[];
   username?: string | null;
 };
 

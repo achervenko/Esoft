@@ -1,3 +1,4 @@
+import { permissionsForTest } from "../../test/permission-fixtures";
 import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -10,7 +11,7 @@ it("combines size, height and active norm filters and resets them", () => {
     <ChakraProvider value={defaultSystem}>
       <CatalogPanel
         items={[{ ...item, hasActiveNorm: true }]}
-        role="admin"
+        permissions={permissionsForTest("admin")}
         onChanged={vi.fn()}
       />
     </ChakraProvider>,
@@ -51,7 +52,7 @@ it("combines size, height and active norm filters and resets them", () => {
 it("opens row actions through a context menu and removes unit and actions columns", () => {
   render(
     <ChakraProvider value={defaultSystem}>
-      <CatalogPanel items={[item]} role="admin" onChanged={vi.fn()} />
+      <CatalogPanel items={[item]} permissions={permissionsForTest("admin")} onChanged={vi.fn()} />
     </ChakraProvider>,
   );
   expect(
@@ -73,7 +74,7 @@ it("opens row actions through a context menu and removes unit and actions column
 it("returns to the original search query and module from a search result", () => {
   const returnTo = "#/search?q=куртка&module=ppe";
   window.history.replaceState(null, "", `#/ppe?tab=catalog&itemId=${item.id}&returnTo=${encodeURIComponent(returnTo)}`);
-  render(<ChakraProvider value={defaultSystem}><CatalogPanel items={[item]} role="admin" onChanged={vi.fn()} /></ChakraProvider>);
+  render(<ChakraProvider value={defaultSystem}><CatalogPanel items={[item]} permissions={permissionsForTest("admin")} onChanged={vi.fn()} /></ChakraProvider>);
   fireEvent.click(screen.getByRole("button", { name: "Назад" }));
   expect(decodeURI(window.location.hash)).toBe(returnTo);
   window.history.replaceState(null, "", "#/");
@@ -83,7 +84,7 @@ it("returns to the original search query and module from a search result", () =>
 it("synchronizes itemId and q changes without remounting the catalog", () => {
   window.history.replaceState(null, "", "#/ppe?tab=catalog");
   const other = { ...item, id: item.id + 1, article: "99.123", name: "Другой СИЗ" };
-  render(<ChakraProvider value={defaultSystem}><CatalogPanel items={[item, other]} role="admin" onChanged={vi.fn()} /></ChakraProvider>);
+  render(<ChakraProvider value={defaultSystem}><CatalogPanel items={[item, other]} permissions={permissionsForTest("admin")} onChanged={vi.fn()} /></ChakraProvider>);
   const input = screen.getByRole("textbox", { name: "Поиск по номенклатуре" });
   const navigate = (query: string) => act(() => {
     window.history.replaceState(null, "", "#/ppe?tab=catalog&" + query);
@@ -103,7 +104,7 @@ it("synchronizes itemId and q changes without remounting the catalog", () => {
 it("keeps the catalog read-only for the occupational safety specialist", () => {
   render(
     <ChakraProvider value={defaultSystem}>
-      <CatalogPanel items={[item]} role="ppe_specialist" onChanged={vi.fn()} />
+      <CatalogPanel items={[item]} permissions={permissionsForTest("ppe_specialist")} onChanged={vi.fn()} />
     </ChakraProvider>,
   );
   expect(screen.getByText(item.article)).toBeInTheDocument();

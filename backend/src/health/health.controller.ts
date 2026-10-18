@@ -3,12 +3,12 @@ import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import type { Response } from 'express';
 import { HealthService } from './health.service';
 
-@AllowAnonymous()
 @Controller('api/health')
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
   @Get()
+  @AllowAnonymous()
   @HttpCode(HttpStatus.OK)
   async getHealth(@Res({ passthrough: true }) response: Response) {
     const health = await this.healthService.check();

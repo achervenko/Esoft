@@ -1,10 +1,11 @@
+import { permissionsForTest } from "../../test/permission-fixtures";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Sidebar } from "./Sidebar";
 
 const adminUser = {
-  role: "admin",
+  role: "admin", permissions: permissionsForTest("admin"),
   username: "admin",
 };
 
@@ -35,6 +36,15 @@ describe("Sidebar", () => {
     vi.restoreAllMocks();
   });
 
+  it.each([
+    ["admin", "#/dashboard"],
+    ["ppe_specialist", "#/ppe"],
+    ["accounting_specialist", "#/ppe"],
+    ["storekeeper", "#/profile"],
+  ])("links the brand to an accessible default for %s", (role, expected) => {
+    render(<Sidebar onLogout={vi.fn()} user={{ role, permissions: permissionsForTest(role) }} />);
+    expect(screen.getByRole("link", { name: "Esoft" })).toHaveAttribute("href", expected);
+  });
   it("keeps the existing top-level links unchanged", () => {
     render(<Sidebar onLogout={vi.fn()} user={adminUser} />);
 
@@ -58,7 +68,7 @@ describe("Sidebar", () => {
   });
 
   it("shows PPE and limited employee navigation to specialists without other admin links", () => {
-    render(<Sidebar onLogout={vi.fn()} user={{ role: "ppe_specialist" }} />);
+    render(<Sidebar onLogout={vi.fn()} user={{ role: "ppe_specialist", permissions: permissionsForTest("ppe_specialist") }} />);
     expect(screen.getByRole("link", { name: "СИЗ" })).toHaveAttribute(
       "href",
       "#/ppe",
@@ -99,7 +109,7 @@ describe("Sidebar", () => {
     render(
       <Sidebar
         onLogout={vi.fn()}
-        user={{ role: "engineer", username: "engineer" }}
+        user={{ role: "engineer", permissions: permissionsForTest("engineer"), username: "engineer" }}
       />,
     );
 

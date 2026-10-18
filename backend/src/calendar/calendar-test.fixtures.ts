@@ -33,6 +33,7 @@ export function calendarRecord(
   overrides: {
     dayOfWeek?: number;
     isWorkingDay?: boolean;
+    isHoliday?: boolean;
     source?: CalendarSource;
     workingHours?: number;
   } = {},
@@ -49,7 +50,7 @@ export function calendarRecord(
     week: 32,
     workday: {
       holidayName: null,
-      isHoliday: false,
+      isHoliday: overrides.isHoliday ?? false,
       isPreholiday: false,
       isWorkingDay: overrides.isWorkingDay ?? true,
       source: overrides.source ?? CalendarSource.SYSTEM,

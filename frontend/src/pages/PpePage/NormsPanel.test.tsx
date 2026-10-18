@@ -1,3 +1,4 @@
+import { permissionsForTest } from "../../test/permission-fixtures";
 import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
 import {
   cleanup,
@@ -31,7 +32,7 @@ it("offers end only for current norms, delete only for future norms, and no hist
           { id: norm.positionId, name: norm.position, isActive: true },
         ]}
         items={[item]}
-        role="admin"
+        permissions={permissionsForTest("admin")}
         revision={0}
         initialPositionId={norm.positionId}
         onChanged={changed}
@@ -80,7 +81,7 @@ it("edits a future revision and starts its successor after the source date", asy
           { id: norm.positionId, name: norm.position, isActive: true },
         ]}
         items={[item]}
-        role="admin"
+        permissions={permissionsForTest("admin")}
         revision={0}
         initialPositionId={norm.positionId}
         onChanged={vi.fn()}
@@ -127,7 +128,7 @@ it("warns about extending the predecessor before deleting a future norm", async 
           { id: norm.positionId, name: norm.position, isActive: true },
         ]}
         items={[item]}
-        role="admin"
+        permissions={permissionsForTest("admin")}
         revision={0}
         initialPositionId={norm.positionId}
         onChanged={changed}
@@ -157,7 +158,7 @@ it("lists positions with and without norms and opens the selected position", asy
           { id: 99, name: "Без нормы", isActive: true },
         ]}
         items={[item]}
-        role="admin"
+        permissions={permissionsForTest("admin")}
         revision={0}
         onChanged={vi.fn()}
       />
@@ -172,4 +173,77 @@ it("lists positions with and without norms and opens the selected position", asy
   fireEvent.click(within(empty).getByRole("button", { name: "Создать норму" }));
   expect(screen.getByRole("dialog")).toBeInTheDocument();
   expect(ppeApi.norms).toHaveBeenCalledWith(undefined, expect.any(AbortSignal));
+});
+
+it("synchronizes the position route and closes the previous position's norm form", async () => {
+  vi.spyOn(ppeApi, "norms").mockResolvedValue([]);
+  const props = {
+    positions: [
+      { id: 10, name: "Должность А", isActive: true },
+      { id: 20, name: "Должность Б", isActive: true },
+    ],
+    items: [item],
+    permissions: ["ppe.read", "ppe.norms.manage"],
+    revision: 0,
+    onChanged: vi.fn(),
+  };
+  const panel = (id?: number) => (
+    <ChakraProvider value={defaultSystem}>
+      <NormsPanel {...props} initialPositionId={id} />
+    </ChakraProvider>
+  );
+  const view = render(panel(10));
+  expect(
+    screen.getByRole("heading", { name: "Должность А" }),
+  ).toBeInTheDocument();
+  fireEvent.click(await screen.findByRole("button", { name: "Создать норму" }));
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  view.rerender(panel(20));
+  expect(
+    screen.getByRole("heading", { name: "Должность Б" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Должность А" }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  view.rerender(panel());
+  expect(screen.getByLabelText("Поиск по должностям")).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "Должность Б" }),
+  ).not.toBeInTheDocument();
+});
+it("closes lifecycle actions belonging to the previous position", async () => {
+  vi.spyOn(ppeApi, "norms").mockResolvedValue([
+    {
+      ...norm,
+      positionId: 10,
+      effectiveFrom: businessToday(),
+      effectiveTo: null,
+    },
+  ]);
+  const props = {
+    positions: [
+      { id: 10, name: "Должность А", isActive: true },
+      { id: 20, name: "Должность Б", isActive: true },
+    ],
+    items: [item],
+    permissions: ["ppe.read", "ppe.norms.manage"],
+    revision: 0,
+    onChanged: vi.fn(),
+  };
+  const panel = (id: number) => (
+    <ChakraProvider value={defaultSystem}>
+      <NormsPanel {...props} initialPositionId={id} />
+    </ChakraProvider>
+  );
+  const view = render(panel(10));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Завершить действие" }),
+  );
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  view.rerender(panel(20));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "Должность Б" }),
+  ).toBeInTheDocument();
 });

@@ -12,7 +12,7 @@ type EmployeeIssueCardProps = {
   backdate: boolean;
   on: string;
   revision: number;
-  role: string | null;
+  permissions: readonly string[] | null;
   onChanged: () => void;
   onExtraIssue: () => void;
   onDateChange: (date: string) => void;
@@ -23,7 +23,7 @@ export function EmployeeIssueCard({
   backdate,
   on,
   revision,
-  role,
+  permissions,
   onChanged,
   onExtraIssue,
   onDateChange,
@@ -78,7 +78,7 @@ export function EmployeeIssueCard({
       />
       <EmployeeIssueHistory
         employeeId={employee.id}
-        role={role}
+        permissions={permissions}
         revision={revision}
         onChanged={onChanged}
       />

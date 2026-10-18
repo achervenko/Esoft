@@ -1,3 +1,4 @@
+import { hasPermission } from "../../shared/lib/permissions";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { MouseEvent } from "react";
@@ -28,7 +29,7 @@ type EquipmentViewPageProps = {
   eventId?: number | null;
   initialTab?: EquipmentViewTab;
   returnTo: string;
-  userRole: string | null;
+  userPermissions: readonly string[] | null;
   visibleId: number;
 };
 
@@ -36,7 +37,7 @@ export function EquipmentViewPage({
   eventId = null,
   initialTab = "details",
   returnTo,
-  userRole,
+  userPermissions,
   visibleId,
 }: EquipmentViewPageProps) {
   const { notifyError } = useNotifications();
@@ -66,7 +67,10 @@ export function EquipmentViewPage({
         if (isMounted) {
           const errorMessage = getApiErrorMessage(requestError);
           setError(errorMessage);
-          notifyError("Не удалось загрузить карточку оборудования", errorMessage);
+          notifyError(
+            "Не удалось загрузить карточку оборудования",
+            errorMessage,
+          );
         }
       })
       .finally(() => {
@@ -140,7 +144,11 @@ export function EquipmentViewPage({
 
   return (
     <div className="equipment-view-page">
-      <a className="equipment-back-link" href={returnTo} onClick={handleBackClick}>
+      <a
+        className="equipment-back-link"
+        href={returnTo}
+        onClick={handleBackClick}
+      >
         <ArrowLeft aria-hidden="true" size={18} />
         <span>Назад</span>
       </a>
@@ -149,9 +157,13 @@ export function EquipmentViewPage({
       {error ? <Notice tone="error">{error}</Notice> : null}
       {equipment ? (
         <EquipmentCardView
-          canEdit={canEditEquipment(userRole)}
-          canManageEquipmentEvents={canManageEquipmentEvents(userRole)}
-          canManageMaintenanceSettings={canManageMaintenanceSettings(userRole)}
+          canReadFiles={hasPermission(userPermissions, "files.read")}
+          canReadEvents={hasPermission(userPermissions, "events.read")}
+          canEdit={canEditEquipment(userPermissions)}
+          canManageEquipmentEvents={canManageEquipmentEvents(userPermissions)}
+          canManageMaintenanceSettings={canManageMaintenanceSettings(
+            userPermissions,
+          )}
           equipment={equipment}
           eventId={eventId}
           history={history}

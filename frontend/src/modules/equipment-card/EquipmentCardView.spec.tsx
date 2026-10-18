@@ -1,7 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createEquipmentCard, createEquipmentHistoryItem } from "./equipment-card.test-helpers";
+import {
+  createEquipmentCard,
+  createEquipmentHistoryItem,
+} from "./equipment-card.test-helpers";
 import { EquipmentCardView } from "./EquipmentCardView";
 
 const mockUseEquipmentPhotos = vi.fn();
@@ -36,7 +39,8 @@ vi.mock("./use-equipment-photos", () => ({
 }));
 
 vi.mock("./equipment-card-navigation", () => ({
-  navigateWithViewTransition: (href: string) => mockNavigateWithViewTransition(href),
+  navigateWithViewTransition: (href: string) =>
+    mockNavigateWithViewTransition(href),
 }));
 
 describe("EquipmentCardView", () => {
@@ -57,13 +61,17 @@ describe("EquipmentCardView", () => {
   it("renders title and opens details tab by default", () => {
     render(
       <EquipmentCardView
+        canReadFiles
+        canReadEvents
         equipment={createEquipmentCard()}
         history={[createEquipmentHistoryItem()]}
         returnTo="#/equipment"
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "ID 42 — Токарный станок" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "ID 42 — Токарный станок" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("tabpanel")).toHaveAttribute(
       "id",
       "equipment-panel-details",
@@ -77,6 +85,8 @@ describe("EquipmentCardView", () => {
   it("renders documents tab from initialTab and reacts to prop changes", () => {
     const { rerender } = render(
       <EquipmentCardView
+        canReadFiles
+        canReadEvents
         equipment={createEquipmentCard()}
         history={[]}
         initialTab="documents"
@@ -88,6 +98,8 @@ describe("EquipmentCardView", () => {
 
     rerender(
       <EquipmentCardView
+        canReadFiles
+        canReadEvents
         equipment={createEquipmentCard()}
         history={[]}
         initialTab="history"
@@ -106,6 +118,8 @@ describe("EquipmentCardView", () => {
 
     render(
       <EquipmentCardView
+        canReadFiles
+        canReadEvents
         canEdit
         equipment={createEquipmentCard()}
         history={[]}
@@ -133,6 +147,8 @@ describe("EquipmentCardView", () => {
 
     render(
       <EquipmentCardView
+        canReadFiles
+        canReadEvents
         canEdit
         equipment={createEquipmentCard()}
         history={[]}
@@ -161,6 +177,8 @@ describe("EquipmentCardView", () => {
 
     render(
       <EquipmentCardView
+        canReadFiles
+        canReadEvents
         equipment={createEquipmentCard()}
         history={[]}
         onTabChange={onTabChange}
@@ -171,7 +189,9 @@ describe("EquipmentCardView", () => {
     await user.click(screen.getByRole("tab", { name: "История изменений" }));
 
     expect(onTabChange).toHaveBeenCalledWith("history");
-    expect(window.location.hash).toBe("#/equipment/42?returnTo=%23%2Fequipment&tab=history");
+    expect(window.location.hash).toBe(
+      "#/equipment/42?returnTo=%23%2Fequipment&tab=history",
+    );
     expect(screen.getByRole("tabpanel")).toHaveAttribute(
       "id",
       "equipment-panel-history",
@@ -184,6 +204,8 @@ describe("EquipmentCardView", () => {
 
     render(
       <EquipmentCardView
+        canReadFiles
+        canReadEvents
         equipment={createEquipmentCard()}
         history={[]}
         onTabChange={onTabChange}
@@ -203,6 +225,8 @@ describe("EquipmentCardView", () => {
 
     render(
       <EquipmentCardView
+        canReadFiles
+        canReadEvents
         canManageEquipmentEvents
         canManageMaintenanceSettings
         equipment={createEquipmentCard()}
@@ -236,6 +260,8 @@ describe("EquipmentCardView", () => {
 
     render(
       <EquipmentCardView
+        canReadFiles
+        canReadEvents
         equipment={createEquipmentCard()}
         history={[]}
         returnTo="#/equipment"
@@ -253,5 +279,45 @@ describe("EquipmentCardView", () => {
       enabled: false,
       visibleId: 42,
     });
+  });
+  it.each(["documents", "events"] as const)(
+    "blocks direct access to the %s tab without its read permission",
+    (tab) => {
+      render(
+        <EquipmentCardView
+          equipment={createEquipmentCard()}
+          history={[]}
+          initialTab={tab}
+          returnTo="#/equipment"
+        />,
+      );
+      expect(mockDocumentsPanel).not.toHaveBeenCalled();
+      expect(mockEventsPanel).not.toHaveBeenCalled();
+      expect(
+        screen.getByText(
+          tab === "documents"
+            ? "Нет доступа к документам оборудования."
+            : "Нет доступа к событиям оборудования.",
+        ),
+      ).toBeInTheDocument();
+    },
+  );
+  it("does not load photos without files.read and unmounts documents when access is removed", () => {
+    const props = {
+      equipment: createEquipmentCard(),
+      history: [],
+      returnTo: "#/equipment",
+    };
+    const view = render(<EquipmentCardView {...props} />);
+    expect(mockUseEquipmentPhotos).toHaveBeenLastCalledWith({
+      enabled: false,
+      visibleId: 42,
+    });
+    view.rerender(
+      <EquipmentCardView {...props} canReadFiles initialTab="documents" />,
+    );
+    expect(screen.getByText("Документы панели")).toBeInTheDocument();
+    view.rerender(<EquipmentCardView {...props} initialTab="documents" />);
+    expect(screen.queryByText("Документы панели")).not.toBeInTheDocument();
   });
 });

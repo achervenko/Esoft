@@ -1,3 +1,4 @@
+import { permissionsForTest } from "../../test/permission-fixtures";
 import { NotificationProvider } from "../../shared/ui/notifications/NotificationProvider";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -17,7 +18,7 @@ it("resolves an employee card URL and allows the PPE specialist", () => {
     tab: "norms",
     positionId: 2,
   });
-  expect(canAccessWorkspaceRoute("ppe_specialist", "#/ppe/positions/2")).toBe(
+  expect(canAccessWorkspaceRoute(permissionsForTest("ppe_specialist"), "#/ppe/positions/2")).toBe(
     true,
   );
   expect(resolveAppRoute("#/ppe/employees/1")).toEqual({
@@ -25,7 +26,7 @@ it("resolves an employee card URL and allows the PPE specialist", () => {
     tab: "issue",
     employeeId: 1,
   });
-  expect(canAccessWorkspaceRoute("ppe_specialist", "#/ppe/employees/1")).toBe(
+  expect(canAccessWorkspaceRoute(permissionsForTest("ppe_specialist"), "#/ppe/employees/1")).toBe(
     true,
   );
   expect(resolveAppRoute("#/ppe/employees/0")).toEqual({ kind: "unknown" });
@@ -38,7 +39,7 @@ it("opens a position norms page directly without tabs after reload", async () =>
   ]);
   vi.spyOn(ppeApi, "norms").mockResolvedValue([]);
   render(
-    <PpePage userRole="ppe_specialist" initialTab="norms" positionId={2} />,
+    <PpePage userPermissions={permissionsForTest("ppe_specialist")} initialTab="norms" positionId={2} />,
   );
   await screen.findByRole("heading", { name: "Инженер" });
   expect(
@@ -68,7 +69,7 @@ it("opens the employee directly without tabs or search after reload", async () =
   });
   render(
     <NotificationProvider>
-      <PpePage userRole="ppe_specialist" employeeId={employee.id} />
+      <PpePage userPermissions={permissionsForTest("ppe_specialist")} employeeId={employee.id} />
     </NotificationProvider>,
   );
   await waitFor(() =>

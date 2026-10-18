@@ -1,3 +1,4 @@
+import { permissionsForTest } from "../../test/permission-fixtures";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { EmployeeIssueCard } from "./EmployeeIssueCard";
@@ -11,7 +12,7 @@ it("keeps one sizes section after repeated updates when employee and position ID
   const props = {
     employee: { ...employee, id: 5, positionId: 5 },
     allowed: false, backdate: false, on: "2026-10-13", revision: 0,
-    role: "ppe_specialist", onChanged: vi.fn(), onExtraIssue: vi.fn(), onDateChange: vi.fn(),
+    permissions: permissionsForTest("ppe_specialist"), onChanged: vi.fn(), onExtraIssue: vi.fn(), onDateChange: vi.fn(),
   };
   const view = render(<EmployeeIssueCard {...props} />);
   for (let revision = 1; revision <= 8; revision++) {

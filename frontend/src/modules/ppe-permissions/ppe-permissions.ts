@@ -1,39 +1,25 @@
-const ppePermissionRoles = {
-  read: ["admin", "ppe_specialist", "accounting_specialist"],
-  manageCatalog: ["admin", "accounting_specialist"],
-  manageEmployeeSizes: ["admin", "ppe_specialist"],
-  manageNorms: ["admin", "ppe_specialist"],
-  issue: ["admin", "accounting_specialist"],
-  backdate: ["admin"],
-} as const;
+import { hasPermission } from "../../shared/lib/permissions";
 
-type PpePermission = keyof typeof ppePermissionRoles;
-
-function hasPpePermission(role: unknown, permission: PpePermission) {
-  const roles: readonly string[] = ppePermissionRoles[permission];
-  return typeof role === "string" && roles.includes(role);
+export function canReadPpe(permissions: unknown) {
+  return hasPermission(permissions, "ppe.read");
 }
 
-export function canReadPpe(role: unknown) {
-  return hasPpePermission(role, "read");
+export function canManagePpeCatalog(permissions: unknown) {
+  return hasPermission(permissions, "ppe.catalog.manage");
 }
 
-export function canManagePpeCatalog(role: unknown) {
-  return hasPpePermission(role, "manageCatalog");
+export function canManageEmployeeSizes(permissions: unknown) {
+  return hasPermission(permissions, "ppe.employee-sizes.manage");
 }
 
-export function canManageEmployeeSizes(role: unknown) {
-  return hasPpePermission(role, "manageEmployeeSizes");
+export function canManagePpeNorms(permissions: unknown) {
+  return hasPermission(permissions, "ppe.norms.manage");
 }
 
-export function canManagePpeNorms(role: unknown) {
-  return hasPpePermission(role, "manageNorms");
+export function canIssuePpe(permissions: unknown) {
+  return hasPermission(permissions, "ppe.issue");
 }
 
-export function canIssuePpe(role: unknown) {
-  return hasPpePermission(role, "issue");
-}
-
-export function canBackdatePpeIssue(role: unknown) {
-  return hasPpePermission(role, "backdate");
+export function canBackdatePpeIssue(permissions: unknown) {
+  return hasPermission(permissions, "ppe.issue.backdate");
 }

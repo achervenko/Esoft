@@ -1,15 +1,23 @@
+import { permissionsForTest } from "../test/permission-fixtures";
 import { expect, it } from "vitest";
 import {
   canAccessWorkspaceRoute,
   getDefaultAuthRoute,
 } from "./role-navigation";
 
+it("sends storekeeper to their profile until the warehouse UI is available", () => {
+  expect(getDefaultAuthRoute(permissionsForTest("storekeeper"))).toBe("#/profile");
+  expect(canAccessWorkspaceRoute(permissionsForTest("storekeeper"), "#/profile")).toBe(true);
+  for (const route of ["#/equipment", "#/ppe", "#/users", "#/calendar", "#/dashboard", "#/search"])
+    expect(canAccessWorkspaceRoute(permissionsForTest("storekeeper"), route)).toBe(false);
+});
+
 it.each(
   ["ppe_specialist", "accounting_specialist"].flatMap((role) =>
     ["#/ppe/employees/1", "#/ppe/positions/1"].map((route) => [role, route]),
   ),
 )("allows %s to access the special PPE route %s", (role, route) => {
-  expect(canAccessWorkspaceRoute(role, route)).toBe(true);
+  expect(canAccessWorkspaceRoute(permissionsForTest(role), route)).toBe(true);
 });
 
 it.each(
@@ -19,7 +27,7 @@ it.each(
     ),
   ),
 )("rejects %s access to the invalid PPE route %s", (role, route) => {
-  expect(canAccessWorkspaceRoute(role, route)).toBe(false);
+  expect(canAccessWorkspaceRoute(permissionsForTest(role), route)).toBe(false);
 });
 
 it("allows only PPE, limited employees and profile for PPE specialists", () => {
@@ -30,7 +38,7 @@ it("allows only PPE, limited employees and profile for PPE specialists", () => {
     "#/dictionaries",
     "#/profile",
   ])
-    expect(canAccessWorkspaceRoute("ppe_specialist", path)).toBe(true);
+    expect(canAccessWorkspaceRoute(permissionsForTest("ppe_specialist"), path)).toBe(true);
   for (const path of [
     "#/dashboard",
     "#/equipment",
@@ -41,18 +49,18 @@ it("allows only PPE, limited employees and profile for PPE specialists", () => {
     "#/production-calendar",
     "#/ppe-other",
   ])
-    expect(canAccessWorkspaceRoute("ppe_specialist", path)).toBe(false);
-  expect(getDefaultAuthRoute("ppe_specialist")).toBe("#/ppe");
-  expect(getDefaultAuthRoute("admin")).toBe("#/dashboard");
-  expect(canAccessWorkspaceRoute("engineer", "#/equipment")).toBe(true);
+    expect(canAccessWorkspaceRoute(permissionsForTest("ppe_specialist"), path)).toBe(false);
+  expect(getDefaultAuthRoute(permissionsForTest("ppe_specialist"))).toBe("#/ppe");
+  expect(getDefaultAuthRoute(permissionsForTest("admin"))).toBe("#/dashboard");
+  expect(canAccessWorkspaceRoute(permissionsForTest("engineer"), "#/equipment")).toBe(true);
 });
 it("keeps the reserved accounting specialist role out of workspace modules", () => {
-  expect(getDefaultAuthRoute("accounting_specialist")).toBe("#/ppe");
+  expect(getDefaultAuthRoute(permissionsForTest("accounting_specialist"))).toBe("#/ppe");
   expect(
-    canAccessWorkspaceRoute("accounting_specialist", "#/search"),
+    canAccessWorkspaceRoute(permissionsForTest("accounting_specialist"), "#/search"),
   ).toBe(true);
-  expect(canAccessWorkspaceRoute("accounting_specialist", "#/ppe")).toBe(true);
-  expect(canAccessWorkspaceRoute("accounting_specialist", "#/profile")).toBe(
+  expect(canAccessWorkspaceRoute(permissionsForTest("accounting_specialist"), "#/ppe")).toBe(true);
+  expect(canAccessWorkspaceRoute(permissionsForTest("accounting_specialist"), "#/profile")).toBe(
     true,
   );
   for (const route of [
@@ -61,5 +69,25 @@ it("keeps the reserved accounting specialist role out of workspace modules", () 
     "#/users",
     "#/dashboard",
   ])
-    expect(canAccessWorkspaceRoute("accounting_specialist", route)).toBe(false);
+    expect(canAccessWorkspaceRoute(permissionsForTest("accounting_specialist"), route)).toBe(false);
 });
+
+it.each([
+  "#/abc", "#/equipment-invalid", "#/something", "#/equipment/1/edit-anything",
+  "#/equipment/1/edit/extra", "#/equipment/abc", "#/equipment/0", "#/equipment/-1",
+  "#/users/unknown", "#/checklist-admin/unknown", "#/my-checklists/unknown",
+])("rejects unsupported workspace route %s even with administrative permissions", (route) => {
+  expect(canAccessWorkspaceRoute(permissionsForTest("admin"), route)).toBe(false);
+});
+it.each([
+  "#/equipment", "#/equipment/12", "#/equipment/12?tab=documents&eventId=3",
+])("checks equipment.read for supported route %s", (route) => {
+  expect(canAccessWorkspaceRoute(["equipment.read"], route)).toBe(true);
+  expect(canAccessWorkspaceRoute([], route)).toBe(false);
+});
+it.each(["#/equipment/create", "#/equipment/12/edit", "#/equipment/12/edit?tab=documents"])(
+  "requires equipment.edit for route %s", (route) => {
+    expect(canAccessWorkspaceRoute(["equipment.read"], route)).toBe(false);
+    expect(canAccessWorkspaceRoute(["equipment.edit"], route)).toBe(true);
+  },
+);

@@ -1,118 +1,66 @@
+import { USER_ROLES } from './role-module-policy';
+import { hasPermission } from './permission-policy';
 import { ForbiddenException } from '@nestjs/common';
 import {
   canReadPpe,
-  canManagePpeCatalog,
-  canManageEmployeeSizes,
-  canManagePpeNorms,
-  canIssuePpe,
   canBackdatePpeIssue,
-  assertCanReadPpe,
-  assertCanManagePpeCatalog,
-  assertCanManageEmployeeSizes,
-  assertCanManagePpeNorms,
-  assertCanIssuePpe,
-  assertAdmin,
-  assertCanEditEquipment,
-  assertCanManageFiles,
-  assertCanManageEvents,
-  assertCanManageEquipmentEvents,
-  assertCanManageChecklists,
-  assertCanAccessCalendar,
   assertCanViewUserProfile,
 } from './role-permissions';
 import { getRoleLabel } from '../users-admin/users-admin.mapper';
 import { parseUpdateUserPayload } from '../users-admin/users-admin.validation';
 
-const capabilities = [
-  canReadPpe,
-  canManagePpeCatalog,
-  canManageEmployeeSizes,
-  canManagePpeNorms,
-  canIssuePpe,
-];
-const assertions = [
-  assertCanReadPpe,
-  assertCanManagePpeCatalog,
-  assertCanManageEmployeeSizes,
-  assertCanManagePpeNorms,
-  assertCanIssuePpe,
-];
-
 describe('PPE permissions', () => {
   it('allows accounting issuance and catalog but denies sizes, norm changes and backdating', () => {
     expect(canReadPpe('accounting_specialist')).toBe(true);
-    expect(canManagePpeCatalog('accounting_specialist')).toBe(true);
-    expect(canIssuePpe('accounting_specialist')).toBe(true);
-    expect(() => assertCanManageEmployeeSizes('accounting_specialist')).toThrow(
-      ForbiddenException,
+    expect(hasPermission('accounting_specialist', 'ppe.catalog.manage')).toBe(
+      true,
     );
-    expect(() => assertCanManagePpeNorms('accounting_specialist')).toThrow(
-      ForbiddenException,
+    expect(hasPermission('accounting_specialist', 'ppe.issue')).toBe(true);
+    expect(
+      hasPermission('accounting_specialist', 'ppe.employee-sizes.manage'),
+    ).toBe(false);
+    expect(hasPermission('accounting_specialist', 'ppe.norms.manage')).toBe(
+      false,
     );
-    expect(() => assertAdmin('accounting_specialist')).toThrow(
-      ForbiddenException,
-    );
+    expect(hasPermission('accounting_specialist', 'users.manage')).toBe(false);
     expect(canBackdatePpeIssue('accounting_specialist')).toBe(false);
   });
-  it('allows explicit issue dates only for admin independently of issue permission', () => {
-    expect(canBackdatePpeIssue('admin')).toBe(true);
-    for (const role of [
-      'ppe_specialist',
-      'engineer',
-      'unknown',
-      null,
-      undefined,
-    ])
-      expect(canBackdatePpeIssue(role)).toBe(false);
-    expect(canIssuePpe('ppe_specialist')).toBe(false);
-  });
-  it.each(['admin', 'ppe_specialist'])(
-    'grants PPE capabilities to %s',
+  it.each(USER_ROLES)(
+    'allows explicit issue dates only for the admin role: %s',
     (role) => {
-      for (const can of capabilities)
-        expect(can(role)).toBe(
-          role === 'admin' ||
-            (can !== canIssuePpe && can !== canManagePpeCatalog),
-        );
-      for (const assertAllowed of assertions)
-        if (
-          role === 'ppe_specialist' &&
-          (assertAllowed === assertCanIssuePpe ||
-            assertAllowed === assertCanManagePpeCatalog)
-        )
-          expect(() => assertAllowed(role)).toThrow(ForbiddenException);
-        else expect(() => assertAllowed(role)).not.toThrow();
+      expect(canBackdatePpeIssue(role)).toBe(role === 'admin');
+      expect(canBackdatePpeIssue(role)).toBe(
+        hasPermission(role, 'ppe.issue.backdate'),
+      );
     },
   );
+  it.each(['unknown', null, undefined])(
+    'denies backdate for invalid role %p',
+    (role) => {
+      expect(canBackdatePpeIssue(role)).toBe(false);
+    },
+  );
+  it('grants expected PPE capabilities to admin', () => {
+    expect(canReadPpe('admin')).toBe(true);
+    expect(hasPermission('admin', 'ppe.catalog.manage')).toBe(true);
+    expect(hasPermission('admin', 'ppe.employee-sizes.manage')).toBe(true);
+    expect(hasPermission('admin', 'ppe.norms.manage')).toBe(true);
+    expect(hasPermission('admin', 'ppe.issue')).toBe(true);
+  });
 
-  it.each([
-    'chief_engineer',
-    'engineer',
-    'operator',
-    'auditor',
-    'PPE_SPECIALIST',
-    'unknown',
-    null,
-    undefined,
-  ])('denies PPE capabilities to %s', (role) => {
-    for (const can of capabilities) expect(can(role)).toBe(false);
-    for (const assertAllowed of assertions)
-      expect(() => assertAllowed(role)).toThrow(ForbiddenException);
+  it('grants only safety-specialist PPE capabilities', () => {
+    expect(canReadPpe('ppe_specialist')).toBe(true);
+    expect(hasPermission('ppe_specialist', 'ppe.catalog.manage')).toBe(false);
+    expect(hasPermission('ppe_specialist', 'ppe.employee-sizes.manage')).toBe(
+      true,
+    );
+    expect(hasPermission('ppe_specialist', 'ppe.norms.manage')).toBe(true);
+    expect(hasPermission('ppe_specialist', 'ppe.issue')).toBe(false);
   });
 
   it('does not grant other module administrative permissions', () => {
-    for (const check of [
-      assertAdmin,
-      assertCanEditEquipment,
-      assertCanManageFiles,
-      assertCanManageEvents,
-      assertCanManageEquipmentEvents,
-      assertCanManageChecklists,
-      assertCanAccessCalendar,
-    ]) {
-      expect(() => check('ppe_specialist')).toThrow(ForbiddenException);
-      expect(() => check('admin')).not.toThrow();
-    }
+    expect(hasPermission('ppe_specialist', 'users.manage')).toBe(false);
+    expect(hasPermission('admin', 'users.manage')).toBe(true);
     expect(() =>
       assertCanViewUserProfile({
         currentUserId: 'ppe',

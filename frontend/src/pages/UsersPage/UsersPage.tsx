@@ -12,21 +12,21 @@ import "./UsersPage.css";
 type UsersPageProps = {
   currentUserId?: string | null;
   onCurrentUserChanged?: () => void;
-  userRole: string | null;
+  userPermissions: readonly string[] | null;
 };
 
 export function UsersPage({
   currentUserId,
   onCurrentUserChanged,
-  userRole,
+  userPermissions,
 }: UsersPageProps) {
   const page = useUsersAdminPage({
     currentUserId,
     onCurrentUserChanged,
-    userRole,
+    userPermissions,
   });
 
-  if (!page.isAdmin) {
+  if (!page.usersManageable) {
     return (
       <section className="admin-page users-page">
         <Notice tone="error">
@@ -76,7 +76,7 @@ export function UsersPage({
           employees={page.employees}
           isSaving={page.isSaving}
           onClose={() => page.setUserForm(null)}
-          onSubmit={(payload) => void page.saveUser(payload)}
+          onSubmit={page.saveUser}
           roles={page.roles}
           user={page.userForm === "new" ? null : page.userForm}
         />

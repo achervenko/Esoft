@@ -1,10 +1,8 @@
+import { CALENDAR_PERMISSIONS } from './calendar.permissions';
+import { RequirePermission } from '../auth/require-permission';
 import { Body, Controller, Get, Patch, Query } from '@nestjs/common';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { Auth } from '../auth/auth.config';
-import {
-  assertCanAccessCalendar,
-  assertCanViewCalendar,
-} from '../auth/role-permissions';
 import { CalendarService } from './calendar.service';
 import {
   parseCalendarEngineQuery,
@@ -33,11 +31,11 @@ export class CalendarController {
   ) {}
 
   @Get('calendar')
+  @RequirePermission(CALENDAR_PERMISSIONS.READ)
   findCalendar(
     @Query() query: CalendarEngineQueryDto | undefined,
     @Session() session: UserSession<Auth>,
   ): Promise<CalendarDto> {
-    assertCanViewCalendar(session.user.role);
     const providers = this.sourceResolver.resolveProviders(session);
     const parsedQuery = parseCalendarEngineQuery(query);
 
@@ -49,22 +47,18 @@ export class CalendarController {
   }
 
   @Get('calendar/day')
+  @RequirePermission(CALENDAR_PERMISSIONS.MANAGE)
   findDay(
     @Query() query: CalendarDayQueryDto | undefined,
-    @Session() session: UserSession<Auth>,
   ): Promise<CalendarDayResponse> {
-    assertCanAccessCalendar(session.user.role);
-
     return this.calendarService.getDay(parseCalendarDayQuery(query));
   }
 
   @Get('calendar/range')
+  @RequirePermission(CALENDAR_PERMISSIONS.MANAGE)
   findRange(
     @Query() query: CalendarRangeQueryDto | undefined,
-    @Session() session: UserSession<Auth>,
   ): Promise<CalendarRangeResponse> {
-    assertCanAccessCalendar(session.user.role);
-
     const parsedQuery = parseCalendarRangeQuery(query);
 
     return this.calendarService.getRange(
@@ -74,12 +68,11 @@ export class CalendarController {
   }
 
   @Patch('calendar/workday')
+  @RequirePermission(CALENDAR_PERMISSIONS.MANAGE)
   updateWorkday(
     @Body() dto: CalendarWorkdayUpdateDto | undefined,
     @Session() session: UserSession<Auth>,
   ): Promise<CalendarDayResponse> {
-    assertCanAccessCalendar(session.user.role);
-
     return this.calendarService.updateWorkday(
       parseCalendarWorkdayUpdateDto(dto),
       session.user.id,
@@ -87,11 +80,11 @@ export class CalendarController {
   }
 
   @Patch('calendar/workday/reset')
+  @RequirePermission(CALENDAR_PERMISSIONS.MANAGE)
   resetWorkday(
     @Body() dto: CalendarDayQueryDto | undefined,
     @Session() session: UserSession<Auth>,
   ): Promise<CalendarDayResponse> {
-    assertCanAccessCalendar(session.user.role);
     return this.calendarService.resetWorkday(
       parseCalendarDayQuery(dto),
       session.user.id,

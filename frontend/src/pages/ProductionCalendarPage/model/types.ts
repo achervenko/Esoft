@@ -1,5 +1,5 @@
 export type ProductionCalendarPageProps = {
-  userRole: string | null;
+  userPermissions: readonly string[] | null;
 };
 
 export type DayType = "working" | "weekend" | "holiday" | "shortened";

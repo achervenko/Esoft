@@ -6,13 +6,13 @@ import { useTemplateStructureActions } from "./useTemplateStructureActions";
 
 type UseChecklistTemplateEditorParams = {
   copyFromTemplateId?: number | null;
-  isAdmin: boolean;
+  checklistsManageable: boolean;
   templateId: number | null;
 };
 
 export function useChecklistTemplateEditor({
   copyFromTemplateId = null,
-  isAdmin,
+  checklistsManageable,
   templateId,
 }: UseChecklistTemplateEditorParams) {
   const isNewTemplate = templateId === null;
@@ -22,7 +22,7 @@ export function useChecklistTemplateEditor({
   const [message, setMessage] = useState<string | null>(null);
   const loader = useChecklistTemplateLoader({
     copyFromTemplateId,
-    isAdmin,
+    checklistsManageable,
     templateId,
   });
   const localState = useLocalTemplateState({

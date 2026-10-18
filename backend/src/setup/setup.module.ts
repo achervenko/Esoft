@@ -3,6 +3,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { SetupController } from './setup.controller';
 import { SetupAuditService } from './setup-audit.service';
 import { SetupAuthService } from './setup-auth.service';
+import { SetupRateLimitService } from './setup-rate-limit.service';
 import { SetupService } from './setup.service';
 import { SetupStateService } from './setup-state.service';
 
@@ -13,6 +14,7 @@ import { SetupStateService } from './setup-state.service';
     SetupAuditService,
     SetupAuthService,
     SetupService,
+    SetupRateLimitService,
     SetupStateService,
   ],
 })

@@ -1,3 +1,4 @@
+import { permissionsForTest } from "../../test/permission-fixtures";
 import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
 import {
   cleanup,
@@ -27,7 +28,7 @@ it("loads and refreshes the catalog without loading employees or positions", asy
   vi.spyOn(ppeApi, "saveItem").mockResolvedValue(item);
   render(
     <ChakraProvider value={defaultSystem}>
-      <PpePage userRole="admin" initialTab="catalog" />
+      <PpePage userPermissions={permissionsForTest("admin")} initialTab="catalog" />
     </ChakraProvider>,
   );
   await screen.findByLabelText("Поиск по номенклатуре");
@@ -55,7 +56,7 @@ it("keeps journal rows visible when a filter reference fails", async () => {
   vi.spyOn(ppeApi, "journal").mockResolvedValue({ items: [issue], total: 1, page: 1, limit: 100 });
   render(
     <ChakraProvider value={defaultSystem}>
-      <PpePage userRole="admin" initialTab="journal" />
+      <PpePage userPermissions={permissionsForTest("admin")} initialTab="journal" />
     </ChakraProvider>,
   );
   await screen.findByRole("table");

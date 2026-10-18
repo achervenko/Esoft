@@ -12,7 +12,7 @@ import {
 } from "./useDictionariesAdminPage";
 
 type DictionariesPageProps = {
-  userRole: string | null;
+  userPermissions: readonly string[] | null;
 };
 
 const tabLabels: Record<ActiveDictionariesTab, string> = {
@@ -31,12 +31,12 @@ const addButtonLabels: Record<ActiveDictionariesTab, string> = {
   locations: "Добавить",
 };
 
-export function DictionariesPage({ userRole }: DictionariesPageProps) {
-  const page = useDictionariesAdminPage({ userRole });
+export function DictionariesPage({ userPermissions }: DictionariesPageProps) {
+  const page = useDictionariesAdminPage({ userPermissions });
   const [sizeEmployeeId, setSizeEmployeeId] = useState<number | null>(null);
 
-  if (!page.isAdmin) {
-    if (canManageEmployeeSizes(userRole)) return <PpeEmployeesPanel />;
+  if (!page.dictionariesManageable) {
+    if (canManageEmployeeSizes(userPermissions)) return <PpeEmployeesPanel />;
     return (
       <section className="admin-page dictionaries-page">
         <Notice tone="error">
@@ -144,7 +144,7 @@ export function DictionariesPage({ userRole }: DictionariesPageProps) {
             toggleEmployeeStatus: page.toggleEmployeeStatus,
             togglePositionStatus: page.togglePositionStatus,
           }}
-          userRole={userRole}
+          userPermissions={userPermissions}
           onOpenEmployeeSizes={setSizeEmployeeId}
         />
       </section>

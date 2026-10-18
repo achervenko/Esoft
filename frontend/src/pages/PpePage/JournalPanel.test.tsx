@@ -1,3 +1,4 @@
+import { permissionsForTest } from "../../test/permission-fixtures";
 import {
   cleanup,
   fireEvent,
@@ -14,7 +15,7 @@ afterEach(() => {
 });
 it("shows empty results after applying filters without Enter", async () => {
   vi.spyOn(ppeApi, "journal").mockResolvedValue({ items: [], total: 0, page: 1, limit: 100 });
-  render(<JournalPanel employees={[]} positions={[]} items={[]} role="admin" revision={0} onChanged={vi.fn()} />);
+  render(<JournalPanel employees={[]} positions={[]} items={[]} permissions={permissionsForTest("admin")} revision={0} onChanged={vi.fn()} />);
   await screen.findByText("Выдач по выбранным фильтрам нет.");
   fireEvent.click(screen.getByRole("button", { name: "Фильтры" }));
   fireEvent.change(screen.getByLabelText("Статус"), { target: { value: "CANCELLED" } });
@@ -29,7 +30,7 @@ it("shows empty results after debounce without Enter and hides stale messages wh
       employees={[]}
       positions={[]}
       items={[]}
-      role="admin"
+      permissions={permissionsForTest("admin")}
       revision={0}
       onChanged={vi.fn()}
     />,

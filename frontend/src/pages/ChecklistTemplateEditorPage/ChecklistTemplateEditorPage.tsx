@@ -27,18 +27,18 @@ import { useTemplateStructureInteractions } from "./useTemplateStructureInteract
 type ChecklistTemplateEditorPageProps = {
   copyFromTemplateId?: number | null;
   templateId: number | null;
-  userRole: string | null;
+  userPermissions: readonly string[] | null;
 };
 
 export function ChecklistTemplateEditorPage({
   copyFromTemplateId = null,
   templateId,
-  userRole,
+  userPermissions,
 }: ChecklistTemplateEditorPageProps) {
-  const isAdmin = canManageChecklists(userRole);
+  const checklistsManageable = canManageChecklists(userPermissions);
   const editor = useChecklistTemplateEditor({
     copyFromTemplateId,
-    isAdmin,
+    checklistsManageable,
     templateId,
   });
   const template = editor.template;
@@ -129,7 +129,7 @@ export function ChecklistTemplateEditorPage({
     void editor.save();
   };
 
-  if (!isAdmin) {
+  if (!checklistsManageable) {
     return (
       <section className="checklist-editor-page">
         <Notice tone="error">

@@ -1,7 +1,7 @@
 import { IssueDraftRow } from "./IssueDraftRow";
 import { buildIssuePayload, comparable, type Draft } from "./issue-form-model";
 import { businessToday, formatPpeDate } from "../../modules/ppe-ui/ppe-presentation";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ppeApi,
   type PpeEmployee,
@@ -54,6 +54,7 @@ export function IssueFormModal({
   );
   const [baseline, setBaseline] = useState(drafts);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const canSubmit =
     drafts.length > 0 &&
@@ -87,11 +88,13 @@ export function IssueFormModal({
         className="ppe-form ppe-issue-form"
         onSubmit={(e) => {
           e.preventDefault();
+          if (savingRef.current) return;
           if (!canSubmit) {
             setError("Выберите доступные СИЗ и их активные размеры.");
             return;
           }
           const payloadItems = buildIssuePayload(drafts);
+          savingRef.current = true;
           setSaving(true);
           setError(null);
           void ppeApi
@@ -105,7 +108,10 @@ export function IssueFormModal({
               onClose();
             })
             .catch((err) => setError(ppeError(err)))
-            .finally(() => setSaving(false));
+            .finally(() => {
+              savingRef.current = false;
+              setSaving(false);
+            });
         }}
       >
         <div className="ppe-issue-form-heading">

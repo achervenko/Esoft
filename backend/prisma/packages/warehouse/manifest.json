@@ -1,0 +1,11 @@
+{
+  "id": "warehouse",
+  "version": 1,
+  "requiresCore": 1,
+  "migrations": [
+    {
+      "id": "20261016000000_warehouse_init",
+      "sha256": "75de071d75d254c221aae3055c3f50a809a1803abb6bb75e65dee4524311ba58"
+    }
+  ]
+}

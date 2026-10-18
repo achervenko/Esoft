@@ -13,7 +13,8 @@ test('package manifests require null for core and version 1 for modules', async 
   try {
     await cp(resolve(root, 'backend/prisma/packages/core'), resolve(fixture, 'backend/prisma/packages/core'), { recursive: true });
     await cp(resolve(root, 'backend/prisma/packages/equipment'), resolve(fixture, 'backend/prisma/packages/equipment'), { recursive: true });
-    await writeFile(resolve(fixture, 'database-packages.json'), '{"modules":["equipment"]}');
+    await cp(resolve(root, 'backend/prisma/packages/warehouse'), resolve(fixture, 'backend/prisma/packages/warehouse'), { recursive: true });
+    await writeFile(resolve(fixture, 'database-packages.json'), '{"modules":["equipment","warehouse"]}');
     const corePath = resolve(fixture, 'backend/prisma/packages/core/manifest.json');
     const core = JSON.parse(await readFile(corePath, 'utf8'));
     assert.doesNotThrow(() => packageTools.readPackageSet(fixture));

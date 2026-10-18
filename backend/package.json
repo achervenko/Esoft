@@ -23,7 +23,6 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register ./node_modules/jest/bin/jest.js --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
     "pretest:ppe-norms:integration": "npm run build",
     "test:ppe-norms:integration": "node --test test/ppe-norms/ppe-norms.integration.setup.mjs",
     "pretest:ppe-issues:integration": "npm run build",

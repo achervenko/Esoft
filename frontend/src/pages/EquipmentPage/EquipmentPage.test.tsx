@@ -1,3 +1,4 @@
+import { permissionsForTest } from "../../test/permission-fixtures";
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { EquipmentPage } from './EquipmentPage';
@@ -9,7 +10,7 @@ vi.mock('./EquipmentRegistryTable', () => ({ EquipmentRegistryTable: ({ onSortCh
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 it('fetches only the selected page, aborts previous requests and resets page on sorting', async () => {
   vi.mocked(getEquipmentRegistry).mockResolvedValue({ items: [], total: 100000, page: 1, limit: 100 });
-  render(<EquipmentPage userRole="admin" />);
+  render(<EquipmentPage userPermissions={permissionsForTest("admin")} />);
   await screen.findByRole('button', { name: 'Сортировать название' });
   expect(getEquipmentRegistry).toHaveBeenCalledOnce();
   const firstSignal = vi.mocked(getEquipmentRegistry).mock.calls[0][1]!;

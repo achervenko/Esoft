@@ -153,8 +153,7 @@ describe('checklist template validation', () => {
   it('rejects legacy model and maintenance type fields in create payloads', () => {
     expectBadRequestCode(() =>
       parseChecklistTemplatePayload({
-        equipmentModelId: 1,
-        maintenanceTypeId: 1,
+        ...{ equipmentModelId: 1, maintenanceTypeId: 1 },
         modules: [
           {
             checklistModuleId: 1,

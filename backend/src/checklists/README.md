@@ -16,12 +16,15 @@ checklists/
 
 ## Доступ
 
-Административные endpoints модулей, вопросов и шаблонов требуют роль `admin`
-или `chief_engineer`. Идентификаторы пользователей для полей `createdBy`,
-`updatedBy`, `publishedBy`, `archivedBy` берутся только из сессии.
+Административные endpoints модулей, вопросов и шаблонов требуют
+`checklists.manage`, доступное активным ролям `admin` и `chief_engineer`.
+Глобальный `PermissionsGuard` проверяет явно объявленное разрешение каждого
+обработчика; контроллеры повторно права не проверяют.
+Идентификаторы пользователей для полей `createdBy`, `updatedBy`, `publishedBy`,
+`archivedBy` берутся только из сессии.
 
-Рабочие endpoints `/api/checklists` доступны авторизованным пользователям
-только по правилу назначения чек-листа.
+Рабочие endpoints `/api/checklists` требуют `checklists.work`.
+Проверка назначения конкретного чек-листа выполняется отдельно в сервисах.
 
 Пользователь может работать только с чек-листами, где он указан как
 `assignedUserId`.
@@ -180,7 +183,6 @@ Query:
 
 ```text
 checklistModuleId?: number | null
-moduleId?: number | null
 answerType?: BOOLEAN | INTEGER | DECIMAL | TEXT | DATE
 isActive?: boolean
 search?: string
@@ -190,8 +192,11 @@ page?: number = 1
 limit?: number = 20, max 100
 ```
 
-- `checklistModuleId` и `moduleId` равнозначны.
-- `checklistModuleId = null` возвращает вопросы без модуля.
+- Фильтр модуля задаётся через `checklistModuleId`. Неизвестные параметры
+  запроса отклоняются с `CHECKLIST_QUESTION_QUERY_FIELD_UNKNOWN` (400).
+- HTTP query `checklistModuleId=null` (строка `"null"`) возвращает вопросы без модуля.
+  Parser также принимает значение `null` при прямом вызове.
+- Отсутствие `checklistModuleId` не добавляет фильтр по модулю.
 - Если фильтр по модулю не передан, список по умолчанию идёт по
   `createdAt desc, id desc`.
 - Если фильтр по модулю передан, список по умолчанию идёт по `sortOrder asc`.

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { getDictionariesAdminErrorMessage } from "./dictionaries-admin-error-messages";
 
 type UseDictionariesSavingParams = {
@@ -13,8 +13,11 @@ export function useDictionariesSaving({
   setMessage,
 }: UseDictionariesSavingParams) {
   const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
 
   const runSavingAction = async (action: () => Promise<void>) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setIsSaving(true);
     setError(null);
     setMessage(null);
@@ -26,6 +29,7 @@ export function useDictionariesSaving({
       setError(message);
       notifyError("Операция не выполнена", message);
     } finally {
+      savingRef.current = false;
       setIsSaving(false);
     }
   };

@@ -1178,3 +1178,13 @@ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT regexp_replace(replace(lower(value), chr(1105), chr(1077)), '[[:space:]]+', ' ', 'g') $$;
 CREATE INDEX idx_search_employee_name_trgm ON employees USING gin (app_search_normalize(last_name || ' ' || first_name || CASE WHEN middle_name IS NULL THEN '' ELSE ' ' || middle_name END) gin_trgm_ops) WHERE is_active = true;
 CREATE INDEX idx_search_position_name_trgm ON positions USING gin (app_search_normalize(name) gin_trgm_ops) WHERE is_active = true;
+
+CREATE TABLE "setup_rate_limits" (
+    "key" VARCHAR(64) NOT NULL,
+    "attempts" INTEGER NOT NULL,
+    "reset_at" TIMESTAMPTZ(6) NOT NULL,
+    CONSTRAINT "setup_rate_limits_pkey" PRIMARY KEY ("key"),
+    CONSTRAINT "chk_setup_rate_limits_attempts" CHECK ("attempts" BETWEEN 1 AND 6)
+);
+
+CREATE INDEX "idx_setup_rate_limits_reset_at" ON "setup_rate_limits" ("reset_at");

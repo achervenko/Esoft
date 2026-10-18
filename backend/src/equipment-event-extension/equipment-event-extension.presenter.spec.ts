@@ -17,6 +17,7 @@ describe('equipment event extension presenter', () => {
           name: 'Model',
         },
         name: 'Pump',
+        serialNumber: null,
         section: {
           id: 10,
           name: 'Line 1',
@@ -48,6 +49,7 @@ describe('equipment event extension presenter', () => {
         },
         location: 'Workshop / Line 1',
         name: 'Pump',
+        serialNumber: null,
         section: {
           id: 10,
           name: 'Line 1',
@@ -79,6 +81,7 @@ describe('equipment event extension presenter', () => {
           name: 'Model',
         },
         name: 'Pump',
+        serialNumber: null,
         visibleId: 5001,
       },
       eventType: {

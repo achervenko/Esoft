@@ -1,4 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { isPrismaTransactionConflict } from '../prisma/prisma-transaction-conflict';
+import { Inject, Injectable } from '@nestjs/common';
+import { countOtherActiveAdmins } from '../auth/role-sql';
+import { ACTIVE_MODULES } from '../config/active-modules.module';
+import {
+  getAssignableRoles,
+  hasRole,
+  validateRoleTransition,
+} from '../auth/role-module-policy';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,8 +19,6 @@ import {
   parseCreateUserPayload,
   parseUpdateUserPayload,
   throwBadRequest,
-  UserRole,
-  userRoles,
 } from './users-admin.validation';
 import { UsersAdminAssertionsService } from './users-admin-assertions.service';
 import {
@@ -30,6 +36,7 @@ export class UserAccountsAdminService {
     private readonly assertions: UsersAdminAssertionsService,
     private readonly audit: UsersAdminAuditService,
     private readonly prisma: PrismaService,
+    @Inject(ACTIVE_MODULES) private readonly activeModules: readonly string[],
   ) {}
 
   async listUsers() {
@@ -55,6 +62,11 @@ export class UserAccountsAdminService {
 
   async createUser(payload: UserPayload, actorUserId?: string | null) {
     const data = parseCreateUserPayload(payload);
+    data.role = validateRoleTransition({
+      currentRole: null,
+      requestedRole: data.role,
+      activeModules: this.activeModules,
+    }).value;
     const passwordHash = await hashUserPassword(data.password);
     const userId = randomUUID();
 
@@ -116,6 +128,7 @@ export class UserAccountsAdminService {
     try {
       return await this.runSerializableTransaction(async (tx) => {
         await this.assertions.assertActiveEmployeeExists(data.employeeId, tx);
+        await tx.$queryRaw`SELECT id FROM "user" WHERE id = ${userId} FOR UPDATE`;
         const currentUser = await tx.user.findUniqueOrThrow({
           include: {
             employeeUser: {
@@ -128,12 +141,21 @@ export class UserAccountsAdminService {
           where: { id: userId },
         });
 
+        const transition = validateRoleTransition({
+          currentRole: currentUser.role,
+          requestedRole: data.role,
+          activeModules: this.activeModules,
+        });
+        data.role = transition.value;
         await this.assertRoleChangeAllowed({
           actorUserId,
           currentRole: currentUser.role,
           newRole: data.role,
           tx,
           userId,
+          rolesChanged:
+            transition.addedRoles.length > 0 ||
+            transition.removedRoles.length > 0,
         });
 
         await tx.user.update({
@@ -188,7 +210,7 @@ export class UserAccountsAdminService {
   }
 
   getRoles() {
-    return userRoles.map((role) => ({
+    return getAssignableRoles(this.activeModules).map((role) => ({
       label: getRoleLabel(role),
       value: role,
     }));
@@ -197,13 +219,12 @@ export class UserAccountsAdminService {
   private async assertRoleChangeAllowed(params: {
     actorUserId?: string | null;
     currentRole?: string | null;
-    newRole: UserRole;
+    newRole: string;
     tx: Prisma.TransactionClient;
     userId: string;
+    rolesChanged: boolean;
   }) {
-    if (params.currentRole === params.newRole) {
-      return;
-    }
+    if (!params.rolesChanged) return;
 
     if (params.actorUserId === params.userId) {
       throwBadRequest(
@@ -212,17 +233,17 @@ export class UserAccountsAdminService {
       );
     }
 
-    if (params.currentRole !== 'admin' || params.newRole === 'admin') {
+    if (
+      !hasRole(params.currentRole, 'admin') ||
+      hasRole(params.newRole, 'admin')
+    ) {
       return;
     }
 
-    const remainingActiveAdminCount = await params.tx.user.count({
-      where: {
-        id: { not: params.userId },
-        role: 'admin',
-        OR: [{ banned: false }, { banned: null }],
-      },
-    });
+    const remainingActiveAdminCount = await countOtherActiveAdmins(
+      params.tx,
+      params.userId,
+    );
 
     if (remainingActiveAdminCount === 0) {
       throwBadRequest(
@@ -247,7 +268,7 @@ export class UserAccountsAdminService {
       } catch (error) {
         if (
           attempt === SERIALIZABLE_TRANSACTION_ATTEMPTS ||
-          !this.isTransactionConflict(error)
+          !isPrismaTransactionConflict(error)
         ) {
           throw error;
         }
@@ -255,12 +276,5 @@ export class UserAccountsAdminService {
     }
 
     throw new Error('Serializable transaction failed');
-  }
-
-  private isTransactionConflict(error: unknown) {
-    return (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2034'
-    );
   }
 }

@@ -1,3 +1,4 @@
+import { hasPermission } from "../shared/lib/permissions";
 import { DEFAULT_AUTH_ROUTE } from "./hash-router";
 import {
   canReadEquipment,
@@ -8,39 +9,42 @@ import {
   canManageEmployeeSizes,
 } from "../modules/ppe-permissions/ppe-permissions";
 import {
-  isAdministrator,
+  canManageUsers,
   canViewCalendar,
   canManageChecklists,
   canManageProductionCalendar,
 } from "../shared/lib/roles";
 
-export function getDefaultAuthRoute(role: unknown) {
-  return role === "accounting_specialist" || role === "ppe_specialist"
-    ? "#/ppe"
-    : DEFAULT_AUTH_ROUTE;
+export function getDefaultAuthRoute(permissions: unknown) {
+  if (canReadEquipment(permissions)) return DEFAULT_AUTH_ROUTE;
+  if (canReadPpe(permissions)) return "#/ppe";
+  return "#/profile";
 }
 
-export function canAccessWorkspaceRoute(role: unknown, route: string) {
+export function canAccessWorkspaceRoute(permissions: unknown, route: string) {
   const path = route.split("?")[0];
-  const knownRole = typeof role === "string" ? role : null;
-  if (path === "#/search") return canReadEquipment(role) || canReadPpe(role);
-  if (path === "#/profile") return true;
+  if (path === "#/search") return hasPermission(permissions, "search.read");
+  if (path === "#/profile") return hasPermission(permissions, "users.profile.read");
   if (
     path === "#/ppe" ||
     /^#\/ppe\/(employees|positions)\/[1-9]\d*$/.test(path)
   )
-    return canReadPpe(role);
+    return canReadPpe(permissions);
   if (path.startsWith("#/ppe")) return false;
   if (path === "#/dictionaries")
-    return isAdministrator(role) || canManageEmployeeSizes(role);
-  if (path === "#/users" || path.startsWith("#/users/"))
-    return isAdministrator(role);
+    return hasPermission(permissions, "dictionaries.manage") || canManageEmployeeSizes(permissions);
+  if (path === "#/users")
+    return canManageUsers(permissions);
   if (path === "#/production-calendar")
-    return canManageProductionCalendar(knownRole);
-  if (path === "#/calendar") return canViewCalendar(knownRole);
-  if (path === "#/checklist-admin" || path.startsWith("#/checklist-admin/"))
-    return canManageChecklists(knownRole);
-  if (path === "#/equipment/create" || /^#\/equipment\/[^/]+\/edit/.test(path))
-    return canEditEquipment(knownRole);
-  return canReadEquipment(role);
+    return canManageProductionCalendar(permissions);
+  if (path === "#/calendar") return canViewCalendar(permissions);
+  if (path === "#/checklist-admin" || /^#\/checklist-admin\/templates\/(new|[1-9]\d*)$/.test(path))
+    return canManageChecklists(permissions);
+  if (path === "#/equipment/create" || /^#\/equipment\/[1-9]\d*\/edit$/.test(path))
+    return canEditEquipment(permissions);
+  if (path === "#/my-checklists" || /^#\/my-checklists\/[1-9]\d*$/.test(path)) return hasPermission(permissions, "checklists.work");
+  if (path === "#/dashboard") return hasPermission(permissions, "equipment.progress.read");
+  if (path === "#/equipment" || /^#\/equipment\/[1-9]\d*$/.test(path))
+    return canReadEquipment(permissions);
+  return false;
 }

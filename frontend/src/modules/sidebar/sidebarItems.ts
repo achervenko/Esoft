@@ -17,7 +17,8 @@ export type SidebarLinkItem = {
   href: string;
   icon: LucideIcon;
   label: string;
-  roles?: string[];
+  permission?: string;
+  excludePermission?: string;
   type?: "link";
 };
 
@@ -59,13 +60,11 @@ export const sidebarSections: SidebarSection[] = [
         href: "#/ppe",
         icon: HardHat,
         label: "СИЗ",
-        roles: ["admin", "ppe_specialist", "accounting_specialist"],
       },
       {
         href: "#/calendar",
         icon: CalendarDays,
         label: "Календарь",
-        roles: ["admin", "chief_engineer", "engineer"],
       },
       {
         icon: ListChecks,
@@ -82,7 +81,6 @@ export const sidebarSections: SidebarSection[] = [
             href: "#/checklist-admin",
             icon: BookCheck,
             label: "Редактор чек-листов",
-            roles: ["admin", "chief_engineer"],
           },
         ],
       },
@@ -96,25 +94,24 @@ export const sidebarSections: SidebarSection[] = [
             href: "#/users",
             icon: Users,
             label: "Пользователи",
-            roles: ["admin"],
           },
           {
             href: "#/dictionaries",
             icon: BookOpen,
             label: "Справочники",
-            roles: ["admin"],
+            permission: "dictionaries.manage",
           },
           {
             href: "#/dictionaries",
             icon: Users,
             label: "Сотрудники",
-            roles: ["ppe_specialist"],
+            permission: "ppe.employee-sizes.manage",
+            excludePermission: "dictionaries.manage",
           },
           {
             href: "#/production-calendar",
             icon: CalendarDays,
             label: "Производственный",
-            roles: ["admin"],
           },
         ],
       },

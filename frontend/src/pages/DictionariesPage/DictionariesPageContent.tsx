@@ -9,13 +9,13 @@ import type { DictionariesContentModel } from "./dictionaries-page-view.types";
 
 type DictionariesPageContentProps = {
   page: DictionariesContentModel;
-  userRole: string | null;
+  userPermissions: readonly string[] | null;
   onOpenEmployeeSizes: (id: number) => void;
 };
 
 export function DictionariesPageContent({
   page,
-  userRole,
+  userPermissions,
   onOpenEmployeeSizes,
 }: DictionariesPageContentProps) {
   return (
@@ -35,7 +35,7 @@ export function DictionariesPageContent({
           employees={page.employees}
           isSaving={page.isSaving}
           onSizes={
-            canManageEmployeeSizes(userRole)
+            canManageEmployeeSizes(userPermissions)
               ? (employee) => onOpenEmployeeSizes(employee.id)
               : undefined
           }

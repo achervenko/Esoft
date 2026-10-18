@@ -1,3 +1,4 @@
+import { hasPermission } from "../../shared/lib/permissions";
 import { canAccessWorkspaceRoute } from "../../lib/role-navigation";
 import {
   sidebarSections,
@@ -17,26 +18,27 @@ const MIN_VISIBLE_ITEMS_FOR_COLLAPSIBLE_GROUP = 2;
 
 export function canShowSidebarItem(
   item: SidebarLinkItem,
-  userRole: string | null,
+  userPermissions: readonly string[] | null,
 ) {
   return (
-    canAccessWorkspaceRoute(userRole, item.href) &&
-    (!item.roles || item.roles.includes(String(userRole)))
+    canAccessWorkspaceRoute(userPermissions, item.href) &&
+    (!item.permission || hasPermission(userPermissions, item.permission)) &&
+    (!item.excludePermission || !hasPermission(userPermissions, item.excludePermission))
   );
 }
 
 export function getVisibleSidebarItems(
   items: SidebarItem[],
-  userRole: string | null,
+  userPermissions: readonly string[] | null,
 ) {
   return items
     .map((item) => {
       if (item.type !== "group") {
-        return canShowSidebarItem(item, userRole) ? item : null;
+        return canShowSidebarItem(item, userPermissions) ? item : null;
       }
 
       const visibleGroupItems = item.items.filter((child) =>
-        canShowSidebarItem(child, userRole),
+        canShowSidebarItem(child, userPermissions),
       );
 
       if (visibleGroupItems.length === 0) {
@@ -57,10 +59,10 @@ export function getVisibleSidebarItems(
 
 export function getActiveSidebarGroupId(
   activeHref: string,
-  userRole: string | null,
+  userPermissions: readonly string[] | null,
 ) {
   for (const section of sidebarSections) {
-    const visibleItems = getVisibleSidebarItems(section.items, userRole);
+    const visibleItems = getVisibleSidebarItems(section.items, userPermissions);
 
     for (const item of visibleItems) {
       if (

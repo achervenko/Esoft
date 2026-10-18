@@ -1,15 +1,17 @@
-export function canManageChecklists(role: string | null | undefined) {
-  return role === "admin" || role === "chief_engineer";
+import { hasPermission } from "./permissions";
+
+export function canManageChecklists(permissions: unknown) {
+  return hasPermission(permissions, "checklists.manage");
 }
 
-export function canViewCalendar(role: string | null | undefined) {
-  return role === "admin" || role === "chief_engineer" || role === "engineer";
+export function canViewCalendar(permissions: unknown) {
+  return hasPermission(permissions, "calendar.read");
 }
 
-export function canManageProductionCalendar(role: string | null | undefined) {
-  return role === "admin";
+export function canManageProductionCalendar(permissions: unknown) {
+  return hasPermission(permissions, "calendar.manage");
 }
 
-export function isAdministrator(role: unknown) {
-  return role === "admin";
+export function canManageUsers(permissions: unknown) {
+  return hasPermission(permissions, "users.manage");
 }

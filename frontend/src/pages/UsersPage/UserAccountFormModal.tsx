@@ -1,5 +1,12 @@
-import { useState } from "react";
-import { isValidPassword, MAX_PASSWORD_LENGTH, PASSWORD_POLICY_MESSAGE } from "../../shared/lib/password-validation";
+import { useId, useRef, useState } from "react";
+import { getUserRoles, USER_ROLES } from "../../shared/lib/user-roles";
+import { getProfileRoleLabel } from "../../modules/user-profile/profile-access";
+import { Checkbox } from "../../shared/ui/Checkbox";
+import {
+  isValidPassword,
+  MAX_PASSWORD_LENGTH,
+  PASSWORD_POLICY_MESSAGE,
+} from "../../shared/lib/password-validation";
 import type {
   AdminEmployee,
   AdminRoleOption,
@@ -14,7 +21,7 @@ type UserAccountFormModalProps = {
   employees: AdminEmployee[];
   isSaving: boolean;
   onClose: () => void;
-  onSubmit: (payload: UserAccountPayload) => void;
+  onSubmit: (payload: UserAccountPayload) => Promise<void>;
   roles: AdminRoleOption[];
   user: AdminUserAccount | null;
 };
@@ -31,20 +38,38 @@ export function UserAccountFormModal({
     email: user?.email ?? "",
     employeeId: user?.employee?.id ? String(user.employee.id) : "",
     password: "",
-    role: String(user?.role ?? "operator"),
+    role: getUserRoles(
+      user?.role ??
+        (roles.some((role) => role.value === "operator") ? "operator" : ""),
+    ).join(","),
     username: user?.username ?? "",
   });
   const [form, setForm] = useState(initialForm);
+  const submittingRef = useRef(false);
   const comparable = (value: typeof form) =>
     JSON.stringify([
       value.email.trim().toLowerCase(),
       value.employeeId,
       value.password,
-      value.role,
+      getUserRoles(value.role).sort().join(","),
       value.username.trim().toLowerCase(),
     ]);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<keyof typeof form, string>>
+  >({});
   const isCreateMode = !user;
+  const roleErrorId = useId();
+  const retainedRoles = getUserRoles(user?.role).filter(
+    (value) => !roles.some((role) => role.value === value),
+  );
+  const roleOptions = [
+    ...roles,
+    ...retainedRoles.map((value) => ({
+      value,
+      label: `${getProfileRoleLabel(value)} (модуль выключен)`,
+    })),
+  ];
+  const selectedRoles = getUserRoles(form.role);
 
   const updateField = (field: keyof typeof form, value: string) => {
     setForm((currentForm) => ({
@@ -54,12 +79,16 @@ export function UserAccountFormModal({
     setFieldErrors((current) => ({ ...current, [field]: undefined }));
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const employeeId = Number(form.employeeId);
-    const selectedRole = roles.find((role) => role.value === form.role);
+    const validRoles =
+      selectedRoles.length > 0 &&
+      selectedRoles.every((value) =>
+        roleOptions.some((role) => role.value === value),
+      );
 
-    if (isSaving) {
+    if (isSaving || submittingRef.current) {
       return;
     }
 
@@ -69,7 +98,8 @@ export function UserAccountFormModal({
     }
 
     if (!/^[a-zA-Z0-9._-]{3,64}$/.test(form.username.trim())) {
-      nextErrors.username = "Логин должен содержать 3–64 латинских символа, цифры, точку, дефис или нижнее подчёркивание.";
+      nextErrors.username =
+        "Логин должен содержать 3–64 латинских символа, цифры, точку, дефис или нижнее подчёркивание.";
     }
 
     if (isCreateMode && !isValidPassword(form.password, form)) {
@@ -79,16 +109,23 @@ export function UserAccountFormModal({
     if (!Number.isInteger(employeeId) || employeeId <= 0) {
       nextErrors.employeeId = "Выберите сотрудника.";
     }
-    if (!selectedRole) nextErrors.role = "Выберите роль.";
+    if (!validRoles) nextErrors.role = "Выберите хотя бы одну роль.";
     setFieldErrors(nextErrors);
-    if (Object.keys(nextErrors).length || !selectedRole) return;
-    onSubmit({
-      email: form.email.trim(),
-      employeeId,
-      password: isCreateMode ? form.password : undefined,
-      role: selectedRole.value,
-      username: form.username.trim(),
-    });
+    if (Object.keys(nextErrors).length || !validRoles) return;
+    submittingRef.current = true;
+    try {
+      await onSubmit({
+        email: form.email.trim(),
+        employeeId,
+        password: isCreateMode ? form.password : undefined,
+        role: USER_ROLES.filter((value) => selectedRoles.includes(value)).join(
+          ",",
+        ),
+        username: form.username.trim(),
+      });
+    } finally {
+      submittingRef.current = false;
+    }
   };
 
   return (
@@ -107,16 +144,19 @@ export function UserAccountFormModal({
             label="Сотрудник"
             error={fieldErrors.employeeId}
             onChange={(value) => updateField("employeeId", value)}
-            options={employees.filter((employee) =>
-              employee.isActive || employee.id === user?.employee?.id
-            ).map((employee) => ({
-              disabled:
-                !employee.isActive && String(employee.id) !== form.employeeId,
-              label: `${employee.fullName} — ${employee.position}${
-                employee.isActive ? "" : " (отключён)"
-              }`,
-              value: String(employee.id),
-            }))}
+            options={employees
+              .filter(
+                (employee) =>
+                  employee.isActive || employee.id === user?.employee?.id,
+              )
+              .map((employee) => ({
+                disabled:
+                  !employee.isActive && String(employee.id) !== form.employeeId,
+                label: `${employee.fullName} — ${employee.position}${
+                  employee.isActive ? "" : " (отключён)"
+                }`,
+                value: String(employee.id),
+              }))}
             placeholder="Выберите сотрудника"
             required
             value={form.employeeId}
@@ -152,18 +192,40 @@ export function UserAccountFormModal({
               />
             </FormField>
           ) : null}
-          <SelectDropdown
-            disabled={isSaving}
-            label="Роль"
-            error={fieldErrors.role}
-            onChange={(value) => updateField("role", value)}
-            options={roles.map((role) => ({
-              label: role.label,
-              value: role.value,
-            }))}
-            required
-            value={form.role}
-          />
+          <fieldset
+            aria-label="Роль"
+            aria-invalid={fieldErrors.role ? true : undefined}
+            aria-describedby={fieldErrors.role ? roleErrorId : undefined}
+          >
+            <legend>Роли</legend>
+            {roleOptions.map((role) => (
+              <Checkbox
+                key={role.value}
+                label={role.label}
+                checked={selectedRoles.includes(role.value)}
+                disabled={
+                  isSaving ||
+                  (retainedRoles.includes(role.value) &&
+                    !selectedRoles.includes(role.value))
+                }
+                onChange={(checked) =>
+                  updateField(
+                    "role",
+                    USER_ROLES.filter((value) =>
+                      value === role.value
+                        ? checked
+                        : selectedRoles.includes(value),
+                    ).join(","),
+                  )
+                }
+              />
+            ))}
+            {fieldErrors.role ? (
+              <small id={roleErrorId} className="field-error">
+                {fieldErrors.role}
+              </small>
+            ) : null}
+          </fieldset>
 
           <div className="admin-form-actions">
             <button

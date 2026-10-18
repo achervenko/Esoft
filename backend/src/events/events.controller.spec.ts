@@ -61,7 +61,7 @@ describe('EventsController', () => {
     );
   }
 
-  it('creates generic event through public endpoint', async () => {
+  it('creates generic event through events endpoint', async () => {
     const { controller, eventsService, session } = createController();
 
     await expect(
@@ -91,27 +91,6 @@ describe('EventsController', () => {
     );
   });
 
-  it('rejects create before parser for user without event management permission', async () => {
-    const { controller, eventsService, session } = createController();
-
-    session.user.role = 'engineer';
-
-    await expectThrownResponse(
-      () =>
-        controller.create(
-          {
-            title: '',
-          },
-          session as never,
-        ),
-      {
-        code: 'FORBIDDEN',
-        message: 'Недостаточно прав для управления событиями.',
-      },
-    );
-    expect(eventsService.create).not.toHaveBeenCalled();
-  });
-
   it('rejects invalid create payload before calling service', async () => {
     const { controller, eventsService, session } = createController();
 
@@ -132,7 +111,7 @@ describe('EventsController', () => {
     expect(eventsService.create).not.toHaveBeenCalled();
   });
 
-  it('creates equipment event through public generic endpoint', async () => {
+  it('creates equipment event through generic events endpoint', async () => {
     const { controller, eventsService, session } = createController();
 
     await expect(
@@ -193,22 +172,19 @@ describe('EventsController', () => {
     expect(eventsService.create).not.toHaveBeenCalled();
   });
 
-  it('loads generic event list through public endpoint', async () => {
-    const { controller, eventsService, session } = createController();
+  it('loads generic event list through events endpoint', async () => {
+    const { controller, eventsService } = createController();
 
     await expect(
-      controller.findAll(
-        {
-          dateFrom: '2026-08-01',
-          extensionCode: 'NONE',
-          limit: '25',
-          offset: '10',
-          responsibleUserId: 'user-1',
-          source: 'MANUAL',
-          status: 'CREATED',
-        },
-        session as never,
-      ),
+      controller.findAll({
+        dateFrom: '2026-08-01',
+        extensionCode: 'NONE',
+        limit: '25',
+        offset: '10',
+        responsibleUserId: 'user-1',
+        source: 'MANUAL',
+        status: 'CREATED',
+      }),
     ).resolves.toEqual([{ id: 1 }]);
 
     expect(eventsService.findAll).toHaveBeenCalledWith({
@@ -230,18 +206,15 @@ describe('EventsController', () => {
     });
   });
 
-  it('loads equipment-filtered event list through public endpoint', async () => {
-    const { controller, eventsService, session } = createController();
+  it('loads equipment-filtered event list through events endpoint', async () => {
+    const { controller, eventsService } = createController();
 
     await expect(
-      controller.findAll(
-        {
-          equipmentVisibleId: '1001',
-          extensionCode: 'EQUIPMENT',
-          maintenanceTypeId: '10',
-        },
-        session as never,
-      ),
+      controller.findAll({
+        equipmentVisibleId: '1001',
+        extensionCode: 'EQUIPMENT',
+        maintenanceTypeId: '10',
+      }),
     ).resolves.toEqual([{ id: 1 }]);
 
     expect(eventsService.findAll).toHaveBeenCalledWith({
@@ -261,15 +234,11 @@ describe('EventsController', () => {
     });
   });
 
-  it('allows user with read permission to load event list and detail', async () => {
-    const { controller, eventsService, session } = createController();
+  it('forwards event list and detail queries', async () => {
+    const { controller, eventsService } = createController();
 
-    session.user.role = 'engineer';
-
-    await expect(controller.findAll({}, session as never)).resolves.toEqual([
-      { id: 1 },
-    ]);
-    await expect(controller.findOne(1, session as never)).resolves.toEqual({
+    await expect(controller.findAll({})).resolves.toEqual([{ id: 1 }]);
+    await expect(controller.findOne(1)).resolves.toEqual({
       id: 1,
     });
 
@@ -281,29 +250,14 @@ describe('EventsController', () => {
     expect(eventsService.findOne).toHaveBeenCalledWith(1);
   });
 
-  it('rejects generic event list for user without view permission', async () => {
-    const { controller, eventsService, session } = createController();
-
-    session.user.role = 'operator';
-
-    await expectThrownResponse(() => controller.findAll({}, session as never), {
-      code: 'FORBIDDEN',
-      message: 'Недостаточно прав для просмотра событий.',
-    });
-    expect(eventsService.findAll).not.toHaveBeenCalled();
-  });
-
   it('rejects invalid list query before calling service', async () => {
-    const { controller, eventsService, session } = createController();
+    const { controller, eventsService } = createController();
 
     await expectThrownResponse(
       () =>
-        controller.findAll(
-          {
-            status: 'UNKNOWN',
-          },
-          session as never,
-        ),
+        controller.findAll({
+          status: 'UNKNOWN',
+        }),
       {
         code: 'EVENT_STATUS_INVALID',
         message: 'Некорректный статус события.',
@@ -312,53 +266,24 @@ describe('EventsController', () => {
     expect(eventsService.findAll).not.toHaveBeenCalled();
   });
 
-  it('loads generic event detail through public endpoint', async () => {
-    const { controller, eventsService, session } = createController();
+  it('loads generic event detail through events endpoint', async () => {
+    const { controller, eventsService } = createController();
 
-    await expect(controller.findOne(1, session as never)).resolves.toEqual({
+    await expect(controller.findOne(1)).resolves.toEqual({
       id: 1,
     });
 
     expect(eventsService.findOne).toHaveBeenCalledWith(1);
   });
 
-  it('loads responsible users through public generic endpoint', async () => {
-    const { controller, eventsService, session } = createController();
+  it('loads responsible users through generic events endpoint', async () => {
+    const { controller, eventsService } = createController();
 
-    await expect(
-      controller.findResponsibleUsers(session as never),
-    ).resolves.toEqual({
+    await expect(controller.findResponsibleUsers()).resolves.toEqual({
       users: [],
     });
 
     expect(eventsService.findResponsibleUsers).toHaveBeenCalledTimes(1);
-  });
-
-  it('rejects responsible users for user without event management permission', async () => {
-    const { controller, eventsService, session } = createController();
-
-    session.user.role = 'engineer';
-
-    await expectThrownResponse(
-      () => controller.findResponsibleUsers(session as never),
-      {
-        code: 'FORBIDDEN',
-        message: 'Недостаточно прав для управления событиями.',
-      },
-    );
-    expect(eventsService.findResponsibleUsers).not.toHaveBeenCalled();
-  });
-
-  it('rejects generic event detail for user without view permission', async () => {
-    const { controller, eventsService, session } = createController();
-
-    session.user.role = 'operator';
-
-    await expectThrownResponse(() => controller.findOne(1, session as never), {
-      code: 'FORBIDDEN',
-      message: 'Недостаточно прав для просмотра событий.',
-    });
-    expect(eventsService.findOne).not.toHaveBeenCalled();
   });
 
   it('updates event through generic endpoint', async () => {
@@ -413,29 +338,6 @@ describe('EventsController', () => {
       },
       'user-1',
     );
-  });
-
-  it('rejects user without event management permission', async () => {
-    const { controller, eventsService, session } = createController();
-
-    session.user.role = 'engineer';
-
-    await expectThrownResponse(
-      () =>
-        controller.updateCreated(
-          1,
-          {
-            title: 'Updated event',
-            version: 2,
-          },
-          session as never,
-        ),
-      {
-        code: 'FORBIDDEN',
-        message: 'Недостаточно прав для управления событиями.',
-      },
-    );
-    expect(eventsService.updateCreated).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -529,21 +431,6 @@ describe('EventsController', () => {
       );
     },
   );
-
-  it('rejects lifecycle endpoint for user without event management permission', async () => {
-    const { controller, eventsService, session } = createController();
-
-    session.user.role = 'engineer';
-
-    await expectThrownResponse(
-      () => controller.start(1, { version: 2 }, session as never),
-      {
-        code: 'FORBIDDEN',
-        message: 'Недостаточно прав для управления событиями.',
-      },
-    );
-    expect(eventsService.start).not.toHaveBeenCalled();
-  });
 
   it('rejects lifecycle endpoint without version before calling service', async () => {
     const { controller, eventsService, session } = createController();

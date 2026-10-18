@@ -39,7 +39,7 @@ test('production roles, actual migration CLI and dump/restore preserve package o
     await cp(join(project, 'scripts'), join(root, 'scripts'), { recursive: true });
     await cp(join(project, 'backend/prisma/schema'), join(root, 'backend/prisma/schema'), { recursive: true });
     await cp(join(project, 'backend/prisma/packages'), join(root, 'backend/prisma/packages'), { recursive: true });
-    await writeFile(join(root, 'database-packages.json'), '{"modules":["equipment","ppe"]}');
+    await writeFile(join(root, 'database-packages.json'), '{"modules":["equipment","ppe","warehouse"]}');
     const migrationUrl = new URL(environment.urlFor('production_probe', 'migration_probe'));
     migrationUrl.password = 'isolated-probe-password'; // Disposable trust-authenticated cluster only.
     await writeFile(join(root, '.env'), `NODE_ENV=production\nDATABASE_URL=${migrationUrl}\n`);
@@ -66,7 +66,7 @@ test('production roles, actual migration CLI and dump/restore preserve package o
     const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: migrationUrl.toString() }) });
     const { seedSelectedDatabase } = require('../../../../backend/dist/prisma/seed/seed-selected.js');
     try {
-      await seedSelectedDatabase(prisma, [{ id: 'core' }, { id: 'equipment' }, { id: 'ppe' }]);
+      await seedSelectedDatabase(prisma, [{ id: 'core' }, { id: 'equipment' }, { id: 'ppe' }, { id: 'warehouse' }]);
       for (const model of Prisma.dmmf.datamodel.models) {
         const delegate = model.name[0].toLowerCase() + model.name.slice(1);
         const orderField = model.fields.find((field) => field.kind === 'scalar' && !field.isList).name;
@@ -82,6 +82,23 @@ test('production roles, actual migration CLI and dump/restore preserve package o
     await assert.rejects(runtime.query("INSERT INTO ppe_employee_sizes(employee_id,shoe_size) SELECT id,99 FROM employees WHERE last_name='Runtime'"), { code: '23514' });
     await assert.rejects(runtime.query('CREATE TABLE forbidden_probe(id int)'), { code: '42501' });
     await assert.rejects(runtime.query('SELECT * FROM _prisma_migrations'), { code: '42501' });
+    await runtime.query(`
+      INSERT INTO "user"(id,name,email,"updatedAt") VALUES ('warehouse-runtime-issuer','Issuer','issuer@runtime.invalid',now());
+      INSERT INTO warehouse_items(article,name,unit) VALUES ('RUNTIME-WH','Runtime item','шт');
+      INSERT INTO warehouse_storage_locations(code,name) VALUES ('RUNTIME-LOCATION','Runtime shelf');
+      INSERT INTO warehouse_balances(item_id,storage_location_id,quantity)
+        SELECT i.id,l.id,5 FROM warehouse_items i CROSS JOIN warehouse_storage_locations l WHERE i.article='RUNTIME-WH' AND l.code='RUNTIME-LOCATION';
+      INSERT INTO warehouse_issues(type,issued_by_user_id,comment,override_reservations)
+        VALUES ('MANUAL','warehouse-runtime-issuer','Runtime override reason',true);
+      INSERT INTO warehouse_issue_positions(issue_id,balance_id,quantity)
+        SELECT i.id,b.id,0.125 FROM warehouse_issues i CROSS JOIN warehouse_balances b
+        WHERE i.issued_by_user_id='warehouse-runtime-issuer';
+    `);
+    const warehouseIssuesBeforeBackup = (await runtime.query('SELECT * FROM warehouse_issues ORDER BY id')).rows;
+    const warehousePositionsBeforeBackup = (await runtime.query('SELECT * FROM warehouse_issue_positions ORDER BY id')).rows;
+    assert.equal(warehousePositionsBeforeBackup[0].quantity, '0.125');
+    await assert.rejects(runtime.query('UPDATE warehouse_issue_positions SET quantity=0'), { code: '23514' });
+    await assert.rejects(runtime.query("UPDATE warehouse_issues SET type='ISSUE_SHEET'"), { code: '23514' });
     const restoreTarget = await environment.database('restored_probe', { owner: 'migration_probe', unicode: true });
     const dump = join(environment.root, 'production.dump');
     const pgBin = process.env.ESOFT_TEST_PG_BIN || 'C:/Program Files/PostgreSQL/17/bin';
@@ -95,6 +112,10 @@ test('production roles, actual migration CLI and dump/restore preserve package o
     assert.equal((await runPackageMigrations({ projectRoot: root, databaseUrl: restoredUrl.toString(), operation: 'status', output: { log() {} } })).ok, true);
     assert.deepEqual((await restoreTarget.query('SELECT migration_name,checksum FROM _prisma_migrations ORDER BY migration_name')).rows, (await database.query('SELECT migration_name,checksum FROM _prisma_migrations ORDER BY migration_name')).rows);
     assert.equal((await restoreTarget.query("SELECT count(*)::int AS count FROM employees WHERE last_name='Runtime'")).rows[0].count, 1);
+    assert.deepEqual((await restoreTarget.query('SELECT * FROM warehouse_issues ORDER BY id')).rows, warehouseIssuesBeforeBackup);
+    assert.deepEqual((await restoreTarget.query('SELECT * FROM warehouse_issue_positions ORDER BY id')).rows, warehousePositionsBeforeBackup);
+    await assert.rejects(restoreTarget.query('UPDATE warehouse_issue_positions SET quantity=0'), { code: '23514' });
+    await assert.rejects(restoreTarget.query('DELETE FROM warehouse_balances'), { code: '23503' });
     assert.equal((await restoreTarget.query('SELECT app_search_normalize($1) AS text', ['Ёж  СИЗ'])).rows[0].text, 'еж сиз');
     const historicalSearch = (await database.query('SELECT app_search_normalize($1) AS text', ['Ёж  СИЗ'])).rows[0].text;
     assert.equal(historicalSearch, 'еж сиз');

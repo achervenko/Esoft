@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { canManageUsers } from "../../shared/lib/roles";
 import {
   createAdminUserAccount,
   deleteAdminUserPhoto,
@@ -21,13 +22,13 @@ export type UserFormState = AdminUserAccount | "new" | null;
 type UseUsersAdminPageParams = {
   currentUserId?: string | null;
   onCurrentUserChanged?: () => void;
-  userRole: string | null;
+  userPermissions: readonly string[] | null;
 };
 
 export function useUsersAdminPage({
   currentUserId,
   onCurrentUserChanged,
-  userRole,
+  userPermissions,
 }: UseUsersAdminPageParams) {
   const [employees, setEmployees] = useState<AdminEmployee[]>([]);
   const [users, setUsers] = useState<AdminUserAccount[]>([]);
@@ -43,7 +44,7 @@ export function useUsersAdminPage({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const isAdmin = userRole === "admin";
+  const usersManageable = canManageUsers(userPermissions);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -57,6 +58,7 @@ export function useUsersAdminPage({
       setUsers(userItems);
       setRoles(roleItems);
     } catch (requestError) {
+      setMessage(null);
       setError(getUsersAdminErrorMessage(requestError));
     } finally {
       setIsLoading(false);
@@ -64,13 +66,13 @@ export function useUsersAdminPage({
   };
 
   useEffect(() => {
-    if (isAdmin) {
+    if (usersManageable) {
       void loadData();
       return;
     }
 
     setIsLoading(false);
-  }, [isAdmin]);
+  }, [usersManageable]);
 
   const saveUser = async (payload: UserAccountPayload) => {
     await runSavingAction(async () => {
@@ -150,6 +152,7 @@ export function useUsersAdminPage({
     isSavingRef.current = true;
     setIsSaving(true);
     setError(null);
+    setMessage(null);
 
     try {
       await action();
@@ -179,7 +182,7 @@ export function useUsersAdminPage({
     deleteUserPhoto,
     employees,
     error,
-    isAdmin,
+    usersManageable,
     isLoading,
     isSaving,
     message,

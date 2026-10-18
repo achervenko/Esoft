@@ -1,6 +1,7 @@
 import { LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DEFAULT_AUTH_ROUTE, getHashRoute } from "../../lib/hash-router";
+import { getDefaultAuthRoute } from "../../lib/role-navigation";
 import type {
   EmployeeProfile,
   UserPhoto,
@@ -24,6 +25,7 @@ type SidebarProps = {
     name?: string | null;
     photo?: UserPhoto | null;
     role?: string | null;
+  permissions?: readonly string[];
     username?: string | null;
   } | null;
 };
@@ -59,18 +61,18 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
   const isMobileSidebar = useMobileSidebar();
   const displayName = getUserDisplayName(user);
   const username = getAccountLabel(user);
-  const userRole = user?.role ?? null;
+  const userPermissions = user?.permissions ?? null;
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const activeGroupId = getActiveSidebarGroupId(
       getHashRoute() || DEFAULT_AUTH_ROUTE,
-      userRole,
+      userPermissions,
     );
 
     return activeGroupId ? { [activeGroupId]: true } : {};
   });
   const [lastActiveGroupId, setLastActiveGroupId] = useState<string | null>(
     () =>
-      getActiveSidebarGroupId(getHashRoute() || DEFAULT_AUTH_ROUTE, userRole),
+      getActiveSidebarGroupId(getHashRoute() || DEFAULT_AUTH_ROUTE, userPermissions),
   );
 
   useEffect(() => {
@@ -83,7 +85,7 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
   }, []);
 
   useEffect(() => {
-    const activeGroupId = getActiveSidebarGroupId(activeHref, userRole);
+    const activeGroupId = getActiveSidebarGroupId(activeHref, userPermissions);
 
     if (activeGroupId === lastActiveGroupId) {
       return;
@@ -97,7 +99,7 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
     }
 
     setLastActiveGroupId(activeGroupId);
-  }, [activeHref, lastActiveGroupId, userRole]);
+  }, [activeHref, lastActiveGroupId, userPermissions]);
 
   const handleToggleSidebar = () => {
     if (isMobileSidebar) {
@@ -125,7 +127,7 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
       <div className="sidebar-header">
         <a
           className="sidebar-brand"
-          href="#/dashboard"
+          href={getDefaultAuthRoute(userPermissions)}
           onClick={closeMobileSidebar}
         >
           <span className="sidebar-brand-mark">
@@ -151,7 +153,7 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
 
       <nav className="sidebar-nav" aria-label="Основное меню">
         {sidebarSections.map((section) => {
-          const visibleItems = getVisibleSidebarItems(section.items, userRole);
+          const visibleItems = getVisibleSidebarItems(section.items, userPermissions);
 
           if (visibleItems.length === 0) {
             return null;

@@ -15,7 +15,7 @@ HTTP-запросы обрабатываются двумя контроллер
 - `EquipmentHistoryService` — получение истории изменений;
 - `EquipmentWriteService` — создание и обновление оборудования.
 
-`EquipmentFilesController` использует `EquipmentService`, чтобы найти внутренний идентификатор оборудования по пользовательскому `visibleId`. Получение и загрузка файлов выполняются через `StorageFileService`.
+`EquipmentFilesController` использует `EquipmentService`, чтобы найти внутренний идентификатор оборудования по пользовательскому `visibleId`. Все файловые операции выполняются через `StorageFileService`.
 
 Доступ к базе данных выполняется через `PrismaService`. Создание и обновление оборудования выполняются в транзакции, которая включает:
 
@@ -39,22 +39,41 @@ HTTP-запросы обрабатываются двумя контроллер
 Контроллер:
 
 - не содержит Prisma-логики;
-- проверяет `visibleId` через `ParseIntPipe`;
-- проверяет право на изменение через `assertCanEditEquipment()` перед созданием и обновлением;
+- проверяет обязательный route-параметр `visibleId` через `ParsePositiveIntPipe`;
+- проверяет optional `visibleId` в query `create-options` через `ParseOptionalPositiveIntPipe`:
+  отсутствие параметра даёт `undefined`, пустое или невалидное значение — `400 ROUTE_ID_INVALID`;
+- принимает только положительные безопасные целые ID; нарушение возвращает `400 ROUTE_ID_INVALID`;
+- явно объявляет permissions: `equipment.read` для чтения и `equipment.edit` для создания/обновления;
+  доступ проверяет глобальный guard, без повторной проверки в контроллере;
 - делегирует выполнение сценариев фасаду `EquipmentService`.
 
 ## EquipmentFilesController
 
-`EquipmentFilesController` отвечает только за файлы оборудования:
+`EquipmentFilesController` обслуживает шесть операций:
 
 - получение списка файлов;
-- загрузку файла по `visibleId`.
+- загрузку файла;
+- скачивание;
+- preview;
+- удаление;
+- назначение основного файла.
 
-Сначала контроллер вызывает `EquipmentService.findStorageOwnerByVisibleId()`, чтобы преобразовать пользовательский `visibleId` во внутренний `equipment.id`.
+Каждый обработчик явно объявляет permission, который проверяет глобальный guard:
 
-После определения владельца фактическая работа с файлами передаётся `StorageFileService`.
+- list / download / preview — `files.read`;
+- upload / delete / set primary — `files.manage`.
 
-Перед загрузкой файла контроллер проверяет право пользователя через `assertCanManageFiles()`.
+Параметры `visibleId` и `fileId` проверяются общим `ParsePositiveIntPipe`.
+Нулевые, отрицательные и небезопасные целые ID возвращают `400 ROUTE_ID_INVALID`.
+
+После проверки доступа и параметров контроллер вызывает
+`EquipmentService.findStorageOwnerByVisibleId()`, чтобы определить storage-owner
+по пользовательскому `visibleId`. Затем операция делегируется `StorageFileService`.
+В операциях с конкретным файлом передаются и `fileId`, и owner, чтобы доступ
+ограничивался файлами указанного оборудования.
+
+Изменяющие операции передают `session.user.id` и `AuditModule.EQUIPMENT` для аудита.
+Отсутствие оборудования нормализуется в `404 EQUIPMENT_NOT_FOUND`.
 
 Файловые операции выполняются независимо от транзакций создания и обновления оборудования.
 

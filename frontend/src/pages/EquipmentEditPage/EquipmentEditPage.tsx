@@ -1,3 +1,4 @@
+import { hasPermission } from "../../shared/lib/permissions";
 import { ArrowLeft } from "lucide-react";
 import { EquipmentDocumentsPanel } from "../../modules/equipment-documents";
 import { Notice } from "../../shared/ui/Notice";
@@ -18,20 +19,20 @@ import "../../modules/equipment-create-form/EquipmentPageLayout.css";
 type EquipmentEditPageProps = {
   initialTab?: EquipmentEditTab;
   returnTo: string;
-  userRole: string | null;
+  userPermissions: readonly string[] | null;
   visibleId: number;
 };
 
 export function EquipmentEditPage({
   initialTab = "details",
   returnTo,
-  userRole,
+  userPermissions,
   visibleId,
 }: EquipmentEditPageProps) {
   const page = useEquipmentEditPage({
     initialTab,
     returnTo,
-    userRole,
+    userPermissions,
     visibleId,
   });
 
@@ -104,11 +105,15 @@ export function EquipmentEditPage({
             id={getEquipmentEditPanelId("documents")}
             role="tabpanel"
           >
-            <EquipmentDocumentsPanel
-              mode="edit"
-              onSaved={page.handleDocumentsSaved}
-              visibleId={visibleId}
-            />
+            {hasPermission(userPermissions, "files.read") ? (
+              <EquipmentDocumentsPanel
+                mode={hasPermission(userPermissions, "files.manage") ? "edit" : "view"}
+                onSaved={page.handleDocumentsSaved}
+                visibleId={visibleId}
+              />
+            ) : (
+              <Notice tone="error">Нет доступа к документам оборудования.</Notice>
+            )}
           </section>
         )
       ) : null}

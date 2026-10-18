@@ -1,0 +1,146 @@
+model WarehouseItem {
+  id              BigInt                    @id @default(autoincrement())
+  article         String                    @unique(map: "uq_warehouse_items_article") @db.VarChar(100)
+  name            String                    @db.VarChar(255)
+  unit            String                    @db.VarChar(50)
+  comment         String?                   @db.Text
+  isActive        Boolean                   @default(true) @map("is_active")
+  balances        WarehouseBalance[]
+  issueSheetLines WarehouseIssueSheetLine[]
+
+  @@map("warehouse_items")
+}
+
+model WarehouseStorageLocation {
+  id              BigInt                    @id @default(autoincrement())
+  code            String                    @unique(map: "uq_warehouse_storage_locations_code") @db.VarChar(100)
+  name            String                    @db.VarChar(255)
+  isActive        Boolean                   @default(true) @map("is_active")
+  balances        WarehouseBalance[]
+  issueSheetLines WarehouseIssueSheetLine[]
+
+  @@map("warehouse_storage_locations")
+}
+
+model WarehouseProject {
+  id              BigInt                        @id @default(autoincrement())
+  projectNumber   String                        @unique(map: "uq_warehouse_projects_project_number") @map("project_number") @db.VarChar(100)
+  name            String?                       @db.VarChar(255)
+  isActive        Boolean                       @default(true) @map("is_active")
+  reservations    WarehouseProjectReservation[]
+  issueSheetLines WarehouseIssueSheetLine[]
+  issues          WarehouseIssue[]
+
+  @@map("warehouse_projects")
+}
+
+model WarehouseBalance {
+  id                BigInt                        @id @default(autoincrement())
+  itemId            BigInt                        @map("item_id")
+  storageLocationId BigInt                        @map("storage_location_id")
+  // DB-only chk_warehouse_balances_quantity: quantity >= 0.
+  quantity          Decimal                       @default(0) @db.Decimal(14, 3)
+  reservations      WarehouseProjectReservation[]
+  issuePositions    WarehouseIssuePosition[]
+  item              WarehouseItem                 @relation(fields: [itemId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_balances_item")
+  storageLocation   WarehouseStorageLocation      @relation(fields: [storageLocationId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_balances_storage_location")
+
+  @@unique([itemId, storageLocationId], map: "uq_warehouse_balances_item_location")
+  @@index([storageLocationId], map: "idx_warehouse_balances_storage_location")
+  @@map("warehouse_balances")
+}
+
+model WarehouseProjectReservation {
+  id        BigInt           @id @default(autoincrement())
+  balanceId BigInt           @map("balance_id")
+  projectId BigInt           @map("project_id")
+  // DB-only chk_warehouse_project_reservations_quantity: quantity > 0.
+  quantity  Decimal          @db.Decimal(14, 3)
+  balance   WarehouseBalance @relation(fields: [balanceId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_project_reservations_balance")
+  project   WarehouseProject @relation(fields: [projectId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_project_reservations_project")
+
+  @@unique([balanceId, projectId], map: "uq_warehouse_project_reservations_balance_project")
+  @@index([projectId], map: "idx_warehouse_project_reservations_project")
+  @@map("warehouse_project_reservations")
+}
+
+model WarehouseIssueSheet {
+  id                BigInt                    @id @default(autoincrement())
+  name              String                    @db.VarChar(255)
+  sourceFileName    String?                   @map("source_file_name") @db.VarChar(255)
+  sourceFileHash    String?                   @map("source_file_hash") @db.VarChar(64)
+  status            String                    @db.VarChar(50)
+  createdByUserId   String                    @map("created_by_user_id")
+  processedByUserId String?                   @map("processed_by_user_id")
+  createdAt         DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  processedAt       DateTime?                 @map("processed_at") @db.Timestamptz(6)
+  lines             WarehouseIssueSheetLine[]
+  createdBy         User                      @relation("WarehouseIssueSheetCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_issue_sheets_created_by")
+  processedBy       User?                     @relation("WarehouseIssueSheetProcessedBy", fields: [processedByUserId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_issue_sheets_processed_by")
+
+  @@map("warehouse_issue_sheets")
+}
+
+model WarehouseIssueSheetLine {
+  id                BigInt                    @id @default(autoincrement())
+  issueSheetId      BigInt                    @map("issue_sheet_id")
+  itemId            BigInt?                   @map("item_id")
+  storageLocationId BigInt?                   @map("storage_location_id")
+  projectId         BigInt?                   @map("project_id")
+  // DB-only chk_warehouse_issue_sheet_lines_quantity: quantity > 0.
+  quantity          Decimal                   @db.Decimal(14, 3)
+  unitSnapshot      String?                   @map("unit_snapshot") @db.VarChar(50)
+  sourceArticle     String?                   @map("source_article") @db.VarChar(100)
+  sourceName        String?                   @map("source_name") @db.VarChar(255)
+  sourceLocation    String?                   @map("source_location") @db.VarChar(255)
+  sourceProject     String?                   @map("source_project") @db.VarChar(255)
+  matchingStatus    String                    @map("matching_status") @db.VarChar(50)
+  error             String?                   @db.Text
+  // DB-only chk_warehouse_issue_sheet_lines_row_number: row_number > 0.
+  rowNumber         Int                       @map("row_number")
+  issues            WarehouseIssue[]
+  issueSheet        WarehouseIssueSheet       @relation(fields: [issueSheetId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_issue_sheet_lines_sheet")
+  item              WarehouseItem?            @relation(fields: [itemId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_issue_sheet_lines_item")
+  storageLocation   WarehouseStorageLocation? @relation(fields: [storageLocationId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_issue_sheet_lines_storage_location")
+  project           WarehouseProject?         @relation(fields: [projectId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_issue_sheet_lines_project")
+
+  @@unique([issueSheetId, rowNumber], map: "uq_warehouse_issue_sheet_lines_sheet_row")
+  @@map("warehouse_issue_sheet_lines")
+}
+
+model WarehouseIssue {
+  id                   BigInt                   @id @default(autoincrement())
+  // DB-only chk_warehouse_issues_type_line: MANUAL has no line; ISSUE_SHEET requires a line.
+  type                 String                   @db.VarChar(50)
+  projectId            BigInt?                  @map("project_id")
+  issueSheetLineId     BigInt?                  @map("issue_sheet_line_id")
+  issuedByUserId       String                   @map("issued_by_user_id")
+  // DB-only chk_warehouse_issues_override_comment: override requires NULLIF(BTRIM(comment), '') IS NOT NULL.
+  comment              String?                  @db.Text
+  overrideReservations Boolean                  @default(false) @map("override_reservations")
+  createdAt            DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  project              WarehouseProject?        @relation(fields: [projectId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_issues_project")
+  issueSheetLine       WarehouseIssueSheetLine? @relation(fields: [issueSheetLineId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_issues_sheet_line")
+  issuedBy             User                     @relation("WarehouseIssuedBy", fields: [issuedByUserId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_issues_issued_by")
+  positions            WarehouseIssuePosition[]
+
+  @@index([projectId], map: "idx_warehouse_issues_project")
+  @@index([issueSheetLineId], map: "idx_warehouse_issues_sheet_line")
+  @@index([issuedByUserId], map: "idx_warehouse_issues_issued_by")
+  @@index([createdAt], map: "idx_warehouse_issues_created_at")
+  @@map("warehouse_issues")
+}
+
+model WarehouseIssuePosition {
+  id        BigInt           @id @default(autoincrement())
+  issueId   BigInt           @map("issue_id")
+  balanceId BigInt           @map("balance_id")
+  // DB-only chk_warehouse_issue_positions_quantity: quantity > 0.
+  quantity  Decimal          @db.Decimal(14, 3)
+  issue     WarehouseIssue   @relation(fields: [issueId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_issue_positions_issue")
+  balance   WarehouseBalance @relation(fields: [balanceId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_issue_positions_balance")
+
+  @@unique([issueId, balanceId], map: "uq_warehouse_issue_positions_issue_balance")
+  @@index([balanceId], map: "idx_warehouse_issue_positions_balance")
+  @@map("warehouse_issue_positions")
+}

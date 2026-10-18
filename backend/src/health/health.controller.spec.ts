@@ -1,3 +1,4 @@
+import type { Response } from 'express';
 import { PATH_METADATA } from '@nestjs/common/constants';
 import { HealthController } from './health.controller';
 import { HealthService } from './health.service';
@@ -24,7 +25,9 @@ describe('HealthController', () => {
     });
     const response = createResponse();
 
-    await expect(controller.getHealth(response)).resolves.toEqual({
+    await expect(
+      controller.getHealth(response as unknown as Response),
+    ).resolves.toEqual({
       dependencies: {
         minio: 'ok',
         minioBucket: 'ok',
@@ -46,7 +49,7 @@ describe('HealthController', () => {
     });
     const response = createResponse();
 
-    await controller.getHealth(response);
+    await controller.getHealth(response as unknown as Response);
 
     expect(response.status).toHaveBeenCalledWith(503);
   });
@@ -63,5 +66,5 @@ function createController(health: HealthResponse) {
 function createResponse() {
   return {
     status: jest.fn(),
-  } as never;
+  };
 }

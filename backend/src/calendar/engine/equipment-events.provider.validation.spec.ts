@@ -4,7 +4,7 @@ import {
 } from './equipment-events.provider.spec-fixtures';
 
 describe('EquipmentEventsProvider extension validation', () => {
-  it.each([
+  it.each<[string, unknown]>([
     ['null', null],
     ['undefined', undefined],
     ['array', []],
@@ -33,23 +33,27 @@ describe('EquipmentEventsProvider extension validation', () => {
     ],
     ['null equipment', { ...eventResponse().extension, equipment: null }],
     ['incomplete equipment', { ...eventResponse().extension, equipment: {} }],
-    ...['name', 'visibleId', 'location', 'serialNumber'].map((field) => [
-      'missing equipment ' + field,
-      {
-        ...eventResponse().extension,
-        equipment: {
-          ...eventResponse().extension.equipment,
-          [field]: undefined,
+    ...['name', 'visibleId', 'location', 'serialNumber'].map(
+      (field): [string, unknown] => [
+        'missing equipment ' + field,
+        {
+          ...eventResponse().extension,
+          equipment: {
+            ...eventResponse().extension.equipment,
+            [field]: undefined,
+          },
         },
-      },
-    ]),
-    ...[0, -1, NaN, Infinity, 1.5, '1001'].map((visibleId) => [
-      'invalid visibleId ' + String(visibleId),
-      {
-        ...eventResponse().extension,
-        equipment: { ...eventResponse().extension.equipment, visibleId },
-      },
-    ]),
+      ],
+    ),
+    ...[0, -1, NaN, Infinity, 1.5, '1001'].map(
+      (visibleId): [string, unknown] => [
+        'invalid visibleId ' + String(visibleId),
+        {
+          ...eventResponse().extension,
+          equipment: { ...eventResponse().extension.equipment, visibleId },
+        },
+      ],
+    ),
   ])('rejects invalid equipment extension: %s', async (_label, extension) => {
     const { eventsQueryService, provider } = createProvider();
     eventsQueryService.findAll.mockResolvedValue([

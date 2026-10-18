@@ -1,4 +1,6 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { permissionsForTest } from "../../test/permission-fixtures";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
 import { StrictMode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import * as api from "../../shared/api/checklists";
@@ -10,7 +12,7 @@ afterEach(() => {
   window.history.replaceState(null, "");
 });
 
-it("keeps the initial saved message but clears it when another template opens", async () => {
+it("keeps the initial saved message but clears it and closes deletion when another template opens", async () => {
   window.history.replaceState({ checklistTemplateSaved: true, otherState: "keep" }, "");
   vi.spyOn(api, "getChecklistTemplate").mockImplementation(async (id) => ({
     template: {
@@ -20,11 +22,28 @@ it("keeps the initial saved message but clears it when another template opens", 
     },
     usage: { maintenanceSettings: [], maintenanceSettingsCount: 0 },
   }));
-  const view = render(<StrictMode><ChecklistTemplateViewPage templateId={1} userRole="admin" /></StrictMode>);
+  const page = (id: number, permissions = permissionsForTest("admin")) => (
+    <StrictMode>
+      <ChakraProvider value={defaultSystem}>
+        <ChecklistTemplateViewPage templateId={id} userPermissions={permissions} />
+      </ChakraProvider>
+    </StrictMode>
+  );
+  const view = render(page(1));
   await screen.findByRole("heading", { name: "Шаблон 1" });
   expect(screen.getByText("Шаблон сохранён.")).toBeInTheDocument();
   expect(window.history.state).toEqual({ checklistTemplateSaved: false, otherState: "keep" });
-  view.rerender(<StrictMode><ChecklistTemplateViewPage templateId={2} userRole="admin" /></StrictMode>);
+  fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
+  expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  view.rerender(page(2));
   await screen.findByRole("heading", { name: "Шаблон 2" });
   expect(screen.queryByText("Шаблон сохранён.")).not.toBeInTheDocument();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
+  expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  view.rerender(page(2, []));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  view.rerender(page(2));
+  await screen.findByRole("heading", { name: "Шаблон 2" });
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });

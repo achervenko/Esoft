@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -43,6 +44,23 @@ const open = (rows = [planRow], issuedAt?: string) => {
   return { onCreated, onClose };
 };
 describe("PPE issue form", () => {
+  it("blocks concurrent submissions and allows retry after failure", async () => {
+    let reject!: (error: Error) => void;
+    vi.mocked(ppeApi.issue).mockReturnValueOnce(new Promise((_, fail) => { reject = fail; }));
+    open();
+    const button = screen.getByRole("button", { name: "Подтвердить" });
+    await waitFor(() => expect(button).toBeEnabled());
+    const form = button.closest("form")!;
+    act(() => {
+      fireEvent.submit(form);
+      fireEvent.submit(form);
+    });
+    expect(ppeApi.issue).toHaveBeenCalledTimes(1);
+    await act(async () => { reject(new Error("Request failed")); });
+    await waitFor(() => expect(button).toBeEnabled());
+    fireEvent.submit(form);
+    await waitFor(() => expect(ppeApi.issue).toHaveBeenCalledTimes(2));
+  });
   it("lets the user open and hide a regular comment without losing its text", async () => {
     open();
     await screen.findByLabelText("Размер / ростовка");
@@ -242,11 +260,14 @@ it("keeps a manually entered issuance comment when the user stays", async () => 
       screen.getByLabelText("Размер / ростовка"),
     ).toBeInTheDocument(),
   );
-  fireEvent.change(screen.getByLabelText("Комментарий"), {
+  fireEvent.click(
+    screen.getByRole("button", { name: "Добавить комментарий" }),
+  );
+  fireEvent.change(screen.getByRole("textbox", { name: "Комментарий" }), {
     target: { value: "Черновик выдачи" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Закрыть" }));
   expect(onClose).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Остаться" }));
-  expect(screen.getByLabelText("Комментарий")).toHaveValue("Черновик выдачи");
+  expect(screen.getByRole("textbox", { name: "Комментарий" })).toHaveValue("Черновик выдачи");
 });

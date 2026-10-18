@@ -1,3 +1,4 @@
+import { permissionsForTest } from "../../test/permission-fixtures";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ppeApi } from "../../shared/api/ppe";
@@ -20,7 +21,7 @@ describe("PPE journal", () => {
         employees={[employee]}
         positions={[]}
         items={[item]}
-        role="admin"
+        permissions={permissionsForTest("admin")}
         revision={0}
         onChanged={vi.fn()}
       />,
@@ -68,7 +69,7 @@ describe("PPE journal", () => {
         employees={[{ ...employee, isActive: false }]}
         positions={[{ id: 2, name: "Инженер", isActive: false }]}
         items={[{ ...item, isActive: false }]}
-        role="admin"
+        permissions={permissionsForTest("admin")}
         revision={0}
         onChanged={vi.fn()}
       />,

@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { canReadEquipment } from '../auth/role-permissions';
+import { canReadEquipment, canReadPpe } from '../auth/role-permissions';
 import {
   SEARCH_DEFAULT_LIMIT,
   SEARCH_DEFAULT_OFFSET,
@@ -43,31 +43,30 @@ export class SearchQueryService {
     },
     role: unknown,
   ): Promise<SearchResultDto[]> {
+    const limit = Math.min(
+      parsePaginationInteger(params.limit, SEARCH_DEFAULT_LIMIT, 1, 'limit'),
+      SEARCH_MAX_LIMIT,
+    );
+    const offset = Math.min(
+      parsePaginationInteger(params.offset, SEARCH_DEFAULT_OFFSET, 0, 'offset'),
+      1000,
+    );
     const query = normalizeSearchQuery(params.query);
     if (query.length < SEARCH_MIN_QUERY_LENGTH) return [];
-    const parsedLimit = Number(params.limit ?? SEARCH_DEFAULT_LIMIT);
-    const limit =
-      Number.isFinite(parsedLimit) && parsedLimit >= 1
-        ? Math.min(Math.trunc(parsedLimit), SEARCH_MAX_LIMIT)
-        : SEARCH_DEFAULT_LIMIT;
-    const parsedOffset = Number(params.offset ?? SEARCH_DEFAULT_OFFSET);
-    const offset =
-      Number.isFinite(parsedOffset) && parsedOffset >= 0
-        ? Math.min(1000, Math.trunc(parsedOffset))
-        : SEARCH_DEFAULT_OFFSET;
     const entityType =
       typeof params.entityType === 'string' ? params.entityType.trim() : '';
     const module = typeof params.module === 'string' ? params.module : '';
-    const modules = module ? module.split(',') : [];
+    const modules = module
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
     if (modules.some((entry) => !['equipment', 'ppe'].includes(entry)))
       return [];
     const equipmentAllowed =
       (!modules.length || modules.includes('equipment')) &&
       canReadEquipment(role);
     const ppeAllowed =
-      (!modules.length || modules.includes('ppe')) &&
-      typeof role === 'string' &&
-      ['admin', 'ppe_specialist', 'accounting_specialist'].includes(role);
+      (!modules.length || modules.includes('ppe')) && canReadPpe(role);
     const branches: Prisma.Sql[] = [];
     const contains = `%${this.escapeLike(query)}%`;
     const normalize = (value: Prisma.Sql) =>
@@ -197,4 +196,27 @@ export class SearchQueryService {
   private escapeLike(value: string) {
     return value.replace(/[\\%_]/g, '\\$&');
   }
+}
+
+function parsePaginationInteger(
+  value: unknown,
+  fallback: number,
+  minimum: number,
+  field: 'limit' | 'offset',
+): number {
+  if (value === undefined) return fallback;
+  const parsed =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string' && /^\d+$/.test(value)
+        ? Number(value)
+        : NaN;
+  if (!Number.isSafeInteger(parsed) || parsed < minimum) {
+    throw new BadRequestException({
+      code:
+        field === 'limit' ? 'SEARCH_LIMIT_INVALID' : 'SEARCH_OFFSET_INVALID',
+      message: `Некорректный параметр ${field}.`,
+    });
+  }
+  return parsed;
 }

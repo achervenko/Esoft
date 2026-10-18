@@ -1,3 +1,6 @@
+import { ParsePositiveIntPipe } from '../application/pipes/parse-positive-int.pipe';
+import { FILES_PERMISSIONS } from '../storage/files.permissions';
+import { RequirePermission } from '../auth/require-permission';
 import {
   BadRequestException,
   Body,
@@ -8,7 +11,6 @@ import {
   NotFoundException,
   Param,
   ParseEnumPipe,
-  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -22,7 +24,6 @@ import { AuditModule, StorageDocumentType } from '@prisma/client';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { Response } from 'express';
 import type { Auth } from '../auth/auth.config';
-import { assertCanManageFiles } from '../auth/role-permissions';
 import { StorageFileService } from '../storage/storage-file.service';
 import { MAX_FILE_SIZE_BYTES } from '../storage/storage-file.validation';
 import type {
@@ -39,13 +40,15 @@ export class EquipmentFilesController {
   ) {}
 
   @Get()
-  async list(@Param('visibleId', ParseIntPipe) visibleId: number) {
+  @RequirePermission(FILES_PERMISSIONS.READ)
+  async list(@Param('visibleId', ParsePositiveIntPipe) visibleId: number) {
     const owner = await this.findStorageOwnerByVisibleId(visibleId);
 
     return this.storageFileService.listFiles(owner);
   }
 
   @Post()
+  @RequirePermission(FILES_PERMISSIONS.MANAGE)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {
@@ -54,7 +57,7 @@ export class EquipmentFilesController {
     }),
   )
   async upload(
-    @Param('visibleId', ParseIntPipe) visibleId: number,
+    @Param('visibleId', ParsePositiveIntPipe) visibleId: number,
     @Body(
       'documentType',
       new ParseEnumPipe(StorageDocumentType, {
@@ -69,8 +72,6 @@ export class EquipmentFilesController {
     @UploadedFile() file: UploadedFileInput | undefined,
     @Session() session: UserSession<Auth>,
   ) {
-    assertCanManageFiles(session.user.role);
-
     const owner = await this.findStorageOwnerByVisibleId(visibleId);
 
     return this.storageFileService.uploadFile({
@@ -85,10 +86,11 @@ export class EquipmentFilesController {
   }
 
   @Get(':fileId/download')
+  @RequirePermission(FILES_PERMISSIONS.READ)
   @Header('Cache-Control', 'private, max-age=0, no-cache')
   async download(
-    @Param('visibleId', ParseIntPipe) visibleId: number,
-    @Param('fileId', ParseIntPipe) fileId: number,
+    @Param('visibleId', ParsePositiveIntPipe) visibleId: number,
+    @Param('fileId', ParsePositiveIntPipe) fileId: number,
     @Res({ passthrough: true }) response: Response,
   ) {
     const owner = await this.findStorageOwnerByVisibleId(visibleId);
@@ -108,9 +110,10 @@ export class EquipmentFilesController {
   }
 
   @Get(':fileId/preview')
+  @RequirePermission(FILES_PERMISSIONS.READ)
   async preview(
-    @Param('visibleId', ParseIntPipe) visibleId: number,
-    @Param('fileId', ParseIntPipe) fileId: number,
+    @Param('visibleId', ParsePositiveIntPipe) visibleId: number,
+    @Param('fileId', ParsePositiveIntPipe) fileId: number,
     @Query('size') size: string | undefined,
     @Res({ passthrough: true }) response: Response,
   ) {
@@ -141,13 +144,12 @@ export class EquipmentFilesController {
   }
 
   @Delete(':fileId')
+  @RequirePermission(FILES_PERMISSIONS.MANAGE)
   async delete(
-    @Param('visibleId', ParseIntPipe) visibleId: number,
-    @Param('fileId', ParseIntPipe) fileId: number,
+    @Param('visibleId', ParsePositiveIntPipe) visibleId: number,
+    @Param('fileId', ParsePositiveIntPipe) fileId: number,
     @Session() session: UserSession<Auth>,
   ) {
-    assertCanManageFiles(session.user.role);
-
     const owner = await this.findStorageOwnerByVisibleId(visibleId);
 
     return this.storageFileService.softDeleteFile({
@@ -161,13 +163,12 @@ export class EquipmentFilesController {
   }
 
   @Patch(':fileId/primary')
+  @RequirePermission(FILES_PERMISSIONS.MANAGE)
   async setPrimary(
-    @Param('visibleId', ParseIntPipe) visibleId: number,
-    @Param('fileId', ParseIntPipe) fileId: number,
+    @Param('visibleId', ParsePositiveIntPipe) visibleId: number,
+    @Param('fileId', ParsePositiveIntPipe) fileId: number,
     @Session() session: UserSession<Auth>,
   ) {
-    assertCanManageFiles(session.user.role);
-
     const owner = await this.findStorageOwnerByVisibleId(visibleId);
 
     return this.storageFileService.setPrimaryFile({

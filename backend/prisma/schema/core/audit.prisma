@@ -23,6 +23,7 @@ enum AuditModule {
   EVENTS    @map("events")
   USERS     @map("users")
   PPE       @map("ppe")
+  WAREHOUSE @map("warehouse")
 
   @@map("audit_module")
 }

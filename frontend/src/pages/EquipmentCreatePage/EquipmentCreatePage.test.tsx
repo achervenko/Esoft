@@ -1,3 +1,4 @@
+import { permissionsForTest } from "../../test/permission-fixtures";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { FormEvent } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -41,7 +42,7 @@ it.each([false, true])("rejects duplicate submits and unlocks only after failure
   let finish!: () => void;
   let reject!: (error: Error) => void;
   mocks.create.mockReturnValue(new Promise<void>((resolve, fail) => { finish = resolve; reject = fail; }));
-  render(<EquipmentCreatePage userRole="admin" />);
+  render(<EquipmentCreatePage userPermissions={permissionsForTest("admin")} />);
   await screen.findByRole("button", { name: "Создать" });
   const form = document.querySelector("form")!;
   act(() => { fireEvent.submit(form); fireEvent.submit(form); });

@@ -17,7 +17,6 @@ export type ChecklistQuestionsQueryDto = {
   checklistModuleId?: unknown;
   isActive?: unknown;
   limit?: unknown;
-  moduleId?: unknown;
   page?: unknown;
   search?: unknown;
   sortBy?: unknown;
@@ -37,16 +36,31 @@ export type ChecklistQuestionReorderPayloadDto = {
 export function parseChecklistQuestionsQuery(
   query: ChecklistQuestionsQueryDto,
 ) {
-  const sortBy = parseQuestionSortBy(query.sortBy);
-
-  if (hasValue(query.checklistModuleId) && hasValue(query.moduleId)) {
+  const allowedFields = new Set([
+    'answerType',
+    'checklistModuleId',
+    'isActive',
+    'limit',
+    'page',
+    'search',
+    'sortBy',
+    'sortDirection',
+  ]);
+  if (Object.keys(query).some((field) => !allowedFields.has(field))) {
     throwChecklistBadRequest(
-      'CHECKLIST_QUESTION_MODULE_FILTER_CONFLICT',
-      'Передайте только один фильтр модуля.',
+      'CHECKLIST_QUESTION_QUERY_FIELD_UNKNOWN',
+      'Неизвестный параметр списка вопросов чек-листа.',
     );
   }
 
-  const checklistModuleIdInput = query.checklistModuleId ?? query.moduleId;
+  const checklistModuleId = parseOptionalNullableModuleId(
+    query.checklistModuleId,
+  );
+  const sortBy = hasValue(query.sortBy)
+    ? parseQuestionSortBy(query.sortBy)
+    : checklistModuleId !== undefined
+      ? 'sortOrder'
+      : 'createdAt';
 
   return {
     ...parsePagination(query),
@@ -56,7 +70,7 @@ export function parseChecklistQuestionsQuery(
       'CHECKLIST_QUESTION_ACTIVE_INVALID',
       'Некорректный признак активности.',
     ),
-    checklistModuleId: parseOptionalNullableModuleId(checklistModuleIdInput),
+    checklistModuleId,
     search: parseSearch(query.search),
     sortBy,
     sortDirection: hasValue(query.sortDirection)
@@ -171,10 +185,6 @@ function parseChecklistQuestionText(value: unknown) {
 }
 
 function parseQuestionSortBy(value: unknown) {
-  if (value === undefined || value === null || value === '') {
-    return 'sortOrder' as const;
-  }
-
   if (
     value === 'questionText' ||
     value === 'createdAt' ||

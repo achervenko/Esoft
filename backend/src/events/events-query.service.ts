@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { EQUIPMENT_RESPONSIBLE_ROLES } from './events-responsible-policy';
+import { Inject, Injectable } from '@nestjs/common';
+import { getEquipmentResponsibleRoles } from '../auth/role-permissions';
+import { ACTIVE_MODULES } from '../config/active-modules.module';
+import { getUserRoles } from '../auth/role-module-policy';
 import { Prisma } from '@prisma/client';
 import { checklistProgressGroupedByChecklistSql } from '../checklists/checklist-work/checklist-work-progress.sql';
 import { PrismaService } from '../prisma/prisma.service';
@@ -26,6 +28,7 @@ export class EventsQueryService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly extensionRegistry: EventExtensionRegistry,
+    @Inject(ACTIVE_MODULES) private readonly activeModules: readonly string[],
   ) {}
 
   async findAll(query: EventsListRecordsQuery = {}) {
@@ -55,6 +58,8 @@ export class EventsQueryService {
   }
 
   async findResponsibleUsers() {
+    const responsibleRoles = getEquipmentResponsibleRoles(this.activeModules);
+    if (!responsibleRoles.length) return { users: [] };
     const users = await this.prisma.user.findMany({
       orderBy: [
         { employeeUser: { employee: { lastName: 'asc' } } },
@@ -78,7 +83,6 @@ export class EventsQueryService {
         role: true,
       },
       where: {
-        role: { in: [...EQUIPMENT_RESPONSIBLE_ROLES] },
         employeeUser: {
           is: {
             employee: {
@@ -92,6 +96,12 @@ export class EventsQueryService {
 
     return {
       users: users.flatMap((user) => {
+        if (
+          !getUserRoles(user.role).some((role) =>
+            responsibleRoles.includes(role),
+          )
+        )
+          return [];
         const employee = user.employeeUser?.employee;
 
         if (!employee) {

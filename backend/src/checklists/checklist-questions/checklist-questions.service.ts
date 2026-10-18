@@ -52,10 +52,10 @@ export class ChecklistQuestionsService {
     const [items, total] = await Promise.all([
       this.prisma.checklistQuestion.findMany({
         include: checklistQuestionInclude,
-        orderBy:
-          query.checklistModuleId === null
-            ? [{ createdAt: 'desc' }, { id: 'desc' }]
-            : [{ [query.sortBy]: query.sortDirection }, { id: 'asc' }],
+        orderBy: [
+          { [query.sortBy]: query.sortDirection },
+          { id: query.sortDirection },
+        ],
         skip: (query.page - 1) * query.limit,
         take: query.limit,
         where,

@@ -17,11 +17,11 @@ import "./CalendarPage.css";
 
 type CalendarPageProps = {
   initialDate?: string | null;
-  userRole: string | null;
+  userPermissions: readonly string[] | null;
 };
 
-export function CalendarPage({ initialDate, userRole }: CalendarPageProps) {
-  const canView = canViewCalendar(userRole);
+export function CalendarPage({ initialDate, userPermissions }: CalendarPageProps) {
+  const canView = canViewCalendar(userPermissions);
 
   if (!canView) {
     return (

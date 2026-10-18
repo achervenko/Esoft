@@ -152,21 +152,21 @@ function App() {
 
     if (isSetupRoute(route)) {
       setHashRoute(
-        isAuthenticated ? getDefaultAuthRoute(user?.role) : LOGIN_ROUTE,
+        isAuthenticated ? getDefaultAuthRoute(user?.permissions) : LOGIN_ROUTE,
       );
       return;
     }
 
     if (isAuthenticated && isLoginRoute(route)) {
-      setHashRoute(getDefaultAuthRoute(user?.role));
+      setHashRoute(getDefaultAuthRoute(user?.permissions));
       return;
     }
 
     if (!isAuthenticated && !isLoginRoute(route)) {
       setHashRoute(LOGIN_ROUTE);
     }
-    if (isAuthenticated && !canAccessWorkspaceRoute(user?.role, route)) {
-      setHashRoute(getDefaultAuthRoute(user?.role));
+    if (isAuthenticated && !canAccessWorkspaceRoute(user?.permissions, route)) {
+      setHashRoute(getDefaultAuthRoute(user?.permissions));
     }
   }, [
     isAuthenticated,
@@ -175,7 +175,7 @@ function App() {
     route,
     setupError,
     setupRequired,
-    user?.role,
+    user?.permissions,
   ]);
 
   const handleLogout = async () => {
@@ -192,7 +192,7 @@ function App() {
       const sessionUser = await waitForAuthenticatedUser();
 
       setUser(sessionUser);
-      setHashRoute(getDefaultAuthRoute(sessionUser?.role));
+      setHashRoute(getDefaultAuthRoute(sessionUser?.permissions));
     } catch (error) {
       setUser(null);
       throw error;

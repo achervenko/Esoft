@@ -8,7 +8,8 @@ import {
 } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { SizeRange, shoeSizeRange, gloveSizeRange, headSizeRange } from "./SizeRange";
+import { SizeRange } from "./SizeRange";
+import { shoeSizeRange, gloveSizeRange, headSizeRange } from "./size-range-options";
 import { defaultShoeSizes, defaultGloveSizes, defaultHeadSizes } from "../../modules/ppe-ui/ppe-size-options";
 
 afterEach(() => {

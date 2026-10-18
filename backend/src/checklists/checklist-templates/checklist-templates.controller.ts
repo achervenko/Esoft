@@ -1,15 +1,9 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  ParseIntPipe,
-  Post,
-  Query,
-} from '@nestjs/common';
+import { CHECKLISTS_PERMISSIONS } from '../checklists.permissions';
+import { RequirePermission } from '../../auth/require-permission';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { Auth } from '../../auth/auth.config';
-import { assertCanManageChecklists } from '../../auth/role-permissions';
+import { ParsePositiveIntPipe } from '../../application/pipes/parse-positive-int.pipe';
 import { ChecklistTemplatesService } from './checklist-templates.service';
 import type {
   ArchiveTemplateDto,
@@ -25,32 +19,23 @@ export class ChecklistTemplatesController {
   constructor(private readonly templatesService: ChecklistTemplatesService) {}
 
   @Get()
-  list(
-    @Query() query: ChecklistTemplatesQueryDto,
-    @Session() session: UserSession<Auth>,
-  ) {
-    assertCanManageChecklists(session.user.role);
-
+  @RequirePermission(CHECKLISTS_PERMISSIONS.MANAGE)
+  list(@Query() query: ChecklistTemplatesQueryDto) {
     return this.templatesService.list(parseChecklistTemplatesQuery(query));
   }
 
   @Get(':id')
-  get(
-    @Param('id', ParseIntPipe) id: number,
-    @Session() session: UserSession<Auth>,
-  ) {
-    assertCanManageChecklists(session.user.role);
-
+  @RequirePermission(CHECKLISTS_PERMISSIONS.MANAGE)
+  get(@Param('id', ParsePositiveIntPipe) id: number) {
     return this.templatesService.get(id);
   }
 
   @Post()
+  @RequirePermission(CHECKLISTS_PERMISSIONS.MANAGE)
   create(
     @Body() dto: ChecklistTemplatePayloadDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
-    assertCanManageChecklists(session.user.role);
-
     return this.templatesService.create(
       parseChecklistTemplatePayload(dto),
       session.user.id,
@@ -58,13 +43,12 @@ export class ChecklistTemplatesController {
   }
 
   @Post(':id/archive')
+  @RequirePermission(CHECKLISTS_PERMISSIONS.MANAGE)
   archive(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParsePositiveIntPipe) id: number,
     @Body() dto: ArchiveTemplateDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
-    assertCanManageChecklists(session.user.role);
-
     return this.templatesService.archive(
       id,
       parseArchiveTemplateDto(dto),

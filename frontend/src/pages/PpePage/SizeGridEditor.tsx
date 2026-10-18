@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { SizeRange, shoeSizeRange, gloveSizeRange, headSizeRange } from "./SizeRange";
+import { useRef, useState } from "react";
+import { SizeRange } from "./SizeRange";
+import { shoeSizeRange, gloveSizeRange, headSizeRange } from "./size-range-options";
 import { ClothingSizeGrid } from "../../modules/ppe-ui/ClothingSizeGrid";
 import { Message } from "../../modules/ppe-ui/ppe-ui";
 import { ppeError } from "../../modules/ppe-ui/ppe-presentation";
@@ -38,6 +39,7 @@ export function SizeGridEditor({
 }) {
   const [draft, setDraft] = useState(() => initialDraft(item));
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const hasChanges = useDraftChanges(
     (draft.type === "BODY"
@@ -46,6 +48,8 @@ export function SizeGridEditor({
     ).sort(),
   );
   const save = async () => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setError(null);
     try {
@@ -61,6 +65,7 @@ export function SizeGridEditor({
     } catch (err) {
       setError(ppeError(err));
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

@@ -23,14 +23,14 @@ import "./ChecklistTemplateViewPage.css";
 
 type ChecklistTemplateViewPageProps = {
   templateId: number;
-  userRole: string | null;
+  userPermissions: readonly string[] | null;
 };
 
 export function ChecklistTemplateViewPage({
   templateId,
-  userRole,
+  userPermissions,
 }: ChecklistTemplateViewPageProps) {
-  const isAdmin = canManageChecklists(userRole);
+  const checklistsManageable = canManageChecklists(userPermissions);
   const [template, setTemplate] = useState<ChecklistTemplateDetail | null>(
     null,
   );
@@ -56,8 +56,10 @@ export function ChecklistTemplateViewPage({
     if (previousTemplateIdRef.current !== templateId) {
       previousTemplateIdRef.current = templateId;
       setMessage(null);
+      setDeleteOpen(false);
     }
-    if (!isAdmin) {
+    if (!checklistsManageable) {
+      setDeleteOpen(false);
       setIsLoading(false);
       return;
     }
@@ -91,7 +93,7 @@ export function ChecklistTemplateViewPage({
     return () => {
       isCancelled = true;
     };
-  }, [isAdmin, templateId]);
+  }, [checklistsManageable, templateId]);
 
   const moduleCount = template?.modules.length ?? 0;
   const questionCount =
@@ -100,7 +102,7 @@ export function ChecklistTemplateViewPage({
       0,
     ) ?? 0;
 
-  if (!isAdmin) {
+  if (!checklistsManageable) {
     return (
       <section className="checklist-template-view-page">
         <Notice tone="error">

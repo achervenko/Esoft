@@ -14,12 +14,12 @@ import {
 
 export function EmployeeIssueHistory({
   employeeId,
-  role,
+  permissions,
   revision,
   onChanged,
 }: {
   employeeId: number;
-  role: string | null;
+  permissions: readonly string[] | null;
   revision: number;
   onChanged: () => void;
 }) {
@@ -99,7 +99,7 @@ export function EmployeeIssueHistory({
       {detail !== null && (
         <IssueDetailsModal
           id={detail}
-          role={role}
+          permissions={permissions}
           onClose={() => setDetail(null)}
           onChanged={() => {
             history.reload();

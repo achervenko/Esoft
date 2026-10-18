@@ -56,11 +56,11 @@ describe('CalendarEngineService', () => {
 
   it('passes calendar period to providers', async () => {
     const service = new CalendarEngineService();
-    let receivedPeriod: CalendarPeriod | null = null;
+    const receivedPeriods: CalendarPeriod[] = [];
     const getCalendarData: CalendarProvider['getCalendarData'] = jest
       .fn()
       .mockImplementation((period: CalendarPeriod) => {
-        receivedPeriod = period;
+        receivedPeriods.push(period);
 
         return Promise.resolve({});
       });
@@ -71,11 +71,11 @@ describe('CalendarEngineService', () => {
       providers: [{ getCalendarData }],
     });
 
-    expect(receivedPeriod).toMatchObject({
+    expect(receivedPeriods[0]).toMatchObject({
       dateFrom: new Date('2026-08-03T00:00:00.000Z'),
       dateTo: new Date('2026-08-05T00:00:00.000Z'),
     });
-    expect(receivedPeriod?.today).toBeInstanceOf(Date);
+    expect(receivedPeriods[0].today).toBeInstanceOf(Date);
   });
 
   it('combines provider data into calendar dto', async () => {

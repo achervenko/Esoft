@@ -1,10 +1,12 @@
+import { ParsePositiveIntPipe } from '../application/pipes/parse-positive-int.pipe';
+import { USERS_PERMISSIONS } from '../users/users.permissions';
+import { RequirePermission } from '../auth/require-permission';
 import {
   Body,
   Controller,
   Delete,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Post,
   Put,
@@ -14,7 +16,6 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { Auth } from '../auth/auth.config';
-import { assertAdmin } from '../auth/role-permissions';
 import type { UploadedFileInput } from '../storage/storage.types';
 import { PositionsAdminService } from './positions-admin.service';
 import { EmployeesAdminService } from './employees-admin.service';
@@ -37,72 +38,68 @@ export class UsersAdminController {
   ) {}
 
   @Get('positions')
-  listPositions(@Session() session: UserSession<Auth>) {
-    assertAdmin(session.user.role);
+  @RequirePermission(USERS_PERMISSIONS.MANAGE)
+  listPositions() {
     return this.positionsAdminService.list();
   }
 
   @Post('positions')
+  @RequirePermission(USERS_PERMISSIONS.MANAGE)
   createPosition(
     @Body() payload: { name?: unknown },
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
     return this.positionsAdminService.save(null, payload, session.user.id);
   }
 
   @Put('positions/:id')
+  @RequirePermission(USERS_PERMISSIONS.MANAGE)
   updatePosition(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParsePositiveIntPipe) id: number,
     @Body() payload: { name?: unknown },
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
     return this.positionsAdminService.save(id, payload, session.user.id);
   }
 
   @Patch('positions/:id/status')
+  @RequirePermission(USERS_PERMISSIONS.MANAGE)
   setPositionStatus(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id', ParsePositiveIntPipe) id: number,
     @Body('isActive') isActive: unknown,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
     return this.positionsAdminService.setStatus(id, isActive, session.user.id);
   }
 
   @Get('roles')
-  listRoles(@Session() session: UserSession<Auth>) {
-    assertAdmin(session.user.role);
-
+  @RequirePermission(USERS_PERMISSIONS.MANAGE)
+  listRoles() {
     return this.userAccountsAdminService.getRoles();
   }
 
   @Get('employees')
+  @RequirePermission(USERS_PERMISSIONS.MANAGE)
   listEmployees(@Session() session: UserSession<Auth>) {
-    assertAdmin(session.user.role);
-
     return this.employeeAdminService.listEmployees(session.user.id);
   }
 
   @Post('employees')
+  @RequirePermission(USERS_PERMISSIONS.MANAGE)
   createEmployee(
     @Body() payload: Record<string, unknown>,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
-
     return this.employeeAdminService.createEmployee(payload, session.user.id);
   }
 
   @Put('employees/:employeeId')
+  @RequirePermission(USERS_PERMISSIONS.MANAGE)
   updateEmployee(
-    @Param('employeeId', ParseIntPipe) employeeId: number,
+    @Param('employeeId', ParsePositiveIntPipe) employeeId: number,
     @Body() payload: Record<string, unknown>,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
-
     return this.employeeAdminService.updateEmployee(
       employeeId,
       payload,
@@ -111,13 +108,12 @@ export class UsersAdminController {
   }
 
   @Patch('employees/:employeeId/status')
+  @RequirePermission(USERS_PERMISSIONS.MANAGE)
   setEmployeeStatus(
-    @Param('employeeId', ParseIntPipe) employeeId: number,
+    @Param('employeeId', ParsePositiveIntPipe) employeeId: number,
     @Body('isActive') isActive: unknown,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
-
     return this.employeeAdminService.setEmployeeStatus({
       actorUserId: session.user.id,
       employeeId,
@@ -126,30 +122,27 @@ export class UsersAdminController {
   }
 
   @Get('accounts')
-  listUsers(@Session() session: UserSession<Auth>) {
-    assertAdmin(session.user.role);
-
+  @RequirePermission(USERS_PERMISSIONS.MANAGE)
+  listUsers() {
     return this.userAccountsAdminService.listUsers();
   }
 
   @Post('accounts')
+  @RequirePermission(USERS_PERMISSIONS.MANAGE)
   createUser(
     @Body() payload: Record<string, unknown>,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
-
     return this.userAccountsAdminService.createUser(payload, session.user.id);
   }
 
   @Put('accounts/:userId')
+  @RequirePermission(USERS_PERMISSIONS.MANAGE)
   updateUser(
     @Param('userId') userId: string,
     @Body() payload: Record<string, unknown>,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
-
     return this.userAccountsAdminService.updateUser(
       userId,
       payload,
@@ -158,13 +151,12 @@ export class UsersAdminController {
   }
 
   @Patch('accounts/:userId/password')
+  @RequirePermission(USERS_PERMISSIONS.MANAGE)
   setUserPassword(
     @Param('userId') userId: string,
     @Body() payload: Record<string, unknown>,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
-
     return this.userCredentialsAdminService.setUserPassword(
       userId,
       payload,
@@ -173,13 +165,12 @@ export class UsersAdminController {
   }
 
   @Patch('accounts/:userId/status')
+  @RequirePermission(USERS_PERMISSIONS.MANAGE)
   setUserStatus(
     @Param('userId') userId: string,
     @Body('banned') banned: unknown,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
-
     return this.userStatusAdminService.setUserStatus({
       banned,
       currentUserId: session.user.id,
@@ -188,6 +179,7 @@ export class UsersAdminController {
   }
 
   @Post('accounts/:userId/photo')
+  @RequirePermission(USERS_PERMISSIONS.MANAGE)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {
@@ -200,8 +192,6 @@ export class UsersAdminController {
     @UploadedFile() file: UploadedFileInput | undefined,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
-
     return this.userPhotosAdminService.uploadPhoto({
       actorUserId: session.user.id,
       file,
@@ -210,12 +200,11 @@ export class UsersAdminController {
   }
 
   @Delete('accounts/:userId/photo')
+  @RequirePermission(USERS_PERMISSIONS.MANAGE)
   deleteUserPhoto(
     @Param('userId') userId: string,
     @Session() session: UserSession<Auth>,
   ) {
-    assertAdmin(session.user.role);
-
     return this.userPhotosAdminService.deletePhoto({
       actorUserId: session.user.id,
       userId,

@@ -1,31 +1,23 @@
-const equipmentEditorRoles = new Set(["admin", "chief_engineer", "engineer"]);
-const equipmentEventsManagerRoles = new Set(["admin", "chief_engineer"]);
-const maintenanceSettingsManagerRoles = new Set(["admin", "chief_engineer"]);
+import { hasPermission } from "../../shared/lib/permissions";
 
-export function canEditEquipment(role: string | null | undefined) {
-  return Boolean(role && equipmentEditorRoles.has(role));
+export function canEditEquipment(permissions: unknown) {
+  return hasPermission(permissions, "equipment.edit");
+}
+
+export function canManageEquipmentEvents(permissions: unknown) {
+  return hasPermission(permissions, "equipment.events.manage");
+}
+
+export function canManageMaintenanceSettings(permissions: unknown) {
+  return hasPermission(permissions, "equipment.events.manage");
+}
+
+export function canReadEquipment(permissions: unknown) {
+  return hasPermission(permissions, "equipment.read");
+}
+
+export function canDownloadEquipmentDocuments(permissions: unknown) {
+  return hasPermission(permissions, "files.read");
 }
 
 export const canCreateEquipment = canEditEquipment;
-
-export function canManageEquipmentEvents(role: string | null | undefined) {
-  return Boolean(role && equipmentEventsManagerRoles.has(role));
-}
-
-export function canManageMaintenanceSettings(role: string | null | undefined) {
-  return Boolean(role && maintenanceSettingsManagerRoles.has(role));
-}
-
-const equipmentReaderRoles = new Set([
-  "admin",
-  "chief_engineer",
-  "engineer",
-  "operator",
-  "auditor",
-]);
-
-export function canReadEquipment(role: unknown) {
-  return typeof role === "string" && equipmentReaderRoles.has(role);
-}
-
-export const canDownloadEquipmentDocuments = canReadEquipment;

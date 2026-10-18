@@ -24,6 +24,7 @@ type AppShellUser = {
   name?: string | null;
   photo?: UserPhoto | null;
   role?: string | null;
+  permissions?: readonly string[];
   username?: string | null;
 };
 
@@ -188,11 +189,11 @@ export function AppShell({
   route,
   user,
 }: AppShellProps) {
-  const routeAllowed = canAccessWorkspaceRoute(user?.role, route);
-  const defaultRoute = getDefaultAuthRoute(user?.role);
-  const fallbackRoute = canAccessWorkspaceRoute(user?.role, defaultRoute)
+  const routeAllowed = canAccessWorkspaceRoute(user?.permissions, route);
+  const defaultRoute = getDefaultAuthRoute(user?.permissions);
+  const fallbackRoute = canAccessWorkspaceRoute(user?.permissions, defaultRoute)
     ? defaultRoute
-    : "#/profile";
+    : null;
   const appRoute = routeAllowed
     ? resolveAppRoute(route)
     : { kind: "unknown" as const };
@@ -207,45 +208,45 @@ export function AppShell({
             {!routeAllowed && (
               <div role="alert">
                 Этот раздел недоступен для вашей роли.{" "}
-                <a href={fallbackRoute}>Перейти в доступный раздел</a>
+                {fallbackRoute && <a href={fallbackRoute}>Перейти в доступный раздел</a>}
               </div>
             )}
             {appRoute.kind === "dashboard" ? <DashboardPage /> : null}
             {appRoute.kind === "calendar" ? (
               <CalendarPage
                 initialDate={appRoute.date}
-                userRole={user?.role ?? null}
+                userPermissions={user?.permissions ?? null}
               />
             ) : null}
             {appRoute.kind === "checklist-admin" ? (
-              <ChecklistAdminPage userRole={user?.role ?? null} />
+              <ChecklistAdminPage userPermissions={user?.permissions ?? null} />
             ) : null}
             {appRoute.kind === "checklist-template-create" ? (
               <ChecklistTemplateEditorPage
                 copyFromTemplateId={appRoute.copyFromTemplateId}
                 templateId={null}
-                userRole={user?.role ?? null}
+                userPermissions={user?.permissions ?? null}
               />
             ) : null}
             {appRoute.kind === "checklist-template-view" ? (
               <ChecklistTemplateViewPage
                 templateId={appRoute.templateId}
-                userRole={user?.role ?? null}
+                userPermissions={user?.permissions ?? null}
               />
             ) : null}
             {appRoute.kind === "dictionaries" ? (
-              <DictionariesPage userRole={user?.role ?? null} />
+              <DictionariesPage userPermissions={user?.permissions ?? null} />
             ) : null}
             {appRoute.kind === "ppe" ? (
               <PpePage
                 employeeId={appRoute.employeeId}
                 positionId={appRoute.positionId}
-                userRole={user?.role ?? null}
+                userPermissions={user?.permissions ?? null}
                 initialTab={appRoute.tab}
               />
             ) : null}
             {appRoute.kind === "equipment-list" ? (
-              <EquipmentPage userRole={user?.role ?? null} />
+              <EquipmentPage userPermissions={user?.permissions ?? null} />
             ) : null}
             {appRoute.kind === "my-checklists-list" ? (
               <MyChecklistsPage route={appRoute.route} />
@@ -257,19 +258,19 @@ export function AppShell({
                 currentUserId={user?.id ?? null}
               />
             ) : null}
-            {appRoute.kind === "search" ? <SearchPage userRole={user?.role ?? null} /> : null}
+            {appRoute.kind === "search" ? <SearchPage userPermissions={user?.permissions ?? null} /> : null}
             {appRoute.kind === "profile" ? <ProfilePage user={user} /> : null}
             {appRoute.kind === "production-calendar" ? (
-              <ProductionCalendarPage userRole={user?.role ?? null} />
+              <ProductionCalendarPage userPermissions={user?.permissions ?? null} />
             ) : null}
             {appRoute.kind === "equipment-create" ? (
-              <EquipmentCreatePage userRole={user?.role ?? null} />
+              <EquipmentCreatePage userPermissions={user?.permissions ?? null} />
             ) : null}
             {appRoute.kind === "equipment-edit" ? (
               <EquipmentEditPage
                 initialTab={appRoute.initialTab}
                 returnTo={appRoute.returnTo}
-                userRole={user?.role ?? null}
+                userPermissions={user?.permissions ?? null}
                 visibleId={appRoute.visibleId}
               />
             ) : null}
@@ -278,7 +279,7 @@ export function AppShell({
                 eventId={appRoute.eventId}
                 initialTab={appRoute.initialTab}
                 returnTo={appRoute.returnTo}
-                userRole={user?.role ?? null}
+                userPermissions={user?.permissions ?? null}
                 visibleId={appRoute.visibleId}
               />
             ) : null}
@@ -286,7 +287,7 @@ export function AppShell({
               <UsersPage
                 currentUserId={user?.id ?? null}
                 onCurrentUserChanged={onUserRefresh}
-                userRole={user?.role ?? null}
+                userPermissions={user?.permissions ?? null}
               />
             ) : null}
           </Suspense>

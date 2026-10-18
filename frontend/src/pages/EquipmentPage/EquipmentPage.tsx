@@ -13,12 +13,12 @@ import type { DataTableSortDirection } from "../../shared/ui/DataTable";
 import "./EquipmentPage.css";
 
 type EquipmentPageProps = {
-  userRole: string | null;
+  userPermissions: readonly string[] | null;
 };
 
-export function EquipmentPage({ userRole }: EquipmentPageProps) {
+export function EquipmentPage({ userPermissions }: EquipmentPageProps) {
   const { notifyError } = useNotifications();
-  const isCreateAllowed = canCreateEquipment(userRole);
+  const isCreateAllowed = canCreateEquipment(userPermissions);
   const [items, setItems] = useState<EquipmentRegistryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

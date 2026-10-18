@@ -1,3 +1,4 @@
+import { permissionsForTest } from "../../test/permission-fixtures";
 import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
 import {
   cleanup,
@@ -31,7 +32,7 @@ describe("PPE catalogue", () => {
     vi.spyOn(ppeApi, "saveItem").mockResolvedValue(item);
     render(
       <ChakraProvider value={defaultSystem}>
-        <CatalogPanel items={[]} role="admin" onChanged={vi.fn()} />
+        <CatalogPanel items={[]} permissions={permissionsForTest("admin")} onChanged={vi.fn()} />
       </ChakraProvider>,
     );
     fireEvent.click(screen.getByRole("button", { name: "Добавить СИЗ" }));
@@ -72,7 +73,7 @@ describe("PPE catalogue", () => {
               isActive: false,
             },
           ]}
-          role="admin"
+          permissions={permissionsForTest("admin")}
           onChanged={onChanged}
         />
       </ChakraProvider>,

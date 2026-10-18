@@ -1,3 +1,4 @@
+import { permissionsForTest } from "./test/permission-fixtures";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -46,7 +47,7 @@ describe("App session-expired flow", () => {
       vi.mocked(getSetupStatus).mockResolvedValueOnce({ setupRequired: false });
       vi.mocked(getAuthenticatedUser).mockResolvedValueOnce({
         ...sessionUser,
-        role: "ppe_specialist",
+        role: "ppe_specialist", permissions: permissionsForTest("ppe_specialist"),
       });
       render(<App />);
       await waitFor(() => expect(window.location.hash).toBe("#/ppe"));

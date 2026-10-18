@@ -22,7 +22,7 @@ export function JournalPanel({
   employees,
   positions,
   items,
-  role,
+  permissions,
   revision,
   referenceState,
   onOpenFilters,
@@ -32,7 +32,7 @@ export function JournalPanel({
   employees: PpeEmployee[];
   positions: PpePosition[];
   items: PpeItem[];
-  role: string | null;
+  permissions: readonly string[] | null;
   revision: number;
   referenceState?: ComponentProps<typeof PpeQueryState>;
   onOpenFilters?: () => void;
@@ -170,7 +170,7 @@ export function JournalPanel({
       {detail !== null && (
         <IssueDetailsModal
           id={detail}
-          role={role}
+          permissions={permissions}
           onClose={() => setDetail(null)}
           onChanged={onChanged}
         />

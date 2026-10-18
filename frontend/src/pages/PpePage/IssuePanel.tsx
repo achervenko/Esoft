@@ -3,7 +3,7 @@ import { EmployeeIssueCard } from "./EmployeeIssueCard";
 import { IssuePlanTable } from "./IssuePlanTable";
 import { useNotifications } from "../../shared/ui/notifications";
 import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ppeApi,
   type PpeEmployee,
@@ -23,7 +23,7 @@ import { IssueFormModal } from "./IssueFormModal";
 export function IssuePanel({
   employees,
   items,
-  role,
+  permissions,
   revision,
   referenceState,
   onChanged,
@@ -33,7 +33,7 @@ export function IssuePanel({
   employees: PpeEmployee[];
   items: PpeItem[];
   referenceState?: ComponentProps<typeof PpeQueryState>;
-  role: string | null;
+  permissions: readonly string[] | null;
   revision: number;
   onChanged: () => void;
   initialEmployeeId?: number;
@@ -45,9 +45,14 @@ export function IssuePanel({
   const [on, setOn] = useState(businessToday);
   const [selected, setSelected] = useState<number[]>([]);
   const [form, setForm] = useState<{ rows: PlanRow[] | null } | null>(null);
+  useEffect(() => {
+    setEmployeeId(initialEmployeeId ? String(initialEmployeeId) : "");
+    setSelected([]);
+    setForm(null);
+  }, [initialEmployeeId]);
   const { notifySuccess, notifyWarning } = useNotifications();
   const employee = employees.find((item) => String(item.id) === employeeId);
-  const backdate = canBackdatePpeIssue(role);
+  const backdate = canBackdatePpeIssue(permissions);
   const issuedAt = backdate ? on : undefined;
   const plan = usePpeQuery(
     `plan:${employeeId}:${issuedAt ?? ""}:${revision}`,
@@ -79,7 +84,7 @@ export function IssuePanel({
     onChanged();
   };
   const allowed =
-    canIssuePpe(role) &&
+    canIssuePpe(permissions) &&
     Boolean(employee?.isActive) &&
     (!backdate || Boolean(on && on <= businessToday()));
   return (
@@ -110,13 +115,13 @@ export function IssuePanel({
           backdate={backdate}
           on={on}
           revision={revision}
-          role={role}
+          permissions={permissions}
           onChanged={onChanged}
           onExtraIssue={() => setForm({ rows: null })}
           onDateChange={(date) => {
             setOn(date);
             setSelected([]);
-                  }}
+          }}
         />
       )}
       <PpeQueryState
@@ -128,20 +133,17 @@ export function IssuePanel({
         }}
         page
       />
-      {!plan.loading &&
-        !referenceState?.loading &&
-        plan.data &&
-        (
-          <IssuePlanTable
-            plan={plan.data}
-            dueItems={plan.data.items}
-            allowed={allowed}
-            selected={selected}
-            hasSelection={eligible.length > 0}
-            onChoose={choose}
-            onIssue={() => setForm({ rows: eligible })}
-          />
-        )}
+      {!plan.loading && !referenceState?.loading && plan.data && (
+        <IssuePlanTable
+          plan={plan.data}
+          dueItems={plan.data.items}
+          allowed={allowed}
+          selected={selected}
+          hasSelection={eligible.length > 0}
+          onChoose={choose}
+          onIssue={() => setForm({ rows: eligible })}
+        />
+      )}
       {form && employee && (
         <IssueFormModal
           employee={employee}

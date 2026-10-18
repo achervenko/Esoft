@@ -11,12 +11,14 @@ import { ProfilePermissionsList } from "./ProfilePermissionsList";
 import { UserPhotoPreviewModal } from "./UserPhotoPreviewModal";
 
 type UserProfileCardUser = {
+  assignedRole?: string | null;
   displayUsername?: string | null;
   email?: string | null;
   employee?: EmployeeProfile | null;
   name?: string | null;
   photo?: UserPhoto | null;
   role?: string | null;
+  permissions?: readonly string[];
   username?: string | null;
 };
 
@@ -28,9 +30,9 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
   const [isPhotoOpen, setIsPhotoOpen] = useState(false);
   const employee = user?.employee ?? null;
   const fullName = getFullName(user);
-  const roleLabel = getProfileRoleLabel(user?.role);
-  const modules = getProfileModuleAccess(user?.role);
-  const permissions = getProfilePermissionAccess(user?.role);
+  const roleLabel = getProfileRoleLabel(user?.assignedRole ?? user?.role);
+  const modules = getProfileModuleAccess(user?.permissions);
+  const permissions = getProfilePermissionAccess(user?.permissions);
   const login = user?.username || user?.displayUsername || "Не указан";
   const position = employee?.position || "Не указана";
 

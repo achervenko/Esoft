@@ -22,14 +22,14 @@ import { CatalogItemForm } from "./CatalogItemForm";
 export function CatalogPanel({
   autoFocusSearch = true,
   items,
-  role,
+  permissions,
   referenceState,
   onChanged,
 }: {
   autoFocusSearch?: boolean;
   items: PpeItem[];
   referenceState?: ComponentProps<typeof PpeQueryState>;
-  role: string | null;
+  permissions: readonly string[] | null;
   onChanged: () => void;
 }) {
   const [search, setSearch] = useState(() => new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("q") ?? "");
@@ -47,7 +47,7 @@ export function CatalogPanel({
     x: number;
     y: number;
   } | null>(null);
-  const manage = canManagePpeCatalog(role);
+  const manage = canManagePpeCatalog(permissions);
   const returnTo = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("returnTo");
   const searchReturnTo = returnTo === "#/search" || returnTo?.startsWith("#/search?") ? returnTo : null;
   const selected = items.find((item) => item.id === sizes);

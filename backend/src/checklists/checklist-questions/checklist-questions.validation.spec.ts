@@ -30,25 +30,77 @@ describe('checklist question validation', () => {
     });
   });
 
-  it('keeps legacy moduleId query filter compatibility', () => {
-    expect(
-      parseChecklistQuestionsQuery({
-        moduleId: '4',
-      }),
-    ).toMatchObject({
-      checklistModuleId: 4,
+  it.each([
+    { moduleId: '4' },
+    { checklistModuleId: '5', moduleId: '4' },
+    { moduleId: '' },
+    { unexpected: 'value' },
+  ])('rejects unknown query fields %p', (query) => {
+    expectBadRequestCode(() =>
+      parseChecklistQuestionsQuery(query as never),
+    ).toBe('CHECKLIST_QUESTION_QUERY_FIELD_UNKNOWN');
+  });
+
+  it.each([null, 'null'])(
+    'preserves the unassigned module filter %p',
+    (value) => {
+      expect(
+        parseChecklistQuestionsQuery({ checklistModuleId: value }),
+      ).toMatchObject({ checklistModuleId: null });
+    },
+  );
+
+  it('does not filter by module when omitted', () => {
+    expect(parseChecklistQuestionsQuery({}).checklistModuleId).toBeUndefined();
+  });
+
+  it.each([
+    { query: {}, sortBy: 'createdAt', sortDirection: 'desc' },
+    {
+      query: { checklistModuleId: '3' },
+      sortBy: 'sortOrder',
+      sortDirection: 'asc',
+    },
+    {
+      query: { checklistModuleId: null },
+      sortBy: 'sortOrder',
+      sortDirection: 'asc',
+    },
+    {
+      query: { checklistModuleId: 'null' },
+      sortBy: 'sortOrder',
+      sortDirection: 'asc',
+    },
+    {
+      query: { checklistModuleId: '' },
+      sortBy: 'createdAt',
+      sortDirection: 'desc',
+    },
+    {
+      query: { sortBy: 'questionText' },
+      sortBy: 'questionText',
+      sortDirection: 'asc',
+    },
+    {
+      query: {
+        checklistModuleId: 'null',
+        sortBy: 'updatedAt',
+        sortDirection: 'asc',
+      },
+      sortBy: 'updatedAt',
+      sortDirection: 'asc',
+    },
+  ])('chooses sorting for $query', ({ query, sortBy, sortDirection }) => {
+    expect(parseChecklistQuestionsQuery(query)).toMatchObject({
+      sortBy,
+      sortDirection,
     });
   });
-
-  it('rejects conflicting module query filter aliases', () => {
+  it('rejects an unsupported explicit sort field', () => {
     expectBadRequestCode(() =>
-      parseChecklistQuestionsQuery({
-        checklistModuleId: '5',
-        moduleId: '4',
-      }),
-    ).toBe('CHECKLIST_QUESTION_MODULE_FILTER_CONFLICT');
+      parseChecklistQuestionsQuery({ sortBy: 'unknown' }),
+    ).toBe('CHECKLIST_QUESTION_SORT_INVALID');
   });
-
   it('allows partial update payloads', () => {
     expect(
       parseChecklistQuestionUpdatePayload({

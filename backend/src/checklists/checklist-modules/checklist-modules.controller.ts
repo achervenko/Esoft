@@ -1,3 +1,5 @@
+import { CHECKLISTS_PERMISSIONS } from '../checklists.permissions';
+import { RequirePermission } from '../../auth/require-permission';
 import {
   Body,
   Controller,
@@ -9,14 +11,13 @@ import {
 } from '@nestjs/common';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { Auth } from '../../auth/auth.config';
-import { assertCanManageChecklists } from '../../auth/role-permissions';
 import { ChecklistModulesService } from './checklist-modules.service';
 import { ChecklistQuestionsService } from '../checklist-questions/checklist-questions.service';
 import {
   type ChecklistQuestionReorderPayloadDto,
   parseChecklistQuestionReorderPayload,
 } from '../checklist-questions/checklist-questions.validation';
-import { ParseChecklistPositiveIntPipe } from '../checklist-common/checklists-positive-int.pipe';
+import { ParsePositiveIntPipe } from '../../application/pipes/parse-positive-int.pipe';
 import {
   type ChecklistModulePayloadDto,
   type ChecklistReorderPayloadDto,
@@ -35,32 +36,23 @@ export class ChecklistModulesController {
   ) {}
 
   @Get()
-  list(
-    @Query() query: ChecklistModulesQueryDto,
-    @Session() session: UserSession<Auth>,
-  ) {
-    assertCanManageChecklists(session.user.role);
-
+  @RequirePermission(CHECKLISTS_PERMISSIONS.MANAGE)
+  list(@Query() query: ChecklistModulesQueryDto) {
     return this.modulesService.list(parseChecklistModulesQuery(query));
   }
 
   @Get(':id')
-  get(
-    @Param('id', ParseChecklistPositiveIntPipe) id: number,
-    @Session() session: UserSession<Auth>,
-  ) {
-    assertCanManageChecklists(session.user.role);
-
+  @RequirePermission(CHECKLISTS_PERMISSIONS.MANAGE)
+  get(@Param('id', ParsePositiveIntPipe) id: number) {
     return this.modulesService.get(id);
   }
 
   @Post()
+  @RequirePermission(CHECKLISTS_PERMISSIONS.MANAGE)
   create(
     @Body() dto: ChecklistModulePayloadDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
-    assertCanManageChecklists(session.user.role);
-
     return this.modulesService.create(
       parseChecklistModulePayload(dto),
       session.user.id,
@@ -68,12 +60,11 @@ export class ChecklistModulesController {
   }
 
   @Patch('reorder')
+  @RequirePermission(CHECKLISTS_PERMISSIONS.MANAGE)
   reorder(
     @Body() dto: ChecklistReorderPayloadDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
-    assertCanManageChecklists(session.user.role);
-
     return this.modulesService.reorder(
       parseChecklistModuleReorderPayload(dto),
       session.user.id,
@@ -81,13 +72,12 @@ export class ChecklistModulesController {
   }
 
   @Patch(':moduleId/questions/reorder')
+  @RequirePermission(CHECKLISTS_PERMISSIONS.MANAGE)
   reorderQuestions(
-    @Param('moduleId', ParseChecklistPositiveIntPipe) moduleId: number,
+    @Param('moduleId', ParsePositiveIntPipe) moduleId: number,
     @Body() dto: ChecklistQuestionReorderPayloadDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
-    assertCanManageChecklists(session.user.role);
-
     return this.questionsService.reorder(
       moduleId,
       parseChecklistQuestionReorderPayload(dto),
@@ -96,13 +86,12 @@ export class ChecklistModulesController {
   }
 
   @Patch(':id')
+  @RequirePermission(CHECKLISTS_PERMISSIONS.MANAGE)
   update(
-    @Param('id', ParseChecklistPositiveIntPipe) id: number,
+    @Param('id', ParsePositiveIntPipe) id: number,
     @Body() dto: ChecklistModulePayloadDto | undefined,
     @Session() session: UserSession<Auth>,
   ) {
-    assertCanManageChecklists(session.user.role);
-
     return this.modulesService.update(
       id,
       parseChecklistModuleUpdatePayload(dto),
@@ -111,22 +100,20 @@ export class ChecklistModulesController {
   }
 
   @Post(':id/activate')
+  @RequirePermission(CHECKLISTS_PERMISSIONS.MANAGE)
   activate(
-    @Param('id', ParseChecklistPositiveIntPipe) id: number,
+    @Param('id', ParsePositiveIntPipe) id: number,
     @Session() session: UserSession<Auth>,
   ) {
-    assertCanManageChecklists(session.user.role);
-
     return this.modulesService.activate(id, session.user.id);
   }
 
   @Post(':id/deactivate')
+  @RequirePermission(CHECKLISTS_PERMISSIONS.MANAGE)
   deactivate(
-    @Param('id', ParseChecklistPositiveIntPipe) id: number,
+    @Param('id', ParsePositiveIntPipe) id: number,
     @Session() session: UserSession<Auth>,
   ) {
-    assertCanManageChecklists(session.user.role);
-
     return this.modulesService.deactivate(id, session.user.id);
   }
 }

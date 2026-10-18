@@ -1,19 +1,13 @@
 import { request } from "./api-client";
 import type { UserPhoto } from "./user-profile-api";
+import type { AppRole } from "../lib/user-roles";
 
 export type AdminRoleOption = {
   label: string;
   value: AdminUserRole;
 };
 
-export type AdminUserRole =
-  | "admin"
-  | "chief_engineer"
-  | "engineer"
-  | "operator"
-  | "auditor"
-  | "ppe_specialist"
-  | "accounting_specialist";
+export type AdminUserRole = AppRole;
 
 export type AdminEmployee = {
   accountCount: number;
@@ -61,7 +55,7 @@ export type UserAccountPayload = {
   email: string;
   employeeId: number;
   password?: string;
-  role: AdminUserRole;
+  role: string;
   username: string;
 };
 

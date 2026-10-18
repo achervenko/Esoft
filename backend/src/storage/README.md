@@ -272,7 +272,7 @@ DELETE /api/equipment/:visibleId/files/:fileId
 PATCH  /api/equipment/:visibleId/files/:fileId/primary
 ```
 
-Controller получает owner через `EquipmentService.findStorageOwnerByVisibleId`, для mutating операций проверяет роль через `assertCanManageFiles`, передает `audit: { actionModule: AuditModule.EQUIPMENT }`, валидирует multipart `documentType` через `ParseEnumPipe`, а preview `size` ограничивает значениями `small` и `medium`.
+Controller получает owner через `EquipmentService.findStorageOwnerByVisibleId`, для mutating операций глобальный guard проверяет разрешение `files.manage` (глобальный guard), передает `audit: { actionModule: AuditModule.EQUIPMENT }`, валидирует multipart `documentType` через `ParseEnumPipe`, а preview `size` ограничивает значениями `small` и `medium`.
 
 ## Добавление нового DocumentType
 

@@ -1,22 +1,26 @@
 import { GuardedAdminModal } from "../../shared/ui/GuardedAdminModal";
 import { formatPpeDate } from "../../modules/ppe-ui/ppe-presentation";
 import { formatPpeQuantity } from "../../modules/ppe-ui/ppe-presentation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ppeApi, type PpeIssue } from "../../shared/api/ppe";
 import { canIssuePpe } from "../../modules/ppe-permissions/ppe-permissions";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import { Field, Message } from "../../modules/ppe-ui/ppe-ui";
-import { ppeError, sizeLabel, typeLabels } from "../../modules/ppe-ui/ppe-presentation";
+import {
+  ppeError,
+  sizeLabel,
+  typeLabels,
+} from "../../modules/ppe-ui/ppe-presentation";
 import { usePpeQuery } from "../../modules/ppe-ui/usePpeQuery";
 import { PpeQueryState } from "../../modules/ppe-ui/PpeQueryState";
 export function IssueDetailsModal({
   id,
-  role,
+  permissions,
   onClose,
   onChanged,
 }: {
   id: number;
-  role: string | null;
+  permissions: readonly string[] | null;
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -50,7 +54,7 @@ export function IssueDetailsModal({
         {details.data && (
           <>
             <IssueSnapshot issue={details.data} hideHeaderFields />
-            {details.data.status === "ISSUED" && canIssuePpe(role) && (
+            {details.data.status === "ISSUED" && canIssuePpe(permissions) && (
               <button
                 className="admin-secondary-button"
                 onClick={() => setCancel(true)}
@@ -133,6 +137,7 @@ function CancelIssueModal({
 }) {
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   return (
     <GuardedAdminModal
@@ -146,6 +151,8 @@ function CancelIssueModal({
           className="ppe-form"
           onSubmit={(e) => {
             e.preventDefault();
+            if (savingRef.current || !reason.trim()) return;
+            savingRef.current = true;
             setSaving(true);
             setError(null);
             void ppeApi
@@ -154,8 +161,11 @@ function CancelIssueModal({
                 onCancelled();
                 onClose();
               })
-              .catch((err) => setError(ppeError(err)))
-              .finally(() => setSaving(false));
+              .catch((err) => {
+                savingRef.current = false;
+                setSaving(false);
+                setError(ppeError(err));
+              });
           }}
         >
           <Field label="Причина">

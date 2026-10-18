@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ActiveModulesModule } from '../config/active-modules.module';
 import { AuditModule } from '../audit/audit.module';
 import { ImageProcessingModule } from '../image-processing/image-processing.module';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -15,7 +16,12 @@ import { UsersAdminAuditService } from './users-admin-audit.service';
 import { UsersAdminController } from './users-admin.controller';
 
 @Module({
-  imports: [AuditModule, ImageProcessingModule, PrismaModule],
+  imports: [
+    AuditModule,
+    ImageProcessingModule,
+    PrismaModule,
+    ActiveModulesModule,
+  ],
   controllers: [UsersAdminController],
   providers: [
     EmployeesAdminService,

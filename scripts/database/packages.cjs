@@ -2,12 +2,16 @@ const { createHash } = require('node:crypto');
 const { readFileSync, readdirSync } = require('node:fs');
 const { resolve } = require('node:path');
 
-function readPackageSet(projectRoot) {
+function readPackageSelection(projectRoot) {
   const selection = JSON.parse(readFileSync(resolve(projectRoot, 'database-packages.json'), 'utf8'));
-  if (!Array.isArray(selection.modules) || selection.modules.some((id) => !['equipment', 'ppe'].includes(id)) || new Set(selection.modules).size !== selection.modules.length) {
-    throw new Error('database-packages.json: modules must contain unique equipment/ppe identifiers');
+  if (!Array.isArray(selection.modules) || selection.modules.some((id) => !['equipment', 'ppe', 'warehouse'].includes(id)) || new Set(selection.modules).size !== selection.modules.length) {
+    throw new Error('database-packages.json: modules must contain unique equipment/ppe/warehouse identifiers');
   }
-  const packages = ['core', ...selection.modules].map((id) => {
+  return selection.modules;
+}
+
+function readPackageSet(projectRoot) {
+  const packages = ['core', ...readPackageSelection(projectRoot)].map((id) => {
     const directory = resolve(projectRoot, 'backend/prisma/packages', id);
     const manifest = JSON.parse(readFileSync(resolve(directory, 'manifest.json'), 'utf8'));
     const validCoreRequirement =
@@ -39,4 +43,4 @@ function readPackageSet(projectRoot) {
   return { packages, migrations };
 }
 
-module.exports = { readPackageSet };
+module.exports = { readPackageSet, readPackageSelection };

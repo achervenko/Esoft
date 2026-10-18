@@ -153,10 +153,10 @@ describe('EquipmentReferenceValidatorService', () => {
   it('skips employee validation when employeeId is nullish', async () => {
     const tx = {
       $queryRaw: jest.fn(),
-    } as never;
+    };
 
     await expect(
-      service.assertResponsibleEmployeeIsActive(tx, null),
+      service.assertResponsibleEmployeeIsActive(tx as never, null),
     ).resolves.toBeUndefined();
     expect(tx.$queryRaw).not.toHaveBeenCalled();
   });

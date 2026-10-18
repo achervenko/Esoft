@@ -17,12 +17,12 @@ const ppeTabs = {
 export type PpeTab = keyof typeof ppeTabs | "issue";
 
 export function PpePage({
-  userRole,
+  userPermissions,
   initialTab: requestedTab = "norms",
   employeeId,
   positionId,
 }: {
-  userRole: string | null;
+  userPermissions: readonly string[] | null;
   initialTab?: PpeTab;
   employeeId?: number;
   positionId?: number;
@@ -31,17 +31,17 @@ export function PpePage({
   const searchReturnTo = returnTo === "#/search" || returnTo?.startsWith("#/search?") ? returnTo : null;
   const initialTab = employeeId ? "issue" : requestedTab === "issue" ? "norms" : requestedTab;
   const [revision, setRevision] = useState(0);
-  const allowed = canReadPpe(userRole);
+  const allowed = canReadPpe(userPermissions);
   const [journalFiltersRequested, setJournalFiltersRequested] = useState(false);
   const loadJournalReferences =
     initialTab === "journal" && journalFiltersRequested;
   const items = usePpeQuery(
-    `ppe-items:${userRole}`,
+    `ppe-items:${userPermissions}`,
     (signal) => ppeApi.items(signal),
     allowed && (initialTab !== "journal" || loadJournalReferences),
   );
   const employees = usePpeQuery(
-    `ppe-employees:${userRole}:${employeeId ?? "all"}`,
+    `ppe-employees:${userPermissions}:${employeeId ?? "all"}`,
     (signal) =>
       employeeId
         ? ppeApi.employee(employeeId, signal).then((employee) => [employee])
@@ -49,7 +49,7 @@ export function PpePage({
     allowed && (initialTab === "issue" || loadJournalReferences),
   );
   const positions = usePpeQuery(
-    `ppe-positions:${userRole}`,
+    `ppe-positions:${userPermissions}`,
     (signal) => ppeApi.positions(signal),
     allowed && (initialTab === "norms" || loadJournalReferences),
   );
@@ -78,7 +78,7 @@ export function PpePage({
     items.reload();
     changed();
   };
-  if (!canReadPpe(userRole))
+  if (!canReadPpe(userPermissions))
     return (
       <section className="admin-page">
         <Message error="Недостаточно прав для просмотра СИЗ." />
@@ -129,7 +129,7 @@ export function PpePage({
               <CatalogPanel
                 items={items.data ?? []}
                 referenceState={reference}
-                role={userRole}
+                permissions={userPermissions}
                 onChanged={catalogChanged}
               />
             )}
@@ -144,7 +144,7 @@ export function PpePage({
                 }
                 onBack={() => (window.location.hash = searchReturnTo ?? "#/ppe?tab=norms")}
                 items={items.data ?? []}
-                role={userRole}
+                permissions={userPermissions}
                 revision={revision}
                 onChanged={catalogChanged}
               />
@@ -159,7 +159,7 @@ export function PpePage({
                   window.location.hash = searchReturnTo ?? "#/search";
                 }}
                 items={items.data ?? []}
-                role={userRole}
+                permissions={userPermissions}
                 revision={revision}
                 onChanged={changed}
               />
@@ -173,7 +173,7 @@ export function PpePage({
             items={items.data ?? []}
             onOpenFilters={() => setJournalFiltersRequested(true)}
             referenceState={reference}
-            role={userRole}
+            permissions={userPermissions}
             revision={revision}
             onChanged={changed}
           />

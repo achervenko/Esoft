@@ -39,10 +39,14 @@ function normalize(value: string) {
   return value.trim().toLowerCase().replace(/ё/g, "е").replace(/\s+/g, " ");
 }
 
+function resultKey(item: SearchResultItem) {
+  return `${item.entityType}:${item.entityId}`;
+}
+
 function reuseResults(previous: SearchResultItem[], incoming: SearchResultItem[]) {
-  const byId = new Map(previous.map((item) => [`${item.entityType}:${item.entityId}`, item]));
+  const byId = new Map(previous.map((item) => [resultKey(item), item]));
   const next = incoming.map((item) => {
-    const old = byId.get(`${item.entityType}:${item.entityId}`);
+    const old = byId.get(resultKey(item));
     if (!old) return item;
     const { score: oldScore, ...oldData } = old;
     const { score: newScore, ...newData } = item;
@@ -54,17 +58,18 @@ function reuseResults(previous: SearchResultItem[], incoming: SearchResultItem[]
     ? previous : next;
 }
 
-export function SearchPage({ userRole = null }: { userRole?: string | null }) {
+export function SearchPage({ userPermissions = null }: { userPermissions?: readonly string[] | null }) {
   const [module, setModule] = useState<string>(() => {
     const value = new URLSearchParams(window.location.hash.split("?")[1]).get("module");
-    return permittedModuleFilter(value, userRole);
+    return permittedModuleFilter(value, userPermissions);
   });
-  const availableModules = availableSearchModules(userRole);
+  const availableModules = availableSearchModules(userPermissions);
   const moduleRef = useRef(module);
-  const roleRef = useRef(userRole);
+  const permissionsRef = useRef(userPermissions);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const snapshot = useRef<{ query: string; items: SearchResultItem[] }>({ query: "", items: [] });
   const generation = useRef(0);
+  const settledGeneration = useRef<number | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState(0);
   const [initialRetry, setInitialRetry] = useState(0);
@@ -86,23 +91,25 @@ export function SearchPage({ userRole = null }: { userRole?: string | null }) {
       if (window.location.hash.split("?")[0] === "#/search") {
         setQuery(getSearchQueryFromHash());
         const value = new URLSearchParams(window.location.hash.split("?")[1]).get("module");
-        setModule(permittedModuleFilter(value, userRole));
+        setModule(permittedModuleFilter(value, userPermissions));
       }
     };
     syncQueryFromHash();
     window.addEventListener("hashchange", syncQueryFromHash);
     return () => window.removeEventListener("hashchange", syncQueryFromHash);
-  }, [userRole]);
+  }, [userPermissions]);
 
   useEffect(() => {
     const cleanQuery = normalize(normalizedQuery);
-    if (moduleRef.current !== module || roleRef.current !== userRole) {
-      roleRef.current = userRole;
+    if (moduleRef.current !== module || permissionsRef.current !== userPermissions) {
+      permissionsRef.current = userPermissions;
       moduleRef.current = module;
       snapshot.current = { query: "", items: [] };
       setResults([]);
     }
     const requestGeneration = ++generation.current;
+    settledGeneration.current = null;
+    setSettledQuery("");
     const controller = new AbortController();
     setOffset(0);
     setLimitReached(false);
@@ -125,6 +132,7 @@ export function SearchPage({ userRole = null }: { userRole?: string | null }) {
           snapshot.current = { query: cleanQuery, items: stableItems };
           setResults((current) => reuseResults(current, stableItems));
           setHasMore(items.length === SEARCH_LIMIT);
+          settledGeneration.current = requestGeneration;
           setSettledQuery(normalizedQuery);
         })
         .catch((requestError: Error) => {
@@ -141,10 +149,11 @@ export function SearchPage({ userRole = null }: { userRole?: string | null }) {
         });
     }, 150);
     return () => { controller.abort(); window.clearTimeout(timer); };
-  }, [isQueryReady, normalizedQuery, module, initialRetry, userRole]);
+  }, [isQueryReady, normalizedQuery, module, initialRetry, userPermissions]);
 
   useEffect(() => {
-    if (!offset || settledQuery !== normalizedQuery) return;
+    if (!offset || settledQuery !== normalizedQuery ||
+        settledGeneration.current !== generation.current) return;
     const requestGeneration = generation.current;
     const controller = new AbortController();
     setIsLoading(true);
@@ -152,8 +161,13 @@ export function SearchPage({ userRole = null }: { userRole?: string | null }) {
     searchApp({ limit: SEARCH_LIMIT, offset, query: settledQuery, ...(module ? { module } : {}), signal: controller.signal })
       .then((items) => {
         if (controller.signal.aborted || generation.current !== requestGeneration) return;
-        const seen = new Set(snapshot.current.items.map((item) => item.id));
-        const combined = [...snapshot.current.items, ...items.filter((item) => !seen.has(item.id))];
+        const seen = new Set(snapshot.current.items.map(resultKey));
+        const combined = [...snapshot.current.items, ...items.filter((item) => {
+          const key = resultKey(item);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })];
         snapshot.current = { query: normalize(settledQuery), items: combined };
         setResults(combined);
         setHasMore(items.length === SEARCH_LIMIT && offset < SEARCH_MAX_OFFSET);

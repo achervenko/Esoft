@@ -11,6 +11,8 @@ export type EmployeeProfile = {
 };
 
 export type UserProfile = {
+  permissions?: readonly string[];
+  assignedRole?: string | null;
   displayUsername?: string | null;
   email?: string | null;
   employee: EmployeeProfile | null;

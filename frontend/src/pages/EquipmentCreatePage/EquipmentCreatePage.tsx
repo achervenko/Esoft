@@ -29,14 +29,14 @@ import {
 import '../../modules/equipment-create-form/EquipmentPageLayout.css';
 
 type EquipmentCreatePageProps = {
-  userRole: string | null;
+  userPermissions: readonly string[] | null;
 };
 
-export function EquipmentCreatePage({ userRole }: EquipmentCreatePageProps) {
+export function EquipmentCreatePage({ userPermissions }: EquipmentCreatePageProps) {
   const { notifyError, notifySuccess, notifyWarning } = useNotifications();
   const redirectTimeoutRef = useRef<number | null>(null);
   const isSubmittingRef = useRef(false);
-  const isCreateAllowed = canCreateEquipment(userRole);
+  const isCreateAllowed = canCreateEquipment(userPermissions);
   const [form, setForm] = useState<EquipmentCreateFormState>(
     initialEquipmentCreateFormState,
   );

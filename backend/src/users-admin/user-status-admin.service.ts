@@ -1,5 +1,8 @@
+import { isPrismaTransactionConflict } from '../prisma/prisma-transaction-conflict';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { hasRole } from '../auth/role-module-policy';
+import { countOtherActiveAdmins } from '../auth/role-sql';
 import { PrismaService } from '../prisma/prisma.service';
 import { toAdminUserDto } from './users-admin.mapper';
 import { throwNotFoundIfPrismaError } from './users-admin.errors';
@@ -47,7 +50,7 @@ export class UserStatusAdminService {
           return toAdminUserDto(currentUser);
         }
 
-        if (banned && currentUser.role === 'admin') {
+        if (banned && hasRole(currentUser.role, 'admin')) {
           await this.assertAnotherActiveAdminExists(tx, params.userId);
         }
 
@@ -94,13 +97,7 @@ export class UserStatusAdminService {
     tx: Prisma.TransactionClient,
     userId: string,
   ) {
-    const remainingActiveAdminCount = await tx.user.count({
-      where: {
-        id: { not: userId },
-        role: 'admin',
-        OR: [{ banned: false }, { banned: null }],
-      },
-    });
+    const remainingActiveAdminCount = await countOtherActiveAdmins(tx, userId);
 
     if (remainingActiveAdminCount === 0) {
       throwBadRequest(
@@ -125,7 +122,7 @@ export class UserStatusAdminService {
       } catch (error) {
         if (
           attempt === SERIALIZABLE_TRANSACTION_ATTEMPTS ||
-          !this.isTransactionConflict(error)
+          !isPrismaTransactionConflict(error)
         ) {
           throw error;
         }
@@ -133,12 +130,5 @@ export class UserStatusAdminService {
     }
 
     throw new Error('Serializable transaction failed');
-  }
-
-  private isTransactionConflict(error: unknown) {
-    return (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2034'
-    );
   }
 }

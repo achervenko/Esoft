@@ -1,3 +1,4 @@
+import { permissionsForTest } from "../../test/permission-fixtures";
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { ppeApi } from "../../shared/api/ppe";
@@ -11,7 +12,7 @@ it("renders and focuses journal search before reference and journal requests fin
   for (const name of ["items", "employees", "positions", "journal"] as const) {
     vi.spyOn(ppeApi, name).mockReturnValue(new Promise<never>(() => {}));
   }
-  render(<PpePage userRole="admin" initialTab="journal" />);
+  render(<PpePage userPermissions={permissionsForTest("admin")} initialTab="journal" />);
   const search = screen.getByLabelText("Поиск по журналу");
   expect(search).toHaveFocus();
   const loading = await screen.findByRole("status");
@@ -32,7 +33,7 @@ it.each([
     for (const name of ["items", "employees", "positions", "norms"] as const) {
       vi.spyOn(ppeApi, name).mockReturnValue(new Promise<never>(() => {}));
     }
-    render(<PpePage userRole="admin" initialTab={initialTab} />);
+    render(<PpePage userPermissions={permissionsForTest("admin")} initialTab={initialTab} />);
     const search = screen.getByLabelText(label);
     expect(search).toHaveFocus();
     const loading = await screen.findByRole("status");
@@ -48,12 +49,12 @@ it("focuses the new search without moving focus to the tab on mouse down", () =>
   for (const name of ["items", "employees", "positions", "norms", "journal"] as const) {
     vi.spyOn(ppeApi, name).mockReturnValue(new Promise<never>(() => {}));
   }
-  const { rerender } = render(<PpePage userRole="admin" initialTab="catalog" />);
+  const { rerender } = render(<PpePage userPermissions={permissionsForTest("admin")} initialTab="catalog" />);
   const oldSearch = screen.getByLabelText("Поиск по номенклатуре");
   const tab = screen.getByRole("link", { name: "Журнал" });
   expect(fireEvent.mouseDown(tab, { button: 0 })).toBe(false);
   expect(oldSearch).toHaveFocus();
   fireEvent.click(tab);
-  rerender(<PpePage userRole="admin" initialTab="journal" />);
+  rerender(<PpePage userPermissions={permissionsForTest("admin")} initialTab="journal" />);
   expect(screen.getByLabelText("Поиск по журналу")).toHaveFocus();
 });

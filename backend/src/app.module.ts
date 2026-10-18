@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { StorageDocumentType } from '@prisma/client';
-import { loadRootConfig } from './config/root-environment';
+import { loadRootEnvironment } from './config/root-environment';
+import { loadOptionalWarehouseModule } from './config/optional-warehouse-module';
 import { AppAuthModule } from './auth/auth.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { ChecklistsModule } from './checklists/checklists.module';
@@ -18,7 +19,8 @@ import { UsersAdminModule } from './users-admin/users-admin.module';
 import { UsersModule } from './users/users.module';
 import { PpeModule } from './ppe/ppe.module';
 
-loadRootConfig();
+const { projectRoot } = loadRootEnvironment();
+const optionalWarehouseModules = loadOptionalWarehouseModule(projectRoot);
 
 @Module({
   imports: [
@@ -62,6 +64,7 @@ loadRootConfig();
     UsersAdminModule,
     UsersModule,
     PpeModule,
+    ...optionalWarehouseModules,
   ],
 })
 export class AppModule {}

@@ -1,10 +1,12 @@
+import { hasPermission } from "../../shared/lib/permissions";
+import { getUserRoles } from "../../shared/lib/user-roles";
 import {
   canEditEquipment,
   canReadEquipment,
   canDownloadEquipmentDocuments,
 } from "../equipment-permissions/equipment-permissions";
 import { canAccessWorkspaceRoute } from "../../lib/role-navigation";
-import { isAdministrator } from "../../shared/lib/roles";
+import { canManageUsers } from "../../shared/lib/roles";
 import {
   canBackdatePpeIssue,
   canIssuePpe,
@@ -30,48 +32,57 @@ const roleLabels: Record<string, string> = {
   auditor: "Аудитор",
   ppe_specialist: "Специалист по охране труда",
   accounting_specialist: "Специалист по учёту",
+  storekeeper: "Кладовщик",
   chief_engineer: "Главный инженер",
   engineer: "Инженер",
   operator: "Оператор",
 };
 
-const baseModules: ProfileModuleAccess[] = [
+const baseModules: (ProfileModuleAccess & { route: string })[] = [
   {
     title: "Панель",
+    route: "#/dashboard",
     description: "Просмотр общей рабочей области.",
   },
   {
     title: "Оборудование",
-    description: "Просмотр карточек, документов и истории оборудования.",
+    route: "#/equipment",
+    description: "Просмотр карточек и истории оборудования.",
   },
   {
     title: "Поиск",
+    route: "#/search",
     description: "Поиск оборудования по общему индексу.",
   },
   {
     title: "Профиль",
+    route: "#/profile",
     description: "Просмотр собственных данных и доступов.",
   },
 ];
 
-const equipmentEditorModules: ProfileModuleAccess[] = [
+const equipmentEditorModules: (ProfileModuleAccess & { permission: string })[] = [
   {
     title: "Редактирование оборудования",
+    permission: "equipment.edit",
     description: "Создание и изменение карточек оборудования.",
   },
   {
     title: "Документы оборудования",
+    permission: "files.manage",
     description: "Загрузка и удаление документов оборудования.",
   },
 ];
 
-const adminModules: ProfileModuleAccess[] = [
+const adminModules: (ProfileModuleAccess & { permission: string })[] = [
   {
     title: "Пользователи",
+    permission: "users.manage",
     description: "Управление сотрудниками и учётными записями.",
   },
   {
     title: "Справочники",
+    permission: "dictionaries.manage",
     description: "Управление справочниками системы.",
   },
 ];
@@ -81,56 +92,61 @@ export function getProfileRoleLabel(role: string | null | undefined) {
     return "Не указана";
   }
 
-  return roleLabels[role] ?? role;
+  const roles = getUserRoles(role);
+  return roles.length ? roles.map((value) => roleLabels[value]).join(", ") : role;
 }
 
-export function getProfileModuleAccess(role: string | null | undefined) {
-  const moduleRoutes: Record<string, string> = {
-    Панель: "#/dashboard",
-    Оборудование: "#/equipment",
-    Поиск: "#/search",
-    Профиль: "#/profile",
-  };
-  const modules = baseModules.filter((module) =>
-    canAccessWorkspaceRoute(role, moduleRoutes[module.title]),
-  );
-  if (canManageEmployeeSizes(role) && !isAdministrator(role))
+export function getProfileModuleAccess(permissions: readonly string[] | null | undefined) {
+  const modules: ProfileModuleAccess[] = baseModules
+    .filter((module) => canAccessWorkspaceRoute(permissions, module.route))
+    .map(({ title, description }) => ({ title, description }));
+  if (canManageEmployeeSizes(permissions) && !canManageUsers(permissions))
     modules.push({
       title: "Сотрудники",
       description: "Просмотр сотрудников и изменение размеров для СИЗ.",
     });
 
-  if (canEditEquipment(role)) {
-    modules.push(...equipmentEditorModules);
-  }
+  modules.push(
+    ...[...equipmentEditorModules, ...adminModules]
+      .filter((module) => hasPermission(permissions, module.permission))
+      .map(({ title, description }) => ({ title, description })),
+  );
 
-  if (isAdministrator(role)) {
-    modules.push(...adminModules);
-  }
-
-  if (canReadPpe(role)) {
+  if (canReadPpe(permissions)) {
     modules.push({
       title: "СИЗ",
       description: "Работа со средствами индивидуальной защиты.",
     });
   }
 
+  if (hasPermission(permissions, "warehouse.catalog.manage")) {
+    modules.push({
+      title: "Склад",
+      description: "Управление складской номенклатурой.",
+    });
+  }
+
   return modules;
 }
 
-export function getProfilePermissionAccess(role: string | null | undefined) {
-  const isAdmin = isAdministrator(role);
-  const equipmentEditable = canEditEquipment(role);
+export function getProfilePermissionAccess(permissions: readonly string[] | null | undefined) {
+  const usersManageable = canManageUsers(permissions);
+  const equipmentEditable = canEditEquipment(permissions);
 
   return [
     {
-      allowed: canReadEquipment(role),
-      title: "Просмотр оборудования",
-      description:
-        "Карточки, документы и история изменений доступны для просмотра.",
+      allowed: hasPermission(permissions, "warehouse.catalog.manage"),
+      title: "Управление складской номенклатурой",
+      description: "Просмотр, создание, изменение и активация или деактивация складских позиций.",
     },
     {
-      allowed: canDownloadEquipmentDocuments(role),
+      allowed: canReadEquipment(permissions),
+      title: "Просмотр оборудования",
+      description:
+        "Карточки и история изменений доступны для просмотра.",
+    },
+    {
+      allowed: canDownloadEquipmentDocuments(permissions),
       title: "Скачивание документов",
       description: "Документы оборудования доступны для скачивания.",
     },
@@ -140,54 +156,54 @@ export function getProfilePermissionAccess(role: string | null | undefined) {
       description: "Создание и изменение карточек оборудования.",
     },
     {
-      allowed: equipmentEditable,
+      allowed: hasPermission(permissions, "files.manage"),
       title: "Управление документами",
       description: "Загрузка и удаление документов оборудования.",
     },
     {
-      allowed: isAdmin,
+      allowed: usersManageable,
       title: "Управление пользователями",
       description: "Создание сотрудников, учётных записей и изменение ролей.",
     },
     {
-      allowed: isAdmin,
+      allowed: hasPermission(permissions, "dictionaries.manage"),
       title: "Управление справочниками",
       description: "Создание и редактирование справочников системы.",
     },
     {
-      allowed: canReadPpe(role),
+      allowed: canReadPpe(permissions),
       title: "Чтение СИЗ",
       description:
         "Просмотр каталога СИЗ, сотрудников и должностей в рамках модуля СИЗ.",
     },
     {
-      allowed: canManagePpeCatalog(role),
+      allowed: canManagePpeCatalog(permissions),
       title: "Управление каталогом СИЗ",
       description:
         "Создание, изменение и удаление позиций СИЗ и их размеров.",
     },
     {
-      allowed: canManagePpeNorms(role),
+      allowed: canManagePpeNorms(permissions),
       title: "Управление нормами СИЗ",
       description:
         "Создание и изменение редакций норм, завершение их действия.",
     },
     {
-      allowed: canIssuePpe(role),
+      allowed: canIssuePpe(permissions),
       title: "Выдача СИЗ",
       description: "Нормативная и дополнительная выдача СИЗ сотрудникам.",
     },
-    ...(isAdmin
+    ...(canBackdatePpeIssue(permissions)
       ? [
           {
-            allowed: canBackdatePpeIssue(role),
+            allowed: canBackdatePpeIssue(permissions),
             title: "Выдача СИЗ задним числом",
             description: "Оформление выдачи СИЗ за прошедшую дату.",
           },
         ]
       : []),
     {
-      allowed: canManageEmployeeSizes(role),
+      allowed: canManageEmployeeSizes(permissions),
       title: "Изменение размеров сотрудников",
       description:
         "Изменение размеров одежды, обуви, перчаток и головных уборов для СИЗ.",

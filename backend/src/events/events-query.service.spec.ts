@@ -39,7 +39,7 @@ describe('EventsQueryService', () => {
     };
   }
 
-  function createService() {
+  function createService(activeModules: string[] = ['equipment', 'warehouse']) {
     const prisma = {
       $queryRaw: jest.fn().mockResolvedValue([]),
       event: {
@@ -53,7 +53,11 @@ describe('EventsQueryService', () => {
     const extensionRegistry = new EventExtensionRegistry([
       createEquipmentEventExtensionAdapter(),
     ]);
-    const service = new EventsQueryService(prisma as never, extensionRegistry);
+    const service = new EventsQueryService(
+      prisma as never,
+      extensionRegistry,
+      activeModules,
+    );
 
     return { prisma, service };
   }
@@ -272,7 +276,7 @@ describe('EventsQueryService', () => {
           },
         },
         id: 'user-1',
-        role: 'engineer',
+        role: 'engineer,storekeeper',
       },
     ]);
 
@@ -281,7 +285,7 @@ describe('EventsQueryService', () => {
         {
           fullName: 'Petrov Ivan Sergeevich',
           position: 'Engineer',
-          role: 'engineer',
+          role: 'engineer,storekeeper',
           userId: 'user-1',
         },
       ],
@@ -290,7 +294,6 @@ describe('EventsQueryService', () => {
     expect(prisma.user.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          role: { in: ['chief_engineer', 'engineer', 'operator', 'auditor'] },
           employeeUser: {
             is: {
               employee: {
@@ -302,5 +305,30 @@ describe('EventsQueryService', () => {
         },
       }),
     );
+  });
+  it('does not offer assignees when equipment is disabled', async () => {
+    const { prisma, service } = createService(['warehouse']);
+    await expect(service.findResponsibleUsers()).resolves.toEqual({
+      users: [],
+    });
+    expect(prisma.user.findMany).not.toHaveBeenCalled();
+  });
+  it('accepts an active engineer role on an admin account without accepting admin alone', async () => {
+    const { prisma, service } = createService(['equipment']);
+    const employeeUser = {
+      employee: {
+        firstName: 'Ivan',
+        lastName: 'Petrov',
+        middleName: null,
+        position: { name: 'Engineer' },
+      },
+    };
+    prisma.user.findMany.mockResolvedValue([
+      { id: 'admin-only', role: 'admin', employeeUser },
+      { id: 'combined', role: 'admin,engineer', employeeUser },
+      { id: 'warehouse-only', role: 'storekeeper', employeeUser },
+    ]);
+    const result = await service.findResponsibleUsers();
+    expect(result.users.map((user) => user.userId)).toEqual(['combined']);
   });
 });

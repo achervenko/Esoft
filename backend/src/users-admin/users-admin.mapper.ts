@@ -1,4 +1,5 @@
 import { toUserPhotoDto } from '../users/user-photo.dto';
+import { getUserRoles } from '../auth/role-module-policy';
 
 export function toEmployeeDto(
   employee: {
@@ -111,9 +112,13 @@ export function getRoleLabel(role: string | null | undefined) {
     auditor: 'Аудитор',
     ppe_specialist: 'Специалист по охране труда',
     accounting_specialist: 'Специалист по учёту',
+    storekeeper: 'Кладовщик',
   };
 
-  return role ? (labels[role] ?? role) : 'Не указана';
+  const roles = getUserRoles(role);
+  return roles.length
+    ? roles.map((value) => labels[value]).join(', ')
+    : role || 'Не указана';
 }
 
 function getEmployeeFullName(employee: {

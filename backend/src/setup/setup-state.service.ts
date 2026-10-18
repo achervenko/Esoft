@@ -1,6 +1,7 @@
 import { getBusinessTodayDate } from '../application/business-date';
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { hasAnyRoleSql } from '../auth/role-sql';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   throwSetupAlreadyCompleted,
@@ -44,7 +45,7 @@ export class SetupStateService {
         ON employee_user.user_id = "user".id
       JOIN employees employee
         ON employee.id = employee_user.employee_id
-      WHERE "user".role = 'admin'
+      WHERE ${hasAnyRoleSql(Prisma.sql`"user".role`, ['admin'])}
         AND "user".banned IS NOT TRUE
         AND employee.is_active = true
         AND EXISTS (
@@ -171,7 +172,7 @@ export class SetupStateService {
         ON employee_user.user_id = "user".id
       JOIN employees employee
         ON employee.id = employee_user.employee_id
-      WHERE "user".role = 'admin'
+      WHERE ${hasAnyRoleSql(Prisma.sql`"user".role`, ['admin'])}
         AND "user".banned IS NOT TRUE
         AND employee.is_active = true
         AND NOT EXISTS (

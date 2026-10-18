@@ -1,3 +1,4 @@
+import { permissionsForTest } from "../../test/permission-fixtures";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import * as api from "../../shared/api/users-admin-api";
@@ -33,7 +34,7 @@ it.each([false, true])("keeps saving locked through reload (reload failure=%s)",
   vi.spyOn(api, "getAdminRoles").mockResolvedValue([]);
   const users = vi.spyOn(api, "getAdminUserAccounts").mockResolvedValue([account]);
   const status = vi.spyOn(api, "setAdminUserStatus").mockResolvedValue({ ...account, banned: true });
-  const { result } = renderHook(() => useUsersAdminPage({ userRole: "admin" }));
+  const { result } = renderHook(() => useUsersAdminPage({ userPermissions: permissionsForTest("admin") }));
   await waitFor(() => expect(result.current.isLoading).toBe(false));
   let finish!: (value: api.AdminUserAccount[]) => void;
   let reject!: (reason: Error) => void;
@@ -53,8 +54,30 @@ it.each([false, true])("keeps saving locked through reload (reload failure=%s)",
   });
   expect(result.current.isSaving).toBe(false);
   expect(result.current.isLoading).toBe(false);
-  if (fails) expect(result.current.error).toBeTruthy();
+  if (fails) {
+    expect(result.current.error).toBeTruthy();
+    expect(result.current.message).toBeNull();
+  }
   else expect(result.current.users[0].banned).toBe(true);
+});
+
+it("clears the previous success when the next operation fails", async () => {
+  vi.spyOn(api, "getAdminEmployees").mockResolvedValue([]);
+  vi.spyOn(api, "getAdminRoles").mockResolvedValue([]);
+  vi.spyOn(api, "getAdminUserAccounts").mockResolvedValue([account]);
+  vi.spyOn(api, "setAdminUserPassword").mockResolvedValue({ ok: true });
+  vi.spyOn(api, "setAdminUserStatus").mockRejectedValue(new Error("Request failed"));
+  const { result } = renderHook(() =>
+    useUsersAdminPage({ userPermissions: permissionsForTest("admin") }),
+  );
+  await waitFor(() => expect(result.current.isLoading).toBe(false));
+  act(() => result.current.setPasswordUser(account));
+  await act(() => result.current.setPassword("new-password"));
+  expect(result.current.message).toBe("Пароль обновлён.");
+
+  await act(() => result.current.toggleUserStatus(account));
+  expect(result.current.error).toBeTruthy();
+  expect(result.current.message).toBeNull();
 });
 
 it.each([false, true])("locks status changes until the request completes (banned=%s)", async (banned) => {
@@ -65,7 +88,7 @@ it.each([false, true])("locks status changes until the request completes (banned
   const status = vi.spyOn(api, "setAdminUserStatus").mockReturnValue(
     new Promise<api.AdminUserAccount>((resolve) => { finish = resolve; }),
   );
-  const { result } = renderHook(() => useUsersAdminPage({ userRole: "admin" }));
+  const { result } = renderHook(() => useUsersAdminPage({ userPermissions: permissionsForTest("admin") }));
   await waitFor(() => expect(result.current.isLoading).toBe(false));
   let pending!: Promise<void>;
   act(() => {
@@ -100,7 +123,7 @@ it.each(["current", "other"])(
       useUsersAdminPage({
         currentUserId: "current",
         onCurrentUserChanged: refresh,
-        userRole: "admin",
+        userPermissions: permissionsForTest("admin"),
       }),
     );
     await waitFor(() => expect(hook.result.current.isLoading).toBe(false));

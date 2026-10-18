@@ -13,13 +13,13 @@ import {
 
 type UseChecklistTemplateLoaderParams = {
   copyFromTemplateId?: number | null;
-  isAdmin: boolean;
+  checklistsManageable: boolean;
   templateId: number | null;
 };
 
 export function useChecklistTemplateLoader({
   copyFromTemplateId = null,
-  isAdmin,
+  checklistsManageable,
   templateId,
 }: UseChecklistTemplateLoaderParams) {
   const [loadedTemplate, setLoadedTemplate] =
@@ -41,7 +41,7 @@ export function useChecklistTemplateLoader({
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
 
-    if (!isAdmin) {
+    if (!checklistsManageable) {
       resetLoaderState();
       setIsLoading(false);
       return;
@@ -88,7 +88,7 @@ export function useChecklistTemplateLoader({
         setIsLoading(false);
       }
     }
-  }, [copyFromTemplateId, isAdmin, resetLoaderState, templateId]);
+  }, [copyFromTemplateId, checklistsManageable, resetLoaderState, templateId]);
 
   useEffect(() => {
     void loadData();

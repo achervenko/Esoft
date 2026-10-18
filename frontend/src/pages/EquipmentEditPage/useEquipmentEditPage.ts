@@ -29,20 +29,22 @@ import { useNotifications } from "../../shared/ui/notifications";
 type UseEquipmentEditPageParams = {
   initialTab: EquipmentEditTab;
   returnTo: string;
-  userRole: string | null;
+  userPermissions: readonly string[] | null;
   visibleId: number;
 };
 
 export function useEquipmentEditPage({
   initialTab,
   returnTo,
-  userRole,
+  userPermissions,
   visibleId,
 }: UseEquipmentEditPageParams) {
   const { notifyError, notifySuccess, notifyWarning } = useNotifications();
   const redirectTimeoutRef = useRef<number | null>(null);
   const visibleIdRef = useRef(visibleId);
-  const isEditAllowed = canEditEquipment(userRole);
+  const isSubmittingRef = useRef(false);
+  const submissionGenerationRef = useRef(0);
+  const isEditAllowed = canEditEquipment(userPermissions);
   const [form, setForm] = useState<EquipmentCreateFormState>(
     initialEquipmentCreateFormState,
   );
@@ -122,6 +124,8 @@ export function useEquipmentEditPage({
 
   useEffect(() => {
     visibleIdRef.current = visibleId;
+    isSubmittingRef.current = false;
+    submissionGenerationRef.current += 1;
 
     if (redirectTimeoutRef.current !== null) {
       window.clearTimeout(redirectTimeoutRef.current);
@@ -133,6 +137,7 @@ export function useEquipmentEditPage({
 
   useEffect(() => {
     return () => {
+      submissionGenerationRef.current += 1;
       if (redirectTimeoutRef.current !== null) {
         window.clearTimeout(redirectTimeoutRef.current);
       }
@@ -158,6 +163,7 @@ export function useEquipmentEditPage({
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isSubmittingRef.current) return;
     setError(null);
 
     if (!options) {
@@ -176,6 +182,8 @@ export function useEquipmentEditPage({
       return;
     }
 
+    isSubmittingRef.current = true;
+    const requestedGeneration = ++submissionGenerationRef.current;
     setIsSubmitting(true);
     let shouldResetSubmitting = true;
     const requestedVisibleId = visibleId;
@@ -186,7 +194,10 @@ export function useEquipmentEditPage({
         toEquipmentCreatePayload(form),
       );
 
-      if (visibleIdRef.current !== requestedVisibleId) {
+      if (
+        visibleIdRef.current !== requestedVisibleId ||
+        submissionGenerationRef.current !== requestedGeneration
+      ) {
         return;
       }
 
@@ -209,7 +220,10 @@ export function useEquipmentEditPage({
         redirectTimeoutRef.current = null;
       }, 500);
     } catch (requestError) {
-      if (visibleIdRef.current !== requestedVisibleId) {
+      if (
+        visibleIdRef.current !== requestedVisibleId ||
+        submissionGenerationRef.current !== requestedGeneration
+      ) {
         return;
       }
 
@@ -227,8 +241,10 @@ export function useEquipmentEditPage({
     } finally {
       if (
         shouldResetSubmitting &&
-        visibleIdRef.current === requestedVisibleId
+        visibleIdRef.current === requestedVisibleId &&
+        submissionGenerationRef.current === requestedGeneration
       ) {
+        isSubmittingRef.current = false;
         setIsSubmitting(false);
       }
     }
