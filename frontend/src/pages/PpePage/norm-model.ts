@@ -17,12 +17,12 @@ export function getNeighborNorms(norms: PpeNorm[], current: PpeNorm) {
   return {
     previousNorm:
       norms
-        .filter((norm) => norm.effectiveFrom < current.effectiveFrom)
+        .filter((norm) => norm.gender === current.gender && norm.positionId === current.positionId && norm.effectiveFrom < current.effectiveFrom)
         .sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom))[0] ??
       null,
     nextNorm:
       norms
-        .filter((norm) => norm.effectiveFrom > current.effectiveFrom)
+        .filter((norm) => norm.gender === current.gender && norm.positionId === current.positionId && norm.effectiveFrom > current.effectiveFrom)
         .sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom))[0] ??
       null,
   };

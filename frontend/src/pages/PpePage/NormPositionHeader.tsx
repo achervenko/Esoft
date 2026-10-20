@@ -31,9 +31,7 @@ export function NormPositionHeader({
           selected?.isActive &&
           !loading &&
           selectedNorms &&
-          !selectedNorms.some(
-            (norm) => normPeriodStatus(norm) !== "Завершённая",
-          ) && (
+          ["MALE", "FEMALE"].some((gender) => !selectedNorms.some((norm) => norm.gender === gender && normPeriodStatus(norm) !== "Завершённая")) && (
             <button className="admin-primary-button" onClick={() => onCreate()}>
               Создать норму
             </button>

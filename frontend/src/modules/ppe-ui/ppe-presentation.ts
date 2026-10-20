@@ -66,6 +66,7 @@ const errorMessages: Record<string, string> = {
   PPE_NORM_ALREADY_ISSUED:
     "Эта нормативная выдача уже выполнена или больше недоступна. Обновите план.",
   PPE_NORM_NOT_DUE: "Окно нормативной выдачи ещё не открыто.",
+  PPE_EMPLOYEE_GENDER_REQUIRED: "Укажите пол сотрудника в его карточке для расчёта норм СИЗ.",
   PPE_EMPLOYEE_NOT_FOUND: "Сотрудник не найден.",
   PPE_EMPLOYEE_INACTIVE: "Сотрудник отключён. Новые выдачи недоступны.",
   PPE_ISSUE_ALREADY_CANCELLED: "Выдача уже отменена. Обновите журнал.",

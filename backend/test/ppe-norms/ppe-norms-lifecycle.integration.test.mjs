@@ -2,6 +2,54 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 export function registerTests({ fixture, service, prisma, actor, day }) {
+  for (const { linked, adjacent } of [
+    { linked: false, adjacent: false },
+    { linked: false, adjacent: true },
+    { linked: true, adjacent: false },
+  ]) {
+    test(`deleting a future norm preserves an explicitly ended predecessor (linked=${linked}, adjacent=${adjacent})`, async () => {
+      const f = await fixture();
+      const original = await service.create(
+        {
+          ...f.payload,
+          effectiveFrom: day(-20),
+          effectiveTo: day(adjacent ? 9 : -5),
+        },
+        actor,
+      );
+      const middle = linked
+        ? await service.createRevision(
+            original.id,
+            { effectiveFrom: day(10), items: f.rows },
+            actor,
+          )
+        : await service.create({ ...f.payload, effectiveFrom: day(10) }, actor);
+      const last = await service.createRevision(
+        middle.id,
+        { effectiveFrom: day(20), items: f.rows },
+        actor,
+      );
+      const auditsBefore = await prisma.auditLog.count({
+        where: { entityType: 'ppe_norm', entityId: original.id },
+      });
+      await service.deleteFuture(middle.id, actor);
+      assert.deepEqual(await service.findOne(original.id), original);
+      assert.equal(
+        (await prisma.ppeNorm.findUniqueOrThrow({ where: { id: last.id } }))
+          .previousNormId,
+        linked ? original.id : null,
+      );
+      assert.equal(
+        await prisma.auditLog.count({
+          where: { entityType: 'ppe_norm', entityId: original.id },
+        }),
+        auditsBefore,
+      );
+      await service.deleteFuture(last.id, actor);
+      assert.deepEqual(await service.findOne(original.id), original);
+    });
+  }
+
   test('deleting the only future revision reopens the predecessor and preserves its items', async () => {
     const f = await fixture();
     const original = await service.create(
@@ -18,8 +66,13 @@ export function registerTests({ fixture, service, prisma, actor, day }) {
     assert.equal(restored.effectiveTo, null);
     assert.deepEqual(restored.items, original.items);
     assert.equal(
-      (await service.findEffectiveNorm(original.positionId, new Date(day(20))))
-        .id,
+      (
+        await service.findEffectiveNorm(
+          original.positionId,
+          new Date(day(20)),
+          'MALE',
+        )
+      ).id,
       original.id,
     );
     assert.equal(
@@ -60,13 +113,23 @@ export function registerTests({ fixture, service, prisma, actor, day }) {
       original.id,
     );
     assert.equal(
-      (await service.findEffectiveNorm(original.positionId, new Date(day(10))))
-        .id,
+      (
+        await service.findEffectiveNorm(
+          original.positionId,
+          new Date(day(10)),
+          'MALE',
+        )
+      ).id,
       original.id,
     );
     assert.equal(
-      (await service.findEffectiveNorm(original.positionId, new Date(day(20))))
-        .id,
+      (
+        await service.findEffectiveNorm(
+          original.positionId,
+          new Date(day(20)),
+          'MALE',
+        )
+      ).id,
       last.id,
     );
     await service.deleteFuture(last.id, actor);
@@ -83,7 +146,11 @@ export function registerTests({ fixture, service, prisma, actor, day }) {
     assert.deepEqual(ended.items, norm.items);
     assert.equal(ended.effectiveTo, day(0));
     assert.equal(
-      await service.findEffectiveNorm(norm.positionId, new Date(day(1))),
+      await service.findEffectiveNorm(
+        norm.positionId,
+        new Date(day(1)),
+        'MALE',
+      ),
       null,
     );
     await assert.rejects(service.deleteFuture(norm.id, actor));

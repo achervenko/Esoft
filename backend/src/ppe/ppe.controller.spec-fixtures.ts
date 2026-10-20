@@ -19,6 +19,8 @@ export function createController() {
     create: jest.fn().mockResolvedValue({}),
     createRevision: jest.fn().mockResolvedValue({}),
     updateFuture: jest.fn().mockResolvedValue({}),
+    end: jest.fn().mockResolvedValue({}),
+    deleteFuture: jest.fn().mockResolvedValue({}),
   };
   const catalog = {
     listItems: jest.fn().mockResolvedValue([]),

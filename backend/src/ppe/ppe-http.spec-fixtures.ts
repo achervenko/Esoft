@@ -32,7 +32,7 @@ export const operations: Operation[] = [
   },
   {
     method: 'GET',
-    path: '/api/ppe/positions/1/norm',
+    path: '/api/ppe/positions/1/norm?gender=MALE',
     permission: PPE_PERMISSIONS.READ,
     group: 'norms',
     action: 'findEffectiveNorm',

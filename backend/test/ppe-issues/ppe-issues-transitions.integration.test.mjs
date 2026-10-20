@@ -59,7 +59,7 @@ export function registerTests(env) {
         );
       } else {
         assert.equal(row.plannedDate, on);
-        assert.equal(row.availableFrom, env.day(-30));
+        assert.equal(row.availableFrom, oldDate);
         assert.equal(row.available.quantity, 2);
         const results = await Promise.allSettled([
           env.issues.createRegular(request(f, revision), env.adminActor),

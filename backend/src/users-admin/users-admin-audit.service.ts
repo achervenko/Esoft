@@ -4,12 +4,14 @@ import { AuditLogService } from '../audit/audit-log.service';
 import { getRoleLabel } from './users-admin.mapper';
 
 type EmployeeAuditData = {
+  gender?: 'MALE' | 'FEMALE' | null;
   firstName: string;
   id: number;
   isActive?: boolean | null;
   lastName: string;
   middleName: string | null;
   position: string;
+  additionalPositions?: { id: number; name: string }[];
 };
 
 type UserAuditData = {
@@ -229,7 +231,19 @@ export class UsersAdminAuditService {
       this.field('Фамилия', newEmployee?.lastName, oldEmployee?.lastName),
       this.field('Имя', newEmployee?.firstName, oldEmployee?.firstName),
       this.field('Отчество', newEmployee?.middleName, oldEmployee?.middleName),
+      this.field('Пол', newEmployee?.gender, oldEmployee?.gender),
       this.field('Должность', newEmployee?.position, oldEmployee?.position),
+      this.field(
+        'Совмещаемые должности',
+        newEmployee?.additionalPositions
+          ?.map(({ name }) => name)
+          .sort()
+          .join(', ') ?? '',
+        oldEmployee?.additionalPositions
+          ?.map(({ name }) => name)
+          .sort()
+          .join(', ') ?? '',
+      ),
     ].filter((field) => field.newValue !== field.oldValue);
   }
 

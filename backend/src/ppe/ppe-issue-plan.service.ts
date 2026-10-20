@@ -22,28 +22,39 @@ export class PpeIssuePlanService {
     const on = parseNormDate(normDateString(date));
     return runPpeIssueTransaction(this.prisma, this.guards, async (tx) => {
       const employee = await this.guards.lockEmployee(tx, employeeId, false);
-      const position = await this.guards.lockPosition(tx, employee.positionId);
-      const current = await this.guards.lockEffectiveNorm(
+      const combined = await this.guards.lockEmployeeNorms(
         tx,
-        employee.positionId,
+        employee,
         on,
+        [],
+        true,
       );
-      const future = await this.guards.lockFutureNorm(
-        tx,
-        employee.positionId,
-        on,
-      );
+      const position = await tx.position.findUniqueOrThrow({
+        where: { id: employee.positionId },
+      });
+      const current = combined.current[0] ?? null;
+      const future = combined.future[0] ?? null;
       const base = {
         employeeId,
+        warnings: combined.warnings,
         employeeName: ppeEmployeeName(employee),
         positionId: position.id,
-        position: position.name,
+        position: (
+          await tx.position.findMany({
+            where: {
+              id: { in: combined.assignments.map((entry) => entry.positionId) },
+            },
+            orderBy: { id: 'asc' },
+          })
+        )
+          .map((entry) => entry.name)
+          .join(', '),
         on: normDateString(on),
       };
       if (!current && !future) return { ...base, norm: null, items: [] };
       const catalog = await this.guards.lockCatalog(
         tx,
-        [current, future].flatMap(
+        [...combined.current, ...combined.future].flatMap(
           (norm) => norm?.items.map((item) => item.ppeItemId) ?? [],
         ),
         false,
@@ -60,13 +71,19 @@ export class PpeIssuePlanService {
             item,
             on,
             issued,
-            employee.positionAssignedAt,
+            combined.assignments.find(
+              (entry) => entry.positionId === norm.positionId,
+            )?.assignedAt,
           ),
         }));
       };
-      const currentRows = current ? await prepare(current) : [];
-      const futureRows = future ? await prepare(future) : [];
-      const norm = (current ?? future)!;
+      const currentRows: Awaited<ReturnType<typeof prepare>> = [];
+      const futureRows: Awaited<ReturnType<typeof prepare>> = [];
+      for (const norm of combined.current)
+        currentRows.push(...(await prepare(norm)));
+      for (const norm of combined.future)
+        futureRows.push(...(await prepare(norm)));
+      const norm = current ?? future;
       const rows = current
         ? [
             ...currentRows,

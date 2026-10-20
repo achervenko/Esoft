@@ -10,6 +10,7 @@ export type AdminRoleOption = {
 export type AdminUserRole = AppRole;
 
 export type AdminEmployee = {
+ gender: "MALE" | "FEMALE" | null;
   accountCount: number;
   activeAccountCount: number;
   equipmentCount: number;
@@ -23,6 +24,7 @@ export type AdminEmployee = {
   middleName: string | null;
   position: string;
   positionId: number;
+  additionalPositions?: { id: number; name: string }[];
 };
 
 export type AdminUserAccount = {
@@ -45,10 +47,12 @@ export type AdminUserAccount = {
 };
 
 export type EmployeePayload = {
+ gender: "MALE" | "FEMALE";
   firstName: string;
   lastName: string;
   middleName?: string | null;
   positionId: number;
+  additionalPositionIds?: number[];
 };
 
 export type UserAccountPayload = {

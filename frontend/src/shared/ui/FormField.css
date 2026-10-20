@@ -100,3 +100,61 @@
 .admin-form .form-field textarea {
   padding: 10px 12px;
 }
+
+.gender-field {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.gender-field legend {
+  margin-bottom: 8px;
+  padding: 0;
+}
+.gender-toggle {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  width: 220px;
+  max-width: 100%;
+  height: 40px;
+  border: 1px solid #d7dce3;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.gender-toggle-segment {
+  position: relative;
+  cursor: pointer;
+}
+.gender-toggle-segment + .gender-toggle-segment {
+  border-left: 1px solid #d7dce3;
+}
+.gender-toggle-segment input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.gender-toggle-segment span {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: #15171c;
+  font-size: 14px;
+  font-weight: 700;
+}
+.gender-toggle-segment input:checked + span {
+  background: #111111;
+  color: #fff;
+}
+.gender-toggle-segment input:focus-visible + span {
+  outline: 2px solid #6b7280;
+  outline-offset: -3px;
+}
+.gender-field:disabled .gender-toggle {
+  opacity: 0.6;
+}
+.gender-field:disabled .gender-toggle-segment {
+  cursor: default;
+}

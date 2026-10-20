@@ -48,7 +48,8 @@ export class PpeController {
     @Param('positionId', ParsePositiveIntPipe) id: number,
     @Query() query: unknown,
   ) {
-    return this.norms.findEffectiveNorm(id, parseEffectiveNormQuery(query));
+    const { date, gender } = parseEffectiveNormQuery(query);
+    return this.norms.findEffectiveNorm(id, date, gender);
   }
 
   @Post('norms')

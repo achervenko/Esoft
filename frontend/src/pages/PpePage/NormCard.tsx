@@ -26,6 +26,7 @@ export function NormCard({
     <section className="ppe-norm-card">
       <header>
         <div>
+          <p>{norm.gender === "MALE" ? "Мужской" : "Женский"}</p>
           <p>
             {formatPpeDate(norm.effectiveFrom)} —{" "}
             {norm.effectiveTo
@@ -43,7 +44,7 @@ export function NormCard({
           normPeriodStatus(norm) !== "Завершённая" && (
             <div className="ppe-actions">
               {!selectedNorms.some(
-                (other) => other.effectiveFrom > norm.effectiveFrom,
+                (other) => other.gender === norm.gender && other.effectiveFrom > norm.effectiveFrom,
               ) && (
                 <button
                   className="admin-secondary-button"

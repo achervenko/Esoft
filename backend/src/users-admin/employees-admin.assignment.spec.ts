@@ -6,15 +6,56 @@ import {
 } from './employees-admin.spec-fixtures';
 
 describe('EmployeesAdminService assignment', () => {
+  it('preserves both assignment dates when primary and additional positions swap', async () => {
+    const { service, tx } = createService();
+    const primaryDate = new Date('2026-01-01');
+    const additionalDate = new Date('2026-03-01');
+    tx.$queryRaw.mockResolvedValue([{ isActive: true }]);
+    tx.employee.findUniqueOrThrow.mockResolvedValue({
+      ...baseEmployee,
+      positionAssignedAt: primaryDate,
+      additionalPositions: [
+        {
+          positionId: 2,
+          assignedAt: additionalDate,
+          position: { name: 'Механик' },
+        },
+      ],
+    });
+    tx.employee.update.mockResolvedValue(baseEmployee);
+    await service.updateEmployee(1, {
+      ...payload,
+      positionId: 2,
+      additionalPositionIds: [1, 3],
+    });
+    const [update] = tx.employee.update.mock.calls[0] as [
+      { data: Record<string, unknown> },
+    ];
+    expect(update.data).toMatchObject({
+      positionAssignedAt: additionalDate,
+      additionalPositions: {
+        deleteMany: { positionId: { notIn: [1, 3] } },
+        create: [
+          { positionId: 1, assignedAt: primaryDate },
+          { positionId: 3, assignedAt: getBusinessTodayDate() },
+        ],
+      },
+    });
+  });
+
   it('starts entitlement on initial assignment instead of accruing months before employee creation', async () => {
     const { service, tx } = createService();
     tx.$queryRaw.mockResolvedValue([{ isActive: true }]);
     tx.employee.create.mockResolvedValue(baseEmployee);
     await service.createEmployee(payload);
     expect(tx.employee.create).toHaveBeenCalledWith({
-      include: { position: true },
+      include: {
+        position: true,
+        additionalPositions: { include: { position: true } },
+      },
       data: {
         ...payload,
+        additionalPositions: { create: [] },
         middleName: null,
         positionAssignedAt: getBusinessTodayDate(),
       },

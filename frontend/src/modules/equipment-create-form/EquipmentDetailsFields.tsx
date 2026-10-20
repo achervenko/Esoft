@@ -16,6 +16,7 @@ export function EquipmentDetailsFields({
     <>
       <SearchSelect
         label="Страна производства"
+        maxResults={null}
         error={fieldErrors.countryId}
         onChange={(value) => onChange("countryId", value)}
         onFocus={() => onFieldFocus("countryId")}

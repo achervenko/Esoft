@@ -1,3 +1,4 @@
+import { Gender } from '@prisma/client';
 import { BadRequestException } from '@nestjs/common';
 import { parseUserRoles } from '../auth/role-module-policy';
 
@@ -6,6 +7,8 @@ type EmployeePayload = {
   lastName?: unknown;
   middleName?: unknown;
   positionId?: unknown;
+  gender?: unknown;
+  additionalPositionIds?: unknown;
 };
 
 type UserPayload = {
@@ -40,12 +43,37 @@ export function parseEmployeePayload(payload: EmployeePayload) {
     throwBadRequest('POSITION_REQUIRED', 'Выберите должность.');
   }
   const middleName = parseOptionalText(payload.middleName, MAX_NAME_LENGTH);
+  const gender = payload.gender;
+  if (gender !== Gender.MALE && gender !== Gender.FEMALE)
+    throwBadRequest('EMPLOYEE_GENDER_REQUIRED', 'Укажите пол сотрудника.');
+  const additionalPositionIds = payload.additionalPositionIds;
+  if (
+    additionalPositionIds !== undefined &&
+    (!Array.isArray(additionalPositionIds) ||
+      additionalPositionIds.length > 50 ||
+      additionalPositionIds.some(
+        (id: unknown) =>
+          typeof id !== 'number' ||
+          !Number.isSafeInteger(id) ||
+          id <= 0 ||
+          id === positionId,
+      ) ||
+      new Set(additionalPositionIds).size !== additionalPositionIds.length)
+  )
+    throwBadRequest(
+      'INVALID_POSITION_IDS',
+      'Выберите разные совмещаемые должности, кроме основной.',
+    );
 
   return {
     firstName,
     lastName,
     middleName,
     positionId,
+    gender,
+    ...(additionalPositionIds === undefined
+      ? {}
+      : { additionalPositionIds: additionalPositionIds as number[] }),
   };
 }
 

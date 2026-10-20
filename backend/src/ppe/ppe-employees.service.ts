@@ -8,11 +8,13 @@ import { employeeSizesSelect } from './ppe-employee-sizes';
 
 const employeeSelect = {
   id: true,
+  gender: true,
   lastName: true,
   firstName: true,
   middleName: true,
   positionId: true,
   position: { select: { name: true } },
+  additionalPositions: { include: { position: { select: { name: true } } } },
   ppeSizes: { select: employeeSizesSelect },
   isActive: true,
 } satisfies Prisma.EmployeeSelect;
@@ -20,9 +22,13 @@ const employeeSelect = {
 type PpeEmployee = Prisma.EmployeeGetPayload<{ select: typeof employeeSelect }>;
 
 function toPpeEmployee(employee: PpeEmployee) {
+  const { additionalPositions, ...rest } = employee;
   return {
-    ...employee,
-    position: employee.position.name,
+    ...rest,
+    position: [
+      employee.position.name,
+      ...additionalPositions.map(({ position }) => position.name),
+    ].join(', '),
     ppeSizes: employee.ppeSizes
       ? {
           ...employee.ppeSizes,

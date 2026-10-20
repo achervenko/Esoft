@@ -6,6 +6,7 @@ import { normDateString, type PpeNormRecord } from './ppe-norms.mapper';
 type NormItem = PpeNormRecord['items'][number];
 
 const normLabels = {
+  gender: 'Пол',
   positionId: 'ID должности',
   position: 'Должность',
   effectiveFrom: 'Дата начала действия',
@@ -30,6 +31,7 @@ export class PpeNormsAuditService {
 
   private normAuditValues(norm: PpeNormRecord) {
     return {
+      gender: norm.gender,
       positionId: norm.positionId,
       position: norm.position.name,
       effectiveFrom: normDateString(norm.effectiveFrom),

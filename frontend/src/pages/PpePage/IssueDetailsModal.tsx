@@ -78,6 +78,7 @@ export function IssueSnapshot({
   const fields: [string, string][] = [
     ["Сотрудник", issue.employeeName],
     ["Должность", issue.position],
+    ["Пол нормы", issue.genderSnapshot === "MALE" ? "Мужской" : issue.genderSnapshot === "FEMALE" ? "Женский" : "—"],
     [
       "Вид выдачи",
       issue.issueType === "REGULAR" ? "Нормативная" : "Дополнительная",

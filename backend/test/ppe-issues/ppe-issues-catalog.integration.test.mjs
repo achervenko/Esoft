@@ -71,10 +71,7 @@ export function registerTests(env) {
       { value: '88–92', heightValue: '194–200' },
       env.actor,
     );
-    assert.equal(
-      (await env.issues.findOne(issue.id)).heightValue,
-      '170–176',
-    );
+    assert.equal((await env.issues.findOne(issue.id)).heightValue, '170–176');
     const noMatch = await env.issueFixture({ type: 'BODY' });
     await env.prisma.employee.update({
       where: { id: noMatch.employee.id },

@@ -1,3 +1,13 @@
+import type { Prisma } from '@prisma/client';
+export const employeePositionsInclude = {
+  position: true,
+  additionalPositions: { include: { position: true } },
+} satisfies Prisma.EmployeeInclude;
+export const employeeAdminInclude = {
+  ...employeePositionsInclude,
+  _count: { select: { employeeUsers: true, responsibleEquipment: true } },
+  employeeUsers: { select: { user: { select: { banned: true, id: true } } } },
+} satisfies Prisma.EmployeeInclude;
 import { toUserPhotoDto } from '../users/user-photo.dto';
 import { getUserRoles } from '../auth/role-module-policy';
 
@@ -13,6 +23,7 @@ export function toEmployeeDto(
         id: string;
       };
     }>;
+    gender?: 'MALE' | 'FEMALE' | null;
     firstName: string;
     id: number;
     isActive: boolean;
@@ -20,6 +31,10 @@ export function toEmployeeDto(
     middleName: string | null;
     position: { name: string };
     positionId: number;
+    additionalPositions?: Array<{
+      positionId: number;
+      position: { name: string };
+    }>;
   },
   currentUserId?: string | null,
 ) {
@@ -34,6 +49,7 @@ export function toEmployeeDto(
     activeAccountCount:
       employee.employeeUsers?.filter((item) => !item.user.banned).length ?? 0,
     equipmentCount: employee._count?.responsibleEquipment ?? 0,
+    gender: employee.gender ?? null,
     firstName: employee.firstName,
     fullName: getEmployeeFullName(employee),
     hasUserAccounts:
@@ -46,6 +62,11 @@ export function toEmployeeDto(
     middleName: employee.middleName,
     position: employee.position.name,
     positionId: employee.positionId,
+    additionalPositions:
+      employee.additionalPositions?.map(({ positionId, position }) => ({
+        id: positionId,
+        name: position.name,
+      })) ?? [],
   };
 }
 

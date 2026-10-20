@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import type { SelectDropdownMenuProps } from "./select-dropdown.types";
 
 export function SelectDropdownMenu({
+  selectedValues,
   activeIndex,
   closeOnFocusLeave,
   disabled,
@@ -33,10 +34,11 @@ export function SelectDropdownMenu({
       onBlur={closeOnFocusLeave}
       ref={menuRef}
       role="listbox"
+      aria-multiselectable={selectedValues ? true : undefined}
       style={menuStyle}
     >
       {options.map((option, optionIndex) => {
-        const isSelected = option.value === value;
+        const isSelected = selectedValues ? selectedValues.includes(option.value) : option.value === value;
         const isActive = optionIndex === activeIndex;
         const isDisabled = disabled || option.disabled;
 

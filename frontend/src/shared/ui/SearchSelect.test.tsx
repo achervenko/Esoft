@@ -4,6 +4,63 @@ import { SearchSelect } from "./SearchSelect";
 import { useState } from "react";
 afterEach(cleanup);
 
+it("lets Escape reach the parent when no popup is visible and consumes it for an empty-state popup", () => {
+  const parentKeyDown = vi.fn();
+  const props = {
+    label: "Страна", value: null, onChange: vi.fn(),
+    options: [{ id: 1, name: "Россия" }], minQueryLength: 2,
+  };
+  const view = render(<div onKeyDown={parentKeyDown}><SearchSelect {...props} /></div>);
+  const input = screen.getByRole("combobox");
+  fireEvent.focus(input);
+  expect(fireEvent.keyDown(input, { key: "Escape" })).toBe(true);
+  expect(parentKeyDown).toHaveBeenCalledTimes(1);
+  fireEvent.change(input, { target: { value: "Нет" } });
+  expect(fireEvent.keyDown(input, { key: "Escape" })).toBe(true);
+  expect(parentKeyDown).toHaveBeenCalledTimes(2);
+  view.rerender(<div onKeyDown={parentKeyDown}><SearchSelect {...props} emptyMessage="Нет совпадений" /></div>);
+  expect(screen.getByRole("status")).toBeInTheDocument();
+  expect(fireEvent.keyDown(input, { key: "Escape" })).toBe(false);
+  expect(parentKeyDown).toHaveBeenCalledTimes(2);
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  fireEvent.keyDown(input, { key: "Escape" });
+  expect(parentKeyDown).toHaveBeenCalledTimes(3);
+});
+
+it("exposes listbox ARIA references only while the listbox exists", () => {
+  const props = {
+    label: "Страна", value: null, onChange: vi.fn(),
+    options: [{ id: 1, name: "Россия" }], minQueryLength: 2,
+    emptyMessage: "Нет совпадений",
+  };
+  const view = render(<SearchSelect {...props} />);
+  const input = screen.getByRole("combobox");
+  const expectCollapsed = () => {
+    expect(input).toHaveAttribute("aria-expanded", "false");
+    expect(input).not.toHaveAttribute("aria-controls");
+    expect(input).not.toHaveAttribute("aria-activedescendant");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  };
+  expectCollapsed();
+  fireEvent.focus(input);
+  expectCollapsed();
+  fireEvent.change(input, { target: { value: "Р" } });
+  expectCollapsed();
+  fireEvent.change(input, { target: { value: "Ро" } });
+  expect(input).toHaveAttribute("aria-expanded", "true");
+  expect(input).toHaveAttribute("aria-controls", screen.getByRole("listbox").id);
+  expect(document.getElementById(input.getAttribute("aria-activedescendant")!)).toHaveRole("option");
+  fireEvent.change(input, { target: { value: "Нет" } });
+  expectCollapsed();
+  expect(screen.getByRole("status")).toHaveTextContent("Нет совпадений");
+  fireEvent.change(input, { target: { value: "Ро" } });
+  fireEvent.keyDown(input, { key: "Escape" });
+  expectCollapsed();
+  fireEvent.focus(input);
+  view.rerender(<SearchSelect {...props} disabled />);
+  expectCollapsed();
+});
+
 it("keeps suggestions outside clipping containers and repositions on scroll", () => {
   const view = render(<div style={{ overflow: "hidden" }} data-admin-modal-id="norm-modal">
     <SearchSelect label="Item" options={[{ id: 1, name: "Item" }]} value={null} onChange={vi.fn()} />
@@ -45,7 +102,7 @@ const options = [{ id: 15, name: "Первый" }, { id: 20, name: "Второй
 
 it("stops filtering a large catalog as soon as eight results are available", () => {
   const filterOption = vi.fn(() => true);
-  render(<SearchSelect label="Каталог" value={null} onChange={vi.fn()} filterOption={filterOption}
+  render(<SearchSelect label="Каталог" value={null} onChange={vi.fn()} filterOption={filterOption} maxResults={8}
     options={Array.from({ length: 100000 }, (_, id) => ({ id, name: `Модель ${id}` }))} />);
   fireEvent.change(screen.getByRole("combobox"), { target: { value: "модель" } });
   expect(filterOption).toHaveBeenCalledTimes(8);
@@ -86,7 +143,7 @@ it("synchronizes external selection, clearing and option renaming", () => {
   view.rerender(<SearchSelect {...props} value={null} />);
   expect(input).toHaveValue("");
 });
-it("preserves default eight-result limit and position substring matching", () => {
+it("shows all options by default and preserves position substring matching", () => {
   const change = vi.fn();
   render(
     <SearchSelect
@@ -102,9 +159,9 @@ it("preserves default eight-result limit and position substring matching", () =>
   );
   const input = screen.getByRole("combobox");
   fireEvent.focus(input);
-  expect(screen.getAllByRole("option")).toHaveLength(8);
+  expect(screen.getAllByRole("option")).toHaveLength(12);
   fireEvent.change(input, { target: { value: "инженер" } });
-  expect(screen.getAllByRole("option")).toHaveLength(8);
+  expect(screen.getAllByRole("option")).toHaveLength(12);
   fireEvent.keyDown(input, { key: "ArrowDown" });
   fireEvent.keyDown(input, { key: "Enter" });
   expect(change).toHaveBeenLastCalledWith(2);

@@ -24,8 +24,8 @@ async function bootstrap() {
     config.backend.port,
     config.backend.host,
   );
-  // Exit follows Nest's HTTP drain and application shutdown hooks. SIGKILL leaves
-  // the lock in place deliberately, requiring an operator to verify termination.
+  // Keep an exit fallback for startup failures. Normal shutdown releases the
+  // lease through Nest because Windows signal termination can skip 'exit'.
   process.once('exit', () => {
     try {
       lease.release();
@@ -34,9 +34,18 @@ async function bootstrap() {
       process.exitCode = 1;
     }
   });
-  const app = await NestFactory.create(AppModule, {
-    bodyParser: false,
-  });
+  const app = await NestFactory.create(
+    {
+      module: AppModule,
+      providers: [
+        {
+          provide: 'INSTALLATION_LEASE_SHUTDOWN',
+          useValue: { onApplicationShutdown: () => lease.release() },
+        },
+      ],
+    },
+    { bodyParser: false },
+  );
 
   app.enableShutdownHooks();
 

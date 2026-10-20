@@ -72,7 +72,7 @@ export function registerTests(env) {
         ],
       },
     });
-    assert.equal(logs.length, 22);
+    assert.equal(logs.length, 23);
     assert.ok(
       logs.every(
         (log) =>

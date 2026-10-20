@@ -8,11 +8,34 @@ import {
 
 const item = { ppeItemId: 1, quantity: 1, periodCount: 1, periodUnit: 'YEAR' };
 const payload = {
+  gender: 'MALE',
   positionId: 1,
   effectiveFrom: '2027-01-01',
   effectiveTo: null,
   items: [item],
 };
+
+it.each([undefined, null, 'ALL', 'male'])(
+  'requires an explicit norm gender: %p',
+  (gender) => {
+    expectCode(
+      () => parseCreateNorm({ ...payload, gender }),
+      'PPE_NORM_GENDER_REQUIRED',
+    );
+  },
+);
+
+it('rejects attempts to change gender on an existing revision', () => {
+  expectCode(
+    () =>
+      parseNormRevision({
+        effectiveFrom: payload.effectiveFrom,
+        items: [item],
+        gender: 'FEMALE',
+      }),
+    'UNKNOWN_FIELDS',
+  );
+});
 
 function expectCode(action: () => unknown, code: string) {
   let caught: unknown;
@@ -70,6 +93,7 @@ describe('PPE norm validation', () => {
       items: [{ ...item, quantity: 12, periodCount: 2, periodUnit: 'MONTH' }],
     });
     expect(result).toEqual({
+      gender: 'MALE',
       positionId: 1,
       effectiveFrom: new Date('2027-01-01T00:00:00Z'),
       effectiveTo: null,
@@ -236,10 +260,10 @@ describe('PPE norm validation', () => {
   it('validates query fields and query IDs without permissive conversions', () => {
     expect(parseNormListQuery({})).toBeUndefined();
     expect(parseNormListQuery({ positionId: '1' })).toBe(1);
-    expect(parseEffectiveNormQuery({ date: '2028-02-29' })).toEqual(
-      new Date('2028-02-29T00:00:00Z'),
-    );
-    expect(parseEffectiveNormQuery({})).toBeUndefined();
+    expect(
+      parseEffectiveNormQuery({ date: '2028-02-29', gender: 'MALE' }),
+    ).toEqual({ date: new Date('2028-02-29T00:00:00Z'), gender: 'MALE' });
+    expectCode(() => parseEffectiveNormQuery({}), 'PPE_NORM_GENDER_REQUIRED');
     for (const value of [true, '1e1', '1.5', '-1', ' 1', ['1'], 1]) {
       expectCode(
         () => parseNormListQuery({ positionId: value }),

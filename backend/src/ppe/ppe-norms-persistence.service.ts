@@ -1,5 +1,5 @@
 import { ConflictException, Injectable } from '@nestjs/common';
-import { AuditAction, Prisma } from '@prisma/client';
+import { AuditAction, Prisma, type Gender } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PpeNormsAuditService } from './ppe-norms-audit.service';
 import { ppeNotFound, rethrowPpeError } from './ppe.errors';
@@ -18,13 +18,14 @@ export class PpeNormsPersistenceService {
   async createInTransaction(
     tx: Prisma.TransactionClient,
     positionId: number,
-    data: NormContent,
+    data: NormContent & { gender: Gender },
     actorUserId: string,
     previousNormId?: number,
   ) {
     const norm = await tx.ppeNorm.create({
       data: {
         positionId,
+        gender: data.gender,
         effectiveFrom: data.effectiveFrom,
         effectiveTo: data.effectiveTo,
         transitionMode: data.transitionMode ?? 'SOFT',

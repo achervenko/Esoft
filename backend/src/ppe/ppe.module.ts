@@ -1,3 +1,8 @@
+import { PpeNormsFutureBoundaryService } from './ppe-norms-future-boundary.service';
+import { PpeNormsFutureItemsService } from './ppe-norms-future-items.service';
+import { PpeIssueSizeService } from './ppe-issue-size.service';
+import { PpeIssueCatalogGuardService } from './ppe-issue-catalog-guard.service';
+import { PpeIssueNormsGuardService } from './ppe-issue-norms-guard.service';
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -32,6 +37,8 @@ import { PpeNormIntervalTransitionService } from './ppe-norm-interval-transition
     PpeEmployeesService,
     PpeNormsService,
     PpeNormsFutureService,
+    PpeNormsFutureBoundaryService,
+    PpeNormsFutureItemsService,
     PpeNormsPersistenceService,
     PpeNormsGuardsService,
     PpeNormsAuditService,
@@ -39,6 +46,9 @@ import { PpeNormIntervalTransitionService } from './ppe-norm-interval-transition
     PpeIssuePlanService,
     PpeIssueCreateService,
     PpeIssueHistoryService,
+    PpeIssueNormsGuardService,
+    PpeIssueCatalogGuardService,
+    PpeIssueSizeService,
     PpeIssuesGuardsService,
     PpeNormTransitionService,
     PpeNormPositionService,

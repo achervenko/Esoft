@@ -32,7 +32,8 @@ export function SearchSelect({
   appearance = "field",
   error,
   filterOption,
-  maxResults = 8,
+  // If large lists become slow, enable maxResults for the affected fields.
+  maxResults = null,
   minQueryLength = 0,
   hideLabel = false,
   icon,
@@ -138,6 +139,11 @@ export function SearchSelect({
   };
 
   const activeOption = filteredOptions[activeOptionIndex] ?? null;
+  const isListboxVisible = !disabled && isOpen &&
+    query.trim().length >= minQueryLength && filteredOptions.length > 0 && popup !== null;
+  const isEmptyStateVisible = !disabled && isOpen &&
+    query.trim().length >= minQueryLength && filteredOptions.length === 0 &&
+    Boolean(emptyMessage) && popup !== null;
   const activeOptionId = activeOption
     ? `${listboxId}-option-${activeOption.id}`
     : undefined;
@@ -188,11 +194,11 @@ export function SearchSelect({
           ref={inputRef}
           autoFocus={autoFocus}
           disabled={disabled}
-          aria-activedescendant={isOpen ? activeOptionId : undefined}
+          aria-activedescendant={isListboxVisible ? activeOptionId : undefined}
           aria-autocomplete="list"
-          aria-controls={listboxId}
+          aria-controls={isListboxVisible ? listboxId : undefined}
           aria-describedby={error ? errorId : undefined}
-          aria-expanded={isOpen}
+          aria-expanded={isListboxVisible}
           aria-invalid={error ? "true" : undefined}
           id={inputId}
           onBlur={() => window.setTimeout(() => setIsOpen(false), 120)}
@@ -226,7 +232,7 @@ export function SearchSelect({
               return;
             }
 
-            if (event.key === "Escape" && isOpen) {
+            if (event.key === "Escape" && (isListboxVisible || isEmptyStateVisible)) {
               event.preventDefault();
               event.stopPropagation();
               setIsOpen(false);
@@ -238,9 +244,7 @@ export function SearchSelect({
           value={query}
         />
       </div>
-      {!disabled && isOpen &&
-      query.trim().length >= minQueryLength &&
-      filteredOptions.length > 0 && popup ? createPortal(
+      {isListboxVisible && popup ? createPortal(
         <div className="search-select-menu" id={listboxId} role="listbox"
           style={popup.style} data-admin-modal-owner={popup.owner}>
           {filteredOptions.map((option, optionIndex) => (
@@ -261,10 +265,7 @@ export function SearchSelect({
           ))}
         </div>, document.body,
       ) : null}
-      {!disabled && isOpen &&
-      query.trim().length >= minQueryLength &&
-      filteredOptions.length === 0 &&
-      emptyMessage && popup ? createPortal(
+      {isEmptyStateVisible && popup ? createPortal(
         <div className="search-select-menu" role="status"
           style={popup.style} data-admin-modal-owner={popup.owner}>
           {emptyMessage}

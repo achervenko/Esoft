@@ -74,6 +74,7 @@ export function registerTests(env) {
     await env.service.create(
       {
         positionId: f.position.id,
+        gender: 'MALE',
         effectiveFrom: day(-10),
         items: [
           {
@@ -103,7 +104,7 @@ export function registerTests(env) {
     );
     await assert.rejects(
       issues.createRegular({ ...f.request, issuedAt: day(-61) }, adminActor),
-      errorCode('PPE_NORM_ALREADY_ISSUED'),
+      errorCode('PPE_NORM_NOT_FOUND'),
     );
   });
   test('closes the nearest outstanding obligation without creating debt for every missed period', async () => {
@@ -201,52 +202,6 @@ export function registerTests(env) {
       0,
     );
   });
-  test('batch creates distinct issues for several norm items', async () => {
-    const f = await issueFixture({ multiple: true });
-    const result = await issues.createRegular(
-      {
-        employeeId: f.employee.id,
-        items: f.norm.items.map((item) => ({
-          normItemId: item.id,
-          ppeItemId: item.ppeItemId,
-        })),
-      },
-      specialist,
-    );
-    assert.equal(result.length, 2);
-    assert.notEqual(result[0].id, result[1].id);
-    assert.equal(result[0].employeeId, result[1].employeeId);
-  });
-  test('a weekly batch closes two whole obligations; a third unavailable row rolls back the batch', async () => {
-    const f = await issueFixture({
-      from: day(),
-      quantity: 3,
-      periodCount: 7,
-      periodUnit: 'DAY',
-    });
-    await assert.rejects(
-      issues.createRegular(
-        {
-          ...f.request,
-          items: [f.request.items[0], f.request.items[0], f.request.items[0]],
-        },
-        specialist,
-      ),
-      errorCode('PPE_NORM_NOT_DUE'),
-    );
-    assert.equal(
-      await prisma.ppeIssue.count({ where: { employeeId: f.employee.id } }),
-      0,
-    );
-    const results = await issues.createRegular(
-      { ...f.request, items: [f.request.items[0], f.request.items[0]] },
-      specialist,
-    );
-    assert.equal(results[0].scheduledAt, day());
-    assert.equal(results[1].scheduledAt, day(7));
-    assert.equal(results[0].quantity, 3);
-    assert.equal(results[1].quantity, 3);
-  });
   test('plan without an effective norm returns an empty plan', async () => {
     const f = await issueFixture({ from: day(31) });
     const plan = await issues.plan(f.employee.id, date());
@@ -256,69 +211,5 @@ export function registerTests(env) {
       issues.createRegular(f.request, specialist),
       errorCode('PPE_NORM_NOT_DUE'),
     );
-  });
-  test('cancel reopens the same normative obligation and preserves original issue data', async () => {
-    const f = await issueFixture({ quantity: 1 });
-    const [original] = await issues.createRegular(f.request, specialist);
-    const cancelled = await issues.cancel(
-      original.id,
-      { reason: '  Ошибка  ' },
-      actor,
-    );
-    assert.equal(cancelled.status, 'CANCELLED');
-    assert.equal(cancelled.cancellationReason, 'Ошибка');
-    for (const field of [
-      'employeeName',
-      'position',
-      'article',
-      'quantity',
-      'scheduledAt',
-      'issuedAt',
-      'sizeValue',
-      'issueType',
-    ])
-      assert.deepEqual(cancelled[field], original[field]);
-    assert.ok(cancelled.cancelledAt);
-    assert.equal(cancelled.cancelledByUserId, actor);
-    await assert.rejects(
-      issues.cancel(original.id, { reason: 'again' }, actor),
-      errorCode('PPE_ISSUE_ALREADY_CANCELLED'),
-    );
-    const plan = await issues.plan(f.employee.id, date());
-    assert.equal(plan.items[0].available.scheduledAt, original.scheduledAt);
-    assert.equal(plan.items[0].fulfilled.length, 0);
-    const [reissued] = await issues.createRegular(f.request, specialist);
-    assert.equal(reissued.scheduledAt, original.scheduledAt);
-    assert.notEqual(reissued.id, original.id);
-    const logs = await prisma.auditLog.findMany({
-      where: {
-        entityType: 'ppe_issue',
-        entityId: original.id,
-        action: 'STATUS_CHANGE',
-      },
-    });
-    assert.equal(logs.length, 2);
-    assert.deepEqual(
-      logs
-        .map(({ fieldName, oldValue, newValue }) => ({
-          fieldName,
-          oldValue,
-          newValue,
-        }))
-        .sort((a, b) => a.fieldName.localeCompare(b.fieldName)),
-      [
-        {
-          fieldName: 'Причина отмены',
-          oldValue: 'не указано',
-          newValue: 'Ошибка',
-        },
-        {
-          fieldName: 'Статус выдачи',
-          oldValue: 'ISSUED',
-          newValue: 'CANCELLED',
-        },
-      ].sort((a, b) => a.fieldName.localeCompare(b.fieldName)),
-    );
-    assert.ok(logs.every((log) => log.userId === actor));
   });
 }

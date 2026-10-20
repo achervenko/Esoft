@@ -17,6 +17,19 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
+
+it.each(["missing", "historical", "future"] as const)("keeps female norm status separate from an effective male norm (%s)", async (state) => {
+  vi.spyOn(ppeApi, "norms").mockResolvedValue([
+    { ...norm, gender: "MALE", effectiveFrom: "2000-01-01", effectiveTo: null },
+    ...(state === "missing" ? [] : [{ ...norm, id: 77, gender: "FEMALE" as const,
+      effectiveFrom: state === "future" ? "2999-01-01" : "2000-01-01",
+      effectiveTo: state === "future" ? null : "2001-01-01" }]),
+  ]);
+  render(<ChakraProvider value={defaultSystem}><NormsPanel positions={[{ id: norm.positionId, name: norm.position, isActive: true }]}
+    items={[item]} permissions={permissionsForTest("admin")} revision={0} onChanged={vi.fn()} /></ChakraProvider>);
+  expect(await screen.findByRole("group", { name: "Мужской: Действующая" })).toBeInTheDocument();
+  expect(screen.getByRole("group", { name: `Женский: ${state === "missing" ? "Отсутствует" : "Недействительна"}` })).toBeInTheDocument();
+});
 it("offers end only for current norms, delete only for future norms, and no historical actions", async () => {
   vi.spyOn(ppeApi, "norms").mockResolvedValue([
     { ...norm, id: 10, effectiveFrom: businessToday(), effectiveTo: null },
@@ -169,7 +182,7 @@ it("lists positions with and without norms and opens the selected position", asy
     within(position.closest("tr")!).getByText("Действующая"),
   ).toBeInTheDocument();
   const empty = screen.getByText("Без нормы").closest("tr")!;
-  expect(within(empty).getByText("Отсутствует")).toBeInTheDocument();
+  expect(within(empty).getAllByText("Отсутствует")).toHaveLength(2);
   fireEvent.click(within(empty).getByRole("button", { name: "Создать норму" }));
   expect(screen.getByRole("dialog")).toBeInTheDocument();
   expect(ppeApi.norms).toHaveBeenCalledWith(undefined, expect.any(AbortSignal));

@@ -1,5 +1,5 @@
 import { ConflictException, Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, type Gender } from '@prisma/client';
 import { ppeNotFound } from './ppe.errors';
 import { normInclude } from './ppe-norms.mapper';
 import type { parseNormRevision } from './ppe-norms.validation';
@@ -56,12 +56,13 @@ export class PpeNormsGuardsService {
   async assertNoOverlap(
     tx: Prisma.TransactionClient,
     positionId: number,
-    data: NormContent,
+    data: NormContent & { gender: Gender },
     excludeId?: number | number[],
   ) {
     const existing = await tx.ppeNorm.findFirst({
       where: {
         positionId,
+        gender: data.gender,
         ...(excludeId === undefined
           ? {}
           : {

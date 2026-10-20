@@ -33,27 +33,17 @@ export class PpeIssueCreateService {
     const data = parseIssueBatch(payload, regular, actor.role);
     return runPpeIssueTransaction(this.prisma, this.guards, async (tx) => {
       const employee = await this.guards.lockEmployee(tx, data.employeeId);
-      const position = await this.guards.lockPosition(tx, employee.positionId);
-      const current = regular
-        ? await this.guards.lockEffectiveNorm(tx, position.id, data.issuedAt)
+      const combined = regular
+        ? await this.guards.lockEmployeeNorms(
+            tx,
+            employee,
+            data.issuedAt,
+            data.items.map((item) => item.normItemId!),
+          )
         : null;
-      const norms = current ? [current] : [];
-      if (regular) {
-        const missingIds = [
-          ...new Set(data.items.map((item) => item.normItemId!)),
-        ].filter((id) => !current?.items.some((item) => item.id === id));
-        if (missingIds.length) {
-          norms.push(
-            ...(await this.guards.lockRequestedFutureNorms(
-              tx,
-              position.id,
-              data.issuedAt,
-              missingIds,
-            )),
-          );
-        }
-        if (!norms.length) ppeNotFound('PPE_NORM_NOT_FOUND');
-      }
+      const position = await this.guards.lockPosition(tx, employee.positionId);
+      const norms = combined ? [...combined.current, ...combined.future] : [];
+      if (regular && !norms.length) ppeNotFound('PPE_NORM_NOT_FOUND');
       const catalogIds = [
         ...data.items.map((item) => item.ppeItemId),
         ...norms.flatMap((norm) => norm.items.map((item) => item.ppeItemId)),
@@ -107,7 +97,9 @@ export class PpeIssueCreateService {
             normItem,
             data.issuedAt,
             issued,
-            employee.positionAssignedAt,
+            combined?.assignments.find(
+              (entry) => entry.positionId === norm.positionId,
+            )?.assignedAt,
           );
           obligation = state.available;
           if (!obligation) {
@@ -122,13 +114,19 @@ export class PpeIssueCreateService {
             );
           }
         }
+        const sourcePosition = norm
+          ? await tx.position.findUniqueOrThrow({
+              where: { id: norm.positionId },
+            })
+          : position;
         const issue = await tx.ppeIssue.create({
           data: {
             employeeId: employee.id,
             employeeNameSnapshot: ppeEmployeeName(employee),
-            positionId: position.id,
-            positionNameSnapshot: position.name,
+            positionId: sourcePosition.id,
+            positionNameSnapshot: sourcePosition.name,
             issueType: regular ? PpeIssueType.REGULAR : PpeIssueType.EXTRA,
+            genderSnapshot: norm?.gender ?? null,
             normItemId: regular ? normItem!.id : null,
             normItemPpeItemId: regular ? normItem!.ppeItemId : null,
             normPpeArticleSnapshot: regular

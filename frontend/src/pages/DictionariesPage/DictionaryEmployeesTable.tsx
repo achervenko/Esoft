@@ -30,8 +30,18 @@ const employeeColumns = (
   {
     key: "position",
     label: "Должность",
-    render: (employee) => employee.position,
+    render: (employee) =>
+      [
+        employee.position,
+        ...(employee.additionalPositions ?? []).map(({ name }) => name),
+      ].join(", "),
     sortValue: (employee) => employee.position,
+  },
+  {
+    key: "gender",
+    label: "Пол",
+    render: (employee) => employee.gender === "MALE" ? "Мужской" : employee.gender === "FEMALE" ? "Женский" : "Не указан",
+    sortValue: (employee) => employee.gender ?? "",
   },
   {
     key: "status",

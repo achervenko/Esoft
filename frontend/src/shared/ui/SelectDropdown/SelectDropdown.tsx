@@ -7,6 +7,7 @@ import type { SelectDropdownProps } from "./select-dropdown.types";
 import "./SelectDropdown.css";
 
 export function SelectDropdown({
+  selectedValues,
   disabled = false,
   error,
   label,
@@ -20,6 +21,7 @@ export function SelectDropdown({
   const errorId = useId();
   const dropdown = useSelectDropdown({
     disabled,
+    multiple: selectedValues !== undefined,
     onChange,
     options,
     value,
@@ -37,6 +39,7 @@ export function SelectDropdown({
       ) : null}
 
       <button
+        aria-label={selectedValues ? label : undefined}
         aria-required={required || undefined}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
@@ -53,13 +56,14 @@ export function SelectDropdown({
         ref={dropdown.triggerRef}
         type="button"
       >
-        <span className={dropdown.selectedOption ? undefined : "select-placeholder"}>
-          {dropdown.selectedOption?.label ?? placeholder}
+        <span className={(selectedValues?.length || dropdown.selectedOption) ? undefined : "select-placeholder"}>
+          {selectedValues ? options.filter((option) => selectedValues.includes(option.value)).map((option) => option.label).join(", ") || placeholder : dropdown.selectedOption?.label ?? placeholder}
         </span>
         <ChevronDown aria-hidden="true" size={18} />
       </button>
 
       <SelectDropdownMenu
+        selectedValues={selectedValues}
         activeIndex={dropdown.activeIndex}
         closeOnFocusLeave={dropdown.closeOnFocusLeave}
         disabled={disabled}

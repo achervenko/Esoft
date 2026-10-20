@@ -22,7 +22,11 @@ export class PpeNormPositionService {
         : norm;
     const foreignItems = new Map<number, NormItemChain[number]>();
     for (const source of context.values()) {
-      if (source.positionId === norm.positionId) continue;
+      if (
+        source.positionId === norm.positionId &&
+        source.gender === norm.gender
+      )
+        continue;
       for (const sourceItem of source.items) {
         if (
           sourceItem.ppeItemId === item.ppeItemId &&

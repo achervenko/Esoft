@@ -92,3 +92,9 @@
 .ppe-norm-search-toolbar .ppe-journal-search {
   margin-bottom: 0;
 }
+
+.ppe-norm-gender-statuses {
+  display: grid;
+  grid-auto-rows: 32px;
+  align-items: center;
+}

@@ -47,6 +47,7 @@ export function registerTests(env) {
         lastName: 'Tester',
         firstName: 'Issue',
         positionId: f.position.id,
+        gender: 'MALE',
       },
     });
     await prisma.ppeIssue.create({

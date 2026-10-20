@@ -15,6 +15,7 @@ export type SelectDropdownOption = {
 };
 
 export type SelectDropdownProps = {
+  selectedValues?: string[];
   disabled?: boolean;
   error?: string;
   label?: string;
@@ -31,6 +32,7 @@ export type SelectDropdownMenuStyle = CSSProperties | null;
 export type SelectDropdownNavigationDirection = 1 | -1;
 
 export type SelectDropdownMenuProps = {
+  selectedValues?: string[];
   activeIndex: number;
   closeOnFocusLeave: (event: FocusEvent<HTMLElement>) => void;
   disabled: boolean;

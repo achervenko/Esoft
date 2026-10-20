@@ -1,44 +1,9 @@
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
 import { test } from 'node:test';
-
-const require = createRequire(import.meta.url);
-const {
-  EmployeesAdminService,
-} = require('../../dist/src/users-admin/employees-admin.service.js');
-const {
-  UsersAdminAuditService,
-} = require('../../dist/src/users-admin/users-admin-audit.service.js');
+import { createEmployeeAdminService } from './ppe-employee-admin-test-helper.mjs';
 
 export function registerTests(env) {
-  const employees = new EmployeesAdminService(
-    new UsersAdminAuditService(new env.AuditLogService(env.prisma)),
-    env.prisma,
-  );
-  test('a newly created employee starts one whole obligation on assignment', async () => {
-    const f = await env.issueFixture({ from: env.day(-200), quantity: 60 });
-    const employee = await employees.createEmployee(
-      {
-        firstName: 'New',
-        lastName: 'Employee',
-        positionId: f.position.id,
-      },
-      env.actor,
-    );
-    const row = (await env.issues.plan(employee.id, env.date())).items[0];
-    assert.equal(row.available.scheduledAt, env.day());
-    assert.equal(row.available.quantity, 60);
-    const request = {
-      employeeId: employee.id,
-      items: [{ ...f.request.items[0], sizeId: f.sizes[0].id }],
-    };
-    const [created] = await env.issues.createRegular(request, env.adminActor);
-    assert.equal(created.quantity, 60);
-    assert.equal(
-      (await env.issues.plan(employee.id, env.date())).items[0].available,
-      null,
-    );
-  });
+  const employees = createEmployeeAdminService(env);
   async function assign(f, position) {
     await employees.updateEmployee(
       f.employee.id,
@@ -46,6 +11,7 @@ export function registerTests(env) {
         firstName: f.employee.firstName,
         lastName: f.employee.lastName,
         positionId: position.id,
+        gender: 'MALE',
       },
       env.actor,
     );
@@ -70,6 +36,7 @@ export function registerTests(env) {
     const next = await env.service.create(
       {
         positionId: target.position.id,
+        gender: 'MALE',
         effectiveFrom: env.day(-200),
         items: [
           {

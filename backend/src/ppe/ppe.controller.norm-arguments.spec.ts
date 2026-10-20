@@ -8,19 +8,27 @@ describe('PPE norm controller arguments', () => {
     await controller.createNorm(payload, currentSession);
     await controller.createNormRevision(1, payload, currentSession);
     await controller.updateFutureNorm(1, payload, currentSession);
+    await controller.endNorm(1, payload, currentSession);
+    await controller.deleteFutureNorm(1, currentSession);
     expect(norms.create).toHaveBeenCalledWith(payload, 'ppe-actor');
     expect(norms.createRevision).toHaveBeenCalledWith(1, payload, 'ppe-actor');
     expect(norms.updateFuture).toHaveBeenCalledWith(1, payload, 'ppe-actor');
+    expect(norms.end).toHaveBeenCalledWith(1, payload, 'ppe-actor');
+    expect(norms.deleteFuture).toHaveBeenCalledWith(1, 'ppe-actor');
   });
 
   it('parses list filters and the date for effective norm reads', async () => {
     const { controller, norms } = createController();
     await controller.listNorms({ positionId: '5' });
-    await controller.findEffectiveNorm(5, { date: '2027-01-01' });
+    await controller.findEffectiveNorm(5, {
+      date: '2027-01-01',
+      gender: 'MALE',
+    });
     expect(norms.list).toHaveBeenCalledWith(5);
     expect(norms.findEffectiveNorm).toHaveBeenCalledWith(
       5,
       new Date('2027-01-01T00:00:00Z'),
+      'MALE',
     );
   });
 });

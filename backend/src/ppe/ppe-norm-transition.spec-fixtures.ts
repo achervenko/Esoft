@@ -25,6 +25,7 @@ export function norm(
   return {
     id,
     positionId: 1,
+    gender: 'MALE' as const,
     effectiveFrom: date(from),
     effectiveTo: null as Date | null,
     previousNormId,
@@ -45,6 +46,8 @@ export function norm(
   };
 }
 
+let nextIssueId = 1;
+
 export function issue(
   normItemId = 1,
   issuedAt = '2026-01-01',
@@ -52,7 +55,9 @@ export function issue(
   patch: Partial<PpeIssue> = {},
 ) {
   return {
-    id: normItemId,
+    id: nextIssueId++,
+    positionId: 1,
+    genderSnapshot: 'MALE',
     normItemId,
     issueType: 'REGULAR',
     status: 'ISSUED',

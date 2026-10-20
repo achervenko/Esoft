@@ -19,6 +19,7 @@ const storedEmployee = {
   middleName: null,
   positionId: 2,
   position: { name: 'Сварщик' },
+  additionalPositions: [],
   isActive: true,
   ppeSizes: sizes,
 };
@@ -60,7 +61,11 @@ describe('PPE employee access', () => {
     const result = await service.list();
     expect(result[1].isActive).toBe(false);
     expect(result[0]).toEqual({
-      ...storedEmployee,
+      ...Object.fromEntries(
+        Object.entries(storedEmployee).filter(
+          ([key]) => key !== 'additionalPositions',
+        ),
+      ),
       position: 'Сварщик',
       ppeSizes: { ...sizes, shoeSize: 42 },
     });
@@ -69,6 +74,32 @@ describe('PPE employee access', () => {
     ];
     expect(query.select).not.toHaveProperty('employeeUsers');
     expect(query.select).not.toHaveProperty('email');
+  });
+
+  it('omits internal position links from list, detail and size update responses', async () => {
+    const { service, tx } = createService();
+    const employee = {
+      ...storedEmployee,
+      additionalPositions: [
+        {
+          employeeId: 1,
+          positionId: 3,
+          assignedAt: new Date('2026-10-20'),
+          position: { name: 'Механик' },
+        },
+      ],
+    };
+    tx.employee.findMany.mockResolvedValue([employee]);
+    tx.employee.findUnique.mockResolvedValue(employee);
+    const results = [
+      ...(await service.list()),
+      await service.findOne(1),
+      await service.updateSizes(1, { clothingSize: '52' }, 'ppe-actor'),
+    ];
+    for (const result of results) {
+      expect(result.position).toBe('Сварщик, Механик');
+      expect(result).not.toHaveProperty('additionalPositions');
+    }
   });
 
   it('reads inactive employee sizes', async () => {

@@ -31,11 +31,18 @@ export function registerTests(env) {
         day(offset - 1),
       );
       assert.equal(
-        (await service.findEffectiveNorm(f.position.id, date(offset - 1))).id,
+        (
+          await service.findEffectiveNorm(
+            f.position.id,
+            date(offset - 1),
+            'MALE',
+          )
+        ).id,
         old.id,
       );
       assert.equal(
-        (await service.findEffectiveNorm(f.position.id, date(offset))).id,
+        (await service.findEffectiveNorm(f.position.id, date(offset), 'MALE'))
+          .id,
         revision.id,
       );
     }

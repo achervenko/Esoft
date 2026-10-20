@@ -1,4 +1,4 @@
-import { PpePeriodUnit } from '@prisma/client';
+import { Gender, PpePeriodUnit } from '@prisma/client';
 import { badPpeRequest, parsePpeObject } from './ppe.validation';
 
 export function parseNormId(value: unknown, code = 'INVALID_NORM_ID'): number {
@@ -103,10 +103,11 @@ function parseNormContent(values: Record<string, unknown>) {
       'Позиция СИЗ не может повторяться внутри нормы.',
     );
   }
+  const transitionMode = values.transitionMode;
   if (
-    values.transitionMode !== undefined &&
-    (typeof values.transitionMode !== 'string' ||
-      !['SOFT', 'HARD'].includes(values.transitionMode))
+    transitionMode !== undefined &&
+    transitionMode !== 'SOFT' &&
+    transitionMode !== 'HARD'
   )
     badPpeRequest(
       'INVALID_NORM_TRANSITION_MODE',
@@ -116,15 +117,20 @@ function parseNormContent(values: Record<string, unknown>) {
     effectiveFrom,
     effectiveTo,
     items,
-    ...(values.transitionMode !== undefined
-      ? { transitionMode: values.transitionMode }
-      : {}),
+    ...(transitionMode !== undefined ? { transitionMode } : {}),
   };
+}
+
+export function parseNormGender(value: unknown): Gender {
+  if (value !== Gender.MALE && value !== Gender.FEMALE)
+    badPpeRequest('PPE_NORM_GENDER_REQUIRED', 'Укажите пол для нормы.');
+  return value;
 }
 
 export function parseCreateNorm(payload: unknown) {
   const values = parsePpeObject(payload, [
     'positionId',
+    'gender',
     'effectiveFrom',
     'effectiveTo',
     'items',
@@ -132,6 +138,7 @@ export function parseCreateNorm(payload: unknown) {
   ]);
   return {
     positionId: parseNormId(values.positionId, 'INVALID_POSITION_ID'),
+    gender: parseNormGender(values.gender),
     ...parseNormContent(values),
   };
 }
@@ -165,6 +172,9 @@ export function parseNormListQuery(payload: unknown) {
 }
 
 export function parseEffectiveNormQuery(payload: unknown) {
-  const values = parsePpeObject(payload, ['date']);
-  return values.date === undefined ? undefined : parseNormDate(values.date);
+  const values = parsePpeObject(payload, ['date', 'gender']);
+  return {
+    date: values.date === undefined ? undefined : parseNormDate(values.date),
+    gender: parseNormGender(values.gender),
+  };
 }

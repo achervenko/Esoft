@@ -1,8 +1,9 @@
+import { GenderToggle } from "../../shared/ui/GenderToggle";
 import { Search, Trash2 } from "lucide-react";
 import { SearchSelect } from "../../shared/ui/SearchSelect";
 import { NormTransitionControl } from "./NormTransitionControl";
 import { AppSelect } from "../../shared/ui/SelectDropdown/AppSelect";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ppeApi,
   type PpeItem,
@@ -34,6 +35,7 @@ export function NormFormModal({
   onClose: () => void;
   onChanged: () => void;
 }) {
+  const [gender, setGender] = useState<"MALE" | "FEMALE" | "">(state.norm?.gender ?? "");
   const today = businessToday();
   const revisionFrom =
     state.mode === "revision"
@@ -81,12 +83,14 @@ export function NormFormModal({
     ],
   );
   const hasChanges = useDraftChanges({
+    gender,
     from,
     to,
     transitionMode,
     rows: rows.map(({ key: _key, ...row }) => row),
   });
   const [nextKey, setNextKey] = useState(rows.length);
+  const savingRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const update = (key: number, patch: Partial<DraftRow>) =>
@@ -105,6 +109,8 @@ export function NormFormModal({
         className="ppe-form"
         onSubmit={(e) => {
           e.preventDefault();
+          if (savingRef.current) return;
+          if (!gender) { setError("Выберите пол для нормы."); return; }
           if (!rows.length) {
             setError("Добавьте хотя бы одну строку нормы.");
             return;
@@ -114,6 +120,7 @@ export function NormFormModal({
             return;
           }
           const payload: NormPayload = {
+            ...(state.mode === "create" ? { gender: gender as "MALE" | "FEMALE" } : {}),
             transitionMode,
             effectiveFrom: from,
             effectiveTo: to || null,
@@ -124,6 +131,7 @@ export function NormFormModal({
               periodUnit: row.periodUnit,
             })),
           };
+          savingRef.current = true;
           setSaving(true);
           setError(null);
           void ppeApi
@@ -133,9 +141,13 @@ export function NormFormModal({
               onClose();
             })
             .catch((err) => setError(ppeError(err)))
-            .finally(() => setSaving(false));
+            .finally(() => {
+              savingRef.current = false;
+              setSaving(false);
+            });
         }}
       >
+        <GenderToggle value={gender} onChange={setGender} disabled={saving || state.mode !== "create"} />
         <div className="ppe-toolbar">
           <Field label="Дата начала">
             <input

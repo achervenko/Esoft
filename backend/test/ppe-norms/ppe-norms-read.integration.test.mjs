@@ -29,20 +29,24 @@ export function registerTests(env) {
     assert.equal((await service.findOne(history.id)).items[0].isActive, false);
     for (const offset of [0, 5])
       assert.equal(
-        (await service.findEffectiveNorm(f.position.id, date(offset))).id,
+        (await service.findEffectiveNorm(f.position.id, date(offset), 'MALE'))
+          .id,
         current.id,
       );
     assert.equal(
-      (await service.findEffectiveNorm(f.position.id, date(-20))).id,
+      (await service.findEffectiveNorm(f.position.id, date(-20), 'MALE')).id,
       history.id,
     );
     assert.equal(
-      (await service.findEffectiveNorm(f.position.id, date(10))).id,
+      (await service.findEffectiveNorm(f.position.id, date(10), 'MALE')).id,
       future.id,
     );
-    assert.equal(await service.findEffectiveNorm(f.position.id, date(6)), null);
     assert.equal(
-      (await service.findEffectiveNorm(f.position.id)).id,
+      await service.findEffectiveNorm(f.position.id, date(6), 'MALE'),
+      null,
+    );
+    assert.equal(
+      (await service.findEffectiveNorm(f.position.id, undefined, 'MALE')).id,
       current.id,
     );
     await assert.rejects(
@@ -50,7 +54,7 @@ export function registerTests(env) {
       errorCode('PPE_NORM_NOT_FOUND'),
     );
     await assert.rejects(
-      service.findEffectiveNorm(2147483647),
+      service.findEffectiveNorm(2147483647, undefined, 'MALE'),
       errorCode('POSITION_NOT_FOUND'),
     );
   });

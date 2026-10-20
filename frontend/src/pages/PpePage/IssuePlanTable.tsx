@@ -28,6 +28,7 @@ export function IssuePlanTable({
 }: IssuePlanTableProps) {
   return (
     <section className="ppe-plan-section">
+      {plan.warnings?.map((warning) => <p className="admin-state" role="status" key={warning.positionId}>{warning.message}</p>)}
       {!plan.norm ? (
         <p className="admin-state">
           На эту дату для должности нет действующей нормы.

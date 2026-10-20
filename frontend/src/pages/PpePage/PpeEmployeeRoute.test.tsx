@@ -65,6 +65,7 @@ it("opens the employee directly without tabs or search after reload", async () =
     position: "Инженер",
     on: "2026-10-06",
     norm: null,
+    warnings: [],
     items: [],
   });
   render(

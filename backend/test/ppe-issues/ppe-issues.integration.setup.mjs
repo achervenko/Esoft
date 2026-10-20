@@ -6,6 +6,16 @@ import { createPpeNormTestEnvironment } from '../ppe-norms/ppe-norms.integration
 
 const require = createRequire(import.meta.url);
 const {
+  PpeIssueNormsGuardService,
+} = require('../../dist/src/ppe/ppe-issue-norms-guard.service.js');
+const {
+  PpeIssueCatalogGuardService,
+} = require('../../dist/src/ppe/ppe-issue-catalog-guard.service.js');
+const {
+  PpeIssueSizeService,
+} = require('../../dist/src/ppe/ppe-issue-size.service.js');
+
+const {
   PpeCatalogSizesService,
 } = require('../../dist/src/ppe/ppe-catalog-sizes.service.js');
 const {
@@ -47,7 +57,11 @@ export async function createPpeIssueTestEnvironment() {
     client = prisma,
     audit = new PpeIssuesAuditService(new AuditLogService(prisma)),
   ) {
-    const guards = new PpeIssuesGuardsService();
+    const guards = new PpeIssuesGuardsService(
+      new PpeIssueNormsGuardService(),
+      new PpeIssueCatalogGuardService(),
+      new PpeIssueSizeService(),
+    );
     const interval = new PpeNormIntervalTransitionService();
     const schedule = new PpeNormTransitionService(
       new PpeNormPositionService(),
@@ -67,6 +81,7 @@ export async function createPpeIssueTestEnvironment() {
   const adminActor = { userId: actor, role: 'admin' };
   async function issueFixture({
     from = day(-2),
+    assignedAt = from > day() ? day(-60) : from,
     quantity = 2,
     periodCount = 1,
     periodUnit = 'YEAR',
@@ -86,9 +101,14 @@ export async function createPpeIssueTestEnvironment() {
           ? ['88–92', '96–100', '84–88']
           : type === 'TSHIRT'
             ? ['108', '112', '104']
-          : type === 'HANDS'
-            ? ['L', 'XL', 'S']
-            : ['58', '60', '56'];
+            : type === 'HANDS'
+              ? ['L', 'XL', 'S']
+              : ['58', '60', '56'];
+    const tshirtHeights = {
+      108: '182–188',
+      112: '182–188',
+      104: '170–176',
+    };
     const sizes =
       type === 'OTHER'
         ? []
@@ -98,7 +118,12 @@ export async function createPpeIssueTestEnvironment() {
                 data: {
                   ppeItemId: ppe.id,
                   value,
-                  heightValue: type === 'BODY' ? '158–164' : type === 'TSHIRT' ? (index === 1 ? '170–176' : '182–188') : null,
+                  heightValue:
+                    type === 'BODY'
+                      ? '158–164'
+                      : type === 'TSHIRT'
+                        ? tshirtHeights[value]
+                        : null,
                   isActive: index !== 2,
                 },
               }),
@@ -109,6 +134,8 @@ export async function createPpeIssueTestEnvironment() {
         lastName: 'Tester',
         firstName: 'PPE',
         positionId: f.position.id,
+        gender: 'MALE',
+        positionAssignedAt: assignedAt === null ? null : new Date(assignedAt),
         ppeSizes: {
           create: {
             clothingSize: '88–92',
@@ -127,6 +154,7 @@ export async function createPpeIssueTestEnvironment() {
     const norm = await env.service.create(
       {
         positionId: f.position.id,
+        gender: 'MALE',
         effectiveFrom: from,
         effectiveTo: null,
         items: rows,
@@ -164,15 +192,21 @@ if (
 ) {
   const groups = await Promise.all(
     [
-      'regular',
-      'catalog',
-      'sizes',
-      'extra-history',
-      'transactions-concurrency',
-      'logic-fixes',
-      'transitions',
-      'position',
-    ].map((name) => import(`./ppe-issues-${name}.integration.test.mjs`)),
+      ...[
+        'catalog',
+        'sizes',
+        'extra-history',
+        'transactions-concurrency',
+        'logic-fixes',
+        'transitions',
+      ].map((name) => `./ppe-issues-${name}.integration.test.mjs`),
+      './ppe-issues-regular.integration.mjs',
+      './ppe-issues-batch.integration.mjs',
+      './ppe-issues-cancel.integration.mjs',
+      './ppe-gender.integration.mjs',
+      './ppe-employee-positions.integration.mjs',
+      './ppe-position-transfer.integration.mjs',
+    ].map((path) => import(path)),
   );
   const env = await createPpeIssueTestEnvironment();
   after(() => env.cleanup());

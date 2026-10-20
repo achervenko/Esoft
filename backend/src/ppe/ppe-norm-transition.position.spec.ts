@@ -2,6 +2,26 @@ import type { PpeIssue } from '@prisma/client';
 import { date, norm, issue, policy } from './ppe-norm-transition.spec-fixtures';
 
 describe('entitlement after position assignment', () => {
+  it('treats default fixture issues as the same position and gender', async () => {
+    const current = norm();
+    const findMany = jest.fn();
+    await policy.prepare({ ppeNorm: { findMany } } as never, current, [
+      issue(),
+    ]);
+    expect(findMany).not.toHaveBeenCalled();
+    expect(issue()).toMatchObject({ positionId: 1, genderSnapshot: 'MALE' });
+    const first = issue();
+    const second = issue();
+    expect(first.id).not.toBe(second.id);
+    expect(
+      issue(1, '2026-01-01', 1, {
+        id: 999,
+        positionId: 2,
+        genderSnapshot: 'FEMALE',
+      }),
+    ).toMatchObject({ id: 999, positionId: 2, genderSnapshot: 'FEMALE' });
+  });
+
   const assigned = date('2026-10-07');
   function transfer(oldQuantity = 1, quantity = 2) {
     const old = {

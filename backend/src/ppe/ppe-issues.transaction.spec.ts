@@ -1,3 +1,6 @@
+import { PpeIssueNormsGuardService } from './ppe-issue-norms-guard.service';
+import { PpeIssueCatalogGuardService } from './ppe-issue-catalog-guard.service';
+import { PpeIssueSizeService } from './ppe-issue-size.service';
 import { Prisma } from '@prisma/client';
 import { PpeIssuesGuardsService } from './ppe-issues-guards.service';
 import { runPpeIssueTransaction } from './ppe-issues.transaction';
@@ -14,7 +17,11 @@ function fail(meta?: Record<string, unknown>, code = 'P2002') {
     run: () =>
       runPpeIssueTransaction(
         prisma as never,
-        new PpeIssuesGuardsService(),
+        new PpeIssuesGuardsService(
+          new PpeIssueNormsGuardService(),
+          new PpeIssueCatalogGuardService(),
+          new PpeIssueSizeService(),
+        ),
         () => Promise.resolve(null),
       ),
   };

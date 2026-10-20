@@ -1,3 +1,6 @@
+import { PpeIssueNormsGuardService } from './ppe-issue-norms-guard.service';
+import { PpeIssueCatalogGuardService } from './ppe-issue-catalog-guard.service';
+import { PpeIssueSizeService } from './ppe-issue-size.service';
 import { Prisma, PpeItemType, type PpeIssue } from '@prisma/client';
 import { PpeIssuesGuardsService } from './ppe-issues-guards.service';
 import { toPpeIssueDto } from './ppe-issues.mapper';
@@ -17,7 +20,11 @@ it.each([PpeItemType.BODY, PpeItemType.TSHIRT])(
 );
 
 it('recommends the independent T-shirt pair and snapshots its height', () => {
-  const guards = new PpeIssuesGuardsService();
+  const guards = new PpeIssuesGuardsService(
+    new PpeIssueNormsGuardService(),
+    new PpeIssueCatalogGuardService(),
+    new PpeIssueSizeService(),
+  );
   const sizes = {
     clothingSize: '48',
     clothingHeight: '170–176',

@@ -76,9 +76,22 @@ export function registerTests(env) {
   ]) {
     test(`recommends and snapshots employee size for ${type}`, async () => {
       const f = await issueFixture({ type });
+      if (type === 'TSHIRT') {
+        assert.deepEqual(
+          f.sizes.map(({ value, heightValue }) => [value, heightValue]),
+          [
+            ['108', '182–188'],
+            ['112', '182–188'],
+            ['104', '170–176'],
+          ],
+        );
+      }
       const plan = await issues.plan(f.employee.id, date());
       assert.equal(plan.items[0].sizes.recommendedSizeId, f.sizes[0].id);
-      const recommendation = await issues.recommendSize(f.employee.id, f.ppe.id);
+      const recommendation = await issues.recommendSize(
+        f.employee.id,
+        f.ppe.id,
+      );
       assert.equal(recommendation.recommendedSizeValue, value);
       assert.equal(recommendation.recommendedHeightValue, height);
       const [issue] = await issues.createRegular(f.request, specialist);
@@ -235,7 +248,10 @@ export function registerTests(env) {
           f.sizes[1].value,
         );
         assert.equal(issue.heightValue, f.sizes[1].heightValue);
-        assert.equal((await issues.findOne(issue.id)).heightValue, f.sizes[1].heightValue);
+        assert.equal(
+          (await issues.findOne(issue.id)).heightValue,
+          f.sizes[1].heightValue,
+        );
       }
     }
   });

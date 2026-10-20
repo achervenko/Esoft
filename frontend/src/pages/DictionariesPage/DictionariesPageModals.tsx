@@ -47,7 +47,7 @@ export function DictionariesPageModals({
           positions={page.positions}
           isSaving={page.isSaving}
           onClose={() => page.setEmployeeForm(null)}
-          onSubmit={(payload) => void page.saveEmployee(payload)}
+          onSubmit={page.saveEmployee}
         />
       ) : null}
 

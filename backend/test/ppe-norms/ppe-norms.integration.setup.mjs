@@ -35,6 +35,13 @@ const {
   PpeNormsPersistenceService,
 } = require('../../dist/src/ppe/ppe-norms-persistence.service.js');
 
+const {
+  PpeNormsFutureBoundaryService,
+} = require('../../dist/src/ppe/ppe-norms-future-boundary.service.js');
+const {
+  PpeNormsFutureItemsService,
+} = require('../../dist/src/ppe/ppe-norms-future-items.service.js');
+
 function createNormsService(client, audit) {
   const guards = new PpeNormsGuardsService();
   const normAudit = new PpeNormsAuditService(audit);
@@ -43,7 +50,13 @@ function createNormsService(client, audit) {
     client,
     guards,
     normAudit,
-    new PpeNormsFutureService(guards, normAudit, persistence),
+    new PpeNormsFutureService(
+      guards,
+      normAudit,
+      persistence,
+      new PpeNormsFutureBoundaryService(guards, normAudit),
+      new PpeNormsFutureItemsService(persistence, normAudit),
+    ),
     persistence,
   );
 }
@@ -167,6 +180,7 @@ export async function createPpeNormTestEnvironment() {
       rows,
       payload: {
         positionId: position.id,
+        gender: 'MALE',
         effectiveFrom: day(10),
         effectiveTo: null,
         items: rows,

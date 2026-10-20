@@ -61,6 +61,7 @@ model PpeItem {
 }
 
 model PpeNorm {
+ gender Gender
   id            Int           @id @default(autoincrement())
   positionId    Int           @map("position_id")
   position      Position      @relation(fields: [positionId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_ppe_norms_position")
@@ -74,7 +75,7 @@ model PpeNorm {
   revisions PpeNorm[] @relation("PpeNormRevisions")
   @@index([previousNormId], map: "idx_ppe_norm_previous")
 
-  @@index([positionId, effectiveFrom], map: "idx_ppe_norms_position_effective_from")
+  @@index([positionId, gender, effectiveFrom], map: "idx_ppe_norms_position_effective_from")
   @@map("ppe_norms")
 }
 
@@ -113,6 +114,7 @@ model PpeItemSize {
 }
 
 model PpeIssue {
+ genderSnapshot Gender? @map("gender_snapshot")
   // DB-only uq_ppe_issues_regular_obligation in init SQL:
   // UNIQUE (employee_id, norm_item_id, scheduled_at)
   // WHERE issue_type = 'REGULAR' AND status = 'ISSUED'.

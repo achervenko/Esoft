@@ -1,62 +1,18 @@
-import type { Prisma } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { toEmployeeDto } from './users-admin.mapper';
-import {
-  parseBoolean,
-  parseEmployeePayload,
-  throwBadRequest,
-} from './users-admin.validation';
-import { throwNotFoundIfPrismaError } from './users-admin.errors';
-import { UsersAdminAuditService } from './users-admin-audit.service';
-import { getBusinessTodayDate } from '../application/business-date';
-
-type EmployeePayload = Parameters<typeof parseEmployeePayload>[0];
-
+import { toEmployeeDto, employeeAdminInclude } from './users-admin.mapper';
+import { EmployeesAdminEditorService } from './employees-admin-editor.service';
+import { EmployeesAdminStatusService } from './employees-admin-status.service';
 @Injectable()
 export class EmployeesAdminService {
   constructor(
-    private readonly audit: UsersAdminAuditService,
     private readonly prisma: PrismaService,
+    private readonly editor: EmployeesAdminEditorService,
+    private readonly status: EmployeesAdminStatusService,
   ) {}
-
-  private async assertPosition(
-    tx: Prisma.TransactionClient,
-    id: number,
-    currentId?: number,
-  ) {
-    const rows = await tx.$queryRaw<Array<{ isActive: boolean }>>`
-      SELECT is_active AS "isActive" FROM positions WHERE id = ${id} FOR SHARE
-    `;
-    if (!rows[0]) {
-      throwBadRequest('POSITION_NOT_FOUND', 'Должность не найдена.');
-    }
-    if (!rows[0].isActive && id !== currentId) {
-      throwBadRequest('POSITION_INACTIVE', 'Выберите активную должность.');
-    }
-  }
-
   async listEmployees(currentUserId?: string | null) {
     const employees = await this.prisma.employee.findMany({
-      include: {
-        position: true,
-        _count: {
-          select: {
-            employeeUsers: true,
-            responsibleEquipment: true,
-          },
-        },
-        employeeUsers: {
-          select: {
-            user: {
-              select: {
-                banned: true,
-                id: true,
-              },
-            },
-          },
-        },
-      },
+      include: employeeAdminInclude,
       orderBy: [
         { lastName: 'asc' },
         { firstName: 'asc' },
@@ -67,246 +23,19 @@ export class EmployeesAdminService {
     return employees.map((employee) => toEmployeeDto(employee, currentUserId));
   }
 
-  async createEmployee(payload: EmployeePayload, actorUserId?: string | null) {
-    const employee = await this.prisma.$transaction(async (tx) => {
-      const data = parseEmployeePayload(payload);
-      await this.assertPosition(tx, data.positionId);
-      const nextEmployee = await tx.employee.create({
-        include: { position: true },
-        data: { ...data, positionAssignedAt: getBusinessTodayDate() },
-      });
-
-      await this.audit.logEmployeeCreated(
-        toEmployeeDto(nextEmployee),
-        actorUserId,
-        tx,
-      );
-
-      return nextEmployee;
-    });
-
-    return toEmployeeDto(employee, actorUserId);
-  }
-
-  async updateEmployee(
-    employeeId: number,
-    payload: EmployeePayload,
-    actorUserId?: string | null,
+  createEmployee(
+    ...args: Parameters<EmployeesAdminEditorService['createEmployee']>
   ) {
-    try {
-      return await this.prisma.$transaction(async (tx) => {
-        await tx.$queryRaw`SELECT id FROM employees WHERE id = ${employeeId} FOR UPDATE`;
-        const currentEmployee = await tx.employee.findUniqueOrThrow({
-          include: { position: true },
-          where: { id: employeeId },
-        });
-        const data = parseEmployeePayload(payload);
-        await this.assertPosition(
-          tx,
-          data.positionId,
-          currentEmployee.positionId,
-        );
-        const employee = await tx.employee.update({
-          data: {
-            ...data,
-            ...(data.positionId !== currentEmployee.positionId
-              ? { positionAssignedAt: getBusinessTodayDate() }
-              : {}),
-          },
-          include: {
-            position: true,
-            _count: {
-              select: {
-                employeeUsers: true,
-                responsibleEquipment: true,
-              },
-            },
-            employeeUsers: {
-              select: {
-                user: {
-                  select: {
-                    banned: true,
-                    id: true,
-                  },
-                },
-              },
-            },
-          },
-          where: { id: employeeId },
-        });
-
-        await this.audit.logEmployeeUpdated({
-          actorUserId,
-          newEmployee: toEmployeeDto(employee),
-          oldEmployee: toEmployeeDto(currentEmployee),
-          tx,
-        });
-
-        return toEmployeeDto(employee, actorUserId);
-      });
-    } catch (error) {
-      throwNotFoundIfPrismaError(error, 'EMPLOYEE_NOT_FOUND');
-      throw error;
-    }
+    return this.editor.createEmployee(...args);
   }
-
-  async setEmployeeStatus(params: {
-    actorUserId?: string | null;
-    employeeId: number;
-    isActive?: unknown;
-  }) {
-    const isActive = parseBoolean(params.isActive);
-
-    try {
-      return await this.prisma.$transaction(async (tx) => {
-        await tx.$queryRaw`SELECT id FROM employees WHERE id = ${params.employeeId} FOR UPDATE`;
-        const currentEmployee = await tx.employee.findUniqueOrThrow({
-          include: {
-            position: true,
-            _count: {
-              select: {
-                employeeUsers: true,
-                responsibleEquipment: true,
-              },
-            },
-            employeeUsers: {
-              select: {
-                user: {
-                  select: {
-                    banned: true,
-                    id: true,
-                  },
-                },
-              },
-            },
-          },
-          where: { id: params.employeeId },
-        });
-
-        if (
-          !isActive &&
-          currentEmployee.employeeUsers.some(
-            (employeeUser) => employeeUser.user.id === params.actorUserId,
-          )
-        ) {
-          throwBadRequest(
-            'CANNOT_DISABLE_OWN_EMPLOYEE',
-            'Нельзя отключить сотрудника, связанного с текущей учётной записью.',
-          );
-        }
-
-        const activeLinkedUsers = currentEmployee.employeeUsers
-          .map((employeeUser) => employeeUser.user)
-          .filter((user) => !user.banned);
-        const hasEmployeeStatusChange = currentEmployee.isActive !== isActive;
-
-        if (
-          !hasEmployeeStatusChange &&
-          (isActive || activeLinkedUsers.length === 0)
-        ) {
-          return toEmployeeDto(currentEmployee, params.actorUserId);
-        }
-
-        let employee = hasEmployeeStatusChange
-          ? await tx.employee.update({
-              data: { isActive },
-              include: {
-                position: true,
-                _count: {
-                  select: {
-                    employeeUsers: true,
-                    responsibleEquipment: true,
-                  },
-                },
-                employeeUsers: {
-                  select: {
-                    user: {
-                      select: {
-                        banned: true,
-                        id: true,
-                      },
-                    },
-                  },
-                },
-              },
-              where: { id: params.employeeId },
-            })
-          : currentEmployee;
-
-        if (!isActive && activeLinkedUsers.length > 0) {
-          const disabledLinkedUserIds: string[] = [];
-
-          for (const user of activeLinkedUsers) {
-            const updateResult = await tx.user.updateMany({
-              data: {
-                banExpires: null,
-                banReason:
-                  'Отключено автоматически вследствие отключения связанного сотрудника',
-                banned: true,
-              },
-              where: {
-                id: user.id,
-                OR: [{ banned: false }, { banned: null }],
-              },
-            });
-
-            if (updateResult.count > 0) {
-              disabledLinkedUserIds.push(user.id);
-              await this.audit.logUserAutoDisabledForEmployee({
-                actorUserId: params.actorUserId,
-                oldBanned: user.banned,
-                tx,
-                userId: user.id,
-              });
-            }
-          }
-
-          if (disabledLinkedUserIds.length > 0) {
-            await tx.session.deleteMany({
-              where: { userId: { in: disabledLinkedUserIds } },
-            });
-          }
-
-          employee = await tx.employee.findUniqueOrThrow({
-            include: {
-              position: true,
-              _count: {
-                select: {
-                  employeeUsers: true,
-                  responsibleEquipment: true,
-                },
-              },
-              employeeUsers: {
-                select: {
-                  user: {
-                    select: {
-                      banned: true,
-                      id: true,
-                    },
-                  },
-                },
-              },
-            },
-            where: { id: params.employeeId },
-          });
-        }
-
-        const employeeDto = toEmployeeDto(employee, params.actorUserId);
-
-        if (hasEmployeeStatusChange) {
-          await this.audit.logEmployeeStatusChanged({
-            actorUserId: params.actorUserId,
-            newEmployee: employeeDto,
-            oldEmployee: toEmployeeDto(currentEmployee, params.actorUserId),
-            tx,
-          });
-        }
-
-        return employeeDto;
-      });
-    } catch (error) {
-      throwNotFoundIfPrismaError(error, 'EMPLOYEE_NOT_FOUND');
-      throw error;
-    }
+  updateEmployee(
+    ...args: Parameters<EmployeesAdminEditorService['updateEmployee']>
+  ) {
+    return this.editor.updateEmployee(...args);
+  }
+  setEmployeeStatus(
+    ...args: Parameters<EmployeesAdminStatusService['setEmployeeStatus']>
+  ) {
+    return this.status.setEmployeeStatus(...args);
   }
 }

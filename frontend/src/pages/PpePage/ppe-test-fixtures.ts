@@ -8,6 +8,7 @@ import type {
   PpePlan,
 } from "../../shared/api/ppe";
 export const employee: PpeEmployee = {
+ gender: "MALE",
   id: 1,
   lastName: "Червенко",
   firstName: "Алехандро",
@@ -18,8 +19,8 @@ export const employee: PpeEmployee = {
   ppeSizes: {
     clothingSize: "88–92",
     clothingHeight: "158–164",
-    tshirtSize: "104–108",
-    tshirtHeight: "194–200",
+    tshirtSize: "108",
+    tshirtHeight: "182–188",
     shoeSize: 42,
     gloveSize: "L",
     headwearSize: "58",
@@ -89,6 +90,7 @@ export const planRow: PlanRow = {
   sizes: recommendation,
 };
 export const issue: PpeIssue = {
+ genderSnapshot: "MALE",
   id: 8,
   employeeId: 1,
   employeeName: "Историческое имя сотрудника",
@@ -119,6 +121,7 @@ export const issue: PpeIssue = {
   cancellationReason: null,
 };
 export const norm: PpeNorm = {
+ gender: "MALE",
   transitionMode: "SOFT",
   id: 9,
   positionId: 2,
@@ -141,6 +144,7 @@ export const norm: PpeNorm = {
 };
 
 export const plan: PpePlan = {
+ warnings: [],
   employeeId: 1,
   employeeName: "Червенко Алехандро",
   positionId: 2,

@@ -24,6 +24,7 @@ export function toPpeNormDto(norm: PpeNormRecord) {
   return {
     id: norm.id,
     positionId: norm.positionId,
+    gender: norm.gender,
     position: norm.position.name,
     effectiveFrom: normDateString(norm.effectiveFrom),
     effectiveTo: norm.effectiveTo ? normDateString(norm.effectiveTo) : null,

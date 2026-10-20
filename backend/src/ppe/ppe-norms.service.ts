@@ -10,6 +10,7 @@ import { ppeNotFound } from './ppe.errors';
 import { normDateString, normInclude, toPpeNormDto } from './ppe-norms.mapper';
 import {
   parseCreateNorm,
+  parseNormGender,
   parseNormDate,
   parseNormId,
   parseNormRevision,
@@ -54,6 +55,7 @@ export class PpeNormsService {
   async findEffectiveNorm(
     positionId: number,
     date: Date = getBusinessTodayDate(),
+    genderValue?: unknown,
   ) {
     parseNormId(positionId, 'INVALID_POSITION_ID');
     if (!(date instanceof Date) || !Number.isFinite(date.getTime())) {
@@ -62,6 +64,7 @@ export class PpeNormsService {
         'Укажите корректную календарную дату.',
       );
     }
+    const gender = parseNormGender(genderValue);
     const day = parseNormDate(normDateString(date));
     const position = await this.prisma.position.findUnique({
       where: { id: positionId },
@@ -71,6 +74,7 @@ export class PpeNormsService {
     const norms = await this.prisma.ppeNorm.findMany({
       where: {
         positionId,
+        gender,
         effectiveFrom: { lte: day },
         OR: [{ effectiveTo: null }, { effectiveTo: { gte: day } }],
       },
@@ -117,6 +121,7 @@ export class PpeNormsService {
         await tx.ppeNorm.findFirst({
           where: {
             positionId: previous.positionId,
+            gender: previous.gender,
             effectiveFrom: { gt: previous.effectiveFrom },
           },
           select: { id: true },
@@ -128,7 +133,7 @@ export class PpeNormsService {
       await this.guards.assertNoOverlap(
         tx,
         previous.positionId,
-        data,
+        { ...data, gender: previous.gender },
         closesPrevious ? id : undefined,
       );
       if (closesPrevious) {
@@ -153,7 +158,7 @@ export class PpeNormsService {
       return this.persistence.createInTransaction(
         tx,
         previous.positionId,
-        data,
+        { ...data, gender: previous.gender },
         actorUserId,
         previous.id,
       );

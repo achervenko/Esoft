@@ -21,11 +21,15 @@ import type {
 
 export function useSelectDropdown({
   disabled = false,
+  multiple = false,
   onChange,
   options,
   value,
-}: Pick<SelectDropdownProps, "disabled" | "onChange" | "options" | "value">) {
+}: Pick<SelectDropdownProps, "disabled" | "onChange" | "options" | "value"> & { multiple?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
+  useEffect(() => {
+    if (disabled) setIsOpen(false);
+  }, [disabled]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [menuStyle, setMenuStyle] = useState<{
     left: number;
@@ -82,8 +86,10 @@ export function useSelectDropdown({
     }
 
     onChange(option.value);
-    closeMenu();
-    triggerRef.current?.focus();
+    if (!multiple) {
+      closeMenu();
+      triggerRef.current?.focus();
+    }
   };
 
   const openMenu = (

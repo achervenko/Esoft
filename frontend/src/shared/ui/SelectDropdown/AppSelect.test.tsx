@@ -2,8 +2,30 @@ import { useState } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { AppSelect } from "./AppSelect";
+import { SelectDropdown } from "./SelectDropdown";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+
+it.each([false, true])("closes an open dropdown when disabled and allows reopening after enabling (multiple=%s)", (multiple) => {
+  const props = {
+    label: "Тип", value: "a", onChange: vi.fn(),
+    options: [{ value: "a", label: "Первый" }],
+    selectedValues: multiple ? ["a"] : undefined,
+  };
+  const view = render(<SelectDropdown {...props} />);
+  const trigger = screen.getByRole("button");
+  fireEvent.click(trigger);
+  expect(screen.getByRole("listbox")).toBeInTheDocument();
+  view.rerender(<SelectDropdown {...props} disabled />);
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  expect(trigger).toBeDisabled();
+  expect(trigger).toHaveAttribute("aria-expanded", "false");
+  expect(trigger).not.toHaveAttribute("aria-controls");
+  view.rerender(<SelectDropdown {...props} />);
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  fireEvent.click(trigger);
+  expect(screen.getByRole("listbox")).toBeInTheDocument();
+});
 
 it.each([false, true])("moves Tab focus relative to the trigger outside a modal (shift=%s)", (shiftKey) => {
   vi.spyOn(HTMLElement.prototype, "getClientRects").mockReturnValue([{}] as unknown as DOMRectList);

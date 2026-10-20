@@ -27,6 +27,7 @@ export function registerTests(env) {
     const current = await env.service.create(
       {
         positionId: f.position.id,
+        gender: 'MALE',
         effectiveFrom: day(-60),
         effectiveTo: day(16),
         items: f.norm.items.map((item) => ({

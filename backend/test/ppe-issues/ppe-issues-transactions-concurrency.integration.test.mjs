@@ -6,6 +6,16 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const {
+  PpeIssueNormsGuardService,
+} = require('../../dist/src/ppe/ppe-issue-norms-guard.service.js');
+const {
+  PpeIssueCatalogGuardService,
+} = require('../../dist/src/ppe/ppe-issue-catalog-guard.service.js');
+const {
+  PpeIssueSizeService,
+} = require('../../dist/src/ppe/ppe-issue-size.service.js');
+
+const {
   runPpeIssueTransaction,
 } = require('../../dist/src/ppe/ppe-issues.transaction.js');
 const {
@@ -42,21 +52,34 @@ export function registerTests(env) {
       (error) => error.code === 'P2002',
     );
     await assert.rejects(
-      runPpeIssueTransaction(prisma, new PpeIssuesGuardsService(), (tx) =>
-        tx.ppeIssue.create({ data }),
+      runPpeIssueTransaction(
+        prisma,
+        new PpeIssuesGuardsService(
+          new PpeIssueNormsGuardService(),
+          new PpeIssueCatalogGuardService(),
+          new PpeIssueSizeService(),
+        ),
+        (tx) => tx.ppeIssue.create({ data }),
       ),
       errorCode('PPE_NORM_ALREADY_ISSUED'),
     );
     await assert.rejects(
-      runPpeIssueTransaction(prisma, new PpeIssuesGuardsService(), (tx) =>
-        tx.ppeItem.create({
-          data: {
-            article: f.ppe.article,
-            name: 'Duplicate',
-            unit: 'пары',
-            type: 'FEET',
-          },
-        }),
+      runPpeIssueTransaction(
+        prisma,
+        new PpeIssuesGuardsService(
+          new PpeIssueNormsGuardService(),
+          new PpeIssueCatalogGuardService(),
+          new PpeIssueSizeService(),
+        ),
+        (tx) =>
+          tx.ppeItem.create({
+            data: {
+              article: f.ppe.article,
+              name: 'Duplicate',
+              unit: 'пары',
+              type: 'FEET',
+            },
+          }),
       ),
       (error) => error.code === 'P2002',
     );

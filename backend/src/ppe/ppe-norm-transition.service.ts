@@ -34,6 +34,7 @@ export class PpeNormTransitionService {
       if (
         !previous ||
         previous.positionId !== current.positionId ||
+        previous.gender !== current.gender ||
         previous.effectiveFrom >= current.effectiveFrom
       )
         break;
@@ -45,7 +46,8 @@ export class PpeNormTransitionService {
         issued
           .filter(
             (issue) =>
-              issue.positionId !== current.positionId &&
+              (issue.positionId !== current.positionId ||
+                issue.genderSnapshot !== current.gender) &&
               issue.normItemId !== null,
           )
           .map((issue) => issue.normItemId!),
@@ -56,7 +58,12 @@ export class PpeNormTransitionService {
         where: { items: { some: { id: { in: foreignIds } } } },
         include: { items: true },
       });
-      for (const source of sources) context.set(source.id, source);
+      for (const source of sources)
+        if (
+          source.positionId !== current.positionId ||
+          source.gender !== current.gender
+        )
+          context.set(source.id, source);
     }
     return context;
   }

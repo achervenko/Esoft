@@ -6,6 +6,14 @@
     {
       "id": "20260725000000_core_init",
       "sha256": "4b505ee160db16c51623da58c389b56cf4a7898103302ae369178cf52f689f44"
+    },
+    {
+      "id": "20261020000000_employee_positions",
+      "sha256": "52523921b6ceef7cb699f9868c6a0d04fa6827feccee2cc560d58a8e3f80ea8e"
+    },
+    {
+      "id": "20261020010000_employee_gender",
+      "sha256": "69c60edff915d82ef6e6fbd7087b808ae8ac21aebd110b2d9641f8c9c8300086"
     }
   ]
 }

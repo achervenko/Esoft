@@ -1,3 +1,6 @@
+import { EmployeePositionAssignmentsService } from './employee-position-assignments.service';
+import { EmployeesAdminStatusService } from './employees-admin-status.service';
+import { EmployeesAdminEditorService } from './employees-admin-editor.service';
 import { Module } from '@nestjs/common';
 import { ActiveModulesModule } from '../config/active-modules.module';
 import { AuditModule } from '../audit/audit.module';
@@ -24,6 +27,9 @@ import { UsersAdminController } from './users-admin.controller';
   ],
   controllers: [UsersAdminController],
   providers: [
+    EmployeesAdminEditorService,
+    EmployeesAdminStatusService,
+    EmployeePositionAssignmentsService,
     EmployeesAdminService,
     PositionsAdminService,
     UserAccountsAdminService,

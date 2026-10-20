@@ -1,6 +1,11 @@
+import { EmployeePositionAssignmentsService } from './employee-position-assignments.service';
+import { EmployeesAdminStatusService } from './employees-admin-status.service';
+import { EmployeesAdminEditorService } from './employees-admin-editor.service';
 import { EmployeesAdminService } from './employees-admin.service';
 
 export const baseEmployee = {
+  gender: 'MALE',
+  additionalPositions: [],
   _count: {
     employeeUsers: 0,
     responsibleEquipment: 0,
@@ -41,9 +46,22 @@ export function createService() {
     logEmployeeUpdated: jest.fn(),
     logUserAutoDisabledForEmployee: jest.fn().mockResolvedValue(undefined),
   };
-  const service = new EmployeesAdminService(audit as never, prisma as never);
+  const service = new EmployeesAdminService(
+    prisma as never,
+    new EmployeesAdminEditorService(
+      audit as never,
+      prisma as never,
+      new EmployeePositionAssignmentsService(),
+    ),
+    new EmployeesAdminStatusService(audit as never, prisma as never),
+  );
 
   return { audit, prisma, service, tx };
 }
 
-export const payload = { firstName: 'Иван', lastName: 'Иванов', positionId: 1 };
+export const payload = {
+  gender: 'MALE' as const,
+  firstName: 'Иван',
+  lastName: 'Иванов',
+  positionId: 1,
+};

@@ -9,6 +9,7 @@ export function toPpeIssueDto(issue: PpeIssue) {
     positionId: issue.positionId,
     position: issue.positionNameSnapshot,
     issueType: issue.issueType,
+    genderSnapshot: issue.genderSnapshot,
     normItemId: issue.normItemId,
     normItemPpeItemId: issue.normItemPpeItemId,
     normPpeArticle: issue.normPpeArticleSnapshot,
