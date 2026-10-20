@@ -1,8 +1,4 @@
-import {
-  StorageDocumentType,
-  StorageOwnerModule,
-  type StorageFile,
-} from '@prisma/client';
+import { StorageDocumentType, type StorageFile } from '@prisma/client';
 import { Readable } from 'node:stream';
 import { AuditLogService } from '../audit/audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -93,9 +89,10 @@ describe('StorageFileService', () => {
 
 function owner() {
   return {
-    entityId: 10,
+    entityId: '10',
+    auditEntityId: 10,
     entityType: 'equipment',
-    module: StorageOwnerModule.EQUIPMENT,
+    module: 'equipment',
   };
 }
 
@@ -110,9 +107,10 @@ function createStorageFile(overrides: Partial<StorageFile> = {}): StorageFile {
     mimeType: 'application/pdf',
     objectKey: 'equipment/equipment/10/passport/object.pdf',
     originalName: 'passport.pdf',
-    ownerEntityId: 10,
+    ownerEntityId: '10',
     ownerEntityType: 'equipment',
-    ownerModule: StorageOwnerModule.EQUIPMENT,
+    ownerModule: 'equipment',
+    isImmutable: false,
     sizeBytes: 100n,
     uploadedByUserId: null,
     ...overrides,

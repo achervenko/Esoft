@@ -26,7 +26,8 @@ const grants: Record<string, readonly string[]> = {
     "ppe.norms.manage",
     "ppe.issue",
     "ppe.issue.backdate",
-    "warehouse.catalog.manage"
+    "warehouse.catalog.manage",
+    "warehouse.adjustments.manage"
   ],
   "chief_engineer": [
     "users.profile.read",

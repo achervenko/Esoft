@@ -1,7 +1,8 @@
 import { useId, useRef, useState } from "react";
 import { getUserRoles, USER_ROLES } from "../../shared/lib/user-roles";
 import { getProfileRoleLabel } from "../../modules/user-profile/profile-access";
-import { Checkbox } from "../../shared/ui/Checkbox";
+import { Checkbox } from "@chakra-ui/react";
+import "./UsersPage.css";
 import {
   isValidPassword,
   MAX_PASSWORD_LENGTH,
@@ -193,32 +194,37 @@ export function UserAccountFormModal({
             </FormField>
           ) : null}
           <fieldset
+            className="user-account-roles"
             aria-label="Роль"
             aria-invalid={fieldErrors.role ? true : undefined}
             aria-describedby={fieldErrors.role ? roleErrorId : undefined}
           >
             <legend>Роли</legend>
             {roleOptions.map((role) => (
-              <Checkbox
+              <Checkbox.Root
                 key={role.value}
-                label={role.label}
+                className="user-account-role-checkbox"
                 checked={selectedRoles.includes(role.value)}
                 disabled={
                   isSaving ||
                   (retainedRoles.includes(role.value) &&
                     !selectedRoles.includes(role.value))
                 }
-                onChange={(checked) =>
+                onCheckedChange={({ checked }) =>
                   updateField(
                     "role",
                     USER_ROLES.filter((value) =>
                       value === role.value
-                        ? checked
+                        ? checked === true
                         : selectedRoles.includes(value),
                     ).join(","),
                   )
                 }
-              />
+              >
+                <Checkbox.HiddenInput />
+                <Checkbox.Control />
+                <Checkbox.Label>{role.label}</Checkbox.Label>
+              </Checkbox.Root>
             ))}
             {fieldErrors.role ? (
               <small id={roleErrorId} className="field-error">

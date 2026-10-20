@@ -1,6 +1,6 @@
 import type { StorageDocumentType } from '@prisma/client';
 
-export type StorageFileContentValidator = 'image' | 'pdf';
+export type StorageFileContentValidator = 'image' | 'pdf' | 'document';
 
 export type StorageFileDocumentRule = {
   allowedExtensions?: readonly string[];

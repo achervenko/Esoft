@@ -1,13 +1,20 @@
+import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
+import type { ReactElement } from "react";
+import userEvent from "@testing-library/user-event";
 import {
   act,
   cleanup,
   fireEvent,
-  render,
+  render as renderComponent,
   screen,
 } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { AdminUserAccount } from "../../shared/api/users-admin-api";
 import { UserAccountFormModal } from "./UserAccountFormModal";
+
+const render = (ui: ReactElement) => renderComponent(
+  <ChakraProvider value={defaultSystem}>{ui}</ChakraProvider>,
+);
 
 afterEach(cleanup);
 
@@ -114,14 +121,14 @@ it("edits a role set and allows removal of an inactive role", async () => {
   );
   expect(screen.getByLabelText("Инженер")).toBeChecked();
   expect(screen.getByLabelText("Кладовщик (модуль выключен)")).toBeChecked();
-  fireEvent.click(screen.getByLabelText("Аудитор"));
+  await userEvent.click(screen.getByLabelText("Аудитор"));
   await act(async () => {
     fireEvent.submit(document.querySelector("form")!);
   });
   expect(onSubmit).toHaveBeenLastCalledWith(
     expect.objectContaining({ role: "engineer,auditor,storekeeper" }),
   );
-  fireEvent.click(screen.getByLabelText("Кладовщик (модуль выключен)"));
+  await userEvent.click(screen.getByLabelText("Кладовщик (модуль выключен)"));
   expect(screen.getByLabelText("Кладовщик (модуль выключен)")).toBeDisabled();
   await act(async () => {
     fireEvent.submit(document.querySelector("form")!);

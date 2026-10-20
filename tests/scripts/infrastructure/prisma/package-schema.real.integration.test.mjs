@@ -70,7 +70,7 @@ test('current packages support optional modules and late installation without da
       assert.equal(tables.includes('equipment'), modules.includes('equipment'));
       assert.equal(tables.includes('ppe_issues'), modules.includes('ppe'));
       const columns = (await work.client.query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='employees'")).rows.map((row) => row.column_name);
-      for (const name of ['clothing_size', 'clothing_height', 'shoe_size', 'glove_size', 'headwear_size']) assert.equal(columns.includes(name), false);
+      for (const name of ['clothing_size', 'clothing_height', 'tshirt_size', 'tshirt_height', 'shoe_size', 'glove_size', 'headwear_size']) assert.equal(columns.includes(name), false);
       assert.equal(tables.includes('ppe_employee_sizes'), modules.includes('ppe'));
       const current = await snapshot(work.client);
       if (name === 'complete') {
@@ -91,7 +91,7 @@ test('current packages support optional modules and late installation without da
         assert.equal((await prisma.employee.findUniqueOrThrow({ where: { id: coreEmployee.id } })).lastName, 'CRUD');
         const renamed = await prisma.employee.update({ where: { id: coreEmployee.id }, data: { firstName: 'Updated' } });
         assert.equal(renamed.firstName, 'Updated');
-        for (const key of ['clothingSize', 'clothingHeight', 'shoeSize', 'gloveSize', 'headwearSize']) assert.equal(Object.hasOwn(renamed, key), false);
+        for (const key of ['clothingSize', 'clothingHeight', 'tshirtSize', 'tshirtHeight', 'shoeSize', 'gloveSize', 'headwearSize']) assert.equal(Object.hasOwn(renamed, key), false);
         assert.equal(Object.hasOwn(renamed, 'ppeSizes'), false);
         if (modules.includes('ppe')) {
           await prisma.ppeEmployeeSizes.create({ data: { employeeId: coreEmployee.id, shoeSize: 42.5 } });

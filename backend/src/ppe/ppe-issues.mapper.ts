@@ -20,7 +20,7 @@ export function toPpeIssueDto(issue: PpeIssue) {
     unit: issue.ppeUnitSnapshot,
     quantity: issue.quantity.toNumber(),
     sizeValue: issue.sizeValue,
-    clothingHeight: issue.clothingHeightSnapshot,
+    heightValue: issue.heightSnapshot,
     scheduledAt: issue.scheduledAt ? normDateString(issue.scheduledAt) : null,
     issuedAt: normDateString(issue.issuedAt),
     issuedByUserId: issue.issuedByUserId,

@@ -1,9 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import {
-  StorageDocumentType,
-  StorageOwnerModule,
-  type StorageFile,
-} from '@prisma/client';
+import { StorageDocumentType, type StorageFile } from '@prisma/client';
 import { Readable } from 'node:stream';
 import { ImageProcessingService } from '../image-processing/image-processing.service';
 import { StorageImagePreviewService } from './storage-image-preview.service';
@@ -146,9 +142,10 @@ function createImageFile(overrides: Partial<StorageFile> = {}): StorageFile {
     mimeType: 'image/jpeg',
     objectKey: 'equipment/equipment/10/equipment_photo/photo.jpg',
     originalName: 'photo.jpg',
-    ownerEntityId: 10,
+    ownerEntityId: '10',
     ownerEntityType: 'equipment',
-    ownerModule: StorageOwnerModule.EQUIPMENT,
+    ownerModule: 'equipment',
+    isImmutable: false,
     sizeBytes: 100n,
     uploadedByUserId: null,
     ...overrides,

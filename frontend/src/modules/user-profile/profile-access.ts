@@ -4,6 +4,7 @@ import {
   canEditEquipment,
   canReadEquipment,
   canDownloadEquipmentDocuments,
+  canManageEquipmentDocuments,
 } from "../equipment-permissions/equipment-permissions";
 import { canAccessWorkspaceRoute } from "../../lib/role-navigation";
 import { canManageUsers } from "../../shared/lib/roles";
@@ -108,7 +109,9 @@ export function getProfileModuleAccess(permissions: readonly string[] | null | u
 
   modules.push(
     ...[...equipmentEditorModules, ...adminModules]
-      .filter((module) => hasPermission(permissions, module.permission))
+      .filter((module) => module.permission === "files.manage"
+        ? canManageEquipmentDocuments(permissions)
+        : hasPermission(permissions, module.permission))
       .map(({ title, description }) => ({ title, description })),
   );
 
@@ -119,10 +122,16 @@ export function getProfileModuleAccess(permissions: readonly string[] | null | u
     });
   }
 
-  if (hasPermission(permissions, "warehouse.catalog.manage")) {
+  const catalogManageable = hasPermission(permissions, "warehouse.catalog.manage");
+  const adjustmentsManageable = hasPermission(permissions, "warehouse.adjustments.manage");
+  if (catalogManageable || adjustmentsManageable) {
     modules.push({
       title: "Склад",
-      description: "Управление складской номенклатурой.",
+      description: adjustmentsManageable
+        ? catalogManageable
+          ? "Управление номенклатурой и корректировка складских остатков."
+          : "Административная корректировка складских остатков."
+        : "Управление складской номенклатурой.",
     });
   }
 
@@ -134,6 +143,11 @@ export function getProfilePermissionAccess(permissions: readonly string[] | null
   const equipmentEditable = canEditEquipment(permissions);
 
   return [
+    {
+      allowed: hasPermission(permissions, "warehouse.adjustments.manage"),
+      title: "Корректировка складских остатков",
+      description: "Административное списание и оприходование излишков с обязательными документами и аудитом.",
+    },
     {
       allowed: hasPermission(permissions, "warehouse.catalog.manage"),
       title: "Управление складской номенклатурой",
@@ -156,7 +170,7 @@ export function getProfilePermissionAccess(permissions: readonly string[] | null
       description: "Создание и изменение карточек оборудования.",
     },
     {
-      allowed: hasPermission(permissions, "files.manage"),
+      allowed: canManageEquipmentDocuments(permissions),
       title: "Управление документами",
       description: "Загрузка и удаление документов оборудования.",
     },

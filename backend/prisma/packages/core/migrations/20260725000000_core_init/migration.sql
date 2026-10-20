@@ -29,7 +29,6 @@ CREATE TYPE "event_source" AS ENUM ('MANUAL', 'PLANNED');
 CREATE TYPE "event_status" AS ENUM ('CREATED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED');
 
 -- CreateEnum
-CREATE TYPE "storage_owner_module" AS ENUM ('equipment');
 
 -- CreateEnum
 CREATE TYPE "storage_document_type" AS ENUM ('passport', 'maintenance_instruction', 'equipment_photo', 'supporting_document');
@@ -354,13 +353,17 @@ CREATE TABLE "storage_files" (
     "size_bytes" BIGINT NOT NULL,
     "document_type" "storage_document_type" NOT NULL,
     "is_primary" BOOLEAN NOT NULL DEFAULT false,
-    "owner_module" "storage_owner_module" NOT NULL,
+    "is_immutable" BOOLEAN NOT NULL DEFAULT false,
+    "owner_module" VARCHAR(64) NOT NULL,
     "owner_entity_type" VARCHAR(64) NOT NULL,
-    "owner_entity_id" INTEGER NOT NULL,
+    "owner_entity_id" VARCHAR(128) NOT NULL,
     "uploaded_by_user_id" TEXT,
     "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deleted_at" TIMESTAMPTZ(6),
 
+    CONSTRAINT "chk_storage_files_owner_module" CHECK ("owner_module" ~ '^[a-z0-9_-]{1,64}$'),
+    CONSTRAINT "chk_storage_files_owner_entity_type" CHECK ("owner_entity_type" ~ '^[a-z0-9_-]{1,64}$'),
+    CONSTRAINT "chk_storage_files_owner_entity_id" CHECK (length("owner_entity_id") BETWEEN 1 AND 128),
     CONSTRAINT "storage_files_pkey" PRIMARY KEY ("id")
 );
 
@@ -1188,3 +1191,28 @@ CREATE TABLE "setup_rate_limits" (
 );
 
 CREATE INDEX "idx_setup_rate_limits_reset_at" ON "setup_rate_limits" ("reset_at");
+
+
+-- Staged uploads survive process failure and are cleaned up after expiry.
+CREATE TABLE "storage_uploads" (
+    "id" UUID NOT NULL,
+    "bucket" VARCHAR(63) NOT NULL,
+    "object_key" VARCHAR(512) NOT NULL,
+    "original_name" VARCHAR(255) NOT NULL,
+    "mime_type" VARCHAR(128) NOT NULL,
+    "size_bytes" BIGINT NOT NULL,
+    "sha256" VARCHAR(64) NOT NULL,
+    "document_type" "storage_document_type" NOT NULL,
+    "owner_module" VARCHAR(64) NOT NULL,
+    "owner_entity_type" VARCHAR(64) NOT NULL,
+    "uploaded_by_user_id" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT now(),
+    "expires_at" TIMESTAMPTZ(6) NOT NULL DEFAULT (now() + interval '24 hours'),
+    "uploaded_at" TIMESTAMPTZ(6),
+    CONSTRAINT "chk_storage_uploads_owner_module" CHECK ("owner_module" ~ '^[a-z0-9_-]{1,64}$'),
+    CONSTRAINT "chk_storage_uploads_owner_entity_type" CHECK ("owner_entity_type" ~ '^[a-z0-9_-]{1,64}$'),
+    CONSTRAINT "storage_uploads_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "fk_storage_uploads_user" FOREIGN KEY ("uploaded_by_user_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+CREATE UNIQUE INDEX "uq_storage_uploads_object_key" ON "storage_uploads"("object_key");
+CREATE INDEX "idx_storage_uploads_expires_at" ON "storage_uploads"("expires_at");

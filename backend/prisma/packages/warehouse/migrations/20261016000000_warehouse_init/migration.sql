@@ -146,3 +146,39 @@ CREATE TABLE "warehouse_issue_positions" (
 
 CREATE UNIQUE INDEX "uq_warehouse_issue_positions_issue_balance" ON "warehouse_issue_positions"("issue_id", "balance_id");
 CREATE INDEX "idx_warehouse_issue_positions_balance" ON "warehouse_issue_positions"("balance_id");
+
+
+CREATE TYPE "warehouse_adjustment_type" AS ENUM ('WRITE_OFF', 'SURPLUS');
+CREATE TABLE "warehouse_stock_adjustments" (
+    "id" BIGSERIAL NOT NULL,
+    "balance_id" BIGINT NOT NULL,
+    "type" "warehouse_adjustment_type" NOT NULL,
+    "quantity" NUMERIC(14,3) NOT NULL,
+    "quantity_before" NUMERIC(14,3) NOT NULL,
+    "quantity_after" NUMERIC(14,3) NOT NULL,
+    "reason" VARCHAR(1000) NOT NULL,
+    "comment" TEXT,
+    "request_key" UUID NOT NULL,
+    "request_hash" VARCHAR(64) NOT NULL,
+    "created_by_user_id" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT now(),
+    CONSTRAINT "warehouse_stock_adjustments_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "fk_warehouse_stock_adjustments_balance" FOREIGN KEY ("balance_id") REFERENCES "warehouse_balances"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "fk_warehouse_stock_adjustments_user" FOREIGN KEY ("created_by_user_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "chk_warehouse_stock_adjustments_quantity" CHECK ("quantity" > 0 AND "quantity_before" >= 0 AND "quantity_after" >= 0),
+    CONSTRAINT "chk_warehouse_stock_adjustments_reason" CHECK (NULLIF(BTRIM("reason"), '') IS NOT NULL),
+    CONSTRAINT "chk_warehouse_stock_adjustments_delta" CHECK (
+      ("type" = 'WRITE_OFF' AND "quantity_after" = "quantity_before" - "quantity") OR
+      ("type" = 'SURPLUS' AND "quantity_after" = "quantity_before" + "quantity")
+    )
+);
+CREATE UNIQUE INDEX "uq_warehouse_stock_adjustments_request" ON "warehouse_stock_adjustments"("created_by_user_id", "request_key");
+CREATE INDEX "idx_warehouse_stock_adjustments_balance" ON "warehouse_stock_adjustments"("balance_id", "created_at");
+CREATE TABLE "warehouse_stock_adjustment_attachments" (
+    "adjustment_id" BIGINT NOT NULL,
+    "file_id" INTEGER NOT NULL,
+    CONSTRAINT "pk_warehouse_stock_adjustment_attachments" PRIMARY KEY ("adjustment_id", "file_id"),
+    CONSTRAINT "fk_warehouse_stock_adjustment_attachments_adjustment" FOREIGN KEY ("adjustment_id") REFERENCES "warehouse_stock_adjustments"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "fk_warehouse_stock_adjustment_attachments_file" FOREIGN KEY ("file_id") REFERENCES "storage_files"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+CREATE UNIQUE INDEX "uq_warehouse_stock_adjustment_attachments_file" ON "warehouse_stock_adjustment_attachments"("file_id");

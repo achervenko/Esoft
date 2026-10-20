@@ -84,6 +84,8 @@ export async function createPpeIssueTestEnvironment() {
         ? ['42', '43', '40']
         : type === 'BODY'
           ? ['88–92', '96–100', '84–88']
+          : type === 'TSHIRT'
+            ? ['108', '112', '104']
           : type === 'HANDS'
             ? ['L', 'XL', 'S']
             : ['58', '60', '56'];
@@ -96,7 +98,7 @@ export async function createPpeIssueTestEnvironment() {
                 data: {
                   ppeItemId: ppe.id,
                   value,
-                  heightValue: type === 'BODY' ? '158–164' : null,
+                  heightValue: type === 'BODY' ? '158–164' : type === 'TSHIRT' ? (index === 1 ? '170–176' : '182–188') : null,
                   isActive: index !== 2,
                 },
               }),
@@ -111,6 +113,8 @@ export async function createPpeIssueTestEnvironment() {
           create: {
             clothingSize: '88–92',
             clothingHeight: '158–164',
+            tshirtSize: '108',
+            tshirtHeight: '182–188',
             shoeSize: 42,
             gloveSize: 'L',
             headwearSize: '58',

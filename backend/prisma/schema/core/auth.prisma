@@ -1,4 +1,6 @@
 model User {
+  pendingStorageUploads StorageUpload[]
+  warehouseStockAdjustments WarehouseStockAdjustment[]
   id                          String              @id
   name                        String
   email                       String

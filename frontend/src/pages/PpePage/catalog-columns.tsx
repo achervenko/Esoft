@@ -45,7 +45,7 @@ export function createCatalogColumns(
           "Без размера"
         ) : (
           <button
-            className="admin-secondary-button"
+            className="admin-secondary-button ppe-catalog-sizes-button"
             onClick={() => onOpenSizes(item.id)}
           >
             Размеры ({item.sizes.filter((s) => s.isActive).length})

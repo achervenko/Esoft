@@ -33,7 +33,7 @@ export function CatalogFiltersModal({
             ...draftFilters,
             size: draftFilters.size.trim(),
             height:
-              draftFilters.type === "BODY" ? draftFilters.height.trim() : "",
+              (draftFilters.type === "BODY" || draftFilters.type === "TSHIRT") ? draftFilters.height.trim() : "",
           });
         }}
       >
@@ -44,7 +44,7 @@ export function CatalogFiltersModal({
               setDraftFilters({
                 ...draftFilters,
                 type: e.target.value,
-                height: e.target.value === "BODY" ? draftFilters.height : "",
+                height: (e.target.value === "BODY" || e.target.value === "TSHIRT") ? draftFilters.height : "",
               })
             }
           >
@@ -76,7 +76,7 @@ export function CatalogFiltersModal({
             }
           />
         </Field>
-        {draftFilters.type === "BODY" && (
+        {(draftFilters.type === "BODY" || draftFilters.type === "TSHIRT") && (
           <Field label="Ростовка">
             <input
               list={heightListId}

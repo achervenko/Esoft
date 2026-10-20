@@ -44,6 +44,44 @@ function notFound(): never {
   });
 }
 
+function isWarehouseArticleUniqueViolation(
+  error: Prisma.PrismaClientKnownRequestError,
+) {
+  const meta = error.meta;
+  if (meta?.modelName !== undefined && meta.modelName !== 'WarehouseItem')
+    return false;
+  const target: unknown = meta?.target;
+  if (target === 'uq_warehouse_items_article') return true;
+  // A field name alone is meaningful only for this model.
+  if (meta?.modelName !== 'WarehouseItem') return false;
+  const isArticleField = (fields: unknown) =>
+    Array.isArray(fields) && fields.length === 1 && fields[0] === 'article';
+  if (target !== undefined) return isArticleField(target);
+
+  // PrismaPg exposes the constraint fields here instead of meta.target.
+  const adapter: unknown = meta.driverAdapterError;
+  if (!adapter || typeof adapter !== 'object' || !('cause' in adapter))
+    return false;
+  const cause: unknown = adapter.cause;
+  if (
+    !cause ||
+    typeof cause !== 'object' ||
+    !('kind' in cause) ||
+    cause.kind !== 'UniqueConstraintViolation' ||
+    !('originalCode' in cause) ||
+    cause.originalCode !== '23505' ||
+    !('constraint' in cause)
+  )
+    return false;
+  const constraint: unknown = cause.constraint;
+  return (
+    !!constraint &&
+    typeof constraint === 'object' &&
+    'fields' in constraint &&
+    isArticleField(constraint.fields)
+  );
+}
+
 @Injectable()
 export class WarehouseCatalogService {
   constructor(
@@ -171,7 +209,8 @@ export class WarehouseCatalogService {
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
+        error.code === 'P2002' &&
+        isWarehouseArticleUniqueViolation(error)
       )
         throw new ConflictException({
           code: 'WAREHOUSE_ARTICLE_EXISTS',

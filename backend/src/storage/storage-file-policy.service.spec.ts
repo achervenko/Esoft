@@ -1,9 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
-import {
-  StorageDocumentType,
-  StorageOwnerModule,
-  type StorageFile,
-} from '@prisma/client';
+import sharp from 'sharp';
+import { StorageDocumentType, type StorageFile } from '@prisma/client';
 import { StorageFilePolicyService } from './storage-file-policy.service';
 import type { StorageFilePolicyConfig } from './storage-file-policy.config';
 import type { UploadedFileInput } from './storage.types';
@@ -20,6 +17,32 @@ describe('StorageFilePolicyService', () => {
 
   beforeEach(() => {
     service = new StorageFilePolicyService(createPolicyConfig());
+  });
+
+  it('keeps existing supporting-document behavior unless a consumer supplies a rule', async () => {
+    const file = createFile({
+      originalname: 'basis.docx',
+      mimetype:
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      buffer: Buffer.from('document'),
+    });
+    await expect(
+      service.assertFileMatchesDocumentType({
+        documentType: StorageDocumentType.supporting_document,
+        file,
+      }),
+    ).resolves.toBeUndefined();
+    await expect(
+      service.assertFileMatchesDocumentType({
+        documentType: StorageDocumentType.supporting_document,
+        file,
+        rule: {
+          allowedExtensions: ['pdf'],
+          allowedMimeTypes: ['application/pdf'],
+          validateContent: 'document',
+        },
+      }),
+    ).rejects.toThrow(BadRequestException);
   });
 
   it('accepts allowed PDF extension, MIME and content signature', async () => {
@@ -89,6 +112,25 @@ describe('StorageFilePolicyService', () => {
       ).resolves.toBeUndefined();
     },
   );
+
+  it.each([
+    ['Input image exceeds pixel limit', 'IMAGE_PIXEL_LIMIT_EXCEEDED'],
+    ['Input buffer has corrupt header', 'INVALID_IMAGE'],
+  ])('classifies Sharp failure "%s" as %s', async (message, code) => {
+    jest.mocked(sharp).mockImplementationOnce(() => {
+      throw new Error(message);
+    });
+    await expect(
+      service.assertFileMatchesDocumentType({
+        documentType: StorageDocumentType.equipment_photo,
+        file: createFile({
+          buffer: pngBytes(),
+          mimetype: 'image/png',
+          originalname: 'photo.png',
+        }),
+      }),
+    ).rejects.toMatchObject({ response: { code } });
+  });
 
   it('rejects a second active file for single document types', () => {
     expect(() =>
@@ -172,9 +214,10 @@ function createStorageFile(overrides: Partial<StorageFile> = {}): StorageFile {
     mimeType: 'application/pdf',
     objectKey: 'key',
     originalName: 'file.pdf',
-    ownerEntityId: 10,
+    ownerEntityId: '10',
     ownerEntityType: 'equipment',
-    ownerModule: StorageOwnerModule.EQUIPMENT,
+    ownerModule: 'equipment',
+    isImmutable: false,
     sizeBytes: 100n,
     uploadedByUserId: null,
     ...overrides,

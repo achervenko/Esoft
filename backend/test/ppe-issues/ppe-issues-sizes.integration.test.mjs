@@ -70,6 +70,7 @@ export function registerTests(env) {
   for (const [type, value, height] of [
     ['FEET', '42', null],
     ['BODY', '88–92', '158–164'],
+    ['TSHIRT', '108', '182–188'],
     ['HANDS', 'L', null],
     ['HEAD', '58', null],
   ]) {
@@ -77,9 +78,13 @@ export function registerTests(env) {
       const f = await issueFixture({ type });
       const plan = await issues.plan(f.employee.id, date());
       assert.equal(plan.items[0].sizes.recommendedSizeId, f.sizes[0].id);
+      const recommendation = await issues.recommendSize(f.employee.id, f.ppe.id);
+      assert.equal(recommendation.recommendedSizeValue, value);
+      assert.equal(recommendation.recommendedHeightValue, height);
       const [issue] = await issues.createRegular(f.request, specialist);
       assert.equal(issue.sizeValue, value);
-      assert.equal(issue.clothingHeight, height);
+      assert.equal(issue.heightValue, height);
+      assert.equal((await issues.findOne(issue.id)).heightValue, height);
       assert.equal(issue.ppeItemTypeSnapshot, type);
       assert.equal(plan.items[0].type, type);
       assert.deepEqual(issue.warnings, []);
@@ -97,7 +102,7 @@ export function registerTests(env) {
     });
     const [issue] = await issues.createRegular(clothing.request, specialist);
     assert.equal(issue.sizeValue, null);
-    assert.equal(issue.clothingHeight, null);
+    assert.equal(issue.heightValue, null);
   });
   test('OTHER replacement clears both size snapshots', async () => {
     const f = await issueFixture({ type: 'OTHER' });
@@ -111,7 +116,7 @@ export function registerTests(env) {
     );
     assert.equal(issue.ppeItemTypeSnapshot, 'OTHER');
     assert.equal(issue.sizeValue, null);
-    assert.equal(issue.clothingHeight, null);
+    assert.equal(issue.heightValue, null);
     assert.equal(
       await prisma.ppeIssue.count({ where: { ppeItemId: f.ppe.id } }),
       0,
@@ -198,7 +203,7 @@ export function registerTests(env) {
     );
   });
   test('different active size warns without blocking REGULAR or EXTRA and preserves selected size', async () => {
-    for (const type of ['HANDS', 'FEET', 'BODY', 'HEAD']) {
+    for (const type of ['HANDS', 'FEET', 'BODY', 'TSHIRT', 'HEAD']) {
       const f = await issueFixture({ type });
       for (const regular of [true, false]) {
         const [issue] = await (regular
@@ -229,7 +234,8 @@ export function registerTests(env) {
           (await issues.findOne(issue.id)).sizeValue,
           f.sizes[1].value,
         );
-        assert.equal(issue.clothingHeight, type === 'BODY' ? '158–164' : null);
+        assert.equal(issue.heightValue, f.sizes[1].heightValue);
+        assert.equal((await issues.findOne(issue.id)).heightValue, f.sizes[1].heightValue);
       }
     }
   });

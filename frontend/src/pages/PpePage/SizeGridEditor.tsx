@@ -7,7 +7,7 @@ import { ppeError } from "../../modules/ppe-ui/ppe-presentation";
 import { ppeApi, type PpeItem } from "../../shared/api/ppe";
 import { GuardedAdminModal } from "../../shared/ui/GuardedAdminModal";
 import { useDraftChanges } from "../../shared/lib/use-draft-changes";
-import { defaultClothingSizes } from "../../modules/ppe-ui/ppe-size-options";
+import { defaultClothingSizes, defaultTshirtSizes } from "../../modules/ppe-ui/ppe-size-options";
 
 type GridDraft =
   | { type: "BODY"; values: { value: string; heightValue: string }[] }
@@ -15,7 +15,7 @@ type GridDraft =
 
 function initialDraft(item: PpeItem): GridDraft {
   const active = item.sizes.filter((size) => size.isActive);
-  return item.type === "BODY"
+  return (item.type === "BODY" || item.type === "TSHIRT")
     ? {
         type: "BODY",
         values: active.length
@@ -23,7 +23,7 @@ function initialDraft(item: PpeItem): GridDraft {
               value: size.value,
               heightValue: size.heightValue ?? "",
             }))
-          : defaultClothingSizes(),
+          : item.type === "TSHIRT" ? defaultTshirtSizes() : defaultClothingSizes(),
       }
     : { type: item.type === "HEAD" ? "HEAD" : item.type === "HANDS" ? "HANDS" : "FEET", values: active.map((size) => size.value) };
 }
@@ -87,6 +87,7 @@ export function SizeGridEditor({
           />
         ) : (
           <ClothingSizeGrid
+            variant={item.type === "TSHIRT" ? "tshirt" : "clothing"}
             values={draft.values}
             disabled={saving}
             onChange={(values) => setDraft({ type: "BODY", values })}

@@ -6,17 +6,20 @@ import { ManufacturersDictionaryPanel } from "./ManufacturersDictionaryPanel";
 import { CountriesTable } from "./CountriesTable";
 import { LocationsDictionaryPanel } from "./LocationsDictionaryPanel";
 import type { DictionariesContentModel } from "./dictionaries-page-view.types";
+import type { EmployeeSizes } from "../../shared/api/ppe";
 
 type DictionariesPageContentProps = {
   page: DictionariesContentModel;
   userPermissions: readonly string[] | null;
   onOpenEmployeeSizes: (id: number) => void;
+  employeeSizes?: ReadonlyMap<number, EmployeeSizes | null>;
 };
 
 export function DictionariesPageContent({
   page,
   userPermissions,
   onOpenEmployeeSizes,
+  employeeSizes,
 }: DictionariesPageContentProps) {
   return (
     <>
@@ -33,6 +36,7 @@ export function DictionariesPageContent({
       page.activeTab === "employees" ? (
         <DictionaryEmployeesTable
           employees={page.employees}
+          employeeSizes={employeeSizes}
           isSaving={page.isSaving}
           onSizes={
             canManageEmployeeSizes(userPermissions)

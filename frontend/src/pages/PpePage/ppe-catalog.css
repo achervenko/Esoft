@@ -1,3 +1,13 @@
+.admin-secondary-button.ppe-catalog-sizes-button {
+  box-sizing: border-box;
+  width: 128px;
+  min-width: 128px;
+  max-width: 128px;
+  flex-shrink: 0;
+  height: 36px;
+  white-space: nowrap;
+}
+
 .admin-card.ppe-catalog-toolbar {
   align-items: center;
   gap: 12px;

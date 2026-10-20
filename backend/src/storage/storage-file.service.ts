@@ -22,6 +22,7 @@ import { StorageImagePreviewService } from './storage-image-preview.service';
 import { StorageObjectService } from './storage-object.service';
 import { StorageOwnerLockService } from './storage-owner-lock.service';
 import { StorageOwnerService } from './storage-owner.service';
+import { assertStorageFileMutable } from './storage-owner.validation';
 import type {
   StorageAuditContext,
   StorageFileDto,
@@ -141,6 +142,7 @@ export class StorageFileService {
       if (!file) {
         throw new NotFoundException('Файл не найден.');
       }
+      assertStorageFileMutable(file);
 
       const activeFiles = await tx.storageFile.findMany({
         orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
@@ -195,7 +197,8 @@ export class StorageFileService {
   ) {
     return this.auditLog.writeFieldChanges({
       action: params.action,
-      entityId: params.owner.entityId,
+      entityId: params.owner.auditEntityId,
+      entityStringId: params.owner.entityId,
       entityType: params.owner.entityType,
       fields: [
         {

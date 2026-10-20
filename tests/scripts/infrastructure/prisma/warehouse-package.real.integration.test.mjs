@@ -114,7 +114,12 @@ async function verifyWarehouse(prisma, database, actor) {
   await assert.rejects(prisma.warehouseIssueSheet.delete({ where: { id: sheet.id } }), { code: 'P2003' });
   await verifyWarehouseIssues(prisma, database, { item, balance, line, project: projectRow });
   const columns = (await database.query("SELECT table_name,column_name,data_type,numeric_precision,numeric_scale,character_maximum_length FROM information_schema.columns WHERE table_schema='public' AND table_name LIKE 'warehouse_%'")).rows;
-  assert.equal(new Set(columns.map((column) => column.table_name)).size, 9);
+  assert.deepEqual([...new Set(columns.map((column) => column.table_name))].sort(), [
+    'warehouse_items', 'warehouse_storage_locations', 'warehouse_projects', 'warehouse_balances',
+    'warehouse_project_reservations', 'warehouse_issue_sheets', 'warehouse_issue_sheet_lines',
+    'warehouse_issues', 'warehouse_issue_positions', 'warehouse_stock_adjustments',
+    'warehouse_stock_adjustment_attachments',
+  ].sort());
   for (const column of columns.filter((column) => column.column_name === 'quantity')) {
     assert.equal(column.numeric_precision, 14);
     assert.equal(column.numeric_scale, 3);

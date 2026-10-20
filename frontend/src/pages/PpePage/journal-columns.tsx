@@ -48,8 +48,8 @@ export function createJournalColumns(
     {
       key: "size",
       label: "Размер",
-      render: (row) => sizeLabel(row.sizeValue, row.clothingHeight),
-      sortValue: (row) => sizeLabel(row.sizeValue, row.clothingHeight),
+      render: (row) => sizeLabel(row.sizeValue, row.heightValue),
+      sortValue: (row) => sizeLabel(row.sizeValue, row.heightValue),
     },
     {
     key: "actions",

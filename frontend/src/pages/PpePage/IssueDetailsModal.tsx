@@ -91,7 +91,7 @@ export function IssueSnapshot({
     ["Выдано фактически", `${issue.article} / ${issue.name}`],
     ["Тип СИЗ", typeLabels[issue.ppeItemTypeSnapshot]],
     ["Количество", formatPpeQuantity(issue.quantity, issue.unit)],
-    ["Размер / ростовка", sizeLabel(issue.sizeValue, issue.clothingHeight)],
+    ["Размер / ростовка", sizeLabel(issue.sizeValue, issue.heightValue)],
     ["Нормативная дата", formatPpeDate(issue.scheduledAt)],
     ["Дата выдачи", formatPpeDate(issue.issuedAt)],
     ["Выдал", issue.issuedByName],

@@ -135,7 +135,10 @@ export class PpeCatalogService {
         const incompatible = await tx.ppeItemSize.count({
           where: {
             ppeItemId: id,
-            heightValue: data.type === PpeItemType.BODY ? null : { not: null },
+            heightValue:
+              data.type === PpeItemType.BODY || data.type === PpeItemType.TSHIRT
+                ? null
+                : { not: null },
           },
         });
         if (incompatible > 0)

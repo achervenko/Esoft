@@ -1,9 +1,5 @@
 import type { Readable } from 'node:stream';
-import type {
-  AuditModule,
-  StorageDocumentType,
-  StorageOwnerModule,
-} from '@prisma/client';
+import type { AuditModule, StorageDocumentType } from '@prisma/client';
 
 export type { StorageDocumentType };
 
@@ -29,9 +25,10 @@ export type UploadedFileInput = {
 };
 
 export type StorageOwnerContext = {
-  entityId: number;
+  entityId: string;
+  auditEntityId?: number;
   entityType: string;
-  module: StorageOwnerModule;
+  module: string;
 };
 
 export type StorageAuditContext = {

@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { StorageOwnerContext } from './storage.types';
+import { assertStorageOwner } from './storage-owner.validation';
 
 @Injectable()
 export class StorageOwnerLockService {
   lock(tx: Prisma.TransactionClient, owner: StorageOwnerContext) {
+    assertStorageOwner(owner);
     const key = [
       'storage_files',
       owner.module,

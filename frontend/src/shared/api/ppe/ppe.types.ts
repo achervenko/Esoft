@@ -1,4 +1,4 @@
-export type PpeType = "BODY" | "FEET" | "HANDS" | "HEAD" | "OTHER";
+export type PpeType = "BODY" | "FEET" | "HANDS" | "HEAD" | "OTHER" | "TSHIRT";
 export type PpeSize = {
   id: number;
   ppeItemId: number;
@@ -20,6 +20,8 @@ export type PpePosition = { id: number; name: string; isActive: boolean };
 export type EmployeeSizes = {
   clothingSize: string | null;
   clothingHeight: string | null;
+  tshirtSize: string | null;
+  tshirtHeight: string | null;
   shoeSize: number | null;
   gloveSize: string | null;
   headwearSize: string | null;
@@ -81,7 +83,7 @@ export type PpeIssue = {
   unit: string;
   quantity: number;
   sizeValue: string | null;
-  clothingHeight: string | null;
+  heightValue: string | null;
   scheduledAt: string | null;
   issuedAt: string;
   issuedByUserId: string;
@@ -102,7 +104,7 @@ export type SizeRecommendation = {
   recommendedSizeValue: string | null;
   recommendedSizeId: number | null;
   recommendedHeightValue: string | null;
-  clothingHeight: string | null;
+  heightValue: string | null;
   requiresSelection: boolean;
   activeSizes: Pick<PpeSize, "id" | "value" | "heightValue">[];
 };

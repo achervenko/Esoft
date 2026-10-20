@@ -2,6 +2,8 @@ import { Edit2 } from "lucide-react";
 import type { AdminEmployee } from "../../shared/api/users-admin-api";
 import { DataTable, type DataTableColumn } from "../../shared/ui/DataTable";
 import { Switch } from "../../shared/ui/Switch";
+import type { EmployeeSizes } from "../../shared/api/ppe";
+import { employeeSizesStatus } from "../../modules/ppe-ui/employee-sizes-model";
 
 type DictionaryEmployeesTableProps = {
   employees: AdminEmployee[];
@@ -9,6 +11,7 @@ type DictionaryEmployeesTableProps = {
   onEdit: (employee: AdminEmployee) => void;
   onToggleStatus: (employee: AdminEmployee) => void;
   onSizes?: (employee: AdminEmployee) => void;
+  employeeSizes?: ReadonlyMap<number, EmployeeSizes | null>;
 };
 
 const employeeColumns = (
@@ -16,6 +19,7 @@ const employeeColumns = (
   onToggleStatus: (employee: AdminEmployee) => void,
   isSaving: boolean,
   onSizes?: (employee: AdminEmployee) => void,
+  employeeSizes?: ReadonlyMap<number, EmployeeSizes | null>,
 ): Array<DataTableColumn<AdminEmployee, string>> => [
   {
     key: "fullName",
@@ -55,29 +59,47 @@ const employeeColumns = (
     key: "actions",
     className: "admin-table-actions-column",
     label: "",
-    render: (employee) => (
-      <div className="admin-table-actions">
-        {onSizes && (
+    render: (employee) => {
+      const status = employeeSizes?.has(employee.id)
+        ? employeeSizesStatus(employeeSizes.get(employee.id) ?? null)
+        : "complete";
+      const warning =
+        status === "missing"
+          ? "Размеры не заполнены"
+          : "Размеры заполнены частично";
+      return (
+        <div className="admin-table-actions">
+          {onSizes && (
+            <button
+              className="employee-sizes-button"
+              type="button"
+              disabled={isSaving}
+              onClick={() => onSizes(employee)}
+            >
+              Размеры
+              {status !== "complete" && (
+                <span
+                  className={`employee-sizes-dot ${status}`}
+                  role="img"
+                  aria-label={warning}
+                  title={warning}
+                />
+              )}
+            </button>
+          )}
           <button
-            type="button"
+            aria-label={`Редактировать сотрудника ${employee.fullName}`}
+            className="admin-icon-button"
             disabled={isSaving}
-            onClick={() => onSizes(employee)}
+            onClick={() => onEdit(employee)}
+            title="Редактировать"
+            type="button"
           >
-            Размеры
+            <Edit2 size={17} />
           </button>
-        )}
-        <button
-          aria-label={`Редактировать сотрудника ${employee.fullName}`}
-          className="admin-icon-button"
-          disabled={isSaving}
-          onClick={() => onEdit(employee)}
-          title="Редактировать"
-          type="button"
-        >
-          <Edit2 size={17} />
-        </button>
-      </div>
-    ),
+        </div>
+      );
+    },
   },
 ];
 
@@ -87,10 +109,17 @@ export function DictionaryEmployeesTable({
   onEdit,
   onToggleStatus,
   onSizes,
+  employeeSizes,
 }: DictionaryEmployeesTableProps) {
   return (
     <DataTable
-      columns={employeeColumns(onEdit, onToggleStatus, isSaving, onSizes)}
+      columns={employeeColumns(
+        onEdit,
+        onToggleStatus,
+        isSaving,
+        onSizes,
+        employeeSizes,
+      )}
       defaultSort={{ direction: "asc", key: "fullName" }}
       getRowKey={(employee) => employee.id}
       rows={employees}

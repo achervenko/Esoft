@@ -50,7 +50,7 @@ export function parseJournalQuery(payload: unknown) {
     );
   if (direction !== 'asc' && direction !== 'desc')
     badPpeRequest('INVALID_SORT', 'Некорректное направление сортировки.');
-  const size = Prisma.sql`coalesce(nullif(concat_ws('; ', nullif(size_value, ''), nullif(clothing_height_snapshot, '')), ''), 'Без размера')`;
+  const size = Prisma.sql`coalesce(nullif(concat_ws('; ', nullif(size_value, ''), nullif(height_snapshot, '')), ''), 'Без размера')`;
   const columns: Record<string, Prisma.Sql> = {
     date: Prisma.sql`issued_at`,
     employee: Prisma.sql`lower(employee_name_snapshot) COLLATE app_registry_order`,

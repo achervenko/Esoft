@@ -41,7 +41,7 @@ export function SizeEditForm({
           onChange={(e) => onValueChange(normalizePpeSizeText(e.target.value))}
         />
       </Field>
-      {item.type === "BODY" && (
+      {(item.type === "BODY" || item.type === "TSHIRT") && (
         <Field label="Ростовка">
           <input
             required

@@ -21,15 +21,18 @@ Storage не должен знать бизнес-логику оборудов�
 
 ```ts
 type StorageOwnerContext = {
-  module: StorageOwnerModule;
+  module: string;
   entityType: string;
-  entityId: number;
+  entityId: string;
+  auditEntityId?: number;
 };
 ```
 
-- `module` - область владельца, сейчас в Prisma есть `StorageOwnerModule.EQUIPMENT`.
+- `module` — строковый код модуля, например `equipment` или `warehouse`; enum в БД не нужен.
 - `entityType` - строковый тип сущности внутри модуля, например `equipment`.
-- `entityId` - внутренний DB id бизнес-сущности.
+- `entityId` — строковый внутренний ID: поддерживаются integer, bigint и UUID без потери точности.
+- `auditEntityId` — необязательный числовой ID для бизнес-сущностей с integer-ID в общем аудите.
+  Оборудование передаёт его явно; Storage также сохраняет строковый ID в `entityStringId`.
 
 `StorageDocumentType` - Prisma enum типа документа. Текущие значения:
 
@@ -272,7 +275,13 @@ DELETE /api/equipment/:visibleId/files/:fileId
 PATCH  /api/equipment/:visibleId/files/:fileId/primary
 ```
 
-Controller получает owner через `EquipmentService.findStorageOwnerByVisibleId`, для mutating операций глобальный guard проверяет разрешение `files.manage` (глобальный guard), передает `audit: { actionModule: AuditModule.EQUIPMENT }`, валидирует multipart `documentType` через `ParseEnumPipe`, а preview `size` ограничивает значениями `small` и `medium`.
+Controller получает owner через `EquipmentService.findStorageOwnerByVisibleId`. Глобальный guard проверяет оба разрешения для каждой операции:
+
+- list / download / preview — `files.read` + `equipment.read`;
+- upload / delete / set primary — `files.manage` + `equipment.edit`.
+
+Consumer обязан объявить проверку права на бизнес-владельца вместе с общим правом на файлы.
+Для изменяющих операций controller передаёт `audit: { actionModule: AuditModule.EQUIPMENT }`, валидирует multipart `documentType` через `ParseEnumPipe`, а preview `size` ограничивает значениями `small` и `medium`.
 
 ## Добавление нового DocumentType
 
@@ -330,3 +339,34 @@ npm run build --workspace backend
 - Audit entity всегда берется из owner; caller передает только `actionModule`.
 - Object key не должен строиться из пользовательского filename.
 - Preview generation сначала проверяет cache, затем применяет size guards.
+
+
+## Документы транзакционных операций
+
+`StorageStagedUploadService.prepare(scope, actorUserId, documentType, file)` сохраняет
+в `StorageUpload` намерение загрузки, затем записывает объект в MinIO и отмечает
+успешную загрузку. Scope содержит модуль и тип будущей сущности, без ID владельца.
+Подтверждение `attach(tx, uploadIds, owner, actorUserId, immutable)` создаёт
+`StorageFile` и удаляет временные записи в переданной транзакции бизнес-операции.
+При откате временные записи сохраняются и могут быть использованы повторно.
+
+Загрузка принадлежит её автору и scope, допускает однократное прикрепление,
+действует 24 часа. Объекты не перемещаются: прежний ключ сохраняется при прикреплении.
+SHA-256 исходных байтов доступен из временной записи для снимка бизнес-аудита.
+Вызывающий компонент может передать в `prepare` правило форматов и проверки
+содержимого отдельным аргументом. StockAdjustments допускает PDF, JPEG, PNG и WebP;
+это не изменяет правила `supporting_document` других компонентов.
+Общий предел — 25 МБ на файл; прикрепление — 1–10 файлов.
+
+Каждый процесс раз в минуту обрабатывает до 20 просроченных загрузок. PostgreSQL
+`FOR UPDATE SKIP LOCKED` согласует несколько обработчиков и прикрепление.
+Намерение очистки хранится до успешного удаления объекта; сбой MinIO приводит
+к повторной попытке на следующем проходе. Для досрочного запуска доступен
+`cleanupExpired()`. Незавершённые загрузки переживают перезапуск процесса.
+
+`StorageFile.isImmutable=true` запрещает soft delete и смену основного файла.
+Права на чтение и существование владельца проверяет бизнес-компонент;
+универсальных ownerless HTTP-маршрутов Storage не предоставляет.
+Существующий одиночный `uploadFile` остаётся удобным самостоятельным сценарием
+с собственной транзакцией метаданных и компенсацией при ошибке. Для общей
+транзакции нескольких компонентов используется staged API.

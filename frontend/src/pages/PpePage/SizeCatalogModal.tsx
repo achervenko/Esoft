@@ -11,7 +11,7 @@ type SizeCatalogModalProps = {
 
 export function SizeCatalogModal(props: SizeCatalogModalProps) {
   const { item, manage } = props;
-  return manage && (item.type === "BODY" || item.type === "FEET" || item.type === "HANDS" || item.type === "HEAD") ? (
+  return manage && ((item.type === "BODY" || item.type === "TSHIRT") || item.type === "FEET" || item.type === "HANDS" || item.type === "HEAD") ? (
     <SizeGridEditor
       item={item}
       onClose={props.onClose}

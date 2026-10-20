@@ -6,6 +6,9 @@ import { Field } from "./ppe-ui";
 import {
   clothingSizes as sizes,
   clothingHeights as heights,
+  tshirtSizes,
+  tshirtHeights,
+  defaultTshirtSizes,
   type ClothingSize,
 } from "./ppe-size-options";
 
@@ -14,15 +17,18 @@ export function ClothingSizeGrid({
   onChange,
   disabled = false,
   selectionMode = "multiple",
+  variant = "clothing",
 }: {
   values: ClothingSize[];
   onChange: (values: ClothingSize[]) => void;
   disabled?: boolean;
   selectionMode?: "single" | "multiple";
+  variant?: "clothing" | "tshirt";
 }) {
   const [manualSize, setManualSize] = useState("");
   const [manualHeight, setManualHeight] = useState("");
   const [customGrid, setCustomGrid] = useState(false);
+  const [editingGrid, setEditingGrid] = useState(false);
   const [addedSizes, setAddedSizes] = useState<string[]>([]);
   const [addedHeights, setAddedHeights] = useState<string[]>([]);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -30,14 +36,14 @@ export function ClothingSizeGrid({
     a.localeCompare(b, "ru", { numeric: true });
   const rows = [
     ...new Set([
-      ...(customGrid ? [] : sizes),
+      ...(customGrid ? [] : variant === "tshirt" ? tshirtSizes : sizes),
       ...addedSizes,
       ...values.map((pair) => pair.value),
     ]),
   ].sort(compareRanges);
   const columns = [
     ...new Set([
-      ...(customGrid ? [] : heights),
+      ...(customGrid ? [] : variant === "tshirt" ? tshirtHeights : heights),
       ...addedHeights,
       ...values.map((pair) => pair.heightValue),
     ]),
@@ -66,11 +72,18 @@ export function ClothingSizeGrid({
   };
   return (
     <div className="ppe-clothing-size-grid" ref={gridRef}>
-      {rows.map((value) => (
+      {rows.map((value) => {
+        const visibleHeights = variant === "tshirt" && !editingGrid
+          ? columns.filter((heightValue) =>
+              (selectionMode === "single" && !customGrid ? [...defaultTshirtSizes(), ...values] : values)
+                .some((pair) => pair.value === value && pair.heightValue === heightValue))
+          : columns;
+        if (!visibleHeights.length) return null;
+        return (
         <div className="ppe-clothing-size-row" key={value}>
           <strong>{value}</strong>
           <div className="ppe-clothing-height-options">
-            {columns.map((heightValue) => (
+            {visibleHeights.map((heightValue) => (
               <button
                 key={heightValue}
                 type="button"
@@ -87,8 +100,9 @@ export function ClothingSizeGrid({
             ))}
           </div>
         </div>
-      ))}
-      <details className="ppe-clothing-custom">
+        );
+      })}
+      <details className="ppe-clothing-custom" onToggle={(event) => setEditingGrid(event.currentTarget.open)}>
         <summary>Редактировать размеры</summary>
         <div className="ppe-actions">
           <button

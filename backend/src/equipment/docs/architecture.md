@@ -60,8 +60,8 @@ HTTP-запросы обрабатываются двумя контроллер
 
 Каждый обработчик явно объявляет permission, который проверяет глобальный guard:
 
-- list / download / preview — `files.read`;
-- upload / delete / set primary — `files.manage`.
+- list / download / preview — `equipment.read` + `files.read`;
+- upload / delete / set primary — `equipment.edit` + `files.manage`.
 
 Параметры `visibleId` и `fileId` проверяются общим `ParsePositiveIntPipe`.
 Нулевые, отрицательные и небезопасные целые ID возвращают `400 ROUTE_ID_INVALID`.
@@ -169,9 +169,10 @@ Sequence должна иметь INCREMENT 1 и CACHE 1; неверная кон
 
 Он возвращает данные, используемые storage-модулем:
 
-- `entityId` — внутренний `equipment.id`;
+- `entityId` — внутренний `equipment.id`, преобразованный в строку;
+- `auditEntityId` — числовой `equipment.id` для привязки файлового аудита к оборудованию;
 - `entityType` — `"equipment"`;
-- `module` — `StorageOwnerModule.EQUIPMENT`.
+- `module` — строка `equipment`.
 
 Если оборудование не найдено, файловая операция не выполняется.
 

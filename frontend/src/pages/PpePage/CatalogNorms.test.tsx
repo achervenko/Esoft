@@ -14,7 +14,10 @@ import { CatalogPanel } from "./CatalogPanel";
 import { SizeCatalogModal } from "./SizeCatalogModal";
 import { NormFormModal } from "./NormFormModal";
 import { item, norm } from "./ppe-test-fixtures";
-import { defaultClothingSizes, defaultHeadSizes } from "../../modules/ppe-ui/ppe-size-options";
+import {
+  defaultClothingSizes,
+  defaultHeadSizes,
+} from "../../modules/ppe-ui/ppe-size-options";
 vi.stubGlobal(
   "ResizeObserver",
   class {
@@ -32,7 +35,11 @@ describe("PPE catalogue", () => {
     vi.spyOn(ppeApi, "saveItem").mockResolvedValue(item);
     render(
       <ChakraProvider value={defaultSystem}>
-        <CatalogPanel items={[]} permissions={permissionsForTest("admin")} onChanged={vi.fn()} />
+        <CatalogPanel
+          items={[]}
+          permissions={permissionsForTest("admin")}
+          onChanged={vi.fn()}
+        />
       </ChakraProvider>,
     );
     fireEvent.click(screen.getByRole("button", { name: "Добавить СИЗ" }));
@@ -107,33 +114,38 @@ describe("PPE catalogue", () => {
     );
     expect(onChanged).toHaveBeenCalledOnce();
   });
-  it("creates a BODY pair and preserves its two components", async () => {
-    vi.spyOn(ppeApi, "replaceSizes").mockResolvedValue([]);
-    render(
-      <SizeCatalogModal
-        item={item}
-        manage
-        onChanged={vi.fn()}
-        onClose={vi.fn()}
-      />,
-    );
-    fireEvent.click(screen.getByText("Редактировать размеры"));
-    fireEvent.change(screen.getByLabelText("Размер"), {
-      target: { value: "88–92" },
-    });
-    fireEvent.change(screen.getByLabelText("Ростовка"), {
-      target: { value: "182–188" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Добавить" }));
-    fireEvent.click(screen.getByRole("button", { name: "Сохранить размеры" }));
-    await waitFor(() =>
-      expect(ppeApi.replaceSizes).toHaveBeenCalledWith(3, [
-        { value: "88–92;158–164" },
-        { value: "88–92;170–176" },
-        { value: "88–92;182–188" },
-      ]),
-    );
-  });
+  it.each(["BODY", "TSHIRT"] as const)(
+    "creates a %s pair and preserves its two components",
+    async (type) => {
+      vi.spyOn(ppeApi, "replaceSizes").mockResolvedValue([]);
+      render(
+        <SizeCatalogModal
+          item={{ ...item, type }}
+          manage
+          onChanged={vi.fn()}
+          onClose={vi.fn()}
+        />,
+      );
+      fireEvent.click(screen.getByText("Редактировать размеры"));
+      fireEvent.change(screen.getByLabelText("Размер"), {
+        target: { value: "88–92" },
+      });
+      fireEvent.change(screen.getByLabelText("Ростовка"), {
+        target: { value: "182–188" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Добавить" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Сохранить размеры" }),
+      );
+      await waitFor(() =>
+        expect(ppeApi.replaceSizes).toHaveBeenCalledWith(3, [
+          { value: "88–92;158–164" },
+          { value: "88–92;170–176" },
+          { value: "88–92;182–188" },
+        ]),
+      );
+    },
+  );
   it("omits height for FEET and shows a backend pair conflict without closing", async () => {
     vi.spyOn(ppeApi, "replaceSizes").mockRejectedValue(
       new ApiRequestError("Conflict", 409, "PPE_ITEM_SIZE_CONFLICT"),
@@ -193,7 +205,9 @@ describe("PPE norm editor", () => {
     fireEvent.click(screen.getByLabelText("Как работают переходы"));
     expect(screen.getByText(/Выключено — мягкий переход/)).toBeVisible();
     expect(screen.queryByLabelText("Расчёт выдачи")).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Единица периода"), { target: { value: "DAY" } });
+    fireEvent.change(screen.getByLabelText("Единица периода"), {
+      target: { value: "DAY" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Сохранить норму" }));
     await waitFor(() =>
       expect(ppeApi.saveNorm).toHaveBeenCalledWith(
@@ -255,7 +269,9 @@ describe("PPE norm editor", () => {
     const newItemSearch = screen.getAllByRole("combobox", { name: "СИЗ" })[1];
     fireEvent.focus(newItemSearch);
     fireEvent.change(newItemSearch, { target: { value: "A-01" } });
-    expect(screen.queryByRole("option", { name: /A-01/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: /A-01/ }),
+    ).not.toBeInTheDocument();
     fireEvent.keyDown(newItemSearch, {
       key: "Escape",
     });

@@ -33,7 +33,7 @@ export function registerTests(env) {
     });
     const [issued] = await env.issues.createRegular(f.request, env.adminActor);
     assert.equal(issued.sizeValue, '44–46');
-    assert.equal(issued.clothingHeight, '170–176');
+    assert.equal(issued.heightValue, '170–176');
     assert.deepEqual(issued.warnings, []);
   });
   test('regular replacements must match both the norm type and unit', async () => {

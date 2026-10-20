@@ -10,6 +10,7 @@ import {
 import { afterEach, expect, it, vi } from "vitest";
 import { ppeApi } from "../../shared/api/ppe";
 import { SizeCatalogModal } from "./SizeCatalogModal";
+import { SizeListEditor } from "./SizeListEditor";
 import { item } from "./ppe-test-fixtures";
 import { defaultClothingSizes } from "../../modules/ppe-ui/ppe-size-options";
 
@@ -17,6 +18,38 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+it.each(["new", "existing"])("blocks duplicate %s size submits and unlocks after failure", async (mode) => {
+  let reject!: (error: Error) => void;
+  const size = item.sizes[0];
+  const save = vi.spyOn(ppeApi, "saveSize")
+    .mockResolvedValue(size)
+    .mockReturnValueOnce(new Promise((_, fail) => { reject = fail; }));
+  const onChanged = vi.fn();
+  render(
+    <ChakraProvider value={defaultSystem}>
+      <SizeListEditor item={{ ...item, sizes: mode === "new" ? [] : [size] }} manage onClose={vi.fn()} onChanged={onChanged} />
+    </ChakraProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: mode === "new" ? "Добавить размер" : "Изменить" }));
+  fireEvent.change(screen.getByLabelText("Размер"), { target: { value: "52" } });
+  fireEvent.change(screen.getByLabelText("Ростовка"), { target: { value: "182–188" } });
+  const form = screen.getByRole("button", { name: "Сохранить размер" }).closest("form")!;
+  act(() => {
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+  });
+  expect(save).toHaveBeenCalledTimes(1);
+  expect(save).toHaveBeenCalledWith(item.id, mode === "new" ? null : size.id, { value: "52", heightValue: "182–188" });
+  expect(screen.getByRole("button", { name: "Сохранение..." })).toBeDisabled();
+  await act(async () => { reject(new Error("Request failed")); });
+  expect(onChanged).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "Сохранить размер" })).toBeEnabled();
+  await act(async () => { fireEvent.submit(form); });
+  expect(save).toHaveBeenCalledTimes(2);
+  expect(onChanged).toHaveBeenCalledOnce();
+  expect(screen.queryByRole("button", { name: "Сохранить размер" })).not.toBeInTheDocument();
 });
 
 it("blocks concurrent grid saves and allows retry after failure", async () => {

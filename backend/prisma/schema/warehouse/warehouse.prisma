@@ -40,6 +40,7 @@ model WarehouseBalance {
   storageLocationId BigInt                        @map("storage_location_id")
   // DB-only chk_warehouse_balances_quantity: quantity >= 0.
   quantity          Decimal                       @default(0) @db.Decimal(14, 3)
+  adjustments       WarehouseStockAdjustment[]
   reservations      WarehouseProjectReservation[]
   issuePositions    WarehouseIssuePosition[]
   item              WarehouseItem                 @relation(fields: [itemId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_balances_item")
@@ -143,4 +144,43 @@ model WarehouseIssuePosition {
   @@unique([issueId, balanceId], map: "uq_warehouse_issue_positions_issue_balance")
   @@index([balanceId], map: "idx_warehouse_issue_positions_balance")
   @@map("warehouse_issue_positions")
+}
+
+enum WarehouseAdjustmentType {
+  WRITE_OFF
+  SURPLUS
+
+  @@map("warehouse_adjustment_type")
+}
+
+model WarehouseStockAdjustment {
+  id              BigInt                  @id @default(autoincrement())
+  balanceId       BigInt                  @map("balance_id")
+  balance         WarehouseBalance        @relation(fields: [balanceId], references: [id], onDelete: Restrict, map: "fk_warehouse_stock_adjustments_balance")
+  type            WarehouseAdjustmentType
+  quantity        Decimal                 @db.Decimal(14, 3)
+  quantityBefore  Decimal                 @map("quantity_before") @db.Decimal(14, 3)
+  quantityAfter   Decimal                 @map("quantity_after") @db.Decimal(14, 3)
+  reason          String                  @db.VarChar(1000)
+  comment         String?                 @db.Text
+  requestKey      String                  @map("request_key") @db.Uuid
+  requestHash     String                  @map("request_hash") @db.VarChar(64)
+  createdByUserId String                  @map("created_by_user_id")
+  createdBy       User                    @relation(fields: [createdByUserId], references: [id], onDelete: Restrict, map: "fk_warehouse_stock_adjustments_user")
+  createdAt       DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  attachments     WarehouseStockAdjustmentAttachment[]
+
+  @@unique([createdByUserId, requestKey], map: "uq_warehouse_stock_adjustments_request")
+  @@index([balanceId, createdAt], map: "idx_warehouse_stock_adjustments_balance")
+  @@map("warehouse_stock_adjustments")
+}
+
+model WarehouseStockAdjustmentAttachment {
+  adjustmentId BigInt                   @map("adjustment_id")
+  fileId       Int                      @unique(map: "uq_warehouse_stock_adjustment_attachments_file") @map("file_id")
+  adjustment   WarehouseStockAdjustment  @relation(fields: [adjustmentId], references: [id], onDelete: Restrict, map: "fk_warehouse_stock_adjustment_attachments_adjustment")
+  file         StorageFile              @relation(fields: [fileId], references: [id], onDelete: Restrict, map: "fk_warehouse_stock_adjustment_attachments_file")
+
+  @@id([adjustmentId, fileId], map: "pk_warehouse_stock_adjustment_attachments")
+  @@map("warehouse_stock_adjustment_attachments")
 }

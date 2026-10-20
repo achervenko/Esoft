@@ -5,6 +5,8 @@ import { PpeAuditService } from './ppe-audit.service';
 const sizes = {
   clothingSize: '50',
   clothingHeight: '170–176',
+  tshirtSize: null,
+  tshirtHeight: null,
   shoeSize: new Prisma.Decimal('42'),
   gloveSize: null,
   headwearSize: null,

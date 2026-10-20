@@ -34,8 +34,9 @@ export class StorageFilePolicyService {
   async assertFileMatchesDocumentType(params: {
     documentType: StorageDocumentType;
     file: UploadedFileInput;
+    rule?: StorageFileDocumentRule;
   }) {
-    const rule = this.documentRules[params.documentType];
+    const rule = params.rule ?? this.documentRules[params.documentType];
 
     if (!rule) {
       return;
@@ -75,11 +76,17 @@ export class StorageFilePolicyService {
       throwUnsupportedFileFormat();
     }
 
-    if (rule.validateContent === 'pdf') {
+    if (
+      rule.validateContent === 'pdf' ||
+      (rule.validateContent === 'document' && mimeType === 'application/pdf')
+    ) {
       assertValidPdfBuffer(params.file.buffer);
     }
 
-    if (rule.validateContent === 'image') {
+    if (
+      rule.validateContent === 'image' ||
+      (rule.validateContent === 'document' && mimeType !== 'application/pdf')
+    ) {
       assertImageMimeTypeMatchesRule({
         allowedMimeTypes: rule.allowedMimeTypes,
         buffer: params.file.buffer,
@@ -209,7 +216,16 @@ async function assertValidImageBuffer(params: {
         : { limitInputPixels: params.maxPixelCount };
 
     await sharp(params.buffer, sharpOptions).rotate().toBuffer();
-  } catch {
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes('Input image exceeds pixel limit')
+    ) {
+      throw createStorageFileBadRequest(
+        'IMAGE_PIXEL_LIMIT_EXCEEDED',
+        'Изображение превышает допустимое количество пикселей.',
+      );
+    }
     throw createStorageFileBadRequest(
       'INVALID_IMAGE',
       'Изображение повреждено или имеет неверный формат.',

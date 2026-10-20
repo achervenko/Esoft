@@ -9,6 +9,7 @@ import {
 } from './storage-file.mapper';
 import { StorageFilePolicyService } from './storage-file-policy.service';
 import { StorageOwnerLockService } from './storage-owner-lock.service';
+import { assertStorageFileMutable } from './storage-owner.validation';
 import type { StorageAuditContext, StorageOwnerContext } from './storage.types';
 
 @Injectable()
@@ -42,6 +43,7 @@ export class StorageFilePrimaryService {
       if (!file) {
         throw new NotFoundException('Файл не найден.');
       }
+      assertStorageFileMutable(file);
 
       this.policy.assertCanBePrimary(file.documentType);
 
@@ -53,6 +55,10 @@ export class StorageFilePrimaryService {
 
       if (file.isPrimary) {
         return file;
+      }
+
+      for (const activeFile of activeFiles) {
+        if (activeFile.isPrimary) assertStorageFileMutable(activeFile);
       }
 
       const previousPrimaryFile =
@@ -69,6 +75,7 @@ export class StorageFilePrimaryService {
         data: { isPrimary: false },
         where: {
           deletedAt: null,
+          isPrimary: true,
           documentType: file.documentType,
           ownerEntityId: file.ownerEntityId,
           ownerEntityType: file.ownerEntityType,
@@ -83,7 +90,8 @@ export class StorageFilePrimaryService {
 
       await this.auditLog.writeFieldChanges({
         action: AuditAction.UPDATE,
-        entityId: params.owner.entityId,
+        entityId: params.owner.auditEntityId,
+        entityStringId: params.owner.entityId,
         entityType: params.owner.entityType,
         fields: [
           {
@@ -132,6 +140,7 @@ export class StorageFilePrimaryService {
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       where: {
         deletedAt: null,
+        isImmutable: false,
         documentType: file.documentType,
         ownerEntityId: file.ownerEntityId,
         ownerEntityType: file.ownerEntityType,

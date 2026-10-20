@@ -5,6 +5,13 @@ import {
 } from './permission-policy';
 import { USER_ROLES, getEffectiveUserRoles } from './role-module-policy';
 
+it('grants stock adjustments only through the admin role', () => {
+  for (const role of USER_ROLES)
+    expect(hasPermission(role, 'warehouse.adjustments.manage')).toBe(
+      role === 'admin',
+    );
+});
+
 describe('profile read permission', () => {
   it('is an ordinary permission granted by each known role', () => {
     expect(getPermissionRoles('users.profile.read')).toEqual([...USER_ROLES]);

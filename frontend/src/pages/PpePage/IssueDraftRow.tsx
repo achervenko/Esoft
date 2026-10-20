@@ -87,7 +87,7 @@ export function IssueDraftRow({
           {data.type !== "OTHER" && data.activeSizes.length > 0 ? (
             <Field
               label={
-                data.type === "BODY"
+                (data.type === "BODY" || data.type === "TSHIRT")
                   ? "Размер / ростовка"
                   : "Размер"
               }

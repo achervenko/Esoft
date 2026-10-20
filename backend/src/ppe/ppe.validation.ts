@@ -5,6 +5,8 @@ import { normalizePpeSizeText } from './ppe-size-text';
 export const employeeSizeFields = [
   'clothingSize',
   'clothingHeight',
+  'tshirtSize',
+  'tshirtHeight',
   'shoeSize',
   'gloveSize',
   'headwearSize',
@@ -145,15 +147,22 @@ export function assertPpeSizeType(
       'PPE_ITEM_SIZES_NOT_ALLOWED',
       'Для СИЗ типа OTHER размеры не предусмотрены.',
     );
-  if (type === PpeItemType.BODY && heightValue === null)
+  if (
+    (type === PpeItemType.BODY || type === PpeItemType.TSHIRT) &&
+    heightValue === null
+  )
     badPpeRequest(
       'PPE_HEIGHT_REQUIRED',
-      'Для одежды укажите размер и ростовку.',
+      'Для одежды и футболок укажите размер и ростовку.',
     );
-  if (type !== PpeItemType.BODY && heightValue !== null)
+  if (
+    type !== PpeItemType.BODY &&
+    type !== PpeItemType.TSHIRT &&
+    heightValue !== null
+  )
     badPpeRequest(
       'PPE_HEIGHT_NOT_ALLOWED',
-      'Ростовка предусмотрена только для одежды.',
+      'Ростовка предусмотрена только для одежды и футболок.',
     );
 }
 
@@ -168,6 +177,8 @@ export function parsePpeStatus(payload: unknown) {
 export type EmployeeSizesPatch = Partial<{
   clothingSize: string | null;
   clothingHeight: string | null;
+  tshirtSize: string | null;
+  tshirtHeight: string | null;
   shoeSize: number | null;
   gloveSize: string | null;
   headwearSize: string | null;

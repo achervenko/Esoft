@@ -35,6 +35,8 @@ function toPpeEmployee(employee: PpeEmployee) {
 const sizeLabels = {
   clothingSize: 'Размер одежды',
   clothingHeight: 'Ростовка одежды',
+  tshirtSize: 'Размер футболки',
+  tshirtHeight: 'Ростовка футболки',
   shoeSize: 'Размер обуви',
   gloveSize: 'Размер перчаток',
   headwearSize: 'Размер головного убора',

@@ -9,7 +9,10 @@ import { Reflector } from '@nestjs/core';
 import { ACTIVE_MODULES } from '../config/active-modules.module';
 import { getEffectiveUserRoles } from './role-module-policy';
 import { hasPermission, isPermission } from './permission-policy';
-import { REQUIRED_PERMISSION } from './require-permission';
+import {
+  ADDITIONAL_REQUIRED_PERMISSIONS,
+  REQUIRED_PERMISSION,
+} from './require-permission';
 import { assertCanViewUserProfile } from './role-permissions';
 
 export const AUTHENTICATE_REQUEST = Symbol('AUTHENTICATE_REQUEST');
@@ -33,9 +36,17 @@ export class PermissionsGuard implements CanActivate {
       REQUIRED_PERMISSION,
       handler,
     );
+    const additional = this.reflector.get<unknown>(
+      ADDITIONAL_REQUIRED_PERMISSIONS,
+      handler,
+    );
+    const validAdditional =
+      additional === undefined ||
+      (Array.isArray(additional) && additional.every(isPermission));
     const isPublic = this.reflector.get<unknown>('PUBLIC', handler) === true;
-    if (isPublic && permission === undefined) return true;
-    if (isPublic || !isPermission(permission))
+    if (isPublic && permission === undefined && additional === undefined)
+      return true;
+    if (isPublic || !isPermission(permission) || !validAdditional)
       throw new ForbiddenException({
         code: 'PERMISSION_NOT_DECLARED',
         message: 'Для операции не объявлено допустимое разрешение.',
@@ -55,7 +66,15 @@ export class PermissionsGuard implements CanActivate {
       request.session = { ...request.session, user: effectiveUser };
       request.user = effectiveUser;
     }
-    if (!user || !hasPermission(effectiveRole, permission)) {
+    if (
+      !user ||
+      !hasPermission(effectiveRole, permission) ||
+      (Array.isArray(additional) &&
+        !additional.every(
+          (required: unknown) =>
+            isPermission(required) && hasPermission(effectiveRole, required),
+        ))
+    ) {
       throw new ForbiddenException({
         code: 'FORBIDDEN',
         message: 'Недостаточно прав для этой операции.',

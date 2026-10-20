@@ -67,7 +67,8 @@ export class StorageFileUploadTransactionService {
 
       await this.auditLog.writeFieldChanges({
         action: AuditAction.FILE_UPLOAD,
-        entityId: params.owner.entityId,
+        entityId: params.owner.auditEntityId,
+        entityStringId: params.owner.entityId,
         entityType: params.owner.entityType,
         fields: [
           {

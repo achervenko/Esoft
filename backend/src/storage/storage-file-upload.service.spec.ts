@@ -1,9 +1,5 @@
 import { InternalServerErrorException, Logger } from '@nestjs/common';
-import {
-  AuditModule,
-  StorageDocumentType,
-  StorageOwnerModule,
-} from '@prisma/client';
+import { AuditModule, StorageDocumentType } from '@prisma/client';
 import { StorageFilePolicyService } from './storage-file-policy.service';
 import { StorageFileUploadService } from './storage-file-upload.service';
 import { StorageFileUploadTransactionService } from './storage-file-upload-transaction.service';
@@ -184,9 +180,10 @@ describe('StorageFileUploadService', () => {
 
 function owner() {
   return {
-    entityId: 10,
+    entityId: '10',
+    auditEntityId: 10,
     entityType: 'equipment',
-    module: StorageOwnerModule.EQUIPMENT,
+    module: 'equipment',
   };
 }
 
@@ -212,9 +209,10 @@ function createStorageFileRecord() {
     mimeType: 'application/pdf',
     objectKey: 'equipment/equipment/10/passport/object.pdf',
     originalName: 'passport.pdf',
-    ownerEntityId: 10,
+    ownerEntityId: '10',
     ownerEntityType: 'equipment',
-    ownerModule: StorageOwnerModule.EQUIPMENT,
+    ownerModule: 'equipment',
+    isImmutable: false,
     sizeBytes: 100n,
     uploadedByUserId: null,
   };

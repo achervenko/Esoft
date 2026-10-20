@@ -1,12 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { StorageOwnerContext } from './storage.types';
+import { assertStorageOwner } from './storage-owner.validation';
 
 @Injectable()
 export class StorageOwnerService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findActiveFiles(owner: StorageOwnerContext) {
+    assertStorageOwner(owner);
     return this.prisma.storageFile.findMany({
       where: {
         deletedAt: null,
@@ -19,6 +21,7 @@ export class StorageOwnerService {
   }
 
   async findActiveFileForOwner(fileId: number, owner: StorageOwnerContext) {
+    assertStorageOwner(owner);
     const file = await this.prisma.storageFile.findFirst({
       where: {
         deletedAt: null,

@@ -3,6 +3,44 @@ import { afterEach, expect, it, vi } from "vitest";
 import { SearchSelect } from "./SearchSelect";
 import { useState } from "react";
 afterEach(cleanup);
+
+it("keeps suggestions outside clipping containers and repositions on scroll", () => {
+  const view = render(<div style={{ overflow: "hidden" }} data-admin-modal-id="norm-modal">
+    <SearchSelect label="Item" options={[{ id: 1, name: "Item" }]} value={null} onChange={vi.fn()} />
+  </div>);
+  const input = screen.getByRole("combobox");
+  const rect = vi.spyOn(input, "getBoundingClientRect").mockReturnValue({
+    left: 40, right: 340, top: window.innerHeight - 90, bottom: window.innerHeight - 50,
+    width: 300, height: 40, x: 40, y: 0, toJSON: () => ({}),
+  });
+  fireEvent.focus(input);
+  const menu = screen.getByRole("listbox");
+  expect(menu.parentElement).toBe(document.body);
+  expect(view.container.contains(menu)).toBe(false);
+  expect(menu).toHaveAttribute("data-admin-modal-owner", "norm-modal");
+  expect(menu).toHaveStyle({ position: "fixed", bottom: "96px", width: "300px" });
+  rect.mockReturnValue({ left: 40, right: 340, top: 50, bottom: 90, width: 300, height: 40, x: 40, y: 50, toJSON: () => ({}) });
+  fireEvent.scroll(window);
+  expect(menu).toHaveStyle({ top: "96px", bottom: "auto" });
+  rect.mockRestore();
+});
+
+it("consumes Escape while suggestions are open and preserves pointer selection", () => {
+  const parentKeyDown = vi.fn();
+  const change = vi.fn();
+  render(<div onKeyDown={parentKeyDown}>
+    <SearchSelect label="Item" options={[{ id: 1, name: "Item" }]} value={null} onChange={change} />
+  </div>);
+  const input = screen.getByRole("combobox");
+  fireEvent.focus(input);
+  fireEvent.keyDown(input, { key: "Escape" });
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  expect(parentKeyDown).not.toHaveBeenCalled();
+  fireEvent.focus(input);
+  fireEvent.mouseDown(screen.getByRole("option"));
+  fireEvent.click(screen.getByRole("option"));
+  expect(change).toHaveBeenCalledWith(1);
+});
 const options = [{ id: 15, name: "Первый" }, { id: 20, name: "Второй" }];
 
 it("stops filtering a large catalog as soon as eight results are available", () => {

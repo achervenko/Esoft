@@ -59,7 +59,7 @@ export function registerTests(env) {
       env.specialist,
     );
     assert.equal(issue.sizeValue, '88–92');
-    assert.equal(issue.clothingHeight, '170–176');
+    assert.equal(issue.heightValue, '170–176');
     assert.equal(issue.warnings[0].code, 'PPE_SIZE_DIFFERS_FROM_RECOMMENDED');
     await env.prisma.employee.update({
       where: { id: f.employee.id },
@@ -72,7 +72,7 @@ export function registerTests(env) {
       env.actor,
     );
     assert.equal(
-      (await env.issues.findOne(issue.id)).clothingHeight,
+      (await env.issues.findOne(issue.id)).heightValue,
       '170–176',
     );
     const noMatch = await env.issueFixture({ type: 'BODY' });
@@ -157,7 +157,7 @@ export function registerTests(env) {
     );
   });
   test('catalog requires type, returns all types, audits changes and locks type after cancelled history', async () => {
-    for (const type of ['HANDS', 'FEET', 'BODY', 'HEAD', 'OTHER']) {
+    for (const type of ['HANDS', 'FEET', 'BODY', 'TSHIRT', 'HEAD', 'OTHER']) {
       const created = await env.catalog.createItem(
         { article: `type-${type}`, name: type, unit: 'шт', type },
         env.actor,

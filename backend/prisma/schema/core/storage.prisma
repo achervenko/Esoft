@@ -1,9 +1,3 @@
-enum StorageOwnerModule {
-  EQUIPMENT @map("equipment")
-
-  @@map("storage_owner_module")
-}
-
 enum StorageDocumentType {
   passport                @map("passport")
   maintenance_instruction @map("maintenance_instruction")
@@ -21,14 +15,21 @@ model StorageFile {
   mimeType         String              @map("mime_type") @db.VarChar(128)
   sizeBytes        BigInt              @map("size_bytes")
   documentType     StorageDocumentType @map("document_type")
+  isImmutable      Boolean             @default(false) @map("is_immutable")
   isPrimary        Boolean             @default(false) @map("is_primary")
-  ownerModule      StorageOwnerModule  @map("owner_module")
+  // Manual SQL CHECKs chk_storage_files_owner_module / chk_storage_files_owner_entity_type:
+  // ownerModule and ownerEntityType must match ^[a-z0-9_-]{1,64}$. Preserve these CHECKs in migrations;
+  // Prisma cannot express them in this schema.
+  ownerModule      String              @map("owner_module") @db.VarChar(64)
   ownerEntityType  String              @map("owner_entity_type") @db.VarChar(64)
-  ownerEntityId    Int                 @map("owner_entity_id")
+  // Manual SQL CHECK chk_storage_files_owner_entity_id: length 1–128. Preserve it in migrations.
+  ownerEntityId    String              @map("owner_entity_id") @db.VarChar(128)
   uploadedByUserId String?             @map("uploaded_by_user_id")
   uploadedByUser   User?               @relation("UploadedStorageFiles", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
   createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
   deletedAt        DateTime?           @map("deleted_at") @db.Timestamptz(6)
+
+  adjustmentAttachments WarehouseStockAdjustmentAttachment[]
 
   @@unique([bucket, objectKey], map: "uq_storage_files_bucket_object_key")
   @@index([bucket], map: "idx_storage_files_bucket")
@@ -39,4 +40,28 @@ model StorageFile {
   @@index([ownerModule, ownerEntityType, ownerEntityId, deletedAt], map: "idx_storage_files_owner")
   @@index([ownerEntityId], map: "idx_storage_files_owner_entity_id")
   @@map("storage_files")
+}
+
+model StorageUpload {
+  id              String              @id @db.Uuid
+  bucket          String              @db.VarChar(63)
+  objectKey       String              @unique(map: "uq_storage_uploads_object_key") @map("object_key") @db.VarChar(512)
+  originalName    String              @map("original_name") @db.VarChar(255)
+  mimeType        String              @map("mime_type") @db.VarChar(128)
+  sizeBytes       BigInt              @map("size_bytes")
+  sha256          String              @db.VarChar(64)
+  documentType    StorageDocumentType @map("document_type")
+  // Manual SQL CHECKs chk_storage_uploads_owner_module / chk_storage_uploads_owner_entity_type:
+  // ownerModule and ownerEntityType must match ^[a-z0-9_-]{1,64}$. Preserve these CHECKs in migrations;
+  // Prisma cannot express them in this schema.
+  ownerModule     String              @map("owner_module") @db.VarChar(64)
+  ownerEntityType String              @map("owner_entity_type") @db.VarChar(64)
+  uploadedByUserId String             @map("uploaded_by_user_id")
+  uploadedByUser  User                @relation(fields: [uploadedByUserId], references: [id], onDelete: Restrict, map: "fk_storage_uploads_user")
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt       DateTime            @default(dbgenerated("(now() + interval '24 hours')")) @map("expires_at") @db.Timestamptz(6)
+  uploadedAt      DateTime?           @map("uploaded_at") @db.Timestamptz(6)
+
+  @@index([expiresAt], map: "idx_storage_uploads_expires_at")
+  @@map("storage_uploads")
 }

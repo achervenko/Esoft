@@ -27,5 +27,5 @@ it('does not conflate dictionary, user-management and file permissions', async (
  const permissions = ['dictionaries.manage', 'files.manage'];
  expect(getProfilePermissionAccess(permissions).find(item => item.title === 'Управление справочниками')?.allowed).toBe(true);
  expect(getProfilePermissionAccess(permissions).find(item => item.title === 'Управление пользователями')?.allowed).toBe(false);
- expect(getProfileModuleAccess(permissions).map(item => item.title)).toEqual(['Документы оборудования', 'Справочники']);
+ expect(getProfileModuleAccess(permissions).map(item => item.title)).toEqual(['Справочники']);
 });

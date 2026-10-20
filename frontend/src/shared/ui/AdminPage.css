@@ -107,6 +107,27 @@
   padding: 18px;
 }
 
+.employee-sizes-button {
+  position: relative;
+}
+
+.employee-sizes-dot {
+  position: absolute;
+  top: -3px;
+  right: -2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.employee-sizes-dot.missing {
+  background: #dc2626;
+}
+
+.employee-sizes-dot.partial {
+  background: #eab308;
+}
+
 .admin-form-actions {
   display: flex;
   justify-content: flex-end;

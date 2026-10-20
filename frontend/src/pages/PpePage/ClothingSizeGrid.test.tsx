@@ -2,8 +2,24 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { useState } from "react";
 import { ClothingSizeGrid } from "../../modules/ppe-ui/ClothingSizeGrid";
-import { defaultClothingSizes } from "../../modules/ppe-ui/ppe-size-options";
+import { defaultClothingSizes, defaultTshirtSizes } from "../../modules/ppe-ui/ppe-size-options";
 afterEach(cleanup);
+it("uses the eleven T-shirt pairs from the size chart", () => {
+  const expected = [
+    ["88", "158–164"],
+    ...[92, 96, 100, 104].map((size) => [String(size), "170–176"]),
+    ...[108, 112, 116, 120, 124, 128].map((size) => [String(size), "182–188"]),
+  ];
+  expect(defaultTshirtSizes()).toEqual(expected.map(([value, heightValue]) => ({ value, heightValue })));
+  render(<ClothingSizeGrid variant="tshirt" values={defaultTshirtSizes()} onChange={() => {}} />);
+  for (const [size, height] of expected) {
+    expect(screen.getByRole("button", { name: `${size};${height}` })).toHaveAttribute("aria-pressed", "true");
+  }
+  expect(screen.queryByRole("button", { name: "88–92;158–164" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "88;170–176" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "108;158–164" })).toBeNull();
+  expect(screen.getByText("Редактировать размеры")).toBeInTheDocument();
+});
 it("replaces pasted and typed dashes immediately in both inputs", () => {
   render(
     <ClothingSizeGrid values={defaultClothingSizes()} onChange={() => {}} />,

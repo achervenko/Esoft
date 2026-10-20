@@ -1,9 +1,15 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
+import type { ReactElement } from "react";
+import { cleanup, fireEvent, render as renderComponent, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { AdminUserAccount } from "../../shared/api/users-admin-api";
 import { UserAccountFormModal } from "./UserAccountFormModal";
 import { PasswordFormModal } from "./PasswordFormModal";
 import { UserPhotoFormModal } from "./UserPhotoFormModal";
+
+const render = (ui: ReactElement) => renderComponent(
+  <ChakraProvider value={defaultSystem}>{ui}</ChakraProvider>,
+);
 
 afterEach(() => {
   cleanup();

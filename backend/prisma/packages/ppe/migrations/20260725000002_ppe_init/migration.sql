@@ -5,6 +5,8 @@ CREATE TABLE "ppe_employee_sizes" (
     "employee_id" INTEGER NOT NULL,
     "clothing_size" VARCHAR(20),
     "clothing_height" VARCHAR(20),
+    "tshirt_size" VARCHAR(20),
+    "tshirt_height" VARCHAR(20),
     "shoe_size" NUMERIC(3,1),
     "glove_size" VARCHAR(20),
     "headwear_size" VARCHAR(20),
@@ -21,7 +23,7 @@ CREATE TYPE "ppe_period_unit" AS ENUM ('DAY', 'MONTH', 'YEAR');
 -- CreateEnum
 CREATE TYPE "ppe_issue_status" AS ENUM ('ISSUED', 'CANCELLED');
 CREATE TYPE "ppe_issue_type" AS ENUM ('REGULAR', 'EXTRA');
-CREATE TYPE "ppe_item_type" AS ENUM ('OTHER', 'BODY', 'FEET', 'HANDS', 'HEAD');
+CREATE TYPE "ppe_item_type" AS ENUM ('OTHER', 'BODY', 'TSHIRT', 'FEET', 'HANDS', 'HEAD');
 
 -- CreateTable
 CREATE TABLE "ppe_items" (
@@ -102,7 +104,7 @@ CREATE TABLE "ppe_issues" (
     "ppe_unit_snapshot" TEXT NOT NULL,
     "quantity" NUMERIC(12,3) NOT NULL,
     "size_value" TEXT,
-    "clothing_height_snapshot" TEXT,
+    "height_snapshot" TEXT,
     "scheduled_at" DATE,
     "issued_at" DATE NOT NULL,
     "issued_by_user_id" TEXT NOT NULL,
@@ -217,7 +219,7 @@ ALTER TABLE ppe_issues ADD COLUMN journal_search_text text GENERATED ALWAYS AS (
   public.app_ppe_journal_search_text(employee_name_snapshot, position_name_snapshot,
     ppe_name_snapshot, ppe_article_snapshot, norm_ppe_name_snapshot,
     norm_ppe_article_snapshot, issued_by_name_snapshot, comment, size_value,
-    clothing_height_snapshot, issued_at, status, issue_type)
+    height_snapshot, issued_at, status, issue_type)
 ) STORED;
 
 

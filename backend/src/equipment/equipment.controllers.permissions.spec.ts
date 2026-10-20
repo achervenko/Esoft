@@ -12,9 +12,13 @@ jest.mock('@thallesp/nestjs-better-auth', () => {
 import type { ExecutionContext } from '@nestjs/common';
 import { RequestMethod } from '@nestjs/common';
 import { PATH_METADATA, METHOD_METADATA } from '@nestjs/common/constants';
+import * as permissionPolicy from '../auth/permission-policy';
 import { hasPermission } from '../auth/permission-policy';
 import { USER_ROLES, getEffectiveUserRoles } from '../auth/role-module-policy';
-import { REQUIRED_PERMISSION } from '../auth/require-permission';
+import {
+  ADDITIONAL_REQUIRED_PERMISSIONS,
+  REQUIRED_PERMISSION,
+} from '../auth/require-permission';
 import { EquipmentController } from './equipment.controller';
 import { EquipmentFilesController } from './equipment-files.controller';
 import {
@@ -86,7 +90,16 @@ describe('Equipment and file authorization through the global guard', () => {
         const effectiveRole = getEffectiveUserRoles(role, http.modules).join(
           ',',
         );
-        const allowed = hasPermission(effectiveRole, operation.permission);
+        const ownerPermission =
+          operation.permission === 'files.read'
+            ? 'equipment.read'
+            : operation.permission === 'files.manage'
+              ? 'equipment.edit'
+              : undefined;
+        const allowed =
+          hasPermission(effectiveRole, operation.permission) &&
+          (ownerPermission === undefined ||
+            hasPermission(effectiveRole, ownerPermission));
         expect((await http.request(operation, role)).status).toBe(
           allowed ? (operation.method === 'POST' ? 201 : 200) : 403,
         );
@@ -94,6 +107,51 @@ describe('Equipment and file authorization through the global guard', () => {
       }
     },
   );
+  it('requires the owner permission on every file handler', () => {
+    for (const name of Object.getOwnPropertyNames(
+      EquipmentFilesController.prototype,
+    )) {
+      const handler: unknown = Object.getOwnPropertyDescriptor(
+        EquipmentFilesController.prototype,
+        name,
+      )?.value;
+      if (
+        typeof handler !== 'function' ||
+        Reflect.getMetadata(METHOD_METADATA, handler) === undefined
+      )
+        continue;
+      const filePermission: unknown = Reflect.getMetadata(
+        REQUIRED_PERMISSION,
+        handler,
+      );
+      expect(
+        Reflect.getMetadata(ADDITIONAL_REQUIRED_PERMISSIONS, handler),
+      ).toEqual([
+        filePermission === 'files.read' ? 'equipment.read' : 'equipment.edit',
+      ]);
+    }
+  });
+  it('denies file-only access before owner lookup, upload processing or storage calls', async () => {
+    const original = permissionPolicy.hasPermission;
+    const policy = jest
+      .spyOn(permissionPolicy, 'hasPermission')
+      .mockImplementation((role, permission) =>
+        permission.startsWith('equipment.')
+          ? false
+          : original(role, permission),
+      );
+    try {
+      for (const operation of operations.filter((op) =>
+        op.path.includes('/files'),
+      )) {
+        jest.clearAllMocks();
+        expect((await http.request(operation, 'admin')).status).toBe(403);
+        http.expectNoServiceCalls();
+      }
+    } finally {
+      policy.mockRestore();
+    }
+  });
   it('rejects unauthenticated requests before services and file processing', async () => {
     for (const operation of operations)
       expect((await http.request(operation)).status).toBe(401);

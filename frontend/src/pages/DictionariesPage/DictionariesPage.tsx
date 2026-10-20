@@ -3,6 +3,8 @@ import { DictionariesPageModals } from "./DictionariesPageModals";
 import { useState } from "react";
 import { canManageEmployeeSizes } from "../../modules/ppe-permissions/ppe-permissions";
 import { PpeEmployeesPanel } from "./PpeEmployeesPanel";
+import { usePpeQuery } from "../../modules/ppe-ui/usePpeQuery";
+import { ppeApi } from "../../shared/api/ppe";
 import { Plus } from "lucide-react";
 import "../../shared/ui/AdminPage.css";
 import { Notice } from "../../shared/ui/Notice";
@@ -34,6 +36,16 @@ const addButtonLabels: Record<ActiveDictionariesTab, string> = {
 export function DictionariesPage({ userPermissions }: DictionariesPageProps) {
   const page = useDictionariesAdminPage({ userPermissions });
   const [sizeEmployeeId, setSizeEmployeeId] = useState<number | null>(null);
+  const sizes = usePpeQuery(
+    `dictionary-employee-sizes:${page.employees.map(({ id }) => id).join(",")}`,
+    (signal) => ppeApi.employees(signal),
+    page.dictionariesManageable &&
+      canManageEmployeeSizes(userPermissions) &&
+      page.activeTab === "employees" && page.employees.length > 0,
+  );
+  const employeeSizes = sizes.data
+    ? new Map(sizes.data.map((employee) => [employee.id, employee.ppeSizes]))
+    : undefined;
 
   if (!page.dictionariesManageable) {
     if (canManageEmployeeSizes(userPermissions)) return <PpeEmployeesPanel />;
@@ -117,7 +129,13 @@ export function DictionariesPage({ userPermissions }: DictionariesPageProps) {
             </button>
           </Notice>
         )}
+        {sizes.error && (
+          <Notice tone="error">
+            Не удалось проверить заполненность размеров: {sizes.error}
+          </Notice>
+        )}
         <DictionariesPageContent
+          employeeSizes={employeeSizes}
           page={{
             activeTab: page.activeTab,
             countries: page.countries,
@@ -179,6 +197,7 @@ export function DictionariesPage({ userPermissions }: DictionariesPageProps) {
         }}
         sizeEmployeeId={sizeEmployeeId}
         onCloseEmployeeSizes={() => setSizeEmployeeId(null)}
+        onEmployeeSizesChanged={sizes.reload}
       />
     </section>
   );

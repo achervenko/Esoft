@@ -1,5 +1,6 @@
+import { createPortal } from "react-dom";
 import { RequiredMark } from "./RequiredMark";
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import "./FormField.css";
 import "./SearchInput.css";
 import "./SearchSelect.css";
@@ -44,6 +45,8 @@ export function SearchSelect({
   required = false,
   value,
 }: SearchSelectProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [popup, setPopup] = useState<{ style: CSSProperties; owner?: string } | null>(null);
   const inputId = useId();
   const listboxId = useId();
   const errorId = useId();
@@ -91,6 +94,39 @@ export function SearchSelect({
       return Math.min(currentIndex, filteredOptions.length - 1);
     });
   }, [filteredOptions.length]);
+
+  useLayoutEffect(() => {
+    if (!isOpen || disabled) return;
+    const position = () => {
+      const input = inputRef.current;
+      if (!input) return;
+      const rect = input.getBoundingClientRect();
+      const below = Math.max(0, window.innerHeight - rect.bottom - 14);
+      const above = Math.max(0, rect.top - 14);
+      const opensAbove = below < 240 && above > below;
+      const width = Math.min(rect.width, Math.max(0, window.innerWidth - 16));
+      setPopup({
+        owner: input.closest<HTMLElement>("[data-admin-modal-id]")?.dataset.adminModalId,
+        style: {
+          position: "fixed",
+          left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
+          right: "auto",
+          width,
+          top: opensAbove ? "auto" : rect.bottom + 6,
+          bottom: opensAbove ? window.innerHeight - rect.top + 6 : "auto",
+          maxHeight: Math.min(240, opensAbove ? above : below),
+          zIndex: 1000,
+        },
+      });
+    };
+    position();
+    window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
+    return () => {
+      window.removeEventListener("resize", position);
+      window.removeEventListener("scroll", position, true);
+    };
+  }, [isOpen, disabled, filteredOptions.length]);
 
   const selectOption = (option: OptionItem) => {
     if (disabled) return;
@@ -149,6 +185,7 @@ export function SearchSelect({
       >
         {icon}
         <input
+          ref={inputRef}
           autoFocus={autoFocus}
           disabled={disabled}
           aria-activedescendant={isOpen ? activeOptionId : undefined}
@@ -189,7 +226,9 @@ export function SearchSelect({
               return;
             }
 
-            if (event.key === "Escape") {
+            if (event.key === "Escape" && isOpen) {
+              event.preventDefault();
+              event.stopPropagation();
               setIsOpen(false);
               setActiveOptionIndex(0);
             }
@@ -201,8 +240,9 @@ export function SearchSelect({
       </div>
       {!disabled && isOpen &&
       query.trim().length >= minQueryLength &&
-      filteredOptions.length > 0 ? (
-        <div className="search-select-menu" id={listboxId} role="listbox">
+      filteredOptions.length > 0 && popup ? createPortal(
+        <div className="search-select-menu" id={listboxId} role="listbox"
+          style={popup.style} data-admin-modal-owner={popup.owner}>
           {filteredOptions.map((option, optionIndex) => (
             <div
               aria-selected={option.id === value}
@@ -219,15 +259,16 @@ export function SearchSelect({
               {option.position ? <small>{option.position}</small> : null}
             </div>
           ))}
-        </div>
+        </div>, document.body,
       ) : null}
       {!disabled && isOpen &&
       query.trim().length >= minQueryLength &&
       filteredOptions.length === 0 &&
-      emptyMessage ? (
-        <div className="search-select-menu" role="status">
+      emptyMessage && popup ? createPortal(
+        <div className="search-select-menu" role="status"
+          style={popup.style} data-admin-modal-owner={popup.owner}>
           {emptyMessage}
-        </div>
+        </div>, document.body,
       ) : null}
       {error ? (
         <small className="field-error" id={errorId}>

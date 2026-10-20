@@ -2,6 +2,22 @@ import { parsePpeItemCreate } from './ppe.validation';
 
 const item = { article: 'A', name: 'Костюм', unit: 'шт', type: 'BODY' };
 
+it('requires a size/height pair for T-shirts', () => {
+  expect(
+    parsePpeItemCreate({
+      ...item,
+      type: 'TSHIRT',
+      sizes: [{ value: '48;176' }],
+    }),
+  ).toMatchObject({
+    data: { type: 'TSHIRT' },
+    sizes: [{ value: '48', heightValue: '176' }],
+  });
+  expect(() =>
+    parsePpeItemCreate({ ...item, type: 'TSHIRT', sizes: [{ value: '48' }] }),
+  ).toThrow();
+});
+
 describe('PPE item creation with sizes', () => {
   it('accepts exactly 2000 distinct sizes', () => {
     const sizes = Array.from({ length: 2000 }, (_, index) => ({

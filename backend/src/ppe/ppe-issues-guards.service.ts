@@ -174,6 +174,9 @@ export class PpeIssuesGuardsService {
       case PpeItemType.BODY:
         recommendedValue = employee.ppeSizes?.clothingSize ?? null;
         break;
+      case PpeItemType.TSHIRT:
+        recommendedValue = employee.ppeSizes?.tshirtSize ?? null;
+        break;
       case PpeItemType.FEET:
         recommendedValue = employee.ppeSizes?.shoeSize?.toString() ?? null;
         break;
@@ -184,6 +187,10 @@ export class PpeIssuesGuardsService {
         recommendedValue = employee.ppeSizes?.headwearSize ?? null;
         break;
     }
+    const height =
+      item.type === PpeItemType.TSHIRT
+        ? employee.ppeSizes?.tshirtHeight
+        : employee.ppeSizes?.clothingHeight;
     const activeSizes = item.sizes.filter((size) => size.isActive);
     const matching =
       item.type === PpeItemType.OTHER
@@ -191,11 +198,12 @@ export class PpeIssuesGuardsService {
         : activeSizes.find(
             (size) =>
               matchesRecommendedSize(item.type, size.value, recommendedValue) &&
-              (item.type !== PpeItemType.BODY ||
-                (employee.ppeSizes?.clothingHeight != null &&
+              ((item.type !== PpeItemType.BODY &&
+                item.type !== PpeItemType.TSHIRT) ||
+                (height != null &&
                   size.heightValue !== null &&
                   normalizePpeSizeText(size.heightValue) ===
-                    normalizePpeSizeText(employee.ppeSizes.clothingHeight))),
+                    normalizePpeSizeText(height))),
           );
     return {
       type: item.type,
@@ -203,9 +211,9 @@ export class PpeIssuesGuardsService {
       recommendedSizeId: matching?.id ?? null,
       recommendedSizeValue: matching?.value ?? null,
       recommendedHeightValue: matching?.heightValue ?? null,
-      clothingHeight:
-        item.type === PpeItemType.BODY
-          ? (employee.ppeSizes?.clothingHeight ?? null)
+      heightValue:
+        item.type === PpeItemType.BODY || item.type === PpeItemType.TSHIRT
+          ? (height ?? null)
           : null,
       requiresSelection:
         item.type !== PpeItemType.OTHER && item.sizes.length > 0 && !matching,
@@ -245,6 +253,7 @@ export class PpeIssuesGuardsService {
     sizeId: number | null,
   ) {
     const recommendation = this.recommendSize(employee, item);
+    const height = recommendation.heightValue;
     if (item.type === PpeItemType.OTHER || item.sizes.length === 0) {
       if (sizeId !== null)
         badPpeRequest(
@@ -253,7 +262,7 @@ export class PpeIssuesGuardsService {
         );
       return {
         sizeValue: null,
-        clothingHeightSnapshot: null,
+        heightSnapshot: null,
         warnings: [] as PpeIssueWarning[],
       };
     }
@@ -269,8 +278,10 @@ export class PpeIssuesGuardsService {
       badPpeRequest('PPE_SIZE_INACTIVE', 'Выбранный размер отключён.');
     return {
       sizeValue: selected.value,
-      clothingHeightSnapshot:
-        item.type === PpeItemType.BODY ? selected.heightValue : null,
+      heightSnapshot:
+        item.type === PpeItemType.BODY || item.type === PpeItemType.TSHIRT
+          ? selected.heightValue
+          : null,
       warnings:
         (recommendation.recommendedValue !== null &&
           !matchesRecommendedSize(
@@ -278,11 +289,11 @@ export class PpeIssuesGuardsService {
             selected.value,
             recommendation.recommendedValue,
           )) ||
-        (item.type === PpeItemType.BODY &&
-          employee.ppeSizes?.clothingHeight != null &&
+        ((item.type === PpeItemType.BODY || item.type === PpeItemType.TSHIRT) &&
+          height != null &&
           (selected.heightValue === null ||
             normalizePpeSizeText(selected.heightValue) !==
-              normalizePpeSizeText(employee.ppeSizes.clothingHeight)))
+              normalizePpeSizeText(height)))
           ? ([
               {
                 code: 'PPE_SIZE_DIFFERS_FROM_RECOMMENDED',

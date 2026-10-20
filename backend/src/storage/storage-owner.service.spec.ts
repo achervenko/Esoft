@@ -1,5 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
-import { StorageOwnerModule, type StorageFile } from '@prisma/client';
+import { type StorageFile } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageOwnerService } from './storage-owner.service';
 import type { StorageOwnerContext } from './storage.types';
@@ -9,9 +9,10 @@ describe('StorageOwnerService', () => {
   let service: StorageOwnerService;
 
   const owner: StorageOwnerContext = {
-    entityId: 10,
+    entityId: '10',
+    auditEntityId: 10,
     entityType: 'equipment',
-    module: StorageOwnerModule.EQUIPMENT,
+    module: 'equipment',
   };
 
   beforeEach(() => {
@@ -65,9 +66,10 @@ function createStorageFile(overrides: Partial<StorageFile> = {}): StorageFile {
     mimeType: 'application/pdf',
     objectKey: 'equipment/equipment/10/passport/file.pdf',
     originalName: 'passport.pdf',
-    ownerEntityId: 10,
+    ownerEntityId: '10',
     ownerEntityType: 'equipment',
-    ownerModule: StorageOwnerModule.EQUIPMENT,
+    ownerModule: 'equipment',
+    isImmutable: false,
     sizeBytes: 100n,
     uploadedByUserId: null,
     ...overrides,

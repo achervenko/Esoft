@@ -72,7 +72,7 @@ export function EmployeeIssueHistory({
                             {formatPpeQuantity(issue.quantity, issue.unit)}
                           </td>
                           <td>
-                            {sizeLabel(issue.sizeValue, issue.clothingHeight)}
+                            {sizeLabel(issue.sizeValue, issue.heightValue)}
                           </td>
                           <td>
                             {issue.status === "ISSUED" ? "Выдано" : "Отменено"}

@@ -17,9 +17,11 @@ import { StorageImagePreviewService } from './storage-image-preview.service';
 import { StorageObjectService } from './storage-object.service';
 import { StorageOwnerLockService } from './storage-owner-lock.service';
 import { StorageOwnerService } from './storage-owner.service';
+import { StorageStagedUploadService } from './storage-staged-upload.service';
 import { STORAGE_CONFIG } from './storage.tokens';
 
 const storageProviders = [
+  StorageStagedUploadService,
   {
     provide: STORAGE_CONFIG,
     useFactory: loadStorageConfig,
@@ -37,6 +39,7 @@ const storageProviders = [
 ];
 
 const storageExports = [
+  StorageStagedUploadService,
   StorageFileService,
   StorageObjectService,
   StorageOwnerService,

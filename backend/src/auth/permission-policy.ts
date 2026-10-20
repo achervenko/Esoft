@@ -37,6 +37,7 @@ export const ROLE_PERMISSIONS = {
     'ppe.issue',
     'ppe.issue.backdate',
     'warehouse.catalog.manage',
+    'warehouse.adjustments.manage',
   ],
   chief_engineer: [
     ...equipmentEditor,

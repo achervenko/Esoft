@@ -9,12 +9,14 @@ type DictionariesPageModalsProps = {
   page: DictionariesModalsModel;
   sizeEmployeeId: number | null;
   onCloseEmployeeSizes: () => void;
+  onEmployeeSizesChanged?: () => void;
 };
 
 export function DictionariesPageModals({
   page,
   sizeEmployeeId,
   onCloseEmployeeSizes,
+  onEmployeeSizesChanged,
 }: DictionariesPageModalsProps) {
   return (
     <>
@@ -22,6 +24,7 @@ export function DictionariesPageModals({
         <EmployeeSizesModal
           id={sizeEmployeeId}
           onClose={onCloseEmployeeSizes}
+          onChanged={onEmployeeSizesChanged}
         />
       )}
       {page.positionForm ? (

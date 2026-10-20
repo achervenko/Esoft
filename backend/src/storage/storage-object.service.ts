@@ -86,10 +86,10 @@ export class StorageObjectService {
     }
   }
 
-  async deleteObject(key: string) {
+  async deleteObject(key: string, bucket = this.config.bucket) {
     await this.s3Client.send(
       new DeleteObjectCommand({
-        Bucket: this.config.bucket,
+        Bucket: bucket,
         Key: key,
       }),
     );

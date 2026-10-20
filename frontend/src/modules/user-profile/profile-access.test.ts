@@ -11,6 +11,34 @@ const ppePermissionTitles = [
   "Изменение размеров сотрудников",
 ];
 
+describe("Equipment document access in profile", () => {
+  it.each([
+    [["files.read", "equipment.read"], true],
+    [["files.read"], false],
+    [["equipment.read"], false],
+    [[], false],
+    [null, false],
+    [undefined, false],
+  ] as const)("requires both read permissions for %p", (permissions, allowed) => {
+    expect(getProfilePermissionAccess(permissions).find(({ title }) => title === "Скачивание документов"))
+      .toMatchObject({ allowed });
+  });
+
+  it.each([
+    [["files.manage", "equipment.edit"], true],
+    [["files.manage"], false],
+    [["equipment.edit"], false],
+    [[], false],
+    [null, false],
+    [undefined, false],
+  ] as const)("requires both permissions for %p", (permissions, allowed) => {
+    expect(getProfileModuleAccess(permissions).some(({ title }) => title === "Документы оборудования"))
+      .toBe(allowed);
+    expect(getProfilePermissionAccess(permissions).find(({ title }) => title === "Управление документами"))
+      .toMatchObject({ allowed });
+  });
+});
+
 describe("PPE access in profile", () => {
   it.each([
     ["admin", true, true, true],
@@ -113,6 +141,14 @@ describe("PPE access in profile", () => {
 });
 
 describe("Warehouse access in profile", () => {
+  it("shows adjustments separately from catalog management", () => {
+    const title = "Корректировка складских остатков";
+    expect(getProfilePermissionAccess(permissionsForTest("admin")).find((permission) => permission.title === title))
+      .toMatchObject({ allowed: true });
+    expect(getProfilePermissionAccess(permissionsForTest("storekeeper")).find((permission) => permission.title === title))
+      .toMatchObject({ allowed: false });
+    expect(getProfileModuleAccess(["warehouse.adjustments.manage"]).map((module) => module.title)).toEqual(["Склад"]);
+  });
   it.each([
     [["warehouse.catalog.manage"], true],
     [["users.profile.read"], false],

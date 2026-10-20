@@ -1,4 +1,4 @@
-import { StorageDocumentType, StorageOwnerModule } from '@prisma/client';
+import { StorageDocumentType } from '@prisma/client';
 import {
   createStorageObjectKey,
   getSafeExtension,
@@ -10,9 +10,10 @@ describe('storage-file-names helper', () => {
       documentType: StorageDocumentType.equipment_photo,
       extension: 'jpg',
       owner: {
-        entityId: 42,
+        entityId: '42',
+        auditEntityId: 42,
         entityType: 'equipment/card',
-        module: StorageOwnerModule.EQUIPMENT,
+        module: 'equipment',
       },
     });
 
@@ -26,9 +27,10 @@ describe('storage-file-names helper', () => {
       documentType: StorageDocumentType.passport,
       extension: 'p df',
       owner: {
-        entityId: 7,
+        entityId: '7',
+        auditEntityId: 7,
         entityType: '   ',
-        module: StorageOwnerModule.EQUIPMENT,
+        module: 'equipment',
       },
     });
 
@@ -42,9 +44,10 @@ describe('storage-file-names helper', () => {
       documentType: StorageDocumentType.passport,
       extension: 'pdf',
       owner: {
-        entityId: 42,
+        entityId: '42',
+        auditEntityId: 42,
         entityType: 'equipment',
-        module: StorageOwnerModule.EQUIPMENT,
+        module: 'equipment',
       },
     };
 

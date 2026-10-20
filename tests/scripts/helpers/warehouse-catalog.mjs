@@ -87,4 +87,30 @@ export async function verifyWarehouseCatalog(prisma, actor) {
   for (const action of [() => service.findOne('9223372036854775807'), () => service.update('9223372036854775807', { name: 'Missing' }, actor.id), () => service.setStatus('9223372036854775807', { isActive: false }, actor.id)])
     await assert.rejects(action(), (error) => error.response?.code === 'WAREHOUSE_ITEM_NOT_FOUND');
   await assert.rejects(service.create({ article: 'BAD', name: 'Item', unit: 'шт', externalId: 'not-supported' }, actor.id), (error) => error.response?.code === 'UNKNOWN_FIELDS');
+
+  // An audit unique conflict must propagate unchanged, rolling back the item.
+  const existingAudit = await prisma.auditLog.findFirstOrThrow({ orderBy: { id: 'asc' } });
+  const auditCountBefore = await prisma.auditLog.count();
+  let auditConflict;
+  const conflictingAudit = new WarehouseCatalogService(prisma, {
+    async writeFieldChanges({ tx }) {
+      try {
+        await tx.auditLog.create({ data: {
+          id: existingAudit.id, userId: actor.id, module: 'WAREHOUSE', action: 'CREATE', entityType: 'warehouse_item',
+        } });
+      } catch (error) { auditConflict = error; throw error; }
+    },
+  });
+  await assert.rejects(
+    conflictingAudit.create({ article: 'CAT-AUDIT-UNIQUE', name: 'Rollback', unit: 'шт' }, actor.id),
+    (error) => {
+      assert.equal(error, auditConflict);
+      assert.equal(error.code, 'P2002');
+      assert.equal(error.meta?.modelName, 'AuditLog');
+      assert.notEqual(error.response?.code, 'WAREHOUSE_ARTICLE_EXISTS');
+      return true;
+    },
+  );
+  assert.equal(await prisma.warehouseItem.count({ where: { article: 'CAT-AUDIT-UNIQUE' } }), 0);
+  assert.equal(await prisma.auditLog.count(), auditCountBefore);
 }

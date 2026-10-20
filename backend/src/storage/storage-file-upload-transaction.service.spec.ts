@@ -2,7 +2,6 @@ import {
   AuditAction,
   AuditModule,
   StorageDocumentType,
-  StorageOwnerModule,
   type StorageFile,
 } from '@prisma/client';
 import { AuditLogService } from '../audit/audit-log.service';
@@ -69,9 +68,9 @@ describe('StorageFileUploadTransactionService', () => {
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       where: {
         deletedAt: null,
-        ownerEntityId: 10,
+        ownerEntityId: '10',
         ownerEntityType: 'equipment',
-        ownerModule: StorageOwnerModule.EQUIPMENT,
+        ownerModule: 'equipment',
       },
     });
     expect(policy.assertDocumentCanBeAdded).toHaveBeenCalledWith({
@@ -86,9 +85,9 @@ describe('StorageFileUploadTransactionService', () => {
         mimeType: 'application/octet-stream',
         objectKey: 'equipment/equipment/10/passport/object.pdf',
         originalName: 'passport.pdf',
-        ownerEntityId: 10,
+        ownerEntityId: '10',
         ownerEntityType: 'equipment',
-        ownerModule: StorageOwnerModule.EQUIPMENT,
+        ownerModule: 'equipment',
         sizeBytes: 123n,
         uploadedByUserId: 'user-1',
       },
@@ -97,6 +96,7 @@ describe('StorageFileUploadTransactionService', () => {
       expect.objectContaining({
         action: AuditAction.FILE_UPLOAD,
         entityId: 10,
+        entityStringId: '10',
         entityType: 'equipment',
         module: AuditModule.EQUIPMENT,
         tx,
@@ -120,9 +120,10 @@ function createTx() {
 
 function owner() {
   return {
-    entityId: 10,
+    entityId: '10',
+    auditEntityId: 10,
     entityType: 'equipment',
-    module: StorageOwnerModule.EQUIPMENT,
+    module: 'equipment',
   };
 }
 
@@ -137,9 +138,10 @@ function createStorageFile(overrides: Partial<StorageFile> = {}): StorageFile {
     mimeType: 'application/pdf',
     objectKey: 'equipment/equipment/10/passport/object.pdf',
     originalName: 'existing.pdf',
-    ownerEntityId: 10,
+    ownerEntityId: '10',
     ownerEntityType: 'equipment',
-    ownerModule: StorageOwnerModule.EQUIPMENT,
+    ownerModule: 'equipment',
+    isImmutable: false,
     sizeBytes: 100n,
     uploadedByUserId: null,
     ...overrides,

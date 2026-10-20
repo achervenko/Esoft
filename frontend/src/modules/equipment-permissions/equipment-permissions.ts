@@ -17,7 +17,11 @@ export function canReadEquipment(permissions: unknown) {
 }
 
 export function canDownloadEquipmentDocuments(permissions: unknown) {
-  return hasPermission(permissions, "files.read");
+  return hasPermission(permissions, "files.read") && canReadEquipment(permissions);
+}
+
+export function canManageEquipmentDocuments(permissions: unknown) {
+  return hasPermission(permissions, "files.manage") && canEditEquipment(permissions);
 }
 
 export const canCreateEquipment = canEditEquipment;

@@ -21,7 +21,7 @@ export function SizeListTable({
         <thead>
           <tr>
             <th>Размер</th>
-            {item.type === "BODY" && <th>Ростовка</th>}
+            {(item.type === "BODY" || item.type === "TSHIRT") && <th>Ростовка</th>}
             <th>Статус</th>
             <th className="admin-table-actions-column">Действия</th>
           </tr>
@@ -33,7 +33,7 @@ export function SizeListTable({
               className={!size.isActive ? "ppe-inactive" : undefined}
             >
               <td>{size.value}</td>
-              {item.type === "BODY" && <td>{size.heightValue}</td>}
+              {(item.type === "BODY" || item.type === "TSHIRT") && <td>{size.heightValue}</td>}
               <td>{size.isActive ? "Активен" : "Удалён"}</td>
               <td className="admin-table-actions-column">
                 {manage && (

@@ -8,6 +8,13 @@ export const clothingSizes = [
   "128–132",
 ];
 export const clothingHeights = ["158–164", "170–176", "182–188", "194–200"];
+export const tshirtSizes = Array.from({ length: 11 }, (_, index) => String(88 + index * 4));
+export const tshirtHeights = clothingHeights.slice(0, 3);
+export const defaultTshirtSizes = (): ClothingSize[] =>
+  tshirtSizes.map((value, index) => ({
+    value,
+    heightValue: tshirtHeights[index === 0 ? 0 : index < 5 ? 1 : 2],
+  }));
 export const defaultClothingSizes = (): ClothingSize[] =>
   clothingSizes.flatMap((value, index) =>
     clothingHeights

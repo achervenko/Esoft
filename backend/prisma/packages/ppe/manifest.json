@@ -5,7 +5,7 @@
   "migrations": [
     {
       "id": "20260725000002_ppe_init",
-      "sha256": "b905dc29b4141fadbb450487d808dff4e0422caba6759fb6f21ee36c4e1eed90"
+      "sha256": "ec534f4e9109cf76dfcae14ff5b78810c13763593ed9458659b842d5f4ab51c6"
     }
   ]
 }

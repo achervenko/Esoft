@@ -12,7 +12,7 @@ import { SizeRange } from "./SizeRange";
 import { shoeSizeRange, gloveSizeRange, headSizeRange } from "./size-range-options";
 import { defaultShoeSizes, defaultGloveSizes, defaultHeadSizes } from "../../modules/ppe-ui/ppe-size-options";
 import { ClothingSizeGrid } from "../../modules/ppe-ui/ClothingSizeGrid";
-import { defaultClothingSizes } from "../../modules/ppe-ui/ppe-size-options";
+import { defaultClothingSizes, defaultTshirtSizes } from "../../modules/ppe-ui/ppe-size-options";
 
 export function CatalogItemForm({
   item,
@@ -65,7 +65,7 @@ export function CatalogItemForm({
                         ? []
                         : sizeRows.map((size) => ({
                             value:
-                              data.type === "BODY"
+                              (data.type === "BODY" || data.type === "TSHIRT")
                                 ? `${size.value};${size.heightValue}`
                                 : size.value,
                           })),
@@ -115,8 +115,8 @@ export function CatalogItemForm({
                       heightValue: "",
                     })),
                   );
-                } else if (!item && type === "BODY") {
-                  setSizeRows(defaultClothingSizes());
+                } else if (!item && (type === "BODY" || type === "TSHIRT")) {
+                  setSizeRows(type === "TSHIRT" ? defaultTshirtSizes() : defaultClothingSizes());
                 } else if (type !== data.type) {
                   setSizeRows([]);
                 }
@@ -153,8 +153,9 @@ export function CatalogItemForm({
             }
           />
         )}
-        {!item && data.type === "BODY" && (
+        {!item && (data.type === "BODY" || data.type === "TSHIRT") && (
           <ClothingSizeGrid
+            variant={data.type === "TSHIRT" ? "tshirt" : "clothing"}
             values={sizeRows}
             onChange={setSizeRows}
             disabled={saving}
@@ -165,7 +166,7 @@ export function CatalogItemForm({
           data.type !== "FEET" &&
           data.type !== "HANDS" &&
           data.type !== "HEAD" &&
-          data.type !== "BODY" && (
+          (data.type !== "BODY" && data.type !== "TSHIRT") && (
             <fieldset disabled={saving} className="ppe-form">
               <legend>Доступные размеры</legend>
               {sizeRows.map((size, index) => (

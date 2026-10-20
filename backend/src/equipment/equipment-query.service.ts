@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, StorageOwnerModule } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import {
   parseEquipmentListQuery,
   type EquipmentListQuery,
@@ -179,9 +179,10 @@ export class EquipmentQueryService {
     }
 
     return {
-      entityId: equipment.id,
+      entityId: equipment.id.toString(),
+      auditEntityId: equipment.id,
       entityType: 'equipment',
-      module: StorageOwnerModule.EQUIPMENT,
+      module: 'equipment',
     };
   }
 }

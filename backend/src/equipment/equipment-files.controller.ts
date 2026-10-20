@@ -1,3 +1,5 @@
+import { EQUIPMENT_PERMISSIONS } from './equipment.permissions';
+import { createContentDisposition } from '../storage/storage-http.helper';
 import { ParsePositiveIntPipe } from '../application/pipes/parse-positive-int.pipe';
 import { FILES_PERMISSIONS } from '../storage/files.permissions';
 import { RequirePermission } from '../auth/require-permission';
@@ -40,7 +42,7 @@ export class EquipmentFilesController {
   ) {}
 
   @Get()
-  @RequirePermission(FILES_PERMISSIONS.READ)
+  @RequirePermission(FILES_PERMISSIONS.READ, EQUIPMENT_PERMISSIONS.READ)
   async list(@Param('visibleId', ParsePositiveIntPipe) visibleId: number) {
     const owner = await this.findStorageOwnerByVisibleId(visibleId);
 
@@ -48,7 +50,7 @@ export class EquipmentFilesController {
   }
 
   @Post()
-  @RequirePermission(FILES_PERMISSIONS.MANAGE)
+  @RequirePermission(FILES_PERMISSIONS.MANAGE, EQUIPMENT_PERMISSIONS.EDIT)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {
@@ -86,7 +88,7 @@ export class EquipmentFilesController {
   }
 
   @Get(':fileId/download')
-  @RequirePermission(FILES_PERMISSIONS.READ)
+  @RequirePermission(FILES_PERMISSIONS.READ, EQUIPMENT_PERMISSIONS.READ)
   @Header('Cache-Control', 'private, max-age=0, no-cache')
   async download(
     @Param('visibleId', ParsePositiveIntPipe) visibleId: number,
@@ -110,7 +112,7 @@ export class EquipmentFilesController {
   }
 
   @Get(':fileId/preview')
-  @RequirePermission(FILES_PERMISSIONS.READ)
+  @RequirePermission(FILES_PERMISSIONS.READ, EQUIPMENT_PERMISSIONS.READ)
   async preview(
     @Param('visibleId', ParsePositiveIntPipe) visibleId: number,
     @Param('fileId', ParsePositiveIntPipe) fileId: number,
@@ -144,7 +146,7 @@ export class EquipmentFilesController {
   }
 
   @Delete(':fileId')
-  @RequirePermission(FILES_PERMISSIONS.MANAGE)
+  @RequirePermission(FILES_PERMISSIONS.MANAGE, EQUIPMENT_PERMISSIONS.EDIT)
   async delete(
     @Param('visibleId', ParsePositiveIntPipe) visibleId: number,
     @Param('fileId', ParsePositiveIntPipe) fileId: number,
@@ -163,7 +165,7 @@ export class EquipmentFilesController {
   }
 
   @Patch(':fileId/primary')
-  @RequirePermission(FILES_PERMISSIONS.MANAGE)
+  @RequirePermission(FILES_PERMISSIONS.MANAGE, EQUIPMENT_PERMISSIONS.EDIT)
   async setPrimary(
     @Param('visibleId', ParsePositiveIntPipe) visibleId: number,
     @Param('fileId', ParsePositiveIntPipe) fileId: number,
@@ -195,21 +197,6 @@ export class EquipmentFilesController {
       throw error;
     }
   }
-}
-
-function createContentDisposition(
-  disposition: 'attachment' | 'inline',
-  fileName: string,
-) {
-  const fallbackFileName = fileName
-    .replace(/[^\x20-\x7E]/g, '_')
-    .replace(/["\\]/g, '_');
-  const encodedFileName = encodeURIComponent(fileName).replace(
-    /[!'()*]/g,
-    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
-  );
-
-  return `${disposition}; filename="${fallbackFileName}"; filename*=UTF-8''${encodedFileName}`;
 }
 
 function toStorageImagePreviewSize(

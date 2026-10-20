@@ -23,16 +23,34 @@ export function EmployeeSizeSummary({ employee }: { employee: PpeEmployee }) {
     <div className="ppe-size-summary">
       <span>
         Размер одежды:{" "}
-        <strong>{employee.ppeSizes?.clothingSize ?? "—"}; {employee.ppeSizes?.clothingHeight ?? "—"}</strong>
+        <strong>
+          {employee.ppeSizes?.clothingSize ?? "—"};{" "}
+          {employee.ppeSizes?.clothingHeight ?? "—"}
+        </strong>
+      </span>
+      <span>
+        Размер футболки:{" "}
+        <strong>
+          {employee.ppeSizes?.tshirtSize ?? "—"};{" "}
+          {employee.ppeSizes?.tshirtHeight ?? "—"}
+        </strong>
       </span>
       {Object.entries(employeeSizeLabels)
-        .filter(([key]) => key !== "clothingSize" && key !== "clothingHeight")
+        .filter(
+          ([key]) =>
+            key !== "clothingSize" &&
+            key !== "clothingHeight" &&
+            key !== "tshirtSize" &&
+            key !== "tshirtHeight",
+        )
         .map(([key, label]) => (
-        <span key={key}>
-          {label}:{" "}
-          <strong>{employee.ppeSizes?.[key as keyof EmployeeSizes] ?? "—"}</strong>
-        </span>
-      ))}
+          <span key={key}>
+            {label}:{" "}
+            <strong>
+              {employee.ppeSizes?.[key as keyof EmployeeSizes] ?? "—"}
+            </strong>
+          </span>
+        ))}
     </div>
   );
 }
@@ -91,15 +109,22 @@ function EmployeeSizesForm({
   const [draft, setDraft] = useState<Record<keyof EmployeeSizes, string>>({
     clothingSize: employee.ppeSizes?.clothingSize ?? "",
     clothingHeight: employee.ppeSizes?.clothingHeight ?? "",
+    tshirtSize: employee.ppeSizes?.tshirtSize ?? "",
+    tshirtHeight: employee.ppeSizes?.tshirtHeight ?? "",
     shoeSize: employee.ppeSizes?.shoeSize?.toString() ?? "",
     gloveSize: employee.ppeSizes?.gloveSize ?? "",
     headwearSize: employee.ppeSizes?.headwearSize ?? "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const savingRef = useRef(false);
   const [clothingExpanded, setClothingExpanded] = useState(
     !employee.ppeSizes?.clothingSize || !employee.ppeSizes?.clothingHeight,
   );
+  const [tshirtExpanded, setTshirtExpanded] = useState(
+    !employee.ppeSizes?.tshirtSize || !employee.ppeSizes?.tshirtHeight,
+  );
+  const tshirtToggle = useRef<HTMLButtonElement>(null);
   const clothingToggle = useRef<HTMLButtonElement>(null);
   const changed = changedEmployeeSizes(employee.ppeSizes, draft);
   const hasChanges = Object.keys(changed).length > 0;
@@ -111,7 +136,8 @@ function EmployeeSizesForm({
       className="ppe-form ppe-employee-sizes-form"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!Object.keys(changed).length) return;
+        if (savingRef.current || !Object.keys(changed).length) return;
+        savingRef.current = true;
         setSaving(true);
         onSavingChange(true);
         setError(null);
@@ -123,6 +149,7 @@ function EmployeeSizesForm({
           })
           .catch((err) => setError(ppeError(err)))
           .finally(() => {
+            savingRef.current = false;
             setSaving(false);
             onSavingChange(false);
           });
@@ -132,86 +159,129 @@ function EmployeeSizesForm({
         <strong>{employeeName(employee)}</strong>
         <p>{employee.position}</p>
       </div>
-      <fieldset className="ppe-form" disabled={saving || !employee.isActive}>
-        <legend>Размер одежды и ростовка</legend>
-        <div className="ppe-employee-clothing-summary">
-          <span>
-            {draft.clothingSize && draft.clothingHeight
-              ? `${draft.clothingSize}; ${draft.clothingHeight}`
-              : "Размер не выбран"}
-          </span>
-          <button
-            ref={clothingToggle}
-            type="button"
-            className="admin-secondary-button"
-            aria-expanded={clothingExpanded}
-            onClick={() => setClothingExpanded((current) => !current)}
-          >
-            {clothingExpanded ? "Свернуть" : "Изменить"}
-          </button>
-        </div>
-        <div
-          className={`ppe-employee-clothing-picker${clothingExpanded ? " is-expanded" : ""}`}
-          aria-hidden={!clothingExpanded}
-          inert={!clothingExpanded}
-        >
-          <div className="ppe-employee-clothing-picker-clip">
-            <div className="ppe-employee-clothing-picker-content">
-        <ClothingSizeGrid
-          selectionMode="single"
-          values={draft.clothingSize && draft.clothingHeight ? [{ value: draft.clothingSize, heightValue: draft.clothingHeight }] : []}
-          disabled={saving || !employee.isActive}
-          onChange={(values) => {
-            setDraft((current) => ({
-            ...current,
-            clothingSize: values[0]?.value ?? "",
-            clothingHeight: values[0]?.heightValue ?? "",
-            }));
-            if (values[0]?.value && values[0]?.heightValue) {
-              setClothingExpanded(false);
-              clothingToggle.current?.focus();
-            }
-          }}
-        />
-            </div>
-          </div>
-        </div>
-      </fieldset>
-      {(
-        Object.entries(employeeSizeLabels) as [keyof EmployeeSizes, string][]
-      ).filter(([key]) => key !== "clothingSize" && key !== "clothingHeight").map(([key, label]) => (
-        <Field key={key} label={label}>
-          <input
-            type={key === "shoeSize" ? "number" : "text"}
-            min={key === "shoeSize" ? 15 : undefined}
-            max={key === "shoeSize" ? 60 : undefined}
-            step={key === "shoeSize" ? "0.1" : undefined}
-            maxLength={key === "shoeSize" ? undefined : 20}
-            value={draft[key]}
+      {[
+        {
+          sizeKey: "clothingSize" as const,
+          heightKey: "clothingHeight" as const,
+          label: "Размер одежды и ростовка",
+          expanded: clothingExpanded,
+          setExpanded: setClothingExpanded,
+          toggleRef: clothingToggle,
+        },
+        {
+          sizeKey: "tshirtSize" as const,
+          heightKey: "tshirtHeight" as const,
+          label: "Размер футболки и ростовка",
+          expanded: tshirtExpanded,
+          setExpanded: setTshirtExpanded,
+          toggleRef: tshirtToggle,
+        },
+      ].map(
+        ({ sizeKey, heightKey, label, expanded, setExpanded, toggleRef }) => (
+          <fieldset
+            key={sizeKey}
+            className="ppe-form"
             disabled={saving || !employee.isActive}
-            onChange={(e) =>
-              setDraft((current) => ({
-                ...current,
-                [key]:
-                  key === "shoeSize"
-                    ? e.target.value
-                    : normalizePpeSizeText(e.target.value),
-              }))
-            }
-          />
-        </Field>
-      ))}
+          >
+            <legend>{label}</legend>
+            <div className="ppe-employee-clothing-summary">
+              <span>
+                {draft[sizeKey] && draft[heightKey]
+                  ? `${draft[sizeKey]}; ${draft[heightKey]}`
+                  : "Размер не выбран"}
+              </span>
+              <button
+                ref={toggleRef}
+                type="button"
+                className="admin-secondary-button"
+                aria-expanded={expanded}
+                onClick={() => setExpanded((current) => !current)}
+              >
+                {expanded ? "Свернуть" : "Изменить"}
+              </button>
+            </div>
+            <div
+              className={`ppe-employee-clothing-picker${expanded ? " is-expanded" : ""}`}
+              aria-hidden={!expanded}
+              inert={!expanded}
+            >
+              <div className="ppe-employee-clothing-picker-clip">
+                <div className="ppe-employee-clothing-picker-content">
+                  <ClothingSizeGrid
+                    variant={sizeKey === "tshirtSize" ? "tshirt" : "clothing"}
+                    selectionMode="single"
+                    values={
+                      draft[sizeKey] && draft[heightKey]
+                        ? [
+                            {
+                              value: draft[sizeKey],
+                              heightValue: draft[heightKey],
+                            },
+                          ]
+                        : []
+                    }
+                    disabled={saving || !employee.isActive}
+                    onChange={(values) => {
+                      setDraft((current) => ({
+                        ...current,
+                        [sizeKey]: values[0]?.value ?? "",
+                        [heightKey]: values[0]?.heightValue ?? "",
+                      }));
+                      if (values[0]?.value && values[0]?.heightValue) {
+                        setExpanded(false);
+                        toggleRef.current?.focus();
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </fieldset>
+        ),
+      )}
+      {(Object.entries(employeeSizeLabels) as [keyof EmployeeSizes, string][])
+        .filter(
+          ([key]) =>
+            key !== "clothingSize" &&
+            key !== "clothingHeight" &&
+            key !== "tshirtSize" &&
+            key !== "tshirtHeight",
+        )
+        .map(([key, label]) => (
+          <Field key={key} label={label}>
+            <input
+              type={key === "shoeSize" ? "number" : "text"}
+              min={key === "shoeSize" ? 15 : undefined}
+              max={key === "shoeSize" ? 60 : undefined}
+              step={key === "shoeSize" ? "0.1" : undefined}
+              maxLength={key === "shoeSize" ? undefined : 20}
+              value={draft[key]}
+              disabled={saving || !employee.isActive}
+              onChange={(e) =>
+                setDraft((current) => ({
+                  ...current,
+                  [key]:
+                    key === "shoeSize"
+                      ? e.target.value
+                      : normalizePpeSizeText(e.target.value),
+                }))
+              }
+            />
+          </Field>
+        ))}
       {!employee.isActive && (
         <Message error="Размеры отключённого сотрудника изменить нельзя." />
       )}
       <Message error={error} />
       <div className="ppe-employee-sizes-actions">
-      <button
-        className="admin-primary-button"
-        disabled={saving || !employee.isActive || !Object.keys(changed).length}
-      >
-        {saving ? "Сохранение..." : "Сохранить размеры"}
-      </button>
+        <button
+          className="admin-primary-button"
+          disabled={
+            saving || !employee.isActive || !Object.keys(changed).length
+          }
+        >
+          {saving ? "Сохранение..." : "Сохранить размеры"}
+        </button>
       </div>
     </form>
   );

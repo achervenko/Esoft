@@ -1,6 +1,6 @@
 import { SizeListTable } from "./SizeListTable";
 import { SizeEditForm } from "./SizeEditForm";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ppeApi, type PpeItem, type PpeSize } from "../../shared/api/ppe";
 import { GuardedAdminModal } from "../../shared/ui/GuardedAdminModal";
 import { ppeError, sizeLabel } from "../../modules/ppe-ui/ppe-presentation";
@@ -20,6 +20,7 @@ export function SizeListEditor({
   const [value, setValue] = useState("");
   const [height, setHeight] = useState("");
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [toggle, setToggle] = useState<PpeSize | null>(null);
   const editingChanged =
@@ -50,7 +51,7 @@ export function SizeListEditor({
       title={`Размеры: ${item.article} — ${item.name}`}
       onClose={onClose}
       isCloseDisabled={saving}
-      className={item.type === "BODY" ? "ppe-clothing-modal" : undefined}
+      className={(item.type === "BODY" || item.type === "TSHIRT") ? "ppe-clothing-modal" : undefined}
     >
       {(requestLeave) => (
         <div className="ppe-form">
@@ -83,19 +84,24 @@ export function SizeListEditor({
               onHeightChange={setHeight}
               onBack={() => requestLeave(() => setEditing(null))}
               onSave={() => {
+                if (savingRef.current) return;
+                savingRef.current = true;
                 setSaving(true);
                 setError(null);
                 void ppeApi
                   .saveSize(item.id, editing === "new" ? null : editing.id, {
                     value,
-                    ...(item.type === "BODY" ? { heightValue: height } : {}),
+                    ...((item.type === "BODY" || item.type === "TSHIRT") ? { heightValue: height } : {}),
                   })
                   .then(() => {
                     setEditing(null);
                     onChanged();
                   })
                   .catch((err) => setError(ppeError(err)))
-                  .finally(() => setSaving(false));
+                  .finally(() => {
+                    savingRef.current = false;
+                    setSaving(false);
+                  });
               }}
             />
           )}

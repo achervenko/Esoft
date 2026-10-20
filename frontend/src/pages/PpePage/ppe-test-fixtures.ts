@@ -16,11 +16,13 @@ export const employee: PpeEmployee = {
   position: "Инженер",
   isActive: true,
   ppeSizes: {
-  clothingSize: "88–92",
-  clothingHeight: "158–164",
-  shoeSize: 42,
-  gloveSize: "L",
-  headwearSize: "58",
+    clothingSize: "88–92",
+    clothingHeight: "158–164",
+    tshirtSize: "104–108",
+    tshirtHeight: "194–200",
+    shoeSize: 42,
+    gloveSize: "L",
+    headwearSize: "58",
   },
 };
 export const item: PpeItem = {
@@ -60,7 +62,7 @@ export const recommendation: SizeRecommendation = {
   recommendedSizeValue: "88–92",
   recommendedHeightValue: "158–164",
   recommendedSizeId: 4,
-  clothingHeight: "158–164",
+  heightValue: "158–164",
   requiresSelection: false,
   activeSizes: item.sizes.filter((size) => size.isActive),
 };
@@ -104,7 +106,7 @@ export const issue: PpeIssue = {
   unit: "пары",
   quantity: 1,
   sizeValue: "88–92",
-  clothingHeight: "170–176",
+  heightValue: "170–176",
   scheduledAt: "2026-01-01",
   issuedAt: "2026-10-06",
   issuedByUserId: "user",

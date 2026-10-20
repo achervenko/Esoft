@@ -3,6 +3,7 @@ import { ApiRequestError } from "../../shared/api/api-error";
 import type { PpeEmployee, PpeType } from "../../shared/api/ppe";
 export const typeLabels: Record<PpeType, string> = {
   BODY: "Одежда",
+  TSHIRT: "Футболки",
   FEET: "Обувь",
   HANDS: "Перчатки",
   HEAD: "Головной убор",
@@ -56,13 +57,14 @@ const errorMessages: Record<string, string> = {
     "Такой размер или пара размера и ростовки уже существует.",
   PPE_ITEM_ARTICLE_CONFLICT: "СИЗ с таким артикулом уже существует.",
   PPE_ITEM_SIZES_NOT_ALLOWED: "Для СИЗ типа «Прочее» размеры не используются.",
-  PPE_HEIGHT_REQUIRED: "Для одежды укажите размер и ростовку.",
-  PPE_HEIGHT_NOT_ALLOWED: "Ростовка предусмотрена только для одежды.",
+  PPE_HEIGHT_REQUIRED: "Для одежды и футболок укажите размер и ростовку.",
+  PPE_HEIGHT_NOT_ALLOWED: "Ростовка предусмотрена только для одежды и футболок.",
   PPE_SIZE_TYPE_CONFLICT: "Размерный ряд несовместим с выбранным типом СИЗ.",
   PPE_NORM_NOT_FOUND: "Норма не найдена. Обновите список норм.",
   PPE_NORM_PERIOD_CONFLICT: "Период нормы пересекается с другой редакцией.",
   PPE_NORM_LOCKED: "Норму уже нельзя изменить.",
-  PPE_NORM_ALREADY_ISSUED: "Эта нормативная выдача уже выполнена или больше недоступна. Обновите план.",
+  PPE_NORM_ALREADY_ISSUED:
+    "Эта нормативная выдача уже выполнена или больше недоступна. Обновите план.",
   PPE_NORM_NOT_DUE: "Окно нормативной выдачи ещё не открыто.",
   PPE_EMPLOYEE_NOT_FOUND: "Сотрудник не найден.",
   PPE_EMPLOYEE_INACTIVE: "Сотрудник отключён. Новые выдачи недоступны.",
