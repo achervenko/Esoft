@@ -38,6 +38,7 @@ export const ROLE_PERMISSIONS = {
     'ppe.issue.backdate',
     'warehouse.catalog.manage',
     'warehouse.adjustments.manage',
+    'warehouse.issue-sheets.manage',
   ],
   chief_engineer: [
     ...equipmentEditor,
@@ -62,7 +63,11 @@ export const ROLE_PERMISSIONS = {
     'ppe.issue',
     'search.read',
   ],
-  storekeeper: ['warehouse.catalog.manage', 'users.profile.read'],
+  storekeeper: [
+    'warehouse.catalog.manage',
+    'warehouse.issue-sheets.manage',
+    'users.profile.read',
+  ],
 } as const satisfies Record<AppRole, readonly string[]>;
 
 type RolePermission = (typeof ROLE_PERMISSIONS)[AppRole][number];

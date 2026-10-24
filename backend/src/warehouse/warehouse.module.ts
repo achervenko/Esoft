@@ -1,3 +1,10 @@
+import { WarehouseIssueSheetLinesService } from './issue-sheets/issue-sheets-lines.service';
+import { WarehouseIssueSheetLifecycleService } from './issue-sheets/issue-sheets-lifecycle.service';
+import { WarehouseIssueSheetExecutionService } from './issue-sheets/issue-sheets-execution.service';
+import { WarehouseIssueSheetsController } from './issue-sheets/issue-sheets.controller';
+import { WarehouseIssueSheetsService } from './issue-sheets/issue-sheets.service';
+import { WarehouseIssueSheetsQueryService } from './issue-sheets/issue-sheets-query.service';
+import { WarehouseIssueSheetTransactions } from './issue-sheets/issue-sheets-transaction.service';
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -15,10 +22,18 @@ import { WarehouseStockAdjustmentQueryService } from './adjustments/adjustment-q
 @Module({
   imports: [PrismaModule, AuditModule],
   controllers: [
+    WarehouseIssueSheetsController,
     WarehouseCatalogController,
     WarehouseStockAdjustmentsController,
   ],
   providers: [
+    WarehouseIssueSheetLinesService,
+    WarehouseIssueSheetLifecycleService,
+    WarehouseIssueSheetExecutionService,
+
+    WarehouseIssueSheetsService,
+    WarehouseIssueSheetsQueryService,
+    WarehouseIssueSheetTransactions,
     WarehouseCatalogService,
     WarehouseStockQueryService,
     WarehouseStockService,
@@ -28,6 +43,6 @@ import { WarehouseStockAdjustmentQueryService } from './adjustments/adjustment-q
     WarehouseStockAdjustmentDocumentService,
     WarehouseStockAdjustmentQueryService,
   ],
-  exports: [WarehouseStockService],
+  exports: [WarehouseStockService, WarehouseIssueSheetsService],
 })
 export class WarehouseModule {}
