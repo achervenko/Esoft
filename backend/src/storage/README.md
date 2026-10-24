@@ -217,7 +217,7 @@ Preview поддерживает размеры `small` (`48x48`) и `medium` (`
 Cache key:
 
 ```text
-storage-previews/<storageFile.id>/<size>.webp
+storage-previews/<storageFile.id>/<sha256([bucket, objectKey])>/<variant>.webp
 ```
 
 Flow:

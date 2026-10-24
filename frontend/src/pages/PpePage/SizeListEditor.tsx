@@ -1,3 +1,4 @@
+import { Plus } from "lucide-react";
 import { SizeListTable } from "./SizeListTable";
 import { SizeEditForm } from "./SizeEditForm";
 import { useRef, useState } from "react";
@@ -51,7 +52,11 @@ export function SizeListEditor({
       title={`Размеры: ${item.article} — ${item.name}`}
       onClose={onClose}
       isCloseDisabled={saving}
-      className={(item.type === "BODY" || item.type === "TSHIRT") ? "ppe-clothing-modal" : undefined}
+      className={
+        item.type === "BODY" || item.type === "TSHIRT"
+          ? "ppe-clothing-modal"
+          : undefined
+      }
     >
       {(requestLeave) => (
         <div className="ppe-form">
@@ -67,10 +72,13 @@ export function SizeListEditor({
           )}
           {manage && !editing && (
             <button
+              type="button"
+              aria-label="Добавить размер"
               className="admin-secondary-button"
               onClick={() => edit("new")}
             >
-              Добавить размер
+              <Plus size={18} aria-hidden="true" />
+              Добавить
             </button>
           )}
           {editing && (
@@ -91,7 +99,9 @@ export function SizeListEditor({
                 void ppeApi
                   .saveSize(item.id, editing === "new" ? null : editing.id, {
                     value,
-                    ...((item.type === "BODY" || item.type === "TSHIRT") ? { heightValue: height } : {}),
+                    ...(item.type === "BODY" || item.type === "TSHIRT"
+                      ? { heightValue: height }
+                      : {}),
                   })
                   .then(() => {
                     setEditing(null);

@@ -18,17 +18,23 @@ it("resolves an employee card URL and allows the PPE specialist", () => {
     tab: "norms",
     positionId: 2,
   });
-  expect(canAccessWorkspaceRoute(permissionsForTest("ppe_specialist"), "#/ppe/positions/2")).toBe(
-    true,
-  );
+  expect(
+    canAccessWorkspaceRoute(
+      permissionsForTest("ppe_specialist"),
+      "#/ppe/positions/2",
+    ),
+  ).toBe(true);
   expect(resolveAppRoute("#/ppe/employees/1")).toEqual({
     kind: "ppe",
     tab: "issue",
     employeeId: 1,
   });
-  expect(canAccessWorkspaceRoute(permissionsForTest("ppe_specialist"), "#/ppe/employees/1")).toBe(
-    true,
-  );
+  expect(
+    canAccessWorkspaceRoute(
+      permissionsForTest("ppe_specialist"),
+      "#/ppe/employees/1",
+    ),
+  ).toBe(true);
   expect(resolveAppRoute("#/ppe/employees/0")).toEqual({ kind: "unknown" });
 });
 it("opens a position norms page directly without tabs after reload", async () => {
@@ -39,7 +45,11 @@ it("opens a position norms page directly without tabs after reload", async () =>
   ]);
   vi.spyOn(ppeApi, "norms").mockResolvedValue([]);
   render(
-    <PpePage userPermissions={permissionsForTest("ppe_specialist")} initialTab="norms" positionId={2} />,
+    <PpePage
+      userPermissions={permissionsForTest("ppe_specialist")}
+      initialTab="norms"
+      positionId={2}
+    />,
   );
   await screen.findByRole("heading", { name: "Инженер" });
   expect(
@@ -50,11 +60,13 @@ it("opens a position norms page directly without tabs after reload", async () =>
   ).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Назад" })).toBeInTheDocument();
   expect(
-    await screen.findByRole("button", { name: "Создать норму" }),
+    await screen.findByRole("button", { name: "Добавить норму" }),
   ).toBeInTheDocument();
 });
 it("opens the employee directly without tabs or search after reload", async () => {
-  const allEmployees = vi.spyOn(ppeApi, "employees").mockResolvedValue([employee]);
+  const allEmployees = vi
+    .spyOn(ppeApi, "employees")
+    .mockResolvedValue([employee]);
   vi.spyOn(ppeApi, "employee").mockResolvedValue(employee);
   vi.spyOn(ppeApi, "items").mockResolvedValue([]);
   vi.spyOn(ppeApi, "positions").mockResolvedValue([]);
@@ -70,7 +82,10 @@ it("opens the employee directly without tabs or search after reload", async () =
   });
   render(
     <NotificationProvider>
-      <PpePage userPermissions={permissionsForTest("ppe_specialist")} employeeId={employee.id} />
+      <PpePage
+        userPermissions={permissionsForTest("ppe_specialist")}
+        employeeId={employee.id}
+      />
     </NotificationProvider>,
   );
   await waitFor(() =>
@@ -87,6 +102,9 @@ it("opens the employee directly without tabs or search after reload", async () =
     screen.queryByRole("navigation", { name: "Разделы СИЗ" }),
   ).not.toBeInTheDocument();
   expect(screen.queryByLabelText("Поиск по ФИО")).not.toBeInTheDocument();
-  expect(ppeApi.employee).toHaveBeenCalledWith(employee.id, expect.any(AbortSignal));
+  expect(ppeApi.employee).toHaveBeenCalledWith(
+    employee.id,
+    expect.any(AbortSignal),
+  );
   expect(allEmployees).not.toHaveBeenCalled();
 });

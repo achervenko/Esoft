@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useMediaQuery } from '../../shared/lib/useMediaQuery';
 import { EquipmentStatusBadge } from '../../modules/equipment-status';
 import type { EquipmentRegistryItem } from '../../shared/api/equipment/equipment.types';
 import {
@@ -86,14 +87,14 @@ export function EquipmentRegistryTable({
   sort,
   onSortChange,
 }: EquipmentRegistryTableProps) {
-  const isMobileRegistry = useMobileEquipmentRegistry();
-  const [mobileSort] = useState(defaultEquipmentSort);
+  const isMobileRegistry = useMediaQuery(MOBILE_EQUIPMENT_REGISTRY_QUERY);
   const sortedMobileItems = useMemo(
-    () =>
-      sort ? items : isMobileRegistry
-        ? sortDataTableRows(items, equipmentColumns, mobileSort)
-        : [],
-    [isMobileRegistry, items, mobileSort, sort],
+    () => {
+      if (sort) return items;
+      if (!isMobileRegistry) return [];
+      return sortDataTableRows(items, equipmentColumns, defaultEquipmentSort);
+    },
+    [isMobileRegistry, items, sort],
   );
 
   if (items.length === 0) {
@@ -110,12 +111,20 @@ export function EquipmentRegistryTable({
   return (
     <div className="equipment-table-shell">
       {isMobileRegistry ? (
-        <div className="equipment-registry-cards" aria-label="Реестр оборудования">
+        <div className="equipment-registry-cards" role="region" aria-label="Реестр оборудования">
           {sortedMobileItems.map((item) => (
             <article
               className="equipment-registry-card"
               key={item.id}
-              onDoubleClick={() => onOpenEquipment(item.visibleId)}
+              onClick={() => onOpenEquipment(item.visibleId)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onOpenEquipment(item.visibleId);
+                }
+              }}
             >
               <span className="equipment-card-id">ID {item.visibleId}</span>
               <h2>{item.name}</h2>
@@ -163,34 +172,4 @@ export function EquipmentRegistryTable({
       )}
     </div>
   );
-}
-
-function getIsMobileEquipmentRegistry() {
-  if (typeof window === 'undefined' || !window.matchMedia) {
-    return false;
-  }
-
-  return window.matchMedia(MOBILE_EQUIPMENT_REGISTRY_QUERY).matches;
-}
-
-function useMobileEquipmentRegistry() {
-  const [isMobileRegistry, setIsMobileRegistry] = useState(
-    getIsMobileEquipmentRegistry,
-  );
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) {
-      return undefined;
-    }
-
-    const mediaQuery = window.matchMedia(MOBILE_EQUIPMENT_REGISTRY_QUERY);
-    const handleChange = () => setIsMobileRegistry(mediaQuery.matches);
-
-    handleChange();
-    mediaQuery.addEventListener('change', handleChange);
-
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
-  return isMobileRegistry;
 }

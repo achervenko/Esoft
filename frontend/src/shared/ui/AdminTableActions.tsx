@@ -2,6 +2,7 @@ import "./AdminButtons.css";
 import { Edit2, Trash2 } from "lucide-react";
 
 type AdminTableActionsProps = {
+  disabled?: boolean;
   deleteLabel: string;
   editLabel: string;
   onDelete: () => void;
@@ -9,6 +10,7 @@ type AdminTableActionsProps = {
 };
 
 export function AdminTableActions({
+  disabled = false,
   deleteLabel,
   editLabel,
   onDelete,
@@ -19,6 +21,7 @@ export function AdminTableActions({
       <button
         aria-label={editLabel}
         className="admin-icon-button"
+        disabled={disabled}
         onClick={onEdit}
         title="Редактировать"
         type="button"
@@ -28,6 +31,7 @@ export function AdminTableActions({
       <button
         aria-label={deleteLabel}
         className="admin-icon-button"
+        disabled={disabled}
         onClick={onDelete}
         title="Удалить"
         type="button"

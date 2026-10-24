@@ -24,14 +24,6 @@
   color: #6b7280;
   font-size: 13px;
 }
-@media (max-width: 760px) {
-  .ppe-draft-row {
-    grid-template-columns: 1fr 1fr;
-  }
-  .ppe-draft-row .ppe-field:first-of-type {
-    grid-column: 1 / -1;
-  }
-}
 
 .ppe-norm-form-modal > .ppe-form {
   display: flex;
@@ -39,12 +31,29 @@
   gap: 20px;
   padding-top: 20px;
   padding-bottom: 24px;
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ppe-norm-form-modal > .ppe-form {
+    scroll-behavior: auto;
+  }
 }
 .ppe-norm-form-modal .ppe-draft-row {
   grid-template-columns: minmax(180px, 1fr) 54px 54px 76px 38px;
+  align-items: start;
+  --field-gap: 7px;
   margin: 0;
   padding: 16px;
   gap: 14px 12px;
+}
+.ppe-norm-form-modal .ppe-draft-row .form-field-label {
+  min-height: 20px;
+  line-height: 20px;
+}
+.ppe-norm-form-modal .ppe-draft-row > label.ppe-field:not(.form-field),
+.ppe-norm-form-modal .ppe-draft-row > .ppe-delete-icon-button {
+  margin-top: 27px;
 }
 .ppe-norm-form-modal .ppe-period-unit-select {
   padding-inline: 8px;
@@ -64,8 +73,27 @@
 }
 
 @media (max-width: 760px) {
+  .ppe-norm-form-modal input[type="date"] {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 36px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2315171c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+  }
+  .ppe-norm-form-modal input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0;
+  }
   .ppe-norm-form-modal .ppe-draft-row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 76px 38px;
+    padding: 12px;
+    gap: 14px 8px;
+  }
+  .ppe-norm-form-modal .ppe-draft-row > :first-child {
+    grid-column: 1 / -1;
+  }
+  .ppe-norm-form-modal .ppe-draft-row .form-field-label {
+    white-space: nowrap;
   }
 }
 
@@ -74,8 +102,18 @@
   -moz-appearance: textfield;
   padding-inline: 8px;
 }
-.ppe-norm-form-modal .ppe-draft-row input[type="number"]::-webkit-inner-spin-button,
-.ppe-norm-form-modal .ppe-draft-row input[type="number"]::-webkit-outer-spin-button {
+.ppe-norm-form-modal .ppe-draft-row input,
+.ppe-norm-form-modal .ppe-draft-row .select-dropdown-trigger,
+.ppe-norm-form-modal .ppe-draft-row > .ppe-delete-icon-button {
+  height: 44px;
+  min-height: 44px;
+}
+.ppe-norm-form-modal
+  .ppe-draft-row
+  input[type="number"]::-webkit-inner-spin-button,
+.ppe-norm-form-modal
+  .ppe-draft-row
+  input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }

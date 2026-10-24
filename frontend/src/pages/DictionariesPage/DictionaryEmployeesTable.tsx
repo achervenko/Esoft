@@ -1,4 +1,13 @@
-import { Edit2 } from "lucide-react";
+import { useMediaQuery } from "../../shared/lib/useMediaQuery";
+import { useEmployeeDictionarySearch } from "./useEmployeeDictionarySearch";
+import { Notice } from "../../shared/ui/Notice";
+import { LoadingIndicator } from "../../shared/ui/LoadingIndicator";
+import "../../shared/ui/SearchInput.css";
+import "../../shared/ui/SearchToolbar.css";
+import { useEffect, useState } from "react";
+import { EmployeeDictionaryDetailsModal } from "./EmployeeDictionaryDetailsModal";
+import { sortDataTableRows } from "../../shared/ui/data-table-model";
+import { ChevronRight, Edit2, Search, X } from "lucide-react";
 import type { AdminEmployee } from "../../shared/api/users-admin-api";
 import { DataTable, type DataTableColumn } from "../../shared/ui/DataTable";
 import { Switch } from "../../shared/ui/Switch";
@@ -121,20 +130,112 @@ export function DictionaryEmployeesTable({
   onSizes,
   employeeSizes,
 }: DictionaryEmployeesTableProps) {
+  const isMobile = useMediaQuery("(max-width: 760px)");
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isMobile) setSelectedId(null);
+  }, [isMobile]);
+
+  const columns = employeeColumns(
+    (employee) => {
+      setSelectedId(null);
+      onEdit(employee);
+    },
+    onToggleStatus,
+    isSaving,
+    onSizes ? (employee) => {
+      setSelectedId(null);
+      onSizes(employee);
+    } : undefined,
+    employeeSizes,
+  );
+  const group = (employee: AdminEmployee) => employee.isActive ? 0 : 1;
+  const defaultSort = { direction: "asc" as const, key: "fullName" };
+
+  const { filtered, isSearching, error, limited, retry } = useEmployeeDictionarySearch(employees, query);
+  const selected = filtered.find(({ id }) => id === selectedId);
+  useEffect(() => {
+    if (selectedId !== null && !selected) setSelectedId(null);
+  }, [selectedId, selected]);
+  const search = (
+    <>
+    <div className="admin-card dictionary-search-toolbar">
+    <div className="search-input-shell ppe-journal-search">
+      <Search aria-hidden="true" size={18} />
+      <input type="search" aria-label="Поиск сотрудников" placeholder=""
+        value={query} onChange={(event) => setQuery(event.target.value)} />
+      {query && <button type="button" className="ppe-journal-icon-button" aria-label="Очистить поиск сотрудников"
+        onClick={() => setQuery("")}><X size={18} aria-hidden="true" /></button>}
+    </div>
+    </div>
+    <LoadingIndicator loading={isSearching}>Поиск сотрудников…</LoadingIndicator>
+    {error && <Notice tone="error">Не удалось выполнить расширенный поиск: {error}
+      <p>Показаны только точные совпадения по ФИО и должностям.</p>
+      <button className="admin-secondary-button" type="button" onClick={retry}>Повторить поиск</button>
+    </Notice>}
+    {limited && <Notice>Дополнительные совпадения ограничены первыми 100 результатами. Уточните запрос.</Notice>}
+    </>
+  );
+  const empty = !isSearching && !error ? <p className="admin-state" role="status">Сотрудники не найдены.</p> : null;
+
+  if (isMobile) {
+    const sorted = sortDataTableRows(filtered, columns, defaultSort, group);
+    return (
+      <>
+        {search}
+        {filtered.length === 0 && empty}
+        <div className="dictionary-employee-cards" aria-label="Сотрудники">
+          {sorted.map((employee) => (
+            <button
+              className="dictionary-employee-card"
+              key={employee.id}
+              type="button"
+              aria-label={`Открыть карточку сотрудника ${employee.fullName}`}
+              onClick={() => setSelectedId(employee.id)}
+            >
+              <span>
+                <strong>{employee.fullName}</strong>
+                <span className="dictionary-employee-position">
+                  {columns.find(({ key }) => key === "position")?.render(employee)}
+                </span>
+              </span>
+              <ChevronRight aria-hidden="true" size={20} />
+            </button>
+          ))}
+        </div>
+        {selected && (
+          <EmployeeDictionaryDetailsModal
+            title={selected.fullName}
+            onClose={() => setSelectedId(null)}
+            isSaving={isSaving}
+            showSizes={Boolean(onSizes)}
+            sizes={employeeSizes?.get(selected.id)}
+            details={columns.filter(({ key }) => ["position", "gender", "status"].includes(key)).map((column) => (
+                  <div key={column.key}>
+                    <dt>{column.label}</dt>
+                    <dd>{column.render(selected)}</dd>
+                  </div>
+                ))}
+            actions={columns.find(({ key }) => key === "actions")?.render(selected)}
+          />
+        )}
+      </>
+    );
+  }
+
   return (
-    <DataTable
-      columns={employeeColumns(
-        onEdit,
-        onToggleStatus,
-        isSaving,
-        onSizes,
-        employeeSizes,
-      )}
-      defaultSort={{ direction: "asc", key: "fullName" }}
+    <>
+    {search}
+    {filtered.length === 0 ? empty : <div className="dictionary-table-surface"><DataTable
+      columns={columns}
+      defaultSort={defaultSort}
       getRowKey={(employee) => employee.id}
-      rows={employees}
-      getRowGroup={(employee) => (employee.isActive ? 0 : 1)}
+      rows={filtered}
+      getRowGroup={group}
       animateRowMoves
-    />
+    /></div>}
+    </>
   );
 }

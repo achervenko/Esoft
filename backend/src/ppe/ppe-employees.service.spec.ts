@@ -18,6 +18,7 @@ const storedEmployee = {
   lastName: 'Иванов',
   middleName: null,
   positionId: 2,
+  positionAssignedAt: new Date('2026-01-01'),
   position: { name: 'Сварщик' },
   additionalPositions: [],
   isActive: true,
@@ -63,10 +64,12 @@ describe('PPE employee access', () => {
     expect(result[0]).toEqual({
       ...Object.fromEntries(
         Object.entries(storedEmployee).filter(
-          ([key]) => key !== 'additionalPositions',
+          ([key]) =>
+            key !== 'additionalPositions' && key !== 'positionAssignedAt',
         ),
       ),
       position: 'Сварщик',
+      positionAssignments: [{ positionId: 2, assignedAt: '2026-01-01' }],
       ppeSizes: { ...sizes, shoeSize: 42 },
     });
     const [query] = tx.employee.findMany.mock.calls[0] as [
@@ -98,6 +101,10 @@ describe('PPE employee access', () => {
     ];
     for (const result of results) {
       expect(result.position).toBe('Сварщик, Механик');
+      expect(result.positionAssignments).toEqual([
+        { positionId: 2, assignedAt: '2026-01-01' },
+        { positionId: 3, assignedAt: '2026-10-20' },
+      ]);
       expect(result).not.toHaveProperty('additionalPositions');
     }
   });

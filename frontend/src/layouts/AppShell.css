@@ -105,6 +105,12 @@
   }
 }
 
+@media (max-width: 760px) and (hover: hover) and (pointer: fine) {
+  html {
+    scrollbar-gutter: stable;
+  }
+}
+
 .app-page-loading--section {
   min-height: calc(100svh - 56px);
 }

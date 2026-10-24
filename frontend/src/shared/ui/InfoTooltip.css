@@ -1,0 +1,48 @@
+.info-tooltip-trigger {
+  display: inline-flex;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #7b8492;
+  cursor: pointer;
+}
+
+.info-tooltip-trigger:hover,
+.info-tooltip-trigger:focus-visible {
+  color: #3f4652;
+  background: #f1f3f6;
+}
+
+.info-tooltip-trigger:focus-visible {
+  outline: 2px solid #667085;
+  outline-offset: 2px;
+}
+
+.info-tooltip-content {
+  max-width: min(320px, calc(100vw - 24px));
+  padding: 10px 12px;
+  border: 1px solid #d6dce5;
+  border-radius: 8px;
+  background: #fff;
+  color: #303744;
+  box-shadow: 0 6px 20px #0002;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.info-tooltip-content ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.info-tooltip-content li + li {
+  margin-top: 4px;
+}

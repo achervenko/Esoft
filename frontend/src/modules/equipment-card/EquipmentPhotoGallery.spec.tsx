@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { getFilePreviewUrl } from "../../shared/api/files-api";
@@ -56,7 +56,9 @@ describe("EquipmentPhotoGallery", () => {
 
     expect(previewImage).toHaveAttribute(
       "src",
-      `${getFilePreviewUrl({ fileId: 10, visibleId: 1001 }, { size: "medium" })}&v=fit2`,
+      getFilePreviewUrl({ fileId: 10, visibleId: 1001 }, {
+        size: "medium", version: createEquipmentPhoto().createdAt,
+      }),
     );
 
     await user.click(previewButton);
@@ -64,6 +66,12 @@ describe("EquipmentPhotoGallery", () => {
     expect(
       screen.getByRole("dialog", { name: "Увеличенное фото оборудования" }),
     ).toBeInTheDocument();
+    const enlargedImage = within(
+      screen.getByRole("dialog", { name: "Увеличенное фото оборудования" }),
+    ).getByRole("img", { name: "Главное.jpg" });
+    const url = new URL(enlargedImage.getAttribute("src")!, "http://localhost");
+    expect(url.searchParams.get("v")).toBe(`source-v1:${createEquipmentPhoto().createdAt}`);
+    expect(url.searchParams.has("size")).toBe(false);
   });
 
   it("supports photo navigation", async () => {

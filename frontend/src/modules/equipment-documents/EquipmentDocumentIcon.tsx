@@ -29,7 +29,7 @@ export function EquipmentDocumentIcon({
         <AsyncImage
           src={getFilePreviewUrl(
             { fileId: file.id, visibleId },
-            { size: "small" },
+            { size: "small", version: file.createdAt },
           )}
         />
       </div>

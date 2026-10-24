@@ -8,6 +8,7 @@ import type { DictionariesModalsModel } from "./dictionaries-page-view.types";
 type DictionariesPageModalsProps = {
   page: DictionariesModalsModel;
   sizeEmployeeId: number | null;
+  newParentId?: number | null;
   onCloseEmployeeSizes: () => void;
   onEmployeeSizesChanged?: () => void;
 };
@@ -15,6 +16,7 @@ type DictionariesPageModalsProps = {
 export function DictionariesPageModals({
   page,
   sizeEmployeeId,
+  newParentId = null,
   onCloseEmployeeSizes,
   onEmployeeSizesChanged,
 }: DictionariesPageModalsProps) {
@@ -94,7 +96,7 @@ export function DictionariesPageModals({
             page.locationForm === "new" ? "" : page.locationForm.name
           }
           initialParentId={
-            page.locationForm === "new" ? null : page.locationForm.workshopId
+            page.locationForm === "new" ? newParentId : page.locationForm.workshopId
           }
           isSaving={page.isSaving}
           nameLabel="Местонахождение"
@@ -119,7 +121,7 @@ export function DictionariesPageModals({
         <ParentNameDictionaryFormModal
           initialName={page.modelForm === "new" ? "" : page.modelForm.name}
           initialParentId={
-            page.modelForm === "new" ? null : page.modelForm.manufacturerId
+            page.modelForm === "new" ? newParentId : page.modelForm.manufacturerId
           }
           isSaving={page.isSaving}
           nameLabel="Модель"

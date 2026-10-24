@@ -4,6 +4,8 @@ import { DataTable, type DataTableColumn } from "../../shared/ui/DataTable";
 
 type ObjectsTableProps = {
   objects: DictionaryObject[];
+  selectedId?: number | null;
+  onSelect?: (item: DictionaryObject) => void;
   onDelete: (object: DictionaryObject) => void;
   onEdit: (object: DictionaryObject) => void;
 };
@@ -33,13 +35,15 @@ const columns = (
   },
 ];
 
-export function ObjectsTable({ objects, onDelete, onEdit }: ObjectsTableProps) {
+export function ObjectsTable({ objects, selectedId, onSelect, onDelete, onEdit }: ObjectsTableProps) {
   return (
     <DataTable
       columns={columns(onEdit, onDelete)}
       defaultSort={{ direction: "asc", key: "name" }}
       getRowKey={(object) => object.id}
       rows={objects}
+      selectedRowKey={selectedId}
+      onRowClick={onSelect}
     />
   );
 }

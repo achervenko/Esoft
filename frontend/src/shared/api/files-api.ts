@@ -6,10 +6,13 @@ export type FilePreviewSize = "small" | "medium";
 
 export function getFilePreviewUrl(
   params: { fileId: number; visibleId: number },
-  options: { size?: FilePreviewSize } = {},
+  options: { size?: FilePreviewSize; version?: string } = {},
 ) {
   const baseUrl = `${API_URL}/api/equipment/${params.visibleId}/files/${params.fileId}/preview`;
-  return options.size ? `${baseUrl}?size=${options.size}` : baseUrl;
+  const query = new URLSearchParams();
+  if (options.size) query.set("size", options.size);
+  if (options.version) query.set("v", `source-v1:${options.version}`);
+  return query.size ? `${baseUrl}?${query}` : baseUrl;
 }
 
 export function getFileDownloadUrl(params: {
@@ -92,7 +95,11 @@ function getFileNameFromContentDisposition(value: string | null) {
   const encodedFileName = value.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
 
   if (encodedFileName) {
-    return decodeURIComponent(encodedFileName);
+    try {
+      return decodeURIComponent(encodedFileName);
+    } catch {
+      return encodedFileName;
+    }
   }
 
   return value.match(/filename="([^"]+)"/i)?.[1] ?? null;

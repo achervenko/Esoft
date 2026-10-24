@@ -14,6 +14,7 @@ export type FormFieldProps = {
   children: ReactNode;
   required?: boolean;
   error?: string;
+  warning?: string;
   hideLabel?: boolean;
   className?: string;
 };
@@ -23,13 +24,14 @@ export function FormField({
   children,
   required = false,
   error,
+  warning,
   hideLabel = false,
   className = "",
 }: FormFieldProps) {
   const errorId = useId();
   return (
     <label
-      className={`form-field ${className}${error ? " has-error" : ""}`.trim()}
+      className={`form-field ${className}${error ? " has-error" : warning ? " has-warning" : ""}`.trim()}
     >
       <span className={`form-field-label${hideLabel ? " admin-control-label-hidden" : ""}`}>
         {label}
@@ -51,14 +53,14 @@ export function FormField({
             : {}),
           "aria-invalid": error ? true : child.props["aria-invalid"],
           "aria-describedby":
-            [child.props["aria-describedby"], error ? errorId : null]
+            [child.props["aria-describedby"], error || warning ? errorId : null]
               .filter(Boolean)
               .join(" ") || undefined,
         });
       })}
-      {error ? (
-        <small id={errorId} className="field-error">
-          {error}
+      {error || warning ? (
+        <small id={errorId} className={error ? "field-error" : "field-warning"}>
+          {error || warning}
         </small>
       ) : null}
     </label>

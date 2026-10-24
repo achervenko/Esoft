@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import type { PpePosition, PpeNorm } from "../../shared/api/ppe";
 import { normPeriodStatus } from "./norm-model";
 type NormPositionHeaderProps = {
@@ -32,8 +32,9 @@ export function NormPositionHeader({
           !loading &&
           selectedNorms &&
           ["MALE", "FEMALE"].some((gender) => !selectedNorms.some((norm) => norm.gender === gender && normPeriodStatus(norm) !== "Завершённая")) && (
-            <button className="admin-primary-button" onClick={() => onCreate()}>
-              Создать норму
+            <button type="button" aria-label="Добавить норму" className="admin-primary-button" onClick={onCreate}>
+              <Plus size={18} aria-hidden="true" />
+              Добавить
             </button>
           )}
       </header>

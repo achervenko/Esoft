@@ -1,6 +1,6 @@
 import "./SizeRange.css";
 import { Slider } from "@chakra-ui/react";
-import { ChevronRight, X } from "lucide-react";
+import { ChevronRight, Plus, X } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { Field } from "../../modules/ppe-ui/ppe-ui";
 
@@ -89,7 +89,10 @@ export function SizeRange({
         minStepsBetweenThumbs={0}
         value={range}
         disabled={disabled}
-        aria-label={[`Минимальный размер ${sizeName}`, `Максимальный размер ${sizeName}`]}
+        aria-label={[
+          `Минимальный размер ${sizeName}`,
+          `Максимальный размер ${sizeName}`,
+        ]}
         onValueChange={({ value }) => fill(value)}
         colorPalette="gray"
       >
@@ -199,6 +202,7 @@ export function SizeRange({
             />
           </Field>
           <button
+            aria-label="Добавить размер"
             type="button"
             className="admin-secondary-button"
             disabled={
@@ -210,7 +214,8 @@ export function SizeRange({
             }
             onClick={add}
           >
-            Добавить размер
+            <Plus size={18} aria-hidden="true" />
+            Добавить
           </button>
         </div>
       </details>

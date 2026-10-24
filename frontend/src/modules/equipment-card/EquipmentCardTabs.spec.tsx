@@ -4,6 +4,23 @@ import { describe, expect, it, vi } from "vitest";
 import { EquipmentCardTabs } from "./EquipmentCardTabs";
 
 describe("EquipmentCardTabs", () => {
+  it("reveals the active tab on mobile, including an initial deep link", () => {
+    vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: true })));
+    const scroll = vi.spyOn(HTMLElement.prototype, "scrollIntoView");
+    try {
+      const { rerender } = render(
+        <EquipmentCardTabs activeTab="history" onTabChange={vi.fn()} />,
+      );
+      expect(scroll.mock.contexts.at(-1)).toBe(screen.getByRole("tab", { name: "История изменений" }));
+      rerender(<EquipmentCardTabs activeTab="details" onTabChange={vi.fn()} />);
+      expect(scroll.mock.contexts.at(-1)).toBe(screen.getByRole("tab", { name: "Карточка" }));
+      expect(scroll).toHaveBeenLastCalledWith({ block: "nearest", inline: "nearest" });
+    } finally {
+      scroll.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("renders all equipment tabs", () => {
     render(
       <EquipmentCardTabs activeTab="details" onTabChange={vi.fn()} />,

@@ -22,14 +22,19 @@ type DataTableProps<Row, SortKey extends string> = {
     key: SortKey;
   };
   getRowKey: (row: Row) => string | number;
+  getRowClassName?: (row: Row) => string | undefined;
   getRowGroup?: (row: Row) => number;
   animateRowMoves?: boolean;
   onRowClick?: (row: Row) => void;
   onRowDoubleClick?: (row: Row) => void;
   onRowContextMenu?: (row: Row, position: { x: number; y: number }) => void;
   rows: Row[];
+  selectedRowKey?: string | number | null;
   sort?: { direction: DataTableSortDirection; key: SortKey };
-  onSortChange?: (sort: { direction: DataTableSortDirection; key: SortKey }) => void;
+  onSortChange?: (sort: {
+    direction: DataTableSortDirection;
+    key: SortKey;
+  }) => void;
   serverSorted?: boolean;
 };
 
@@ -37,12 +42,14 @@ export function DataTable<Row, SortKey extends string>({
   columns,
   defaultSort,
   getRowKey,
+  getRowClassName,
   getRowGroup,
   animateRowMoves = false,
   onRowClick,
   onRowDoubleClick,
   onRowContextMenu,
   rows,
+  selectedRowKey,
   sort: controlledSort,
   onSortChange,
   serverSorted = false,
@@ -51,7 +58,8 @@ export function DataTable<Row, SortKey extends string>({
   const sort = controlledSort ?? localSort;
 
   const sortedRows = useMemo(
-    () => serverSorted ? rows : sortDataTableRows(rows, columns, sort, getRowGroup),
+    () =>
+      serverSorted ? rows : sortDataTableRows(rows, columns, sort, getRowGroup),
     [columns, rows, sort, getRowGroup, serverSorted],
   );
 
@@ -59,7 +67,11 @@ export function DataTable<Row, SortKey extends string>({
 
   const toggleSort = (key: SortKey) => {
     if (onSortChange) {
-      onSortChange({ key, direction: sort.key === key && sort.direction === 'asc' ? 'desc' : 'asc' });
+      onSortChange({
+        key,
+        direction:
+          sort.key === key && sort.direction === "asc" ? "desc" : "asc",
+      });
       return;
     }
     setSort((currentSort) => {
@@ -114,12 +126,22 @@ export function DataTable<Row, SortKey extends string>({
         {sortedRows.map((row) => (
           <tr
             className={
-              onRowClick || onRowDoubleClick
-                ? "data-table-row-clickable"
-                : undefined
+              [
+                onRowClick || onRowDoubleClick
+                  ? "data-table-row-clickable"
+                  : null,
+                getRowClassName?.(row),
+              ]
+                .filter(Boolean)
+                .join(" ") || undefined
             }
             key={getRowKey(row)}
             data-row-key={getRowKey(row)}
+            aria-selected={
+              selectedRowKey !== undefined
+                ? getRowKey(row) === selectedRowKey
+                : undefined
+            }
             onContextMenu={(event: MouseEvent<HTMLTableRowElement>) => {
               if (!onRowContextMenu) return;
               event.preventDefault();

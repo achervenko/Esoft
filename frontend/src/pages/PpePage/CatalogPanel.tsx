@@ -9,9 +9,9 @@ import {
   type CatalogFilters,
 } from "./catalog-filtering";
 import "../../shared/ui/SearchInput.css";
-import { ArrowLeft, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowLeft, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { CatalogContextMenu } from "./CatalogContextMenu";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ppeApi, type PpeItem } from "../../shared/api/ppe";
 import { DataTable } from "../../shared/ui/DataTable";
 import { canManagePpeCatalog } from "../../modules/ppe-permissions/ppe-permissions";
@@ -33,6 +33,9 @@ export function CatalogPanel({
   onChanged: () => void;
 }) {
   const [search, setSearch] = useState(() => new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("q") ?? "");
+  const itemsRef = useRef(items);
+  const pendingItemIdRef = useRef<string | null>(null);
+  itemsRef.current = items;
   const [filters, setFilters] = useState<CatalogFilters>({
     ...emptyCatalogFilters,
   });
@@ -56,15 +59,39 @@ export function CatalogPanel({
   useEffect(() => {
     const syncSearchFromHash = () => {
       const [path, query = ""] = window.location.hash.split("?");
-      if (path !== "#/ppe") return;
       const params = new URLSearchParams(query);
-      if (params.get("tab") !== "catalog") return;
-      const target = items.find((item) => String(item.id) === params.get("itemId"));
+      pendingItemIdRef.current = null;
+      if (path !== "#/ppe" || params.get("tab") !== "catalog") return;
+
+      const itemId = params.get("itemId");
+      const target = itemsRef.current.find((item) => String(item.id) === itemId);
+      if (itemId && !target) pendingItemIdRef.current = itemId;
       setSearch(target ? target.article : params.get("q") ?? "");
     };
     syncSearchFromHash();
     window.addEventListener("hashchange", syncSearchFromHash);
     return () => window.removeEventListener("hashchange", syncSearchFromHash);
+  }, []);
+
+  useEffect(() => {
+    const itemId = pendingItemIdRef.current;
+    if (!itemId) return;
+
+    const [path, query = ""] = window.location.hash.split("?");
+    const params = new URLSearchParams(query);
+    if (
+      path !== "#/ppe" ||
+      params.get("tab") !== "catalog" ||
+      params.get("itemId") !== itemId
+    ) {
+      pendingItemIdRef.current = null;
+      return;
+    }
+
+    const target = items.find((item) => String(item.id) === itemId);
+    if (!target) return;
+    pendingItemIdRef.current = null;
+    setSearch(target.article);
   }, [items]);
 
   return (
@@ -74,21 +101,27 @@ export function CatalogPanel({
           <ArrowLeft size={18} aria-hidden="true" /> Назад
         </button>
       )}
-      <div className="admin-card ppe-search-toolbar ppe-catalog-toolbar">
+      <div className="ppe-search-toolbar ppe-catalog-toolbar">
         <div className="ppe-journal-search search-input-shell">
           <Search size={18} aria-hidden="true" />
           <input
             autoFocus={autoFocusSearch}
             aria-label="Поиск по номенклатуре"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              pendingItemIdRef.current = null;
+              setSearch(e.target.value);
+            }}
           />
           {search && (
             <button
               type="button"
               className="ppe-journal-icon-button"
               aria-label="Очистить поиск"
-              onClick={() => setSearch("")}
+              onClick={() => {
+                pendingItemIdRef.current = null;
+                setSearch("");
+              }}
             >
               <X size={18} aria-hidden="true" />
             </button>
@@ -117,10 +150,13 @@ export function CatalogPanel({
         </div>
         {manage && (
           <button
+            aria-label="Добавить СИЗ"
+            type="button"
             className="admin-primary-button"
             onClick={() => setForm("new")}
           >
-            Добавить СИЗ
+            <Plus size={18} aria-hidden="true" />
+            Добавить
           </button>
         )}
       </div>
@@ -139,12 +175,13 @@ export function CatalogPanel({
       {!referenceState?.loading &&
         !referenceState?.error &&
         (rows.length ? (
-          <div className="admin-card ppe-table-wrap ppe-list-table-card">
+          <div className="admin-card ppe-table-wrap ppe-list-table-card ppe-catalog-list-card">
             <DataTable
               columns={columns}
               rows={rows}
               getRowKey={(item) => item.id}
-              defaultSort={{ key: "article", direction: "asc" }}
+              getRowClassName={(item) => item.isActive ? undefined : "ppe-inactive"}
+              defaultSort={{ key: "name", direction: "asc" }}
               onRowContextMenu={
                 manage
                   ? (item, position) => setMenu({ item, ...position })
@@ -174,6 +211,7 @@ export function CatalogPanel({
       {form && (
         <CatalogItemForm
           item={form === "new" ? null : form}
+          items={items}
           onClose={() => setForm(null)}
           onChanged={onChanged}
         />

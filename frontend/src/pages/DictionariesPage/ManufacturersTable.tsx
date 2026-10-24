@@ -4,6 +4,8 @@ import { DataTable, type DataTableColumn } from "../../shared/ui/DataTable";
 
 type ManufacturersTableProps = {
   manufacturers: DictionaryManufacturer[];
+  selectedId?: number | null;
+  onSelect?: (item: DictionaryManufacturer) => void;
   onDelete: (manufacturer: DictionaryManufacturer) => void;
   onEdit: (manufacturer: DictionaryManufacturer) => void;
 };
@@ -35,6 +37,8 @@ const columns = (
 
 export function ManufacturersTable({
   manufacturers,
+  selectedId,
+  onSelect,
   onDelete,
   onEdit,
 }: ManufacturersTableProps) {
@@ -44,6 +48,8 @@ export function ManufacturersTable({
       defaultSort={{ direction: "asc", key: "name" }}
       getRowKey={(manufacturer) => manufacturer.id}
       rows={manufacturers}
+      selectedRowKey={selectedId}
+      onRowClick={onSelect}
     />
   );
 }

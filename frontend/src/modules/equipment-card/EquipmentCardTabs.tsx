@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import type { KeyboardEvent } from "react";
 import {
   getEquipmentPanelId,
@@ -32,6 +32,12 @@ export function EquipmentCardTabs({
   });
 
   const activeIndex = tabConfig.findIndex((tab) => tab.value === activeTab);
+
+  useEffect(() => {
+    if (window.matchMedia?.("(max-width: 760px)").matches) {
+      tabRefs.current[activeTab]?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    }
+  }, [activeTab]);
 
   function focusTab(nextIndex: number) {
     const nextTab = tabConfig[nextIndex];

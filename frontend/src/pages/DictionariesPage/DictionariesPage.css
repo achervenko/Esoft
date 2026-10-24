@@ -1,0 +1,246 @@
+.dictionaries-page-header h1,
+.dictionaries-page .admin-nested-section > header h3 {
+  padding-inline-start: 8px;
+}
+
+.dictionaries-page .dictionaries-card {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.dictionaries-page .dictionary-table-surface {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  background: #fff;
+  overflow-x: auto;
+}
+.dictionaries-content {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.dictionary-parent-surface .data-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.dictionaries-content .data-table tbody tr[aria-selected="true"] td {
+  background: #f0f3f7;
+  border-bottom-color: transparent;
+}
+
+.dictionaries-content .data-table tbody tr[aria-selected="true"] td:first-child {
+  border-start-start-radius: 8px;
+  border-end-start-radius: 8px;
+}
+
+.dictionaries-content .data-table tbody tr[aria-selected="true"] td:last-child {
+  border-start-end-radius: 8px;
+  border-end-end-radius: 8px;
+}
+
+.dictionaries-content .data-table-row-clickable:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: -2px;
+}
+
+.dictionaries-page .dictionary-search-toolbar {
+  min-width: 0;
+  padding: 18px;
+}
+
+.dictionary-search-toolbar .ppe-journal-search {
+  margin-bottom: 0;
+}
+
+.dictionaries-page .dictionaries-employees-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.dictionaries-employees-card > .admin-card-actions-header {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+}
+
+.dictionary-search-toolbar .search-input-shell {
+  min-height: 38px;
+}
+
+.dictionaries-employees-card > .dictionaries-content {
+  display: contents;
+}
+
+.dictionaries-employees-card > .dictionaries-content > * {
+  grid-column: 1 / -1;
+}
+
+.dictionaries-employees-card > .dictionaries-content > .dictionary-search-toolbar {
+  grid-column: 1;
+  grid-row: 1;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.dictionaries-content .admin-table-actions {
+  flex-wrap: nowrap;
+}
+
+.dictionaries-content .admin-table-actions .admin-icon-button {
+  flex-shrink: 0;
+}
+
+.dictionary-employee-cards {
+  display: grid;
+  gap: 10px;
+}
+
+.dictionary-employee-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 76px;
+  padding: 18px;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #15171c;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dictionary-employee-card > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dictionary-employee-card strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.dictionary-employee-position {
+  display: block;
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.dictionary-employee-card > svg {
+  flex-shrink: 0;
+  color: #6b7280;
+}
+
+.dictionary-employee-card:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
+.dictionary-employee-details {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.dictionary-employee-details dt {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.dictionary-employee-details dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .dictionary-models-surface .data-table {
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  .dictionary-models-surface .data-table th,
+  .dictionary-models-surface .data-table td {
+    padding-inline: 4px;
+    overflow-wrap: anywhere;
+  }
+
+  .dictionary-models-surface .data-table tr > :first-child {
+    width: 25%;
+    padding-inline-start: 0;
+  }
+
+  .dictionary-models-surface .data-table tr > :last-child {
+    width: 92px;
+    padding-inline-end: 0;
+  }
+
+  .dictionary-models-surface .data-table-sort-button {
+    white-space: normal;
+  }
+
+  .dictionary-models-surface .data-table-sort-button > span:first-child {
+    min-width: 0;
+  }
+
+  .dictionaries-page,
+  .dictionaries-page > .dictionaries-page-header,
+  .dictionaries-page > .admin-tabs,
+  .dictionaries-page > .dictionaries-card {
+    min-width: 0;
+  }
+
+  .dictionaries-page .admin-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .dictionaries-page .admin-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dictionaries-page .admin-tabs button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .dictionaries-page .admin-card-actions-header {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .dictionaries-page .admin-nested-section,
+  .dictionaries-page .admin-nested-sections {
+    min-width: 0;
+  }
+
+  .dictionaries-page .admin-nested-section > header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .dictionaries-page .admin-nested-section > header h3 {
+    overflow-wrap: anywhere;
+  }
+
+  .dictionaries-page .admin-card-actions-header .admin-primary-button,
+  .dictionaries-page .admin-nested-section > header .admin-primary-button {
+    width: auto;
+  }
+}

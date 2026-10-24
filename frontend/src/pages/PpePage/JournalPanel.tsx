@@ -62,7 +62,7 @@ export function JournalPanel({
   const columns = useMemo(() => createJournalColumns(setDetail), []);
   return (
     <>
-      <div className="admin-card ppe-search-toolbar ppe-journal-toolbar">
+      <div className="ppe-search-toolbar ppe-journal-toolbar">
         <div className="ppe-journal-search search-input-shell">
           <Search size={18} aria-hidden="true" />
           <input

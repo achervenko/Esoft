@@ -1,5 +1,7 @@
+import { useSelectDropdownPopup } from "./useSelectDropdownPopup";
+import { DialogPopupReadyContext } from "../DialogPopupReadyContext";
 import {
-  useCallback,
+  useContext,
   useEffect,
   useId,
   useMemo,
@@ -25,24 +27,29 @@ export function useSelectDropdown({
   onChange,
   options,
   value,
-}: Pick<SelectDropdownProps, "disabled" | "onChange" | "options" | "value"> & { multiple?: boolean }) {
+}: Pick<SelectDropdownProps, "disabled" | "onChange" | "options" | "value"> & {
+  multiple?: boolean;
+}) {
+  const isDialogReady = useContext(DialogPopupReadyContext);
   const [isOpen, setIsOpen] = useState(false);
-  useEffect(() => {
-    if (disabled) setIsOpen(false);
-  }, [disabled]);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [menuStyle, setMenuStyle] = useState<{
-    left: number;
-    top: number;
-    width: number;
-    maxHeight: number;
-  } | null>(null);
-  const [ownerModalId, setOwnerModalId] = useState<string | null>(null);
+  useEffect(() => {
+    if (disabled || !isDialogReady) {
+      setIsOpen(false);
+    }
+  }, [disabled, isDialogReady]);
   const listboxId = useId();
   const triggerId = useId();
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const { menuStyle, ownerModalId } = useSelectDropdownPopup({
+    triggerRef,
+    isOpen,
+    disabled,
+    isDialogReady,
+    optionCount: options.length,
+  });
   const selectedOption = useMemo(
     () => options.find((option) => option.value === value) ?? null,
     [options, value],
@@ -51,30 +58,6 @@ export function useSelectDropdown({
     () => options.findIndex((option) => option.value === value),
     [options, value],
   );
-
-  const updateMenuPosition = useCallback(() => {
-    const trigger = triggerRef.current;
-
-    if (!trigger) {
-      return;
-    }
-
-    const rect = trigger.getBoundingClientRect();
-    const below = Math.max(0, window.innerHeight - rect.bottom - 18);
-    const above = Math.max(0, rect.top - 18);
-    const desiredHeight = Math.min(280, options.length * 42 + 2);
-    const opensAbove = below < desiredHeight && above > below;
-    const maxHeight = Math.max(42, Math.min(280, opensAbove ? above : below));
-
-    setMenuStyle({
-      left: rect.left,
-      top: opensAbove
-        ? Math.max(12, rect.top - 6 - Math.min(desiredHeight, maxHeight))
-        : rect.bottom + 6,
-      width: rect.width,
-      maxHeight,
-    });
-  }, [options.length]);
 
   const closeMenu = () => {
     setIsOpen(false);
@@ -95,17 +78,11 @@ export function useSelectDropdown({
   const openMenu = (
     nextActiveIndex = selectedIndex >= 0 ? selectedIndex : 0,
   ) => {
-    if (disabled || options.length === 0) {
+    if (disabled || !isDialogReady || options.length === 0) {
       return;
     }
 
     const resolvedActiveIndex = getNextEnabledIndex(options, nextActiveIndex);
-    const nextOwnerModalId =
-      triggerRef.current?.closest<HTMLElement>("[data-admin-modal-id]")?.dataset
-        .adminModalId ?? null;
-
-    setOwnerModalId(nextOwnerModalId);
-    updateMenuPosition();
     setActiveIndex(resolvedActiveIndex);
     setIsOpen(true);
   };
@@ -119,24 +96,9 @@ export function useSelectDropdown({
     openMenu();
   };
 
+  const isPopupPositioned = menuStyle !== null;
   useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    updateMenuPosition();
-
-    window.addEventListener("resize", updateMenuPosition);
-    window.addEventListener("scroll", updateMenuPosition, true);
-
-    return () => {
-      window.removeEventListener("resize", updateMenuPosition);
-      window.removeEventListener("scroll", updateMenuPosition, true);
-    };
-  }, [isOpen, updateMenuPosition]);
-
-  useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen || !isDialogReady || !isPopupPositioned) {
       return undefined;
     }
 
@@ -164,7 +126,7 @@ export function useSelectDropdown({
     return () => {
       document.removeEventListener("pointerdown", closeOnOutsidePointerDown);
     };
-  }, [activeIndex, isOpen]);
+  }, [activeIndex, isOpen, isDialogReady, isPopupPositioned]);
 
   const handleTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (disabled) {
@@ -234,7 +196,8 @@ export function useSelectDropdown({
 
       if (!modal) {
         const focusableElements = getFocusableElements(document.body).filter(
-          (element) => element.tabIndex >= 0 && !menuRef.current?.contains(element),
+          (element) =>
+            element.tabIndex >= 0 && !menuRef.current?.contains(element),
         );
         const nextElement = getAdjacentFocusableElementForDropdown(
           focusableElements,
@@ -324,7 +287,7 @@ export function useSelectDropdown({
     },
     handleOptionKeyDown,
     handleTriggerKeyDown,
-    isOpen,
+    isOpen: isOpen && isDialogReady,
     listboxId,
     menuRef,
     menuStyle,

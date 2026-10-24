@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { StorageFile } from '@prisma/client';
 import { Readable } from 'node:stream';
+import { createHash } from 'node:crypto';
 import { ImageProcessingService } from '../image-processing/image-processing.service';
 import type { StorageImagePreviewSize, StoredObject } from './storage.types';
 import { StorageObjectService } from './storage-object.service';
@@ -89,7 +90,10 @@ function createPreviewObjectKey(
   file: StorageFile,
   size: StorageImagePreviewSize,
 ) {
-  return `storage-previews/${file.id}/${size === 'medium' ? 'medium-fit-v2' : size}.webp`;
+  const sourceHash = createHash('sha256')
+    .update(JSON.stringify([file.bucket, file.objectKey]))
+    .digest('hex');
+  return `storage-previews/${file.id}/${sourceHash}/${size === 'medium' ? 'medium-fit-v2' : size}.webp`;
 }
 
 async function streamToBuffer(

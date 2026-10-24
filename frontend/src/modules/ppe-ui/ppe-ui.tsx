@@ -2,6 +2,7 @@ import { AdminFormField } from "../../shared/ui/AdminFormField";
 import type { ReactNode } from "react";
 import { Notice } from "../../shared/ui/Notice";
 import "./PpeForm.css";
+
 export function Message({
   error,
   children,
@@ -15,17 +16,28 @@ export function Message({
     <Notice tone="success">{children}</Notice>
   ) : null;
 }
+
 export function Field({
   label,
+  error,
+  warning,
   children,
   hideLabel = false,
 }: {
   label: string;
+  error?: string;
+  warning?: string;
   children: ReactNode;
   hideLabel?: boolean;
 }) {
   return (
-    <AdminFormField label={label} hideLabel={hideLabel} className="ppe-field">
+    <AdminFormField
+      label={label}
+      error={error}
+      warning={warning}
+      hideLabel={hideLabel}
+      className="ppe-field"
+    >
       {children}
     </AdminFormField>
   );

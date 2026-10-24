@@ -63,3 +63,32 @@
   color: #7b8492;
   font-size: 12px;
 }
+
+.search-select-menu[role="status"] {
+  min-height: 56px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  color: #667085;
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .search-select-menu,
+  .search-select-menu[data-admin-modal-owner] {
+    animation: search-select-enter 360ms ease-in-out both;
+  }
+}
+
+@keyframes search-select-enter {
+  from {
+    opacity: 0;
+    transform: scaleY(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}

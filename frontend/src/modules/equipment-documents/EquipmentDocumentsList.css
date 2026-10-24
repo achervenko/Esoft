@@ -221,14 +221,3 @@
   border-color: #d69e2e;
   color: #b7791f;
 }
-
-@media (max-width: 760px) {
-  .equipment-documents-list li {
-    grid-template-columns: 1fr;
-  }
-
-  .equipment-document-actions {
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-}

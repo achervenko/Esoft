@@ -1,30 +1,40 @@
-import type { PpePosition, PpeNorm } from "../../shared/api/ppe";
+import type { PpePosition } from "../../shared/api/ppe";
 import type { DataTableColumn } from "../../shared/ui/DataTable";
-import { normPeriodStatus } from "./norm-model";
-const genders = [ ["MALE", "Мужской"], ["FEMALE", "Женский"] ] as const;
+import { InfoTooltip } from "../../shared/ui/InfoTooltip";
+import { normStatusLabels, type NormCoverage } from "./norm-coverage";
 
-type NormColumnsOptions = {
-  norms: PpeNorm[] | null;
-  manage: boolean;
-  opensRoute: boolean;
-  openPosition: (id: number) => void;
-  onCreate: () => void;
+const statuses = {
+  invalid: {
+    label: normStatusLabels.invalid,
+    className: "ppe-norm-invalid",
+    rank: 1,
+  },
+  complete: {
+    label: normStatusLabels.complete,
+    className: "ppe-good",
+    rank: 2,
+  },
+  missing: {
+    label: normStatusLabels.missing,
+    className: "ppe-norm-missing",
+    rank: 0,
+  },
+  partial: {
+    label: normStatusLabels.partial,
+    className: "ppe-norm-invalid",
+    rank: 1,
+  },
 };
+
 export function createNormColumns({
-  norms,
-  manage,
-  opensRoute,
+  coverage,
   openPosition,
-  onCreate,
-}: NormColumnsOptions): DataTableColumn<PpePosition, string>[] {
-  const statusFor = (positionId: number, gender: "MALE" | "FEMALE") => {
-    const revisions = norms?.filter((norm) => norm.positionId === positionId && norm.gender === gender) ?? [];
-    if (revisions.some((norm) => normPeriodStatus(norm) === "Действующая"))
-      return { label: "Действующая", className: "ppe-good", rank: 2 };
-    return revisions.length
-      ? { label: "Недействительна", className: "ppe-norm-invalid", rank: 1 }
-      : { label: "Отсутствует", className: "ppe-norm-missing", rank: 0 };
-  };
+}: {
+  coverage: Map<number, NormCoverage>;
+  openPosition: (id: number) => void;
+}): DataTableColumn<PpePosition, string>[] {
+  const forPosition = (id: number) =>
+    coverage.get(id) ?? { status: "missing" as const };
   return [
     {
       key: "position",
@@ -38,44 +48,47 @@ export function createNormColumns({
       sortValue: (row) => row.name,
     },
     {
-      key: "gender",
-      label: "Пол",
-      render: () => <div className="ppe-norm-gender-statuses">{genders.map(([gender, label]) => <span key={gender}>{label}</span>)}</div>,
-      isSortable: false,
-    },
-    {
-      key: "norms",
-      label: "Норма",
-      render: (row) => <div className="ppe-norm-gender-statuses">{genders.map(([gender, label]) => {
-        const status = statusFor(row.id, gender);
-        return <div role="group" aria-label={`${label}: ${status.label}`} key={gender}>
-          <span className={`ppe-badge ${status.className}`}>{status.label}</span>
-        </div>;
-      })}</div>,
-      sortValue: (row) => statusFor(row.id, "MALE").rank * 3 + statusFor(row.id, "FEMALE").rank,
-    },
-    {
-    key: "actions",
-    className: "admin-table-actions-column",
-      label: "",
-      isSortable: false,
+      key: "status",
+      label: "Статус",
       render: (row) => {
-        const hasNorms = norms?.some((norm) => norm.positionId === row.id);
+        const summary = forPosition(row.id);
+        const { label, className } = statuses[summary.status];
+        const showInfo =
+          summary.status !== "complete" || Boolean(summary.reasons?.length);
         return (
-          <button
-            className="admin-secondary-button"
-            onClick={() => {
-              openPosition(row.id);
-              if (!opensRoute && !hasNorms && manage && row.isActive)
-                onCreate();
-            }}
+          <span
+            className={`ppe-badge ppe-norm-coverage-badge ${className}${showInfo ? " ppe-norm-coverage-with-info" : ""}`}
           >
-            {!opensRoute && !hasNorms && manage && row.isActive
-              ? "Создать норму"
-              : "Открыть"}
-          </button>
+            {label}
+            {showInfo && (
+              <InfoTooltip
+                label={`Причины статуса «${label}»: ${row.name}`}
+                reasons={
+                  summary.reasons?.length
+                    ? summary.reasons
+                    : ["Нет подходящей действующей нормы"]
+                }
+              />
+            )}
+          </span>
         );
       },
+      sortValue: (row) => statuses[forPosition(row.id).status].rank,
+    },
+    {
+      key: "actions",
+      className: "admin-table-actions-column ppe-norm-open-column",
+      label: "",
+      isSortable: false,
+      render: (row) => (
+        <button
+          type="button"
+          className="admin-secondary-button"
+          onClick={() => openPosition(row.id)}
+        >
+          Открыть
+        </button>
+      ),
     },
   ];
 }

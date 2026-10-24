@@ -92,6 +92,11 @@
   font-weight: 800;
   display: inline-flex;
 }
+@media (max-width: 760px) and (hover: none) and (pointer: coarse) {
+  .ppe-page .ppe-search-back {
+    display: none;
+  }
+}
 .ppe-employee-sizes summary {
   cursor: pointer;
   color: #15171c;
@@ -174,8 +179,12 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
-.ppe-plan-section .ppe-plan-table th:not(.ppe-plan-name-column):not(.ppe-plan-selection-column),
-.ppe-plan-section .ppe-plan-table td:not(.ppe-plan-name-column):not(.ppe-plan-selection-column) {
+.ppe-plan-section
+  .ppe-plan-table
+  th:not(.ppe-plan-name-column):not(.ppe-plan-selection-column),
+.ppe-plan-section
+  .ppe-plan-table
+  td:not(.ppe-plan-name-column):not(.ppe-plan-selection-column) {
   width: 1%;
   text-align: center;
   white-space: nowrap;
@@ -270,13 +279,19 @@
   visibility: hidden;
   opacity: 0;
   transform: translateY(4px);
-  transition: opacity 120ms ease, transform 120ms ease, visibility 0s linear;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease,
+    visibility 0s linear;
 }
 .ppe-plan-confirm-reveal.is-visible .admin-primary-button {
   visibility: visible;
   opacity: 1;
   transform: translateY(0);
-  transition: opacity 240ms ease-out 240ms, transform 240ms cubic-bezier(0.22, 1, 0.36, 1) 240ms, visibility 0s linear 240ms;
+  transition:
+    opacity 240ms ease-out 240ms,
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1) 240ms,
+    visibility 0s linear 240ms;
 }
 @media (prefers-reduced-motion: reduce) {
   .ppe-plan-confirm-reveal .admin-primary-button,

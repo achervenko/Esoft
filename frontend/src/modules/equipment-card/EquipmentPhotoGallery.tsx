@@ -76,8 +76,8 @@ export function EquipmentPhotoGallery({
               alt={getDisplayName(activePhoto)}
               src={getFilePreviewUrl(
                 { fileId: activePhoto.id, visibleId },
-                { size: "medium" },
-              ) + "&v=fit2"}
+                { size: "medium", version: activePhoto.createdAt },
+              )}
             />
           </button>
         ) : (
@@ -117,10 +117,10 @@ export function EquipmentPhotoGallery({
               : undefined
           }
           imageAlt={getDisplayName(activePhoto)}
-          imageUrl={getFilePreviewUrl({
-            fileId: activePhoto.id,
-            visibleId,
-          })}
+          imageUrl={getFilePreviewUrl(
+            { fileId: activePhoto.id, visibleId },
+            { version: activePhoto.createdAt },
+          )}
           onClose={() => setIsPreviewOpen(false)}
           onNext={canNavigate ? showNext : undefined}
           onPrevious={canNavigate ? showPrevious : undefined}

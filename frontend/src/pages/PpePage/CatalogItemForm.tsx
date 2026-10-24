@@ -1,7 +1,6 @@
 import "../../modules/ppe-ui/PpeForm.css";
 import { useRef, useState } from "react";
-import { Trash2 } from "lucide-react";
-import { normalizePpeSizeText } from "../../shared/lib/ppe-size-text";
+import { ApiRequestError } from "../../shared/api/api-error";
 import { AppSelect } from "../../shared/ui/SelectDropdown/AppSelect";
 import { ppeApi, type PpeItem, type PpeType } from "../../shared/api/ppe";
 import { GuardedAdminModal } from "../../shared/ui/GuardedAdminModal";
@@ -16,10 +15,12 @@ import { defaultClothingSizes, defaultTshirtSizes } from "../../modules/ppe-ui/p
 
 export function CatalogItemForm({
   item,
+  items,
   onClose,
   onChanged,
 }: {
   item: PpeItem | null;
+  items: PpeItem[];
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -39,6 +40,23 @@ export function CatalogItemForm({
     sizeRows: sizeRows.map((row) => `${row.value};${row.heightValue}`).sort(),
   });
   const [error, setError] = useState<string | null>(null);
+  const [articleConflict, setArticleConflict] = useState<string | null>(null);
+  const article = data.article.trim();
+  const duplicate = article
+    ? items.find((candidate) => candidate.id !== item?.id && candidate.article === article)
+    : undefined;
+  const articleError = duplicate
+    ? `Этот артикул уже используется: «${duplicate.name}».${duplicate.isActive ? "" : " Позиция неактивна."}`
+    : articleConflict === article
+      ? "СИЗ с таким артикулом уже существует."
+      : undefined;
+  const name = data.name.trim();
+  const duplicateNames = name
+    ? items.filter((candidate) => candidate.id !== item?.id && candidate.name.trim() === name)
+    : [];
+  const nameWarning = duplicateNames.length
+    ? `Такое наименование уже есть. Артикулы: ${duplicateNames.map((candidate) => `${candidate.article}${candidate.isActive ? "" : " (позиция неактивна)"}`).join(", ")}.`
+    : undefined;
   return (
     <GuardedAdminModal
       hasChanges={hasChanges}
@@ -51,7 +69,7 @@ export function CatalogItemForm({
         className="ppe-form"
         onSubmit={(e) => {
           e.preventDefault();
-          if (savingRef.current) return;
+          if (savingRef.current || articleError) return;
           savingRef.current = true;
           setSaving(true);
           setError(null);
@@ -76,7 +94,13 @@ export function CatalogItemForm({
               onChanged();
               onClose();
             })
-            .catch((err) => setError(ppeError(err)))
+            .catch((err) => {
+              if (err instanceof ApiRequestError && err.code === "PPE_ITEM_ARTICLE_CONFLICT") {
+                setArticleConflict(article);
+              } else {
+                setError(ppeError(err));
+              }
+            })
             .finally(() => {
               savingRef.current = false;
               setSaving(false);
@@ -88,6 +112,8 @@ export function CatalogItemForm({
             <Field
               key={key}
               label={["Артикул", "Наименование", "Единица измерения"][index]}
+              error={key === "article" ? articleError : undefined}
+              warning={key === "name" ? nameWarning : undefined}
             >
               <input
                 required
@@ -161,59 +187,6 @@ export function CatalogItemForm({
             disabled={saving}
           />
         )}
-        {!item &&
-          data.type !== "OTHER" &&
-          data.type !== "FEET" &&
-          data.type !== "HANDS" &&
-          data.type !== "HEAD" &&
-          (data.type !== "BODY" && data.type !== "TSHIRT") && (
-            <fieldset disabled={saving} className="ppe-form">
-              <legend>Доступные размеры</legend>
-              {sizeRows.map((size, index) => (
-                <div className="ppe-actions" key={index}>
-                  <Field label={`Размер ${index + 1}`} hideLabel>
-                    <input
-                      required
-                      maxLength={20}
-                      value={size.value}
-                      onChange={(e) =>
-                        setSizeRows(
-                          sizeRows.map((row, i) =>
-                            i === index
-                              ? {
-                                  ...row,
-                                  value: normalizePpeSizeText(e.target.value),
-                                }
-                              : row,
-                          ),
-                        )
-                      }
-                    />
-                  </Field>
-                  <button
-                    type="button"
-                    className="admin-icon-button ppe-delete-icon-button"
-                    aria-label={`Удалить размер ${index + 1}`}
-                    title="Удалить размер"
-                    onClick={() =>
-                      setSizeRows(sizeRows.filter((_, i) => i !== index))
-                    }
-                  >
-                    <Trash2 aria-hidden="true" size={17} />
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                className="admin-secondary-button"
-                onClick={() =>
-                  setSizeRows([...sizeRows, { value: "", heightValue: "" }])
-                }
-              >
-                Добавить размер
-              </button>
-            </fieldset>
-          )}
         {item?.hasActiveNorm && (
           <Message>
             Чтобы применить изменения к действующей норме, создайте новую
@@ -222,7 +195,7 @@ export function CatalogItemForm({
         )}
         <Message error={error} />
         <div className="ppe-form-actions">
-          <button className="admin-primary-button" disabled={saving}>
+          <button className="admin-primary-button" disabled={saving || Boolean(articleError)}>
             {saving ? "Сохранение..." : "Сохранить"}
           </button>
         </div>

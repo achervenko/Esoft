@@ -13,6 +13,7 @@ const employeeSelect = {
   firstName: true,
   middleName: true,
   positionId: true,
+  positionAssignedAt: true,
   position: { select: { name: true } },
   additionalPositions: { include: { position: { select: { name: true } } } },
   ppeSizes: { select: employeeSizesSelect },
@@ -22,9 +23,19 @@ const employeeSelect = {
 type PpeEmployee = Prisma.EmployeeGetPayload<{ select: typeof employeeSelect }>;
 
 function toPpeEmployee(employee: PpeEmployee) {
-  const { additionalPositions, ...rest } = employee;
+  const { additionalPositions, positionAssignedAt, ...rest } = employee;
   return {
     ...rest,
+    positionAssignments: [
+      {
+        positionId: employee.positionId,
+        assignedAt: positionAssignedAt?.toISOString().slice(0, 10) ?? null,
+      },
+      ...additionalPositions.map(({ positionId, assignedAt }) => ({
+        positionId,
+        assignedAt: assignedAt.toISOString().slice(0, 10),
+      })),
+    ],
     position: [
       employee.position.name,
       ...additionalPositions.map(({ position }) => position.name),

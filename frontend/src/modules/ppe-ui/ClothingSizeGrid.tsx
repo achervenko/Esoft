@@ -1,3 +1,4 @@
+import { Plus } from "lucide-react";
 import "./ClothingSizeGrid.css";
 import { normalizePpeSizeText } from "../../shared/lib/ppe-size-text";
 import { useLayoutEffect, useRef, useState } from "react";
@@ -168,6 +169,7 @@ export function ClothingSizeGrid({
               setManualHeight("");
             }}
           >
+            <Plus size={18} aria-hidden="true" />
             Добавить
           </button>
         </div>

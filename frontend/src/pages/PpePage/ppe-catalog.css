@@ -8,28 +8,54 @@
   white-space: nowrap;
 }
 
-.admin-card.ppe-catalog-toolbar {
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 0;
-  display: flex;
+.ppe-catalog-list-card {
+  container: ppe-catalog-list / inline-size;
 }
-.ppe-catalog-toolbar .ppe-journal-search {
-  flex: 1;
-  min-width: 0;
-  margin-bottom: 0;
-}
-.ppe-catalog-toolbar > button {
-  flex-shrink: 0;
-}
-@media (width<=540px) {
-  .ppe-catalog-toolbar {
-    flex-wrap: wrap;
-  }
-  .ppe-catalog-toolbar .ppe-journal-search {
-    flex-basis: 100%;
+
+@media (max-width: 760px) {
+  .ppe-catalog-list-card .ppe-catalog-type-column,
+  .ppe-catalog-list-card .ppe-catalog-status-column {
+    display: none;
   }
 }
+
+@container ppe-catalog-list (max-width: 760px) {
+  .ppe-catalog-type-column,
+  .ppe-catalog-status-column {
+    display: none;
+  }
+
+  .data-table {
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding-inline: 4px;
+    overflow-wrap: anywhere;
+  }
+
+  .ppe-catalog-article-column {
+    width: 24%;
+  }
+
+  .ppe-catalog-sizes-column {
+    width: 112px;
+  }
+
+  .data-table .data-table-sort-button {
+    white-space: normal;
+  }
+
+  .ppe-catalog-list-card .ppe-catalog-sizes-button {
+    width: 104px;
+    min-width: 104px;
+    max-width: 104px;
+    padding-inline: 6px;
+  }
+}
+
 .ppe-item-fields {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

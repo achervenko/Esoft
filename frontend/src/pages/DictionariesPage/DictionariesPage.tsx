@@ -1,12 +1,13 @@
 import { DictionariesPageContent } from "./DictionariesPageContent";
 import { DictionariesPageModals } from "./DictionariesPageModals";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { canManageEmployeeSizes } from "../../modules/ppe-permissions/ppe-permissions";
 import { PpeEmployeesPanel } from "./PpeEmployeesPanel";
 import { usePpeQuery } from "../../modules/ppe-ui/usePpeQuery";
 import { ppeApi } from "../../shared/api/ppe";
 import { Plus } from "lucide-react";
 import "../../shared/ui/AdminPage.css";
+import "./DictionariesPage.css";
 import { Notice } from "../../shared/ui/Notice";
 import {
   useDictionariesAdminPage,
@@ -25,19 +26,19 @@ const tabLabels: Record<ActiveDictionariesTab, string> = {
   locations: "Местонахождения",
 };
 
-const addButtonLabels: Record<ActiveDictionariesTab, string> = {
-  employees: "Добавить",
-  positions: "Добавить",
-  manufacturers: "Добавить",
-  countries: "Добавить",
-  locations: "Добавить",
-};
-
 export function DictionariesPage({ userPermissions }: DictionariesPageProps) {
   const page = useDictionariesAdminPage({ userPermissions });
+  const tabsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (window.matchMedia?.("(max-width: 760px)").matches) {
+      tabsRef.current?.querySelector<HTMLElement>('[aria-selected="true"]')
+        ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    }
+  }, [page.activeTab]);
+  const [newParentId, setNewParentId] = useState<number | null>(null);
   const [sizeEmployeeId, setSizeEmployeeId] = useState<number | null>(null);
   const sizes = usePpeQuery(
-    `dictionary-employee-sizes:${page.employees.map(({ id }) => id).join(",")}`,
+    "dictionary-employee-sizes",
     (signal) => ppeApi.employees(signal),
     page.dictionariesManageable &&
       canManageEmployeeSizes(userPermissions) &&
@@ -87,7 +88,7 @@ export function DictionariesPage({ userPermissions }: DictionariesPageProps) {
         <h1>Справочники</h1>
       </header>
 
-      <div className="equipment-edit-tabs admin-tabs" role="tablist">
+      <div className="equipment-edit-tabs admin-tabs" role="tablist" ref={tabsRef}>
         {Object.entries(tabLabels).map(([tab, label]) => (
           <button
             aria-selected={page.activeTab === tab}
@@ -102,7 +103,7 @@ export function DictionariesPage({ userPermissions }: DictionariesPageProps) {
         ))}
       </div>
 
-      <section className="admin-card dictionaries-card">
+      <section className={`admin-card dictionaries-card${page.activeTab === "employees" ? " dictionaries-employees-card" : ""}`}>
         {page.activeTab !== "locations" &&
         page.activeTab !== "manufacturers" ? (
           <header className="admin-card-actions-header">
@@ -112,11 +113,12 @@ export function DictionariesPage({ userPermissions }: DictionariesPageProps) {
               type="button"
             >
               <Plus size={18} />
-              {addButtonLabels[page.activeTab]}
+              Добавить
             </button>
           </header>
         ) : null}
 
+        <div className={`dictionaries-content${page.activeTab === "positions" || page.activeTab === "countries" ? " dictionary-table-surface" : ""}`}>
         {page.error && (
           <Notice tone="error">
             {page.error}
@@ -135,6 +137,14 @@ export function DictionariesPage({ userPermissions }: DictionariesPageProps) {
           </Notice>
         )}
         <DictionariesPageContent
+          onCreateModel={(parentId) => {
+            setNewParentId(parentId);
+            page.setModelForm("new");
+          }}
+          onCreateLocation={(parentId) => {
+            setNewParentId(parentId);
+            page.setLocationForm("new");
+          }}
           employeeSizes={employeeSizes}
           page={{
             activeTab: page.activeTab,
@@ -165,6 +175,7 @@ export function DictionariesPage({ userPermissions }: DictionariesPageProps) {
           userPermissions={userPermissions}
           onOpenEmployeeSizes={setSizeEmployeeId}
         />
+        </div>
       </section>
 
       <DictionariesPageModals
@@ -181,7 +192,10 @@ export function DictionariesPage({ userPermissions }: DictionariesPageProps) {
           positionForm: page.positionForm,
           positions: page.positions,
           saveCountry: page.saveCountry,
-          saveEmployee: page.saveEmployee,
+          saveEmployee: async (payload) => {
+            await page.saveEmployee(payload);
+            if (page.employeeForm === "new") sizes.reload();
+          },
           saveLocation: page.saveLocation,
           saveManufacturer: page.saveManufacturer,
           saveModel: page.saveModel,
@@ -195,6 +209,7 @@ export function DictionariesPage({ userPermissions }: DictionariesPageProps) {
           setObjectForm: page.setObjectForm,
           setPositionForm: page.setPositionForm,
         }}
+        newParentId={newParentId}
         sizeEmployeeId={sizeEmployeeId}
         onCloseEmployeeSizes={() => setSizeEmployeeId(null)}
         onEmployeeSizesChanged={sizes.reload}

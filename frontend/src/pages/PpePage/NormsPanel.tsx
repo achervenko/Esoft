@@ -10,7 +10,7 @@ import {
 } from "./norm-model";
 export type { NormFormState } from "./norm-model";
 import "../../shared/ui/SearchInput.css";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ppeApi,
   type PpeItem,
@@ -19,10 +19,13 @@ import {
 } from "../../shared/api/ppe";
 import { canManagePpeNorms } from "../../modules/ppe-permissions/ppe-permissions";
 import { DataTable } from "../../shared/ui/DataTable";
-import { Search, X } from "lucide-react";
+import { Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { usePpeQuery } from "../../modules/ppe-ui/usePpeQuery";
 import { PpeQueryState } from "../../modules/ppe-ui/PpeQueryState";
 import { NormFormModal } from "./NormFormModal";
+import { getNormCoverage } from "./norm-coverage";
+import { NormCreatePositionModal } from "./NormCreatePositionModal";
+import { NormFiltersModal, type NormStatusFilter } from "./NormFiltersModal";
 import { NormLifecycleDialog } from "./NormLifecycleDialog";
 export function NormsPanel({
   autoFocusSearch = true,
@@ -52,6 +55,10 @@ export function NormsPanel({
   );
   const openPosition = (id: number) =>
     onOpenPosition ? onOpenPosition(id) : setPosition(String(id));
+  const [choosingPosition, setChoosingPosition] = useState(false);
+  const [createPosition, setCreatePosition] = useState<PpePosition | null>(null);
+  const [statusFilter, setStatusFilter] = useState<NormStatusFilter>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [form, setForm] = useState<NormFormState | null>(null);
   const [lifecycle, setLifecycle] = useState<PpeNorm | null>(null);
@@ -59,27 +66,41 @@ export function NormsPanel({
     setPosition(initialPositionId ? String(initialPositionId) : "");
     setForm(null);
     setLifecycle(null);
+    setChoosingPosition(false);
+    setCreatePosition(null);
+    setFiltersOpen(false);
   }, [initialPositionId]);
   const norms = usePpeQuery(`norms:${revision}`, (signal) =>
     ppeApi.norms(undefined, signal),
   );
+  const employees = usePpeQuery(
+    `norm-employees:${revision}:${permissions}`,
+    (signal) => ppeApi.employees(signal),
+    !position,
+  );
+  const coverage = useMemo(
+    () => getNormCoverage(positions, norms.data ?? [], employees.data ?? []),
+    [positions, norms.data, employees.data],
+  );
+  const listLoading = !position && employees.loading;
+  const listError = !position ? employees.error : null;
   const manage = canManagePpeNorms(permissions);
   const selected = positions.find((item) => String(item.id) === position);
-  const visiblePositions = searchNormPositions(positions, search);
+  const formPosition = selected ?? createPosition;
+  const visiblePositions = searchNormPositions(positions, search).filter(
+    (row) => !statusFilter.length || statusFilter.includes(coverage.get(row.id)?.status ?? "missing"),
+  );
   const selectedNorms = norms.data?.filter(
     (norm) => String(norm.positionId) === position,
   );
   const columns = createNormColumns({
-    norms: norms.data,
-    manage,
-    opensRoute: Boolean(onOpenPosition),
+    coverage,
     openPosition,
-    onCreate: () => setForm({ mode: "create", norm: null }),
   });
   return (
     <>
       {!position && (
-        <div className="admin-card ppe-search-toolbar ppe-norm-search-toolbar">
+        <div className="ppe-search-toolbar ppe-norm-search-toolbar">
           <div className="ppe-journal-search search-input-shell">
             <Search size={18} aria-hidden="true" />
             <input
@@ -98,8 +119,45 @@ export function NormsPanel({
                 <X size={18} aria-hidden="true" />
               </button>
             )}
+            <button
+              type="button"
+              className={`ppe-journal-icon-button${statusFilter.length ? " ppe-journal-filter-active" : ""}`}
+              aria-label="Фильтры"
+              title="Фильтры норм"
+              aria-haspopup="dialog"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen(true)}
+            >
+              <SlidersHorizontal size={20} aria-hidden="true" />
+            </button>
           </div>
+          {manage && (
+          <button
+            type="button"
+            aria-label="Добавить норму"
+            className="admin-primary-button"
+            disabled={Boolean(
+              referenceState?.loading || norms.loading ||
+              referenceState?.error || norms.error ||
+              !positions.some((row) => row.isActive)
+            )}
+            onClick={() => setChoosingPosition(true)}
+          >
+            <Plus size={18} aria-hidden="true" />
+            Добавить
+          </button>
+          )}
         </div>
+      )}
+      {filtersOpen && (
+        <NormFiltersModal
+          statuses={statusFilter}
+          onClose={() => setFiltersOpen(false)}
+          onApply={(status) => {
+            setStatusFilter(status);
+            setFiltersOpen(false);
+          }}
+        />
       )}
       {position && (
         <NormPositionHeader
@@ -113,20 +171,24 @@ export function NormsPanel({
       )}
       <PpeQueryState
         page
-        loading={Boolean(referenceState?.loading || norms.loading)}
-        error={referenceState?.error ?? norms.error}
+        loading={Boolean(referenceState?.loading || norms.loading || listLoading)}
+        error={referenceState?.error ?? norms.error ?? listError}
         reload={() => {
           referenceState?.reload();
           norms.reload();
+          if (!position) employees.reload();
         }}
       />
       {!position &&
         !referenceState?.loading &&
         !norms.loading &&
+        !listLoading &&
+        !listError &&
+        !norms.error &&
         !referenceState?.error &&
         norms.data &&
         (visiblePositions.length ? (
-          <div className="admin-card ppe-table-wrap ppe-list-table-card">
+          <div className="admin-card ppe-table-wrap ppe-list-table-card ppe-norms-list-card">
             <DataTable
               columns={columns}
               rows={visiblePositions}
@@ -145,6 +207,8 @@ export function NormsPanel({
       {position &&
         !norms.loading &&
         !referenceState?.loading &&
+        !norms.error &&
+        !referenceState?.error &&
         selectedNorms?.length === 0 && (
           <p className="admin-state ppe-norms-empty">
             Для этой должности нормы пока не созданы.
@@ -153,6 +217,8 @@ export function NormsPanel({
       {position &&
         !norms.loading &&
         !referenceState?.loading &&
+        !norms.error &&
+        !referenceState?.error &&
         selectedNorms?.map((norm) => (
           <NormCard
             key={norm.id}
@@ -164,12 +230,26 @@ export function NormsPanel({
             onLifecycle={setLifecycle}
           />
         ))}
-      {form && selected && (
+      {choosingPosition && (
+        <NormCreatePositionModal
+          positions={positions}
+          onClose={() => setChoosingPosition(false)}
+          onSelect={(selectedPosition) => {
+            setCreatePosition(selectedPosition);
+            setChoosingPosition(false);
+            setForm({ mode: "create", norm: null });
+          }}
+        />
+      )}
+      {form && formPosition && (
         <NormFormModal
           state={form}
-          position={selected}
+          position={formPosition}
           items={items}
-          onClose={() => setForm(null)}
+          onClose={() => {
+            setForm(null);
+            setCreatePosition(null);
+          }}
           onChanged={onChanged}
         />
       )}

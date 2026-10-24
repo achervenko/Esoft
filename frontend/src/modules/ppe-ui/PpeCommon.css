@@ -1,8 +1,15 @@
 .ppe-tabs {
+  min-width: 0;
   max-width: 100%;
+  flex-wrap: nowrap;
   overflow-x: auto;
+  scrollbar-width: none;
+}
+.ppe-tabs::-webkit-scrollbar {
+  display: none;
 }
 .ppe-tabs a {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   min-height: 36px;
@@ -60,11 +67,13 @@
   background: #fff5dc;
 }
 @media (max-width: 760px) {
+  .ppe-tabs a {
+    padding-inline: 8px;
+    flex-grow: 1;
+    justify-content: center;
+  }
   .ppe-toolbar {
     align-items: stretch;
-  }
-  .ppe-tabs a {
-    padding: 0 10px;
   }
 }
 .ppe-visually-hidden {

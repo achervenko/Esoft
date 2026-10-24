@@ -112,3 +112,65 @@ it("keeps the catalog read-only for the occupational safety specialist", () => {
   fireEvent.contextMenu(screen.getByText(item.article).closest("tr")!);
   expect(screen.queryByRole("menu")).not.toBeInTheDocument();
 });
+
+it("preserves manual search when catalog items refresh", () => {
+  window.history.replaceState(null, "", "#/ppe?tab=catalog&q=original");
+  const view = (items: typeof item[]) => (
+    <ChakraProvider value={defaultSystem}>
+      <CatalogPanel items={items} permissions={permissionsForTest("admin")} onChanged={vi.fn()} />
+    </ChakraProvider>
+  );
+  const { rerender } = render(view([item]));
+  const input = screen.getByRole("textbox", { name: "Поиск по номенклатуре" });
+  fireEvent.change(input, { target: { value: "перчатки" } });
+  rerender(view([{ ...item }]));
+  expect(input).toHaveValue("перчатки");
+  window.history.replaceState(null, "", "#/");
+});
+
+it("resolves a pending itemId once and uses refreshed items on later navigation", () => {
+  window.history.replaceState(null, "", `#/ppe?tab=catalog&itemId=${item.id}`);
+  const view = (items: typeof item[]) => (
+    <ChakraProvider value={defaultSystem}>
+      <CatalogPanel items={items} permissions={permissionsForTest("admin")} onChanged={vi.fn()} />
+    </ChakraProvider>
+  );
+  const { rerender } = render(view([]));
+  const input = screen.getByRole("textbox", { name: "Поиск по номенклатуре" });
+  expect(input).toHaveValue("");
+  rerender(view([item]));
+  expect(input).toHaveValue(item.article);
+  fireEvent.change(input, { target: { value: "перчатки" } });
+  const updated = { ...item, article: "789" };
+  rerender(view([updated]));
+  expect(input).toHaveValue("перчатки");
+  act(() => window.dispatchEvent(new HashChangeEvent("hashchange")));
+  expect(input).toHaveValue(updated.article);
+  window.history.replaceState(null, "", "#/");
+});
+
+it.each(["typing", "clearing"])("cancels pending itemId after manual %s", (action) => {
+  window.history.replaceState(null, "", `#/ppe?tab=catalog&itemId=${item.id}&q=fallback`);
+  const view = (items: typeof item[]) => (
+    <ChakraProvider value={defaultSystem}>
+      <CatalogPanel items={items} permissions={permissionsForTest("admin")} onChanged={vi.fn()} />
+    </ChakraProvider>
+  );
+  const { rerender } = render(view([]));
+  const input = screen.getByRole("textbox", { name: "Поиск по номенклатуре" });
+  if (action === "typing") fireEvent.change(input, { target: { value: "перчатки" } });
+  else fireEvent.click(screen.getByRole("button", { name: "Очистить поиск" }));
+  rerender(view([item]));
+  expect(input).toHaveValue(action === "typing" ? "перчатки" : "");
+  window.history.replaceState(null, "", "#/");
+});
+
+it("marks inactive catalogue rows with the shared muted style", () => {
+  const inactive = { ...item, id: item.id + 1, article: "INACTIVE", isActive: false };
+  render(<ChakraProvider value={defaultSystem}>
+    <CatalogPanel items={[item, inactive]} permissions={permissionsForTest("admin")} onChanged={vi.fn()} />
+  </ChakraProvider>);
+  expect(screen.getByText(inactive.article).closest("tr")).toHaveClass("ppe-inactive");
+  expect(screen.getByText(item.article).closest("tr")).not.toHaveClass("ppe-inactive");
+  expect(screen.getByText("Неактивная позиция")).toHaveClass("ppe-visually-hidden");
+});

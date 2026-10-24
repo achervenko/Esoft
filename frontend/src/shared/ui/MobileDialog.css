@@ -1,0 +1,61 @@
+@keyframes mobile-dialog-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mobile-dialog-backdrop-enter {
+  from {
+    background-color: transparent;
+  }
+}
+
+@media (max-width: 760px) {
+  .mobile-dialog-backdrop > .mobile-dialog[role="dialog"] {
+    top: calc(
+      var(--dialog-viewport-top, 0px) + var(--dialog-viewport-height, 100dvh) /
+        2
+    );
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-height: calc(
+      var(--dialog-viewport-height, 100dvh) - 24px - env(safe-area-inset-top) -
+        env(safe-area-inset-bottom)
+    );
+    animation: mobile-dialog-enter 320ms ease-out both;
+  }
+
+  [data-admin-modal-owner] {
+    animation: mobile-dialog-enter 320ms ease-out both;
+  }
+
+  .mobile-dialog-backdrop[role="presentation"] {
+    animation: mobile-dialog-backdrop-enter 320ms ease-out both;
+  }
+
+  .mobile-dialog-backdrop > .mobile-dialog[data-viewport-pending] {
+    opacity: 0;
+    animation: none;
+  }
+
+  .mobile-dialog[data-viewport-pending] * {
+    pointer-events: none;
+  }
+
+  .mobile-dialog input,
+  .mobile-dialog textarea,
+  .mobile-dialog select {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 760px) and (prefers-reduced-motion: reduce) {
+  [data-admin-modal-owner],
+  .mobile-dialog-backdrop > .mobile-dialog[role="dialog"],
+  .mobile-dialog-backdrop[role="presentation"] {
+    animation: none;
+  }
+}

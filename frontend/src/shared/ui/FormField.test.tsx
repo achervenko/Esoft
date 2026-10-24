@@ -84,3 +84,25 @@ it("identifies the label without marking nested control content", () => {
   expect(content.matches("label.form-field > span")).toBe(false);
   view.unmount();
 });
+
+it("associates a non-blocking warning and gives errors priority", () => {
+  const { rerender } = render(
+    <FormField label="Название" warning="Название уже есть">
+      <input />
+    </FormField>,
+  );
+  const input = screen.getByRole("textbox");
+  const warning = screen.getByText("Название уже есть");
+  expect(warning).toHaveClass("field-warning");
+  expect(input).toHaveAttribute("aria-describedby", warning.id);
+  expect(input).not.toHaveAttribute("aria-invalid");
+  expect(input.closest("label")).toHaveClass("has-warning");
+  rerender(
+    <FormField label="Название" warning="Название уже есть" error="Ошибка">
+      <input />
+    </FormField>,
+  );
+  expect(screen.queryByText("Название уже есть")).not.toBeInTheDocument();
+  expect(screen.getByText("Ошибка")).toHaveClass("field-error");
+  expect(input.closest("label")).not.toHaveClass("has-warning");
+});

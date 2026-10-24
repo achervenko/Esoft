@@ -1,5 +1,5 @@
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { EquipmentRegistryItem } from '../../shared/api/equipment/equipment.types';
 import { EquipmentRegistryTable } from './EquipmentRegistryTable';
@@ -72,12 +72,12 @@ function installMatchMediaMock(initialMatches: boolean) {
   };
 }
 
-function renderRegistry() {
+function renderRegistry(onOpenEquipment = vi.fn()) {
   return render(
     <ChakraProvider value={defaultSystem}>
       <EquipmentRegistryTable
         items={[createEquipmentItem()]}
-        onOpenEquipment={vi.fn()}
+        onOpenEquipment={onOpenEquipment}
       />
     </ChakraProvider>,
   );
@@ -91,31 +91,49 @@ describe('EquipmentRegistryTable responsive render', () => {
   it('renders only the desktop table on desktop viewport', () => {
     installMatchMediaMock(false);
 
-    const { container } = renderRegistry();
+    renderRegistry();
 
     expect(screen.getByRole('table')).toBeInTheDocument();
-    expect(container.querySelector('.equipment-registry-cards')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Реестр оборудования' })).toBeNull();
   });
 
   it('renders only mobile cards on mobile viewport', () => {
     installMatchMediaMock(true);
 
-    const { container } = renderRegistry();
+    renderRegistry();
 
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
-    expect(container.querySelector('.equipment-registry-cards')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Реестр оборудования' })).toBeInTheDocument();
+  });
+
+  it('opens a mobile card with one click and keyboard activation', () => {
+    installMatchMediaMock(true);
+    const onOpenEquipment = vi.fn();
+    renderRegistry(onOpenEquipment);
+    const card = screen.getByRole('button');
+
+    fireEvent.pointerDown(card);
+    fireEvent.pointerMove(card);
+    fireEvent.pointerUp(card);
+    expect(onOpenEquipment).not.toHaveBeenCalled();
+
+    fireEvent.click(card);
+    expect(onOpenEquipment).toHaveBeenCalledExactlyOnceWith(101);
+    fireEvent.keyDown(card, { key: 'Enter' });
+    fireEvent.keyDown(card, { key: ' ' });
+    expect(onOpenEquipment).toHaveBeenCalledTimes(3);
   });
 
   it('switches rendered branch when viewport crosses the breakpoint', () => {
     const media = installMatchMediaMock(false);
-    const { container } = renderRegistry();
+    renderRegistry();
 
     expect(screen.getByRole('table')).toBeInTheDocument();
-    expect(container.querySelector('.equipment-registry-cards')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Реестр оборудования' })).toBeNull();
 
     media.setMatches(true);
 
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
-    expect(container.querySelector('.equipment-registry-cards')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Реестр оборудования' })).toBeInTheDocument();
   });
 });

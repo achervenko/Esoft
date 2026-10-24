@@ -1,4 +1,5 @@
 .equipment-view-page {
+  min-width: 0;
   display: grid;
   gap: 18px;
 }

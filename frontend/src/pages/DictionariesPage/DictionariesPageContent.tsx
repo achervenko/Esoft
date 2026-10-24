@@ -12,6 +12,8 @@ type DictionariesPageContentProps = {
   page: DictionariesContentModel;
   userPermissions: readonly string[] | null;
   onOpenEmployeeSizes: (id: number) => void;
+  onCreateModel: (parentId: number | null) => void;
+  onCreateLocation: (parentId: number | null) => void;
   employeeSizes?: ReadonlyMap<number, EmployeeSizes | null>;
 };
 
@@ -19,6 +21,8 @@ export function DictionariesPageContent({
   page,
   userPermissions,
   onOpenEmployeeSizes,
+  onCreateModel,
+  onCreateLocation,
   employeeSizes,
 }: DictionariesPageContentProps) {
   return (
@@ -54,7 +58,7 @@ export function DictionariesPageContent({
           manufacturers={page.manufacturers}
           models={page.models}
           onCreateManufacturer={() => page.setManufacturerForm("new")}
-          onCreateModel={() => page.setModelForm("new")}
+          onCreateModel={onCreateModel}
           onDeleteManufacturer={(manufacturer) =>
             void page.removeManufacturer(manufacturer)
           }
@@ -74,7 +78,7 @@ export function DictionariesPageContent({
         <LocationsDictionaryPanel
           locations={page.locations}
           objects={page.objects}
-          onCreateLocation={() => page.setLocationForm("new")}
+          onCreateLocation={onCreateLocation}
           onCreateObject={() => page.setObjectForm("new")}
           onDeleteLocation={(location) => void page.removeLocation(location)}
           onDeleteObject={(object) => void page.removeObject(object)}

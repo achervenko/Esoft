@@ -1,47 +1,25 @@
-import {
-  cleanup,
-  fireEvent,
-  render as renderComponent,
-  screen,
-} from "@testing-library/react";
-import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
-import type { ReactElement } from "react";
+import { fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { EmployeeSizes } from "../../shared/api/ppe";
-import type { AdminEmployee } from "../../shared/api/users-admin-api";
+import { searchApp } from "../../shared/api/search-api";
 import { DictionaryEmployeesTable } from "./DictionaryEmployeesTable";
+import {
+  complete,
+  employee,
+  mockViewport,
+  renderEmployees,
+} from "./dictionary-employees-test-helpers";
 
-beforeEach(() =>
-  vi.stubGlobal(
-    "matchMedia",
-    vi.fn(() => ({ matches: true })),
-  ),
-);
+vi.mock("../../shared/api/search-api", () => ({ searchApp: vi.fn() }));
+
+beforeEach(() => {
+  vi.mocked(searchApp).mockReset().mockResolvedValue([]);
+  mockViewport();
+});
+
 afterEach(() => {
-  cleanup();
   vi.unstubAllGlobals();
 });
-const render = (ui: ReactElement) =>
-  renderComponent(ui, {
-    wrapper: ({ children }) => (
-      <ChakraProvider value={defaultSystem}>{children}</ChakraProvider>
-    ),
-  });
-const employee = {
-  id: 1,
-  fullName: "Иван Иванов",
-  position: "Инженер",
-  isActive: true,
-} as AdminEmployee;
-const complete: EmployeeSizes = {
-  clothingSize: "48",
-  clothingHeight: "176",
-  tshirtSize: "48",
-  tshirtHeight: "176",
-  shoeSize: 42,
-  gloveSize: "9",
-  headwearSize: "58",
-};
 
 it.each([
   [null, "missing"],
@@ -58,21 +36,16 @@ it.each([
     },
     "missing",
   ],
-  ...Object.keys(complete).map(
+  ...(Object.keys(complete) as Array<keyof EmployeeSizes>).map(
     (key) => [{ ...complete, [key]: null }, "partial"] as const,
   ),
   [complete, "complete"],
 ] as const)("shows the size completeness state for %p", (sizes, status) => {
   const onSizes = vi.fn();
-  render(
-    <DictionaryEmployeesTable
-      employees={[employee]}
-      onEdit={vi.fn()}
-      onToggleStatus={vi.fn()}
-      onSizes={onSizes}
-      employeeSizes={new Map([[1, sizes]])}
-    />,
-  );
+  renderEmployees([employee], {
+    onSizes,
+    employeeSizes: new Map([[1, sizes]]),
+  });
   const dot = screen.queryByRole("img");
   if (status === "complete") expect(dot).toBeNull();
   else expect(dot).toHaveClass("employee-sizes-dot", status);
@@ -87,7 +60,7 @@ it("does not mark unloaded sizes as missing and updates when sizes change", () =
     onToggleStatus: vi.fn(),
     onSizes: vi.fn(),
   };
-  const { rerender } = render(<DictionaryEmployeesTable {...props} />);
+  const { rerender } = renderEmployees(props.employees, props);
   expect(screen.queryByRole("img")).toBeNull();
   rerender(
     <DictionaryEmployeesTable

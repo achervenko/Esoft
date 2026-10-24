@@ -1,3 +1,4 @@
+import { AdminTableActions } from "../../shared/ui/AdminTableActions";
 import type { AdminPosition } from "../../shared/api/users-admin-api";
 import { DataTable, type DataTableColumn } from "../../shared/ui/DataTable";
 
@@ -26,24 +27,13 @@ export function PositionsDictionaryPanel({
       className: "admin-table-actions-column",
       label: "",
       render: (item) => (
-        <div className="admin-form-actions">
-          <button
-            className="admin-secondary-button"
-            disabled={isSaving}
-            onClick={() => onEdit(item)}
-            type="button"
-          >
-            Редактировать
-          </button>
-          <button
-            className="admin-secondary-button"
-            disabled={isSaving}
-            onClick={() => onToggleStatus(item)}
-            type="button"
-          >
-            Удалить
-          </button>
-        </div>
+        <AdminTableActions
+          disabled={isSaving}
+          editLabel={`Редактировать должность ${item.name}`}
+          deleteLabel={`Удалить должность ${item.name}`}
+          onEdit={() => onEdit(item)}
+          onDelete={() => onToggleStatus(item)}
+        />
       ),
     },
   ];

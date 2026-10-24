@@ -8,24 +8,31 @@ export function createCatalogColumns(
   return [
     {
       key: "article",
+      className: "ppe-catalog-article-column",
       label: "Артикул",
-      render: (item) => <strong>{item.article}</strong>,
+      render: (item) => <>
+        <strong>{item.article}</strong>
+        {!item.isActive && <span className="ppe-visually-hidden">Неактивная позиция</span>}
+      </>,
       sortValue: (item) => item.article,
     },
     {
       key: "name",
+      className: "ppe-catalog-name-column",
       label: "Наименование",
       render: (item) => item.name,
       sortValue: (item) => item.name,
     },
     {
       key: "type",
+      className: "ppe-catalog-type-column",
       label: "Тип СИЗ",
       render: (item) => typeLabels[item.type],
       sortValue: (item) => typeLabels[item.type],
     },
     {
       key: "status",
+      className: "ppe-catalog-status-column",
       label: "Статус",
       render: (item) => (
         <span
@@ -38,6 +45,7 @@ export function createCatalogColumns(
     },
     {
       key: "sizes",
+      className: "ppe-catalog-sizes-column",
       label: "Размеры",
       isSortable: false,
       render: (item) =>
@@ -45,6 +53,7 @@ export function createCatalogColumns(
           "Без размера"
         ) : (
           <button
+            type="button"
             className="admin-secondary-button ppe-catalog-sizes-button"
             onClick={() => onOpenSizes(item.id)}
           >

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useMediaQuery } from "../../shared/lib/useMediaQuery";
 import { ppeApi } from "../../shared/api/ppe";
 import { canReadPpe } from "../../modules/ppe-permissions/ppe-permissions";
 import { Message } from "../../modules/ppe-ui/ppe-ui";
@@ -31,6 +32,14 @@ export function PpePage({
   const searchReturnTo = returnTo === "#/search" || returnTo?.startsWith("#/search?") ? returnTo : null;
   const initialTab = employeeId ? "issue" : requestedTab === "issue" ? "norms" : requestedTab;
   const [revision, setRevision] = useState(0);
+  const isMobile = useMediaQuery("(max-width: 760px)");
+  const tabsRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (isMobile) {
+      tabsRef.current?.querySelector<HTMLElement>('[aria-current="page"]')
+        ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    }
+  }, [initialTab, isMobile]);
   const allowed = canReadPpe(userPermissions);
   const [journalFiltersRequested, setJournalFiltersRequested] = useState(false);
   const loadJournalReferences =
@@ -97,6 +106,7 @@ export function PpePage({
       )}
       {!employeeId && !positionId && (
         <nav
+          ref={tabsRef}
           className="equipment-edit-tabs admin-tabs ppe-tabs"
           aria-label="Разделы СИЗ"
         >
@@ -127,6 +137,7 @@ export function PpePage({
           <>
             {initialTab === "catalog" && (
               <CatalogPanel
+                autoFocusSearch={!isMobile}
                 items={items.data ?? []}
                 referenceState={reference}
                 permissions={userPermissions}
@@ -135,6 +146,7 @@ export function PpePage({
             )}
             {initialTab === "norms" && (
               <NormsPanel
+                autoFocusSearch={!isMobile}
                 referenceState={reference}
                 positions={positions.data ?? []}
                 key={positionId ?? "positions"}
@@ -168,6 +180,7 @@ export function PpePage({
         }
         {initialTab === "journal" && (
           <JournalPanel
+            autoFocusSearch={!isMobile}
             employees={employees.data ?? []}
             positions={positions.data ?? []}
             items={items.data ?? []}

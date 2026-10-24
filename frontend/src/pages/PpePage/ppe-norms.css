@@ -93,8 +93,45 @@
   margin-bottom: 0;
 }
 
-.ppe-norm-gender-statuses {
-  display: grid;
-  grid-auto-rows: 32px;
+.ppe-norm-coverage-badge {
+  display: inline-flex;
   align-items: center;
+  gap: 2px;
+}
+
+.ppe-norms-list-card {
+  container: ppe-norm-list / inline-size;
+}
+
+@media (max-width: 760px) {
+  .ppe-norms-list-card .ppe-norm-open-column {
+    display: none;
+  }
+}
+
+@container ppe-norm-list (max-width: 560px) {
+  .ppe-norm-open-column {
+    display: none;
+  }
+}
+
+.ppe-norm-coverage-with-info {
+  padding-block: 2px;
+  padding-right: 2px;
+}
+
+.ppe-norm-coverage-badge .info-tooltip-trigger {
+  flex-basis: 24px;
+  width: 24px;
+  height: 24px;
+  color: inherit;
+  opacity: 0.8;
+}
+
+.ppe-norm-coverage-badge .info-tooltip-trigger:hover,
+.ppe-norm-coverage-badge .info-tooltip-trigger:focus-visible {
+  color: inherit;
+  background: rgba(0, 0, 0, 0.04);
+  outline-color: currentColor;
+  opacity: 1;
 }

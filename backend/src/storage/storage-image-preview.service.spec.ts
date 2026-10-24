@@ -69,6 +69,29 @@ describe('StorageImagePreviewService', () => {
     expect(objectStorage.getObject).not.toHaveBeenCalled();
   });
 
+  it('separates previews when a file ID is reused for another source', async () => {
+    objectStorage.getObjectOrNull.mockResolvedValue({
+      body: Readable.from(Buffer.from('cached')),
+      contentLength: 6,
+      contentType: 'image/webp',
+    });
+    await service.getPreview(createImageFile(), 'small');
+    await service.getPreview(
+      createImageFile({ objectKey: 'another-photo.jpg' }),
+      'small',
+    );
+    await service.getPreview(
+      createImageFile({ bucket: 'another-bucket' }),
+      'small',
+    );
+    await service.getPreview(createImageFile(), 'small');
+
+    const keys = objectStorage.getObjectOrNull.mock.calls.map(([key]) => key);
+    expect(new Set(keys.slice(0, 3)).size).toBe(3);
+    expect(keys[3]).toBe(keys[0]);
+    expect(keys[0]).not.toBe('storage-previews/1/small.webp');
+  });
+
   it('rejects by source contentLength before buffering stream', async () => {
     objectStorage.getObject.mockResolvedValueOnce({
       body: Readable.from(Buffer.from('source')),
@@ -121,10 +144,14 @@ describe('StorageImagePreviewService', () => {
         height: 256,
       }),
     ]);
+    const previewKey = objectStorage.getObjectOrNull.mock.calls[0][0];
+    expect(previewKey).toMatch(
+      /^storage-previews\/1\/[a-f0-9]{64}\/medium-fit-v2\.webp$/,
+    );
     expect(objectStorage.putObject).toHaveBeenCalledWith({
       body: Buffer.from('webp'),
       contentType: 'image/webp',
-      key: 'storage-previews/1/medium-fit-v2.webp',
+      key: previewKey,
     });
     expect(result.contentLength).toBe(4);
     expect(result.contentType).toBe('image/webp');

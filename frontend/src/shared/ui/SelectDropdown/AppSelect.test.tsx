@@ -1,52 +1,78 @@
+import { DialogPopupReadyContext } from "../DialogPopupReadyContext";
 import { useState } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { AppSelect } from "./AppSelect";
 import { SelectDropdown } from "./SelectDropdown";
 
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
-
-it.each([false, true])("closes an open dropdown when disabled and allows reopening after enabling (multiple=%s)", (multiple) => {
-  const props = {
-    label: "Тип", value: "a", onChange: vi.fn(),
-    options: [{ value: "a", label: "Первый" }],
-    selectedValues: multiple ? ["a"] : undefined,
-  };
-  const view = render(<SelectDropdown {...props} />);
-  const trigger = screen.getByRole("button");
-  fireEvent.click(trigger);
-  expect(screen.getByRole("listbox")).toBeInTheDocument();
-  view.rerender(<SelectDropdown {...props} disabled />);
-  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
-  expect(trigger).toBeDisabled();
-  expect(trigger).toHaveAttribute("aria-expanded", "false");
-  expect(trigger).not.toHaveAttribute("aria-controls");
-  view.rerender(<SelectDropdown {...props} />);
-  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
-  fireEvent.click(trigger);
-  expect(screen.getByRole("listbox")).toBeInTheDocument();
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
 });
 
-it.each([false, true])("moves Tab focus relative to the trigger outside a modal (shift=%s)", (shiftKey) => {
-  vi.spyOn(HTMLElement.prototype, "getClientRects").mockReturnValue([{}] as unknown as DOMRectList);
-  render(
-    <div>
-      <input aria-label="До" />
-      <AppSelect value="a"><option value="a">Первый</option></AppSelect>
-      <input aria-label="После" disabled />
-      <button>Далее</button>
-    </div>,
-  );
-  fireEvent.click(screen.getByRole("button", { name: "Первый" }));
-  const option = screen.getByRole("option", { name: "Первый" });
-  expect(option).toHaveFocus();
-  fireEvent.keyDown(option, { key: "Tab", shiftKey });
-  expect(screen.queryByRole("listbox")).toBeNull();
-  expect(shiftKey ? screen.getByLabelText("До") : screen.getByRole("button", { name: "Далее" })).toHaveFocus();
-});
+it.each([false, true])(
+  "closes an open dropdown when disabled and allows reopening after enabling (multiple=%s)",
+  (multiple) => {
+    const props = {
+      label: "Тип",
+      value: "a",
+      onChange: vi.fn(),
+      options: [{ value: "a", label: "Первый" }],
+      selectedValues: multiple ? ["a"] : undefined,
+    };
+    const view = render(<SelectDropdown {...props} />);
+    const trigger = screen.getByRole("button");
+    fireEvent.click(trigger);
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    view.rerender(<SelectDropdown {...props} disabled />);
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(trigger).toBeDisabled();
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).not.toHaveAttribute("aria-controls");
+    view.rerender(<SelectDropdown {...props} />);
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    fireEvent.click(trigger);
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+  },
+);
+
+it.each([false, true])(
+  "moves Tab focus relative to the trigger outside a modal (shift=%s)",
+  (shiftKey) => {
+    vi.spyOn(HTMLElement.prototype, "getClientRects").mockReturnValue([
+      {},
+    ] as unknown as DOMRectList);
+    render(
+      <div>
+        <input aria-label="До" />
+        <AppSelect value="a">
+          <option value="a">Первый</option>
+        </AppSelect>
+        <input aria-label="После" disabled />
+        <button>Далее</button>
+      </div>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Первый" }));
+    const option = screen.getByRole("option", { name: "Первый" });
+    expect(option).toHaveFocus();
+    fireEvent.keyDown(option, { key: "Tab", shiftKey });
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(
+      shiftKey
+        ? screen.getByLabelText("До")
+        : screen.getByRole("button", { name: "Далее" }),
+    ).toHaveFocus();
+  },
+);
 it("forwards required and error semantics to the trigger and combines descriptions", () => {
   const view = render(
-    <AppSelect aria-label="Тип" required aria-invalid="true" aria-describedby="field-error" value="a">
+    <AppSelect
+      aria-label="Тип"
+      required
+      aria-invalid="true"
+      aria-describedby="field-error"
+      value="a"
+    >
       <option value="a">Первый</option>
     </AppSelect>,
   );
@@ -58,7 +84,9 @@ it("forwards required and error semantics to the trigger and combines descriptio
   expect(document.getElementById(ids[0])).toHaveTextContent("Тип");
   expect(ids[1]).toBe("field-error");
   view.rerender(
-    <AppSelect aria-label="Тип" value="a"><option value="a">Первый</option></AppSelect>,
+    <AppSelect aria-label="Тип" value="a">
+      <option value="a">Первый</option>
+    </AppSelect>,
   );
   expect(trigger).not.toHaveAttribute("aria-required");
   expect(trigger).not.toHaveAttribute("aria-invalid");
@@ -121,4 +149,30 @@ it("supports keyboard selection and Escape", () => {
     key: "Escape",
   });
   expect(screen.queryByRole("listbox")).toBeNull();
+});
+
+it("does not expose a portalled dropdown before its dialog is ready", () => {
+  const viewFor = (ready: boolean) => (
+    <DialogPopupReadyContext.Provider value={ready}>
+      <AppSelect value="a">
+        <option value="a">Первый</option>
+      </AppSelect>
+    </DialogPopupReadyContext.Provider>
+  );
+  const view = render(viewFor(false));
+  const trigger = screen.getByRole("button", { name: "Первый" });
+  fireEvent.click(trigger);
+  expect(screen.queryByRole("listbox")).toBeNull();
+  expect(trigger).toHaveAttribute("aria-expanded", "false");
+  view.rerender(viewFor(true));
+  fireEvent.click(trigger);
+  expect(screen.getByRole("listbox")).toBeInTheDocument();
+  view.rerender(viewFor(false));
+  expect(screen.queryByRole("listbox")).toBeNull();
+  expect(trigger).toHaveAttribute("aria-expanded", "false");
+  view.rerender(viewFor(true));
+  expect(screen.queryByRole("listbox")).toBeNull();
+  expect(trigger).toHaveAttribute("aria-expanded", "false");
+  fireEvent.click(trigger);
+  expect(screen.getByRole("listbox")).toBeInTheDocument();
 });

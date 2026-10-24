@@ -14,7 +14,7 @@ import {
   getVisibleSidebarItems,
   getActiveSidebarGroupId,
 } from "./sidebar-navigation";
-import { useMobileSidebar } from "./useMobileSidebar";
+import { useMediaQuery } from "../../shared/lib/useMediaQuery";
 import "./Sidebar.css";
 
 type SidebarProps = {
@@ -58,7 +58,7 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
   const [activeHref, setActiveHref] = useState(
     getHashRoute() || DEFAULT_AUTH_ROUTE,
   );
-  const isMobileSidebar = useMobileSidebar();
+  const isMobileSidebar = useMediaQuery("(max-width: 760px)");
   const displayName = getUserDisplayName(user);
   const username = getAccountLabel(user);
   const userPermissions = user?.permissions ?? null;

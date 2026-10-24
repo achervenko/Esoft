@@ -27,7 +27,8 @@ export type EmployeeSizes = {
   headwearSize: string | null;
 };
 export type PpeEmployee = {
- gender: "MALE" | "FEMALE" | null;
+  positionAssignments?: { positionId: number; assignedAt: string | null }[];
+  gender: "MALE" | "FEMALE" | null;
   ppeSizes: EmployeeSizes | null;
   id: number;
   firstName: string;
@@ -49,7 +50,7 @@ export type NormRow = {
   periodUnit: "DAY" | "MONTH" | "YEAR";
 };
 export type PpeNorm = {
- gender: "MALE" | "FEMALE";
+  gender: "MALE" | "FEMALE";
   transitionMode: "SOFT" | "HARD";
   id: number;
   positionId: number;
@@ -59,7 +60,7 @@ export type PpeNorm = {
   items: NormRow[];
 };
 export type NormPayload = {
- gender?: "MALE" | "FEMALE";
+  gender?: "MALE" | "FEMALE";
   transitionMode?: "SOFT" | "HARD";
   effectiveFrom: string;
   effectiveTo: string | null;
@@ -69,7 +70,7 @@ export type NormPayload = {
   >[];
 };
 export type PpeIssue = {
- genderSnapshot: "MALE" | "FEMALE" | null;
+  genderSnapshot: "MALE" | "FEMALE" | null;
   id: number;
   employeeId: number;
   employeeName: string;
@@ -139,7 +140,12 @@ export type PlanRow = {
   sizes: SizeRecommendation;
 };
 export type PpePlan = {
- warnings: { code: "PPE_NORM_MISSING"; positionId: number; position: string; message: string }[];
+  warnings: {
+    code: "PPE_NORM_MISSING";
+    positionId: number;
+    position: string;
+    message: string;
+  }[];
   employeeId: number;
   employeeName: string;
   positionId: number;
