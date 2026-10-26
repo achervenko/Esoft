@@ -1,3 +1,5 @@
+import { dictionaryTabs, getAvailableDictionaryTabs } from "./dictionary-tabs";
+import { setHashRoute } from "../../lib/hash-router";
 import { hasPermission } from "../../shared/lib/permissions";
 import { useConfirmation } from "../../shared/ui/useConfirmation";
 import { useEffect, useState } from "react";
@@ -39,24 +41,60 @@ type UseDictionariesAdminPageParams = {
   userPermissions: readonly string[] | null;
 };
 
+function getRouteTab() {
+  const [path, query] = window.location.hash.split("?");
+  if (path !== "#/dictionaries") return undefined;
+  const value = new URLSearchParams(query).get("tab");
+  const id = value === "storage-locations" ? "storageLocations" : value;
+  return dictionaryTabs.find((tab) => tab.id === id)?.id;
+}
+
 export function useDictionariesAdminPage({
   userPermissions,
 }: UseDictionariesAdminPageParams) {
   const confirm = useConfirmation();
-  const dictionariesManageable = hasPermission(userPermissions, "dictionaries.manage");
-  const [activeTab, setActiveTab] = useState<ActiveDictionariesTab>(() => {
-    try {
-      const saved = sessionStorage.getItem("esoft:dictionaries:tab");
-      return saved === "positions" ||
-        saved === "manufacturers" ||
-        saved === "countries" ||
-        saved === "locations"
-        ? saved
-        : "employees";
-    } catch {
-      return "employees";
+  const dictionariesManageable = hasPermission(
+    userPermissions,
+    "dictionaries.manage",
+  );
+  const [requestedTab, setRequestedTab] = useState<ActiveDictionariesTab>(
+    () => {
+      const routeTab = getRouteTab();
+      if (routeTab) return routeTab;
+      try {
+        const saved = sessionStorage.getItem("esoft:dictionaries:tab");
+        return (
+          dictionaryTabs.find((tab) => tab.id === saved)?.id ?? "employees"
+        );
+      } catch {
+        return "employees";
+      }
+    },
+  );
+  useEffect(() => {
+    const onHashChange = () => {
+      const tab = getRouteTab();
+      if (tab) setRequestedTab(tab);
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+  const setActiveTab = (tab: ActiveDictionariesTab) => {
+    setRequestedTab(tab);
+    const value = tab === "storageLocations" ? "storage-locations" : tab;
+    setHashRoute(`#/dictionaries?tab=${value}`);
+  };
+  const availableTabs = getAvailableDictionaryTabs(userPermissions);
+  const activeTab =
+    availableTabs.find((tab) => tab.id === requestedTab)?.id ??
+    availableTabs[0]?.id ??
+    "employees";
+  const hasAvailableTabs = availableTabs.length > 0;
+  useEffect(() => {
+    if (hasAvailableTabs && requestedTab !== activeTab) {
+      setRequestedTab(activeTab);
     }
-  });
+  }, [activeTab, requestedTab, hasAvailableTabs]);
   useEffect(() => {
     try {
       sessionStorage.setItem("esoft:dictionaries:tab", activeTab);
@@ -134,6 +172,7 @@ export function useDictionariesAdminPage({
 
   return {
     activeTab,
+    availableTabs,
     positions: data.positions,
     positionForm,
     setPositionForm,

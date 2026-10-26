@@ -1,5 +1,6 @@
+import { SearchToolbar } from "../../shared/ui/SearchToolbar";
 import { LoadingIndicator } from "../../shared/ui/LoadingIndicator";
-import { Copy, FilePlus2, Trash2, Search, SlidersHorizontal, X } from "lucide-react";
+import { Copy, FilePlus2, Trash2 } from "lucide-react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import {
@@ -11,8 +12,7 @@ import { DataTable, type DataTableColumn } from "../../shared/ui/DataTable";
 import { SelectDropdown } from "../../shared/ui/SelectDropdown";
 import { templateStateOptions } from "./checklist-admin.constants";
 import { AdminModal } from "../../shared/ui/AdminModal";
-import "../../shared/ui/SearchInput.css";
-import "../../shared/ui/SearchToolbar.css";
+import type { ChecklistTemplateSort } from "./useChecklistTemplates";
 
 type TemplatesPanelProps = {
   isLoading: boolean;
@@ -22,9 +22,10 @@ type TemplatesPanelProps = {
   onSearch: (next?: { search?: string; state?: string }) => void;
   search: string;
   setSearch: (value: string) => void;
-  setState: (value: string) => void;
   state: string;
   templates: ChecklistTemplateListItem[];
+  sort: ChecklistTemplateSort;
+  onSortChange: (sort: ChecklistTemplateSort) => void;
 };
 
 export function TemplatesPanel({
@@ -37,27 +38,39 @@ export function TemplatesPanel({
   setSearch,
   state,
   templates,
+  sort,
+  onSortChange,
 }: TemplatesPanelProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const lastSearch = useRef(search);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (lastSearch.current === search) return;
-    timer.current = setTimeout(() => { lastSearch.current = search; onSearch({ search }); }, 200);
-    return () => { if (timer.current) clearTimeout(timer.current); };
+    timer.current = setTimeout(() => {
+      lastSearch.current = search;
+      onSearch({ search });
+    }, 200);
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
   }, [search, onSearch]);
-  const stopRowOpen = useCallback((
-    event: KeyboardEvent<HTMLButtonElement> | MouseEvent<HTMLButtonElement>,
-  ) => {
-    event.stopPropagation();
-  }, []);
+  const stopRowOpen = useCallback(
+    (
+      event: KeyboardEvent<HTMLButtonElement> | MouseEvent<HTMLButtonElement>,
+    ) => {
+      event.stopPropagation();
+    },
+    [],
+  );
 
   const openTemplate = useCallback((template: ChecklistTemplateListItem) => {
     window.location.hash = `#/checklist-admin/templates/${template.id}`;
   }, []);
   const hasActiveFilters = search.trim().length > 0 || state !== "ACTIVE";
 
-  const columns = useMemo<Array<DataTableColumn<ChecklistTemplateListItem, string>>>(
+  const columns = useMemo<
+    Array<DataTableColumn<ChecklistTemplateListItem, string>>
+  >(
     () => [
       {
         key: "name",
@@ -88,8 +101,8 @@ export function TemplatesPanel({
         sortValue: (template) => template.questionCount,
       },
       {
-    key: "actions",
-    className: "admin-table-actions-column",
+        key: "actions",
+        className: "admin-table-actions-column",
         isSortable: false,
         label: "",
         render: (template) => (
@@ -133,37 +146,53 @@ export function TemplatesPanel({
     <>
       <header>
         <h2>Шаблоны</h2>
-        <button className="admin-primary-button" onClick={onCreate} type="button">
+        <button
+          className="admin-primary-button"
+          onClick={onCreate}
+          type="button"
+        >
           <FilePlus2 size={18} />
           Создать шаблон
         </button>
       </header>
-      <div className="search-input-shell">
-        <Search size={18} aria-hidden="true" />
-        <input
-          aria-label="Поиск шаблонов по названию"
-          onChange={(event) => setSearch(event.target.value)}
-          value={search}
-          onKeyDown={(event) => { if (event.key === "Enter") {
-            event.preventDefault();
-            if (timer.current) clearTimeout(timer.current);
-            lastSearch.current = search;
-            onSearch({ search });
-          } }}
-        />
-        {search && <button type="button" className="ppe-journal-icon-button" aria-label="Очистить поиск" onClick={() => {
+      <SearchToolbar
+        label="Поиск шаблонов по названию"
+        value={search}
+        onChange={setSearch}
+        clearLabel="Очистить поиск"
+        onClear={() => {
           if (timer.current) clearTimeout(timer.current);
           lastSearch.current = "";
-          setSearch(""); onSearch({ search: "" });
-        }}><X size={18} aria-hidden="true" /></button>}
-        <button type="button" className={`ppe-journal-icon-button${state !== "ACTIVE" ? " ppe-journal-filter-active" : ""}`}
-          aria-label="Фильтры шаблонов" aria-haspopup="dialog" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(true)}>
-          <SlidersHorizontal size={20} aria-hidden="true" />
-        </button>
-      </div>
-      {filtersOpen && <TemplateFiltersModal state={state} onClose={() => setFiltersOpen(false)} onApply={(nextState) => {
-        onSearch({ state: nextState }); setFiltersOpen(false);
-      }} />}
+          setSearch("");
+          onSearch({ search: "" });
+        }}
+        inputProps={{
+          onKeyDown: (event) => {
+            if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+              event.preventDefault();
+              if (timer.current) clearTimeout(timer.current);
+              lastSearch.current = search;
+              onSearch({ search });
+            }
+          },
+        }}
+        filters={{
+          label: "Фильтры шаблонов",
+          count: state !== "ACTIVE" ? 1 : 0,
+          expanded: filtersOpen,
+          onOpen: () => setFiltersOpen(true),
+        }}
+      />
+      {filtersOpen && (
+        <TemplateFiltersModal
+          state={state}
+          onClose={() => setFiltersOpen(false)}
+          onApply={(nextState) => {
+            onSearch({ state: nextState });
+            setFiltersOpen(false);
+          }}
+        />
+      )}
       <LoadingIndicator loading={isLoading} />
       {!isLoading && templates.length === 0 ? (
         <p className="admin-state">
@@ -174,8 +203,19 @@ export function TemplatesPanel({
       ) : null}
       {!isLoading && templates.length > 0 ? (
         <DataTable
+          incremental={false}
           columns={columns}
           defaultSort={{ direction: "asc", key: "name" }}
+          sort={sort}
+          serverSorted
+          onSortChange={(next) => {
+            if (
+              next.key === "name" ||
+              next.key === "state" ||
+              next.key === "questions"
+            )
+              onSortChange({ key: next.key, direction: next.direction });
+          }}
           getRowKey={(template) => template.id}
           onRowClick={openTemplate}
           rows={templates}
@@ -185,15 +225,44 @@ export function TemplatesPanel({
   );
 }
 
-function TemplateFiltersModal({ state, onApply, onClose }: { state: string; onApply: (state: string) => void; onClose: () => void }) {
+function TemplateFiltersModal({
+  state,
+  onApply,
+  onClose,
+}: {
+  state: string;
+  onApply: (state: string) => void;
+  onClose: () => void;
+}) {
   const [draft, setDraft] = useState(state);
-  return <AdminModal title="Фильтры шаблонов" onClose={onClose}>
-    <form className="admin-form" onSubmit={(event) => { event.preventDefault(); onApply(draft); }}>
-      <SelectDropdown label="Состояние" value={draft} options={templateStateOptions} onChange={setDraft} />
-      <div className="admin-form-actions">
-        <button type="button" className="admin-secondary-button" onClick={() => setDraft("ACTIVE")}>Сбросить</button>
-        <button type="submit" className="admin-primary-button">Применить</button>
-      </div>
-    </form>
-  </AdminModal>;
+  return (
+    <AdminModal title="Фильтры шаблонов" onClose={onClose}>
+      <form
+        className="admin-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onApply(draft);
+        }}
+      >
+        <SelectDropdown
+          label="Состояние"
+          value={draft}
+          options={templateStateOptions}
+          onChange={setDraft}
+        />
+        <div className="admin-form-actions">
+          <button
+            type="button"
+            className="admin-secondary-button"
+            onClick={() => setDraft("ACTIVE")}
+          >
+            Сбросить
+          </button>
+          <button type="submit" className="admin-primary-button">
+            Применить
+          </button>
+        </div>
+      </form>
+    </AdminModal>
+  );
 }

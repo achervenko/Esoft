@@ -243,15 +243,8 @@ describe('Maintenance authorization through the global guard', () => {
       http.modules.splice(0, http.modules.length, 'warehouse');
       for (const operation of operations) {
         jest.clearAllMocks();
-        const allowed = isAllowed(operation, role);
-        expect((await request(operation, role)).status).toBe(
-          allowed ? (operation.method === 'POST' ? 201 : 200) : 403,
-        );
-        if (allowed)
-          expect(
-            services[operation.group][operation.action],
-          ).toHaveBeenCalledTimes(1);
-        else expectNoServiceCalls();
+        expect((await request(operation, role)).status).toBe(403);
+        expectNoServiceCalls();
       }
     },
   );

@@ -50,6 +50,7 @@ describe('Maintenance type route ID validation', () => {
   });
   beforeEach(() => {
     jest.clearAllMocks();
+    http.modules.splice(0, http.modules.length, 'equipment');
   });
   describe.each(['0', '-1', '9007199254740992'])('invalid type ID %s', (id) => {
     it.each(operations)(

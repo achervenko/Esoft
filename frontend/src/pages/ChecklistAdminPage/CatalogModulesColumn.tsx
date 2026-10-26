@@ -1,7 +1,6 @@
+import { SearchToolbar } from "../../shared/ui/SearchToolbar";
 import { LoadingIndicator } from "../../shared/ui/LoadingIndicator";
-import { Plus, Search, X } from "lucide-react";
-import "../../shared/ui/SearchInput.css";
-import "../../shared/ui/SearchToolbar.css";
+import { Plus } from "lucide-react";
 import {
   Fragment,
   type PointerEvent as ReactPointerEvent,
@@ -80,90 +79,77 @@ export function CatalogModulesColumn({
         </button>
       </header>
 
-      <div className="search-input-shell">
-        <Search size={18} aria-hidden="true" />
-        <input
-          aria-label="Поиск по модулям"
-          onChange={(event) => onModuleSearchChange(event.target.value)}
-          value={moduleSearch}
-        />
-        {moduleSearch && (
-          <button type="button" className="ppe-journal-icon-button"
-            aria-label="Очистить поиск по модулям"
-            onClick={() => onModuleSearchChange("")}>
-            <X size={18} aria-hidden="true" />
-          </button>
-        )}
-      </div>
-
+      <SearchToolbar
+        label="Поиск по модулям"
+        value={moduleSearch}
+        onChange={onModuleSearchChange}
+      />
       <LoadingIndicator loading={isLoading} />
       {!isLoading && (
-        <>
-          <div className="checklist-order-list" ref={moduleListRef}>
-            <CatalogUnassignedCard
-              isSelected={selectedGroup.kind === "unassigned"}
-              onSelect={() => onSelectGroup({ kind: "unassigned" })}
-              questionCount={unassignedCount}
-            />
+        <div className="checklist-order-list" ref={moduleListRef}>
+          <CatalogUnassignedCard
+            isSelected={selectedGroup.kind === "unassigned"}
+            onSelect={() => onSelectGroup({ kind: "unassigned" })}
+            questionCount={unassignedCount}
+          />
 
-            {isModuleReorderDisabled ? (
-              <p className="admin-state">
-                Очистите поиск, чтобы изменить порядок.
-              </p>
-            ) : null}
+          {isModuleReorderDisabled ? (
+            <p className="admin-state">
+              Очистите поиск, чтобы изменить порядок.
+            </p>
+          ) : null}
 
-            {filteredModules.length === 0 ? (
-              <p className="admin-state">
-                {normalizedModuleSearch
-                  ? "Модули не найдены."
-                  : "Модули пока не созданы."}
-              </p>
-            ) : null}
+          {filteredModules.length === 0 ? (
+            <p className="admin-state">
+              {normalizedModuleSearch
+                ? "Модули не найдены."
+                : "Модули пока не созданы."}
+            </p>
+          ) : null}
 
-            {filteredModules.map((module) => {
-              const canReorder = module.isActive && !isModuleReorderDisabled;
-              const activeIndex = activeModules.findIndex(
-                (activeModule) => activeModule.id === module.id,
-              );
-              const questionCount = questionCountByModuleId.get(module.id) ?? 0;
+          {filteredModules.map((module) => {
+            const canReorder = module.isActive && !isModuleReorderDisabled;
+            const activeIndex = activeModules.findIndex(
+              (activeModule) => activeModule.id === module.id,
+            );
+            const questionCount = questionCountByModuleId.get(module.id) ?? 0;
 
-              return (
-                <Fragment key={module.id}>
-                  <CatalogModuleCard
-                    activeIndex={activeIndex}
-                    canReorder={canReorder}
-                    dragOverIndex={dragOverIndex}
-                    dragProps={getModuleDragProps({
-                      id: module.id,
+            return (
+              <Fragment key={module.id}>
+                <CatalogModuleCard
+                  activeIndex={activeIndex}
+                  canReorder={canReorder}
+                  dragOverIndex={dragOverIndex}
+                  dragProps={getModuleDragProps({
+                    id: module.id,
+                    kind: "module",
+                    subtitle: formatQuestionCount(questionCount),
+                    title: module.name,
+                  })}
+                  dragState={dragState}
+                  isSelected={selectedModuleId === module.id}
+                  module={module}
+                  onEdit={onEditModule}
+                  onReorder={onReorderModules}
+                  onSelect={(selectedModule) =>
+                    onSelectGroup({
                       kind: "module",
-                      subtitle: formatQuestionCount(questionCount),
-                      title: module.name,
-                    })}
-                    dragState={dragState}
-                    isSelected={selectedModuleId === module.id}
-                    module={module}
-                    onEdit={onEditModule}
-                    onReorder={onReorderModules}
-                    onSelect={(selectedModule) =>
-                      onSelectGroup({
-                        kind: "module",
-                        moduleId: selectedModule.id,
-                      })
-                    }
-                    onToggleStatus={onToggleModuleStatus}
-                    pendingModuleIds={pendingModuleIds}
-                    questionCount={questionCount}
-                  />
-                  {dragState?.kind === "module" &&
-                  dragOverIndex === activeModules.length &&
-                  activeIndex === activeModules.length - 1 ? (
-                    <span className="checklist-order-drop-line after" />
-                  ) : null}
-                </Fragment>
-              );
-            })}
-          </div>
-        </>
+                      moduleId: selectedModule.id,
+                    })
+                  }
+                  onToggleStatus={onToggleModuleStatus}
+                  pendingModuleIds={pendingModuleIds}
+                  questionCount={questionCount}
+                />
+                {dragState?.kind === "module" &&
+                dragOverIndex === activeModules.length &&
+                activeIndex === activeModules.length - 1 ? (
+                  <span className="checklist-order-drop-line after" />
+                ) : null}
+              </Fragment>
+            );
+          })}
+        </div>
       )}
     </section>
   );

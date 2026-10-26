@@ -7,7 +7,7 @@ import {
   type ChecklistWorkStatus,
 } from "../../shared/api/checklists";
 import "../../shared/ui/AdminPage.css";
-import { PageNavigation } from "../../shared/ui/PageNavigation";
+import { ListLoadMore } from "../../shared/ui/ListLoadMore";
 import { Notice } from "../../shared/ui/Notice";
 import { MyChecklistsList } from "./components/MyChecklistsList";
 import { MyChecklistsTabs } from "./components/MyChecklistsTabs";
@@ -75,24 +75,21 @@ export function MyChecklistsPage({ route }: MyChecklistsPageProps) {
             : "completed",
     });
 
-  const startChecklist = useCallback(
-    async (item: ChecklistWorkListItem) => {
-      setStartError(null);
-      setStartingChecklistId(item.id);
+  const startChecklist = useCallback(async (item: ChecklistWorkListItem) => {
+    setStartError(null);
+    setStartingChecklistId(item.id);
 
-      try {
-        await startChecklistWork(item.id, {
-          version: item.version,
-        });
-        window.location.hash = getChecklistHref(item.id, "IN_PROGRESS");
-      } catch (error) {
-        setStartError(getApiErrorMessage(error, "Не удалось начать чек-лист."));
-      } finally {
-        setStartingChecklistId(null);
-      }
-    },
-    [],
-  );
+    try {
+      await startChecklistWork(item.id, {
+        version: item.version,
+      });
+      window.location.hash = getChecklistHref(item.id, "IN_PROGRESS");
+    } catch (error) {
+      setStartError(getApiErrorMessage(error, "Не удалось начать чек-лист."));
+    } finally {
+      setStartingChecklistId(null);
+    }
+  }, []);
 
   return (
     <div className="admin-page my-checklists-page">
@@ -109,7 +106,16 @@ export function MyChecklistsPage({ route }: MyChecklistsPageProps) {
       </header>
 
       {checklistList.error ? (
-        <Notice tone="error">{checklistList.error}</Notice>
+        <Notice tone="error">
+          {checklistList.error}
+          <button
+            type="button"
+            className="admin-secondary-button"
+            onClick={checklistList.list.retry}
+          >
+            Повторить загрузку
+          </button>
+        </Notice>
       ) : null}
 
       {startError ? <Notice tone="error">{startError}</Notice> : null}
@@ -124,7 +130,7 @@ export function MyChecklistsPage({ route }: MyChecklistsPageProps) {
           onStartChecklist={startChecklist}
           startingChecklistId={startingChecklistId}
         />
-        <PageNavigation page={checklistList.page} pageSize={checklistList.pageSize} total={checklistList.total} loading={checklistList.isLoading} onChange={checklistList.setPage} />
+        <ListLoadMore list={checklistList.list} />
       </section>
     </div>
   );

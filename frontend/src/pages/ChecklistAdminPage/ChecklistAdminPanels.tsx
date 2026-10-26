@@ -1,7 +1,10 @@
-import type { ChecklistModule, ChecklistQuestion } from "../../shared/api/checklists";
+import type {
+  ChecklistModule,
+  ChecklistQuestion,
+} from "../../shared/api/checklists";
 import { CatalogPanel } from "./CatalogPanel";
 import { TemplatesPanel } from "./TemplatesPanel";
-import { PageNavigation } from "../../shared/ui/PageNavigation";
+import { ListLoadMore } from "../../shared/ui/ListLoadMore";
 import type {
   ActiveChecklistAdminTab,
   ChecklistAdminConfirmState,
@@ -32,23 +35,35 @@ export function ChecklistAdminPanels({
   if (activeTab === "templates") {
     return (
       <>
-      <TemplatesPanel
-        isLoading={templatesState.isLoading}
-        onArchive={(template) => setConfirm({ kind: "archive-template", template })}
-        onCopy={(template) => {
-          window.location.hash = `#/checklist-admin/templates/new?copyFrom=${template.id}`;
-        }}
-        onCreate={() => {
-          window.location.hash = "#/checklist-admin/templates/new";
-        }}
-        onSearch={templatesState.applyFilters}
-        search={templatesState.search}
-        setSearch={templatesState.setSearch}
-        setState={templatesState.setState}
-        state={templatesState.state}
-        templates={templatesState.templates}
-      />
-      <PageNavigation page={templatesState.page} pageSize={templatesState.pageSize} total={templatesState.total} loading={templatesState.isLoading} onChange={templatesState.setPage} />
+        {templatesState.error && (
+          <button
+            type="button"
+            className="admin-secondary-button"
+            onClick={templatesState.list.retry}
+          >
+            Повторить загрузку
+          </button>
+        )}
+        <TemplatesPanel
+          isLoading={templatesState.isLoading}
+          onArchive={(template) =>
+            setConfirm({ kind: "archive-template", template })
+          }
+          onCopy={(template) => {
+            window.location.hash = `#/checklist-admin/templates/new?copyFrom=${template.id}`;
+          }}
+          onCreate={() => {
+            window.location.hash = "#/checklist-admin/templates/new";
+          }}
+          onSearch={templatesState.applyFilters}
+          search={templatesState.search}
+          setSearch={templatesState.setSearch}
+          state={templatesState.state}
+          templates={templatesState.templates}
+          sort={templatesState.sort}
+          onSortChange={templatesState.setSort}
+        />
+        <ListLoadMore list={templatesState.list} />
       </>
     );
   }

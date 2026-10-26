@@ -1,3 +1,4 @@
+import { SearchToolbar } from "../../shared/ui/SearchToolbar";
 import { PpeQueryState } from "../../modules/ppe-ui/PpeQueryState";
 import type { ComponentProps } from "react";
 import { CatalogFiltersModal } from "./CatalogFiltersModal";
@@ -8,8 +9,7 @@ import {
   getCatalogHeightOptions,
   type CatalogFilters,
 } from "./catalog-filtering";
-import "../../shared/ui/SearchInput.css";
-import { ArrowLeft, Plus, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { CatalogContextMenu } from "./CatalogContextMenu";
 import { useEffect, useRef, useState } from "react";
 import { ppeApi, type PpeItem } from "../../shared/api/ppe";
@@ -32,7 +32,11 @@ export function CatalogPanel({
   permissions: readonly string[] | null;
   onChanged: () => void;
 }) {
-  const [search, setSearch] = useState(() => new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("q") ?? "");
+  const [search, setSearch] = useState(
+    () =>
+      new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("q") ??
+      "",
+  );
   const itemsRef = useRef(items);
   const pendingItemIdRef = useRef<string | null>(null);
   itemsRef.current = items;
@@ -51,8 +55,13 @@ export function CatalogPanel({
     y: number;
   } | null>(null);
   const manage = canManagePpeCatalog(permissions);
-  const returnTo = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("returnTo");
-  const searchReturnTo = returnTo === "#/search" || returnTo?.startsWith("#/search?") ? returnTo : null;
+  const returnTo = new URLSearchParams(
+    window.location.hash.split("?")[1] ?? "",
+  ).get("returnTo");
+  const searchReturnTo =
+    returnTo === "#/search" || returnTo?.startsWith("#/search?")
+      ? returnTo
+      : null;
   const selected = items.find((item) => item.id === sizes);
   const columns = createCatalogColumns(setSizes);
   const rows = filterCatalogItems(items, search, filters);
@@ -64,9 +73,11 @@ export function CatalogPanel({
       if (path !== "#/ppe" || params.get("tab") !== "catalog") return;
 
       const itemId = params.get("itemId");
-      const target = itemsRef.current.find((item) => String(item.id) === itemId);
+      const target = itemsRef.current.find(
+        (item) => String(item.id) === itemId,
+      );
       if (itemId && !target) pendingItemIdRef.current = itemId;
-      setSearch(target ? target.article : params.get("q") ?? "");
+      setSearch(target ? target.article : (params.get("q") ?? ""));
     };
     syncSearchFromHash();
     window.addEventListener("hashchange", syncSearchFromHash);
@@ -97,69 +108,35 @@ export function CatalogPanel({
   return (
     <>
       {searchReturnTo && (
-        <button type="button" className="ppe-search-back" onClick={() => { window.location.hash = searchReturnTo; }}>
+        <button
+          type="button"
+          className="ppe-search-back"
+          onClick={() => {
+            window.location.hash = searchReturnTo;
+          }}
+        >
           <ArrowLeft size={18} aria-hidden="true" /> Назад
         </button>
       )}
-      <div className="ppe-search-toolbar ppe-catalog-toolbar">
-        <div className="ppe-journal-search search-input-shell">
-          <Search size={18} aria-hidden="true" />
-          <input
-            autoFocus={autoFocusSearch}
-            aria-label="Поиск по номенклатуре"
-            value={search}
-            onChange={(e) => {
-              pendingItemIdRef.current = null;
-              setSearch(e.target.value);
-            }}
-          />
-          {search && (
-            <button
-              type="button"
-              className="ppe-journal-icon-button"
-              aria-label="Очистить поиск"
-              onClick={() => {
-                pendingItemIdRef.current = null;
-                setSearch("");
-              }}
-            >
-              <X size={18} aria-hidden="true" />
-            </button>
-          )}
-          <button
-            type="button"
-            className={
-              "ppe-journal-icon-button" +
-              (activeFilterCount ? " ppe-journal-filter-active" : "")
-            }
-            aria-label="Фильтры"
-            title="Фильтры"
-            aria-haspopup="dialog"
-            aria-expanded={filtersOpen}
-            onClick={() => {
-              setFiltersOpen(true);
-            }}
-          >
-            <SlidersHorizontal size={20} aria-hidden="true" />
-            {activeFilterCount > 0 && (
-              <span className="ppe-journal-filter-count">
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
-        </div>
-        {manage && (
-          <button
-            aria-label="Добавить СИЗ"
-            type="button"
-            className="admin-primary-button"
-            onClick={() => setForm("new")}
-          >
-            <Plus size={18} aria-hidden="true" />
-            Добавить
-          </button>
-        )}
-      </div>
+      <SearchToolbar
+        label="Поиск по номенклатуре"
+        value={search}
+        onChange={(value) => {
+          pendingItemIdRef.current = null;
+          setSearch(value);
+        }}
+        inputProps={{ autoFocus: autoFocusSearch }}
+        clearLabel="Очистить поиск"
+        filters={{
+          label: "Фильтры",
+          title: "Фильтры",
+          count: activeFilterCount,
+          expanded: filtersOpen,
+          onOpen: () => setFiltersOpen(true),
+        }}
+        onCreate={manage ? () => setForm("new") : undefined}
+        createAriaLabel="Добавить СИЗ"
+      />
       {filtersOpen && (
         <CatalogFiltersModal
           filters={filters}
@@ -180,7 +157,9 @@ export function CatalogPanel({
               columns={columns}
               rows={rows}
               getRowKey={(item) => item.id}
-              getRowClassName={(item) => item.isActive ? undefined : "ppe-inactive"}
+              getRowClassName={(item) =>
+                item.isActive ? undefined : "ppe-inactive"
+              }
               defaultSort={{ key: "name", direction: "asc" }}
               onRowContextMenu={
                 manage

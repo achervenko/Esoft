@@ -47,7 +47,8 @@ describe("App session-expired flow", () => {
       vi.mocked(getSetupStatus).mockResolvedValueOnce({ setupRequired: false });
       vi.mocked(getAuthenticatedUser).mockResolvedValueOnce({
         ...sessionUser,
-        role: "ppe_specialist", permissions: permissionsForTest("ppe_specialist"),
+        role: "ppe_specialist",
+        permissions: permissionsForTest("ppe_specialist"),
       });
       render(<App />);
       await waitFor(() => expect(window.location.hash).toBe("#/ppe"));
@@ -69,10 +70,10 @@ describe("App session-expired flow", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("login-page")).toBeInTheDocument();
+      expect(window.location.hash).toBe(LOGIN_ROUTE);
     });
 
     expect(screen.queryByTestId("app-shell")).not.toBeInTheDocument();
-    expect(window.location.hash).toBe(LOGIN_ROUTE);
   });
 
   it("resets authenticated UI and routes to login after session-expired", async () => {

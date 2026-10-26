@@ -40,7 +40,7 @@ export class UsersService {
       photo: toUserPhotoDto(user.photo),
       assignedRole: user.role,
       role,
-      permissions: getUserPermissions(role),
+      permissions: getUserPermissions(role, this.activeModules),
       username: user.username,
       employee: employee
         ? {

@@ -12,7 +12,6 @@ jest.mock('@thallesp/nestjs-better-auth', () => {
 import type { ExecutionContext } from '@nestjs/common';
 import { RequestMethod } from '@nestjs/common';
 import { PATH_METADATA, METHOD_METADATA } from '@nestjs/common/constants';
-import * as permissionPolicy from '../auth/permission-policy';
 import { hasPermission } from '../auth/permission-policy';
 import { USER_ROLES, getEffectiveUserRoles } from '../auth/role-module-policy';
 import {
@@ -132,24 +131,13 @@ describe('Equipment and file authorization through the global guard', () => {
     }
   });
   it('denies file-only access before owner lookup, upload processing or storage calls', async () => {
-    const original = permissionPolicy.hasPermission;
-    const policy = jest
-      .spyOn(permissionPolicy, 'hasPermission')
-      .mockImplementation((role, permission) =>
-        permission.startsWith('equipment.')
-          ? false
-          : original(role, permission),
-      );
-    try {
-      for (const operation of operations.filter((op) =>
-        op.path.includes('/files'),
-      )) {
-        jest.clearAllMocks();
-        expect((await http.request(operation, 'admin')).status).toBe(403);
-        http.expectNoServiceCalls();
-      }
-    } finally {
-      policy.mockRestore();
+    http.modules.splice(0, http.modules.length, 'ppe', 'warehouse');
+    for (const operation of operations.filter((op) =>
+      op.path.includes('/files'),
+    )) {
+      jest.clearAllMocks();
+      expect((await http.request(operation, 'admin')).status).toBe(403);
+      http.expectNoServiceCalls();
     }
   });
   it('rejects unauthenticated requests before services and file processing', async () => {
@@ -157,7 +145,7 @@ describe('Equipment and file authorization through the global guard', () => {
       expect((await http.request(operation)).status).toBe(401);
     http.expectNoServiceCalls();
   });
-  it('filters disabled roles while preserving admin access', async () => {
+  it('denies disabled equipment access even to admin', async () => {
     http.modules.splice(0, http.modules.length, 'warehouse');
     for (const operation of operations)
       expect(
@@ -165,7 +153,8 @@ describe('Equipment and file authorization through the global guard', () => {
       ).toBe(403);
     http.expectNoServiceCalls();
     expect((await http.request(operations[0], 'admin,engineer')).status).toBe(
-      200,
+      403,
     );
+    http.expectNoServiceCalls();
   });
 });

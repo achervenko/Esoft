@@ -1,11 +1,4 @@
-.ppe-journal-search {
-  margin-bottom: 16px;
-  padding-right: 6px;
-}
-.ppe-journal-search input {
-  flex: 1;
-}
-.ppe-journal-icon-button {
+.search-toolbar-icon-button {
   color: #475467;
   cursor: pointer;
   background: 0 0;
@@ -19,21 +12,14 @@
   display: inline-flex;
   position: relative;
 }
-.ppe-journal-icon-button:hover {
+.search-toolbar-icon-button:hover {
   background: #f2f4f7;
 }
-.ppe-journal-icon-button:focus-visible {
+.search-toolbar-icon-button:focus-visible {
   outline-offset: 2px;
   outline: 2px solid #475467;
 }
-.ppe-journal-filter-active {
-  color: #fff;
-  background: #111;
-}
-.ppe-journal-filter-active:hover {
-  background: #333;
-}
-.ppe-journal-filter-count {
+.search-toolbar-filter-count {
   color: #111;
   background: #fff;
   border: 1px solid #d0d5dd;
@@ -45,4 +31,35 @@
   position: absolute;
   top: -4px;
   right: -3px;
+}
+
+.search-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.search-toolbar-with-action {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.search-toolbar .search-input-shell {
+  min-width: 0;
+  min-height: 38px;
+  margin: 0;
+}
+.search-toolbar input::-webkit-search-cancel-button {
+  display: none;
+}
+.search-toolbar > .admin-primary-button {
+  width: auto;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .search-toolbar {
+    gap: 10px;
+  }
+  .search-toolbar > .admin-primary-button {
+    padding-inline: 12px;
+  }
 }

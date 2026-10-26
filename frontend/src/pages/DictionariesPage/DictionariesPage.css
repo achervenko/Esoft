@@ -1,6 +1,9 @@
-.dictionaries-page-header h1,
+.dictionaries-page-header h1 {
+  padding-inline-start: var(--optical-inset-page);
+}
+
 .dictionaries-page .admin-nested-section > header h3 {
-  padding-inline-start: 8px;
+  padding-inline-start: var(--optical-inset-modal);
 }
 
 .dictionaries-page .dictionaries-card {
@@ -34,7 +37,11 @@
   border-bottom-color: transparent;
 }
 
-.dictionaries-content .data-table tbody tr[aria-selected="true"] td:first-child {
+.dictionaries-content
+  .data-table
+  tbody
+  tr[aria-selected="true"]
+  td:first-child {
   border-start-start-radius: 8px;
   border-end-start-radius: 8px;
 }
@@ -47,46 +54,6 @@
 .dictionaries-content .data-table-row-clickable:focus-visible {
   outline: 2px solid #111;
   outline-offset: -2px;
-}
-
-.dictionaries-page .dictionary-search-toolbar {
-  min-width: 0;
-  padding: 18px;
-}
-
-.dictionary-search-toolbar .ppe-journal-search {
-  margin-bottom: 0;
-}
-
-.dictionaries-page .dictionaries-employees-card {
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
-.dictionaries-employees-card > .admin-card-actions-header {
-  grid-column: 2;
-  grid-row: 1;
-  align-self: center;
-}
-
-.dictionary-search-toolbar .search-input-shell {
-  min-height: 38px;
-}
-
-.dictionaries-employees-card > .dictionaries-content {
-  display: contents;
-}
-
-.dictionaries-employees-card > .dictionaries-content > * {
-  grid-column: 1 / -1;
-}
-
-.dictionaries-employees-card > .dictionaries-content > .dictionary-search-toolbar {
-  grid-column: 1;
-  grid-row: 1;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  overflow: visible;
 }
 
 .dictionaries-content .admin-table-actions {

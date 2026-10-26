@@ -23,8 +23,11 @@ export function getDefaultAuthRoute(permissions: unknown) {
 
 export function canAccessWorkspaceRoute(permissions: unknown, route: string) {
   const path = route.split("?")[0];
+  if (path === "#/warehouse/catalog")
+    return hasPermission(permissions, "warehouse.catalog.manage");
   if (path === "#/search") return hasPermission(permissions, "search.read");
-  if (path === "#/profile") return hasPermission(permissions, "users.profile.read");
+  if (path === "#/profile")
+    return hasPermission(permissions, "users.profile.read");
   if (
     path === "#/ppe" ||
     /^#\/ppe\/(employees|positions)\/[1-9]\d*$/.test(path)
@@ -32,18 +35,29 @@ export function canAccessWorkspaceRoute(permissions: unknown, route: string) {
     return canReadPpe(permissions);
   if (path.startsWith("#/ppe")) return false;
   if (path === "#/dictionaries")
-    return hasPermission(permissions, "dictionaries.manage") || canManageEmployeeSizes(permissions);
-  if (path === "#/users")
-    return canManageUsers(permissions);
+    return (
+      hasPermission(permissions, "dictionaries.manage") ||
+      canManageEmployeeSizes(permissions) ||
+      hasPermission(permissions, "warehouse.storage-locations.read")
+    );
+  if (path === "#/users") return canManageUsers(permissions);
   if (path === "#/production-calendar")
     return canManageProductionCalendar(permissions);
   if (path === "#/calendar") return canViewCalendar(permissions);
-  if (path === "#/checklist-admin" || /^#\/checklist-admin\/templates\/(new|[1-9]\d*)$/.test(path))
+  if (
+    path === "#/checklist-admin" ||
+    /^#\/checklist-admin\/templates\/(new|[1-9]\d*)$/.test(path)
+  )
     return canManageChecklists(permissions);
-  if (path === "#/equipment/create" || /^#\/equipment\/[1-9]\d*\/edit$/.test(path))
+  if (
+    path === "#/equipment/create" ||
+    /^#\/equipment\/[1-9]\d*\/edit$/.test(path)
+  )
     return canEditEquipment(permissions);
-  if (path === "#/my-checklists" || /^#\/my-checklists\/[1-9]\d*$/.test(path)) return hasPermission(permissions, "checklists.work");
-  if (path === "#/dashboard") return hasPermission(permissions, "equipment.progress.read");
+  if (path === "#/my-checklists" || /^#\/my-checklists\/[1-9]\d*$/.test(path))
+    return hasPermission(permissions, "checklists.work");
+  if (path === "#/dashboard")
+    return hasPermission(permissions, "equipment.progress.read");
   if (path === "#/equipment" || /^#\/equipment\/[1-9]\d*$/.test(path))
     return canReadEquipment(permissions);
   return false;

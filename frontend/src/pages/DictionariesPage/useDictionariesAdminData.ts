@@ -33,6 +33,7 @@ const tabResources: Record<ActiveDictionariesTab, DictionaryResource[]> = {
   manufacturers: ["manufacturers", "models"],
   countries: ["countries"],
   locations: ["objects", "locations"],
+  storageLocations: [],
 };
 type ResourceState = {
   loading: boolean;
@@ -57,6 +58,9 @@ export function useDictionariesAdminData(
     Partial<Record<DictionaryResource, ResourceState>>
   >({});
   const [operationError, setError] = useState<string | null>(null);
+  useEffect(() => {
+    setError(null);
+  }, [activeTab]);
   const requested = useRef<Partial<Record<DictionaryResource, boolean>>>({});
   const generations = useRef<Partial<Record<DictionaryResource, number>>>({});
   const mounted = useRef(false);

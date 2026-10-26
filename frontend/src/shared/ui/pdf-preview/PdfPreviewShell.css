@@ -30,6 +30,7 @@
   background: #ffffff;
 }
 .pdf-preview-title {
+  padding-inline-start: var(--optical-inset-modal);
   min-width: 0;
   overflow: hidden;
   color: #15171c;

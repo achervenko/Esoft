@@ -1,3 +1,4 @@
+import { SearchToolbar } from "../../shared/ui/SearchToolbar";
 import type { ComponentProps } from "react";
 import { NormCard } from "./NormCard";
 import { NormPositionHeader } from "./NormPositionHeader";
@@ -9,7 +10,6 @@ import {
   type NormFormState,
 } from "./norm-model";
 export type { NormFormState } from "./norm-model";
-import "../../shared/ui/SearchInput.css";
 import { useEffect, useMemo, useState } from "react";
 import {
   ppeApi,
@@ -19,7 +19,6 @@ import {
 } from "../../shared/api/ppe";
 import { canManagePpeNorms } from "../../modules/ppe-permissions/ppe-permissions";
 import { DataTable } from "../../shared/ui/DataTable";
-import { Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { usePpeQuery } from "../../modules/ppe-ui/usePpeQuery";
 import { PpeQueryState } from "../../modules/ppe-ui/PpeQueryState";
 import { NormFormModal } from "./NormFormModal";
@@ -56,7 +55,9 @@ export function NormsPanel({
   const openPosition = (id: number) =>
     onOpenPosition ? onOpenPosition(id) : setPosition(String(id));
   const [choosingPosition, setChoosingPosition] = useState(false);
-  const [createPosition, setCreatePosition] = useState<PpePosition | null>(null);
+  const [createPosition, setCreatePosition] = useState<PpePosition | null>(
+    null,
+  );
   const [statusFilter, setStatusFilter] = useState<NormStatusFilter>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -88,7 +89,9 @@ export function NormsPanel({
   const selected = positions.find((item) => String(item.id) === position);
   const formPosition = selected ?? createPosition;
   const visiblePositions = searchNormPositions(positions, search).filter(
-    (row) => !statusFilter.length || statusFilter.includes(coverage.get(row.id)?.status ?? "missing"),
+    (row) =>
+      !statusFilter.length ||
+      statusFilter.includes(coverage.get(row.id)?.status ?? "missing"),
   );
   const selectedNorms = norms.data?.filter(
     (norm) => String(norm.positionId) === position,
@@ -100,54 +103,29 @@ export function NormsPanel({
   return (
     <>
       {!position && (
-        <div className="ppe-search-toolbar ppe-norm-search-toolbar">
-          <div className="ppe-journal-search search-input-shell">
-            <Search size={18} aria-hidden="true" />
-            <input
-              autoFocus={autoFocusSearch}
-              aria-label="Поиск по должностям"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {search && (
-              <button
-                type="button"
-                className="ppe-journal-icon-button"
-                aria-label="Очистить поиск"
-                onClick={() => setSearch("")}
-              >
-                <X size={18} aria-hidden="true" />
-              </button>
-            )}
-            <button
-              type="button"
-              className={`ppe-journal-icon-button${statusFilter.length ? " ppe-journal-filter-active" : ""}`}
-              aria-label="Фильтры"
-              title="Фильтры норм"
-              aria-haspopup="dialog"
-              aria-expanded={filtersOpen}
-              onClick={() => setFiltersOpen(true)}
-            >
-              <SlidersHorizontal size={20} aria-hidden="true" />
-            </button>
-          </div>
-          {manage && (
-          <button
-            type="button"
-            aria-label="Добавить норму"
-            className="admin-primary-button"
-            disabled={Boolean(
-              referenceState?.loading || norms.loading ||
-              referenceState?.error || norms.error ||
-              !positions.some((row) => row.isActive)
-            )}
-            onClick={() => setChoosingPosition(true)}
-          >
-            <Plus size={18} aria-hidden="true" />
-            Добавить
-          </button>
+        <SearchToolbar
+          label="Поиск по должностям"
+          value={search}
+          onChange={setSearch}
+          inputProps={{ autoFocus: autoFocusSearch }}
+          clearLabel="Очистить поиск"
+          filters={{
+            label: "Фильтры",
+            title: "Фильтры норм",
+            count: statusFilter.length,
+            expanded: filtersOpen,
+            onOpen: () => setFiltersOpen(true),
+          }}
+          onCreate={manage ? () => setChoosingPosition(true) : undefined}
+          createAriaLabel="Добавить норму"
+          createDisabled={Boolean(
+            referenceState?.loading ||
+            norms.loading ||
+            referenceState?.error ||
+            norms.error ||
+            !positions.some((row) => row.isActive),
           )}
-        </div>
+        />
       )}
       {filtersOpen && (
         <NormFiltersModal
@@ -171,7 +149,9 @@ export function NormsPanel({
       )}
       <PpeQueryState
         page
-        loading={Boolean(referenceState?.loading || norms.loading || listLoading)}
+        loading={Boolean(
+          referenceState?.loading || norms.loading || listLoading,
+        )}
         error={referenceState?.error ?? norms.error ?? listError}
         reload={() => {
           referenceState?.reload();

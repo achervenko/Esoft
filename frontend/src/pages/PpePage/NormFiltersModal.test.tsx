@@ -96,7 +96,7 @@ it.each([
   expect(within(table).getAllByRole("row")).toHaveLength(2);
   expect(within(table).getByText(name)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Фильтры" })).toHaveClass(
-    "ppe-journal-filter-active",
+    "search-toolbar-filter-active",
   );
 });
 
@@ -108,7 +108,7 @@ it("discards unapplied changes and resets the status without clearing search", a
   selectFilter("complete");
   fireEvent.click(screen.getByRole("button", { name: "Применить" }));
   fireEvent.change(
-    screen.getByRole("textbox", { name: "Поиск по должностям" }),
+    screen.getByRole("searchbox", { name: "Поиск по должностям" }),
     { target: { value: "Будущая" } },
   );
   expect(screen.getByText("Ничего не найдено.")).toBeInTheDocument();
@@ -117,11 +117,11 @@ it("discards unapplied changes and resets the status without clearing search", a
   fireEvent.click(screen.getByRole("button", { name: "Сбросить" }));
   fireEvent.click(screen.getByRole("button", { name: "Применить" }));
   expect(
-    screen.getByRole("textbox", { name: "Поиск по должностям" }),
+    screen.getByRole("searchbox", { name: "Поиск по должностям" }),
   ).toHaveValue("Будущая");
   expect(screen.getByText("Будущая должность")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Фильтры" })).not.toHaveClass(
-    "ppe-journal-filter-active",
+    "search-toolbar-filter-active",
   );
 });
 

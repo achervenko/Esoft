@@ -1,3 +1,15 @@
+import { WarehouseProjectsModule } from './projects/projects.module';
+import { WarehouseReservationsController } from './reservations/reservations.controller';
+import { WarehouseReservationsApiService } from './reservations/reservations-api.service';
+import { WarehouseStockController } from './stock/stock.controller';
+import { WarehouseStorageLocationsController } from './storage-locations/storage-locations.controller';
+import { WarehouseStorageLocationsService } from './storage-locations/storage-locations.service';
+import { WarehouseIssuesService } from './issues/issues.service';
+import { WarehouseIssuesAccessService } from './issues/issues-access.service';
+import { WarehouseIssuePlanService } from './issues/issues-plan.service';
+import { WarehouseIssuesQueryService } from './issues/issues-query.service';
+import { WarehouseReservationsService } from './reservations/reservations.service';
+import { WarehouseIssuesController } from './issues/issues.controller';
 import { WarehouseIssueSheetLinesService } from './issue-sheets/issue-sheets-lines.service';
 import { WarehouseIssueSheetLifecycleService } from './issue-sheets/issue-sheets-lifecycle.service';
 import { WarehouseIssueSheetExecutionService } from './issue-sheets/issue-sheets-execution.service';
@@ -20,13 +32,25 @@ import { WarehouseStockAdjustmentDocumentService } from './adjustments/adjustmen
 import { WarehouseStockAdjustmentQueryService } from './adjustments/adjustment-query.service';
 
 @Module({
-  imports: [PrismaModule, AuditModule],
+  imports: [PrismaModule, AuditModule, WarehouseProjectsModule],
   controllers: [
+    WarehouseReservationsController,
+    WarehouseStockController,
+    WarehouseStorageLocationsController,
+    WarehouseIssuesController,
     WarehouseIssueSheetsController,
     WarehouseCatalogController,
     WarehouseStockAdjustmentsController,
   ],
   providers: [
+    WarehouseReservationsApiService,
+    WarehouseStorageLocationsService,
+    WarehouseIssuesService,
+    WarehouseIssuesAccessService,
+    WarehouseIssuePlanService,
+    WarehouseIssuesQueryService,
+    WarehouseReservationsService,
+
     WarehouseIssueSheetLinesService,
     WarehouseIssueSheetLifecycleService,
     WarehouseIssueSheetExecutionService,

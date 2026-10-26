@@ -117,7 +117,7 @@ it.each([
         />
       </ChakraProvider>,
     );
-    const input = await screen.findByRole("textbox", { name: label });
+    const input = await screen.findByRole("searchbox", { name: label });
     if (mobile) {
       expect(input).not.toHaveFocus();
       expect(scroll).toHaveBeenCalledWith({

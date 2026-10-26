@@ -1,0 +1,6 @@
+/* Same muted surface used by inactive PPE items. */
+.ppe-inactive,
+.inactive-surface {
+  background: #f8f9fb;
+  color: #727985;
+}

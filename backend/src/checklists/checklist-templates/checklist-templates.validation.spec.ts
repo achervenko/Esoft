@@ -4,6 +4,14 @@ import { parseArchiveTemplateDto } from './checklist-template-lifecycle.validati
 import { parseChecklistTemplatePayload } from './checklist-template.validation';
 
 describe('checklist template validation', () => {
+  it.each(['state', 'questionCount'])(
+    'accepts server sorting by %s',
+    (sortBy) => {
+      expect(
+        parseChecklistTemplatesQuery({ sortBy, sortDirection: 'asc' }),
+      ).toMatchObject({ sortBy, sortDirection: 'asc' });
+    },
+  );
   it('rejects blank template name', () => {
     expectBadRequestCode(() =>
       parseChecklistTemplatePayload({

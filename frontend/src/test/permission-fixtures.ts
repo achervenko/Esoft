@@ -1,6 +1,6 @@
 // API response fixtures for UI tests only. Runtime permissions always come from backend.
 const grants: Record<string, readonly string[]> = {
-  "admin": [
+  admin: [
     "users.profile.read",
     "equipment.read",
     "files.read",
@@ -27,9 +27,17 @@ const grants: Record<string, readonly string[]> = {
     "ppe.issue",
     "ppe.issue.backdate",
     "warehouse.catalog.manage",
-    "warehouse.adjustments.manage"
+    "warehouse.projects.read",
+    "warehouse.reservations.manage",
+    "warehouse.stock.read",
+    "warehouse.storage-locations.read",
+    "warehouse.storage-locations.manage",
+    "warehouse.adjustments.manage",
+    "warehouse.issues.manage",
+    "warehouse.reservations.override",
+    "warehouse.issue-sheets.manage",
   ],
-  "chief_engineer": [
+  chief_engineer: [
     "users.profile.read",
     "equipment.read",
     "files.read",
@@ -43,9 +51,9 @@ const grants: Record<string, readonly string[]> = {
     "calendar.read",
     "equipment.events.manage",
     "events.manage",
-    "checklists.manage"
+    "checklists.manage",
   ],
-  "engineer": [
+  engineer: [
     "users.profile.read",
     "equipment.read",
     "files.read",
@@ -56,46 +64,55 @@ const grants: Record<string, readonly string[]> = {
     "equipment.edit",
     "files.manage",
     "events.read",
-    "calendar.read"
+    "calendar.read",
   ],
-  "operator": [
+  operator: [
     "users.profile.read",
     "equipment.read",
     "files.read",
     "equipment.maintenance-types.read",
     "equipment.progress.read",
     "checklists.work",
-    "search.read"
+    "search.read",
   ],
-  "auditor": [
+  auditor: [
     "users.profile.read",
     "equipment.read",
     "files.read",
     "equipment.maintenance-types.read",
     "equipment.progress.read",
     "checklists.work",
-    "search.read"
+    "search.read",
   ],
-  "ppe_specialist": [
+  ppe_specialist: [
     "users.profile.read",
     "ppe.read",
     "ppe.employee-sizes.manage",
     "ppe.norms.manage",
-    "search.read"
+    "search.read",
   ],
-  "accounting_specialist": [
+  accounting_specialist: [
     "users.profile.read",
     "ppe.read",
     "ppe.catalog.manage",
     "ppe.issue",
-    "search.read"
+    "search.read",
   ],
-  "storekeeper": [
+  storekeeper: [
     "warehouse.catalog.manage",
-    "users.profile.read"
-  ]
+    "warehouse.projects.read",
+    "warehouse.reservations.manage",
+    "warehouse.stock.read",
+    "warehouse.storage-locations.read",
+    "warehouse.storage-locations.manage",
+    "warehouse.issue-sheets.manage",
+    "warehouse.issues.manage",
+    "users.profile.read",
+  ],
 };
 export function permissionsForTest(role: unknown): string[] {
- if (typeof role !== 'string') return [];
- return [...new Set(role.split(',').flatMap(value => grants[value.trim()] ?? []))];
+  if (typeof role !== "string") return [];
+  return [
+    ...new Set(role.split(",").flatMap((value) => grants[value.trim()] ?? [])),
+  ];
 }

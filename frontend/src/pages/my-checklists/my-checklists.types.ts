@@ -1,3 +1,4 @@
+import type { IncrementalListControls } from "../../shared/ui/ListLoadMore";
 import type {
   ChecklistAnswerType,
   ChecklistResult,
@@ -106,9 +107,7 @@ export type UseChecklistWorkParams = {
 };
 
 export type MyChecklistsListState = {
-  page: number;
-  pageSize: number;
-  setPage: (page: number) => void;
+  list: IncrementalListControls;
   error: string | null;
   isLoading: boolean;
   items: ChecklistWorkListItem[];

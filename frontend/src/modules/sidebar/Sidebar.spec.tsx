@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Sidebar } from "./Sidebar";
 
 const adminUser = {
-  role: "admin", permissions: permissionsForTest("admin"),
+  role: "admin",
+  permissions: permissionsForTest("admin"),
   username: "admin",
 };
 
@@ -15,6 +16,70 @@ function setHashRoute(route: string) {
 }
 
 describe("Sidebar", () => {
+  it("uses a neutral account label when a storekeeper has no username or name", () => {
+    render(
+      <Sidebar
+        onLogout={vi.fn()}
+        user={{
+          role: "storekeeper",
+          permissions: permissionsForTest("storekeeper"),
+        }}
+      />,
+    );
+    const profile = screen.getByRole("link", { name: /Пользователь/ });
+    expect(profile).not.toHaveTextContent("admin");
+    expect(profile).toHaveAttribute("href", "#/profile");
+  });
+  it("expands a collapsed sidebar to reveal the warehouse catalog", async () => {
+    render(
+      <Sidebar
+        onLogout={vi.fn()}
+        user={{ permissions: permissionsForTest("storekeeper") }}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Свернуть меню" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Склад" }));
+    expect(screen.getByRole("button", { name: "Свернуть меню" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Склад" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByRole("link", { name: "Номенклатура" })).toBeVisible();
+  });
+  it.each(["admin", "storekeeper"])(
+    "keeps Warehouse grouped with its single active catalog link for %s",
+    (role) => {
+      window.location.hash = "#/warehouse/catalog";
+      render(
+        <Sidebar
+          onLogout={vi.fn()}
+          user={{ role, permissions: permissionsForTest(role) }}
+        />,
+      );
+      expect(screen.getByRole("button", { name: "Склад" })).toHaveAttribute(
+        "aria-expanded",
+        "true",
+      );
+      expect(
+        screen.getByRole("link", { name: "Номенклатура" }),
+      ).toHaveAttribute("href", "#/warehouse/catalog");
+      expect(
+        screen.getByRole("link", { name: "Номенклатура" }),
+      ).toHaveAttribute("aria-current", "page");
+    },
+  );
+  it("hides Warehouse without its permissions", () => {
+    render(
+      <Sidebar
+        onLogout={vi.fn()}
+        user={{ permissions: ["users.profile.read"] }}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Склад" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Номенклатура" })).toBeNull();
+  });
   beforeEach(() => {
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
@@ -42,8 +107,16 @@ describe("Sidebar", () => {
     ["accounting_specialist", "#/ppe"],
     ["storekeeper", "#/profile"],
   ])("links the brand to an accessible default for %s", (role, expected) => {
-    render(<Sidebar onLogout={vi.fn()} user={{ role, permissions: permissionsForTest(role) }} />);
-    expect(screen.getByRole("link", { name: "Esoft" })).toHaveAttribute("href", expected);
+    render(
+      <Sidebar
+        onLogout={vi.fn()}
+        user={{ role, permissions: permissionsForTest(role) }}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Esoft" })).toHaveAttribute(
+      "href",
+      expected,
+    );
   });
   it("keeps the existing top-level links unchanged", () => {
     render(<Sidebar onLogout={vi.fn()} user={adminUser} />);
@@ -68,14 +141,22 @@ describe("Sidebar", () => {
   });
 
   it("shows PPE and limited employee navigation to specialists without other admin links", () => {
-    render(<Sidebar onLogout={vi.fn()} user={{ role: "ppe_specialist", permissions: permissionsForTest("ppe_specialist") }} />);
+    render(
+      <Sidebar
+        onLogout={vi.fn()}
+        user={{
+          role: "ppe_specialist",
+          permissions: permissionsForTest("ppe_specialist"),
+        }}
+      />,
+    );
     expect(screen.getByRole("link", { name: "СИЗ" })).toHaveAttribute(
       "href",
       "#/ppe",
     );
     expect(screen.getByRole("link", { name: "Сотрудники" })).toHaveAttribute(
       "href",
-      "#/dictionaries",
+      "#/dictionaries?tab=employees",
     );
     expect(screen.queryByRole("link", { name: "Пользователи" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Справочники" })).toBeNull();
@@ -87,6 +168,30 @@ describe("Sidebar", () => {
     ]) {
       expect(screen.queryByRole("link", { name })).toBeNull();
     }
+  });
+
+  it("addresses separate dictionary tabs for combined limited permissions", async () => {
+    render(
+      <Sidebar
+        onLogout={vi.fn()}
+        user={{
+          permissions: [
+            "ppe.employee-sizes.manage",
+            "warehouse.storage-locations.read",
+          ],
+        }}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Администрирование" }),
+    );
+    expect(screen.getByRole("link", { name: "Сотрудники" })).toHaveAttribute(
+      "href",
+      "#/dictionaries?tab=employees",
+    );
+    expect(
+      screen.getByRole("link", { name: "Места хранения" }),
+    ).toHaveAttribute("href", "#/dictionaries?tab=storage-locations");
   });
 
   it("renders checklist and administration sections as collapsible menu buttons", () => {
@@ -109,7 +214,11 @@ describe("Sidebar", () => {
     render(
       <Sidebar
         onLogout={vi.fn()}
-        user={{ role: "engineer", permissions: permissionsForTest("engineer"), username: "engineer" }}
+        user={{
+          role: "engineer",
+          permissions: permissionsForTest("engineer"),
+          username: "engineer",
+        }}
       />,
     );
 

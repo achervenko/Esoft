@@ -1,9 +1,9 @@
 import { AppTable } from "../../shared/ui/AppTable";
-import { useEffect, useState } from "react";
-import { PageNavigation } from "../../shared/ui/PageNavigation";
+import { useState } from "react";
+import { ListLoadMore } from "../../shared/ui/ListLoadMore";
+import { useIncrementalList } from "../../shared/lib/useIncrementalList";
 import { ChevronRight } from "lucide-react";
 import { ppeApi } from "../../shared/api/ppe";
-import { usePpeQuery } from "../../modules/ppe-ui/usePpeQuery";
 import { PpeQueryState } from "../../modules/ppe-ui/PpeQueryState";
 import { IssueDetailsModal } from "./IssueDetailsModal";
 import {
@@ -25,17 +25,23 @@ export function EmployeeIssueHistory({
 }) {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<number | null>(null);
-  const [selection, setSelection] = useState({ employeeId, page: 0 });
-  const page = selection.employeeId === employeeId ? selection.page : 0;
-  const setPage = (page: number) => setSelection({ employeeId, page });
-  const history = usePpeQuery(
-    `employee-history:${employeeId}:${revision}:${page}`,
-    (signal) => ppeApi.journal({ employeeId: String(employeeId), page: String(page + 1), limit: '100' }, signal),
-    open,
-  );
-  useEffect(() => {
-    if (history.data && page > 0 && page * 100 >= history.data.total) setSelection({ employeeId, page: Math.max(0, Math.ceil(history.data.total / 100) - 1) });
-  }, [history.data, page, employeeId]);
+  const [localRevision, setLocalRevision] = useState(0);
+  const history = useIncrementalList({
+    queryKey: JSON.stringify([employeeId, revision, localRevision]),
+    enabled: open,
+    getKey: (
+      issue: Awaited<ReturnType<typeof ppeApi.journal>>["items"][number],
+    ) => issue.id,
+    loadPage: (offset, signal) =>
+      ppeApi.journal(
+        {
+          employeeId: String(employeeId),
+          page: String(Math.floor(offset / 100) + 1),
+          limit: "100",
+        },
+        signal,
+      ),
+  });
   return (
     <details
       className="ppe-employee-section ppe-employee-sizes"
@@ -47,11 +53,15 @@ export function EmployeeIssueHistory({
       </summary>
       {open && (
         <>
-          <PpeQueryState {...history} />
+          <PpeQueryState
+            loading={history.loading && !history.data}
+            error={!history.data ? history.error : null}
+            reload={history.retry}
+          />
           {history.data &&
             (history.data.items.length ? (
               <div className="ppe-table-wrap">
-                <AppTable>
+                <AppTable incremental={false}>
                   <thead>
                     <tr>
                       <th>Дата</th>
@@ -63,37 +73,32 @@ export function EmployeeIssueHistory({
                     </tr>
                   </thead>
                   <tbody>
-                    {history.data.items
-                      .map((issue) => (
-                        <tr key={issue.id}>
-                          <td>{formatPpeDate(issue.issuedAt)}</td>
-                          <td>{issue.name}</td>
-                          <td>
-                            {formatPpeQuantity(issue.quantity, issue.unit)}
-                          </td>
-                          <td>
-                            {sizeLabel(issue.sizeValue, issue.heightValue)}
-                          </td>
-                          <td>
-                            {issue.status === "ISSUED" ? "Выдано" : "Отменено"}
-                          </td>
-                          <td>
-                            <button
-                              className="admin-secondary-button"
-                              onClick={() => setDetail(issue.id)}
-                            >
-                              Подробнее
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                    {history.data.items.map((issue) => (
+                      <tr key={issue.id}>
+                        <td>{formatPpeDate(issue.issuedAt)}</td>
+                        <td>{issue.name}</td>
+                        <td>{formatPpeQuantity(issue.quantity, issue.unit)}</td>
+                        <td>{sizeLabel(issue.sizeValue, issue.heightValue)}</td>
+                        <td>
+                          {issue.status === "ISSUED" ? "Выдано" : "Отменено"}
+                        </td>
+                        <td>
+                          <button
+                            className="admin-secondary-button"
+                            onClick={() => setDetail(issue.id)}
+                          >
+                            Подробнее
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </AppTable>
               </div>
             ) : (
               <p className="admin-state">Выдач пока нет.</p>
             ))}
-          {history.data && !history.error ? <PageNavigation page={page} pageSize={100} total={history.data.total} loading={history.loading} onChange={setPage} /> : null}
+          <ListLoadMore list={history} disabled={detail !== null} />
         </>
       )}
       {detail !== null && (
@@ -102,7 +107,7 @@ export function EmployeeIssueHistory({
           permissions={permissions}
           onClose={() => setDetail(null)}
           onChanged={() => {
-            history.reload();
+            setLocalRevision((value) => value + 1);
             onChanged();
           }}
         />

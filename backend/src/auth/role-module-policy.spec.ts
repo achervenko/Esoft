@@ -1,3 +1,4 @@
+import optionalModuleIds from '../../prisma/module-catalog.json';
 import { BadRequestException } from '@nestjs/common';
 import {
   assertRoleAssignmentAvailable,
@@ -139,29 +140,26 @@ describe('module role policy', () => {
       'ROLE_MODULE_DISABLED',
     );
   });
-  it.each(Array.from({ length: 8 }, (_, mask) => mask))(
-    'filters roles for module combination %s',
-    (mask) => {
-      const modules = ['equipment', 'ppe', 'warehouse'].filter(
-        (_, index) => mask & (1 << index),
-      );
-      const expected = ['admin', 'auditor'];
-      if (modules.includes('equipment'))
-        expected.push('chief_engineer', 'engineer', 'operator');
-      if (modules.includes('ppe'))
-        expected.push('ppe_specialist', 'accounting_specialist');
-      if (modules.includes('warehouse')) expected.push('storekeeper');
-      expect(getAssignableRoles(modules).sort()).toEqual(expected.sort());
-      for (const role of USER_ROLES) {
-        if (expected.includes(role))
-          expect(() => assertRoleAvailable(role, modules)).not.toThrow();
-        else
-          expect(() => assertRoleAvailable(role, modules)).toThrow(
-            BadRequestException,
-          );
-      }
-    },
-  );
+  it.each(
+    Array.from({ length: 2 ** optionalModuleIds.length }, (_, mask) => mask),
+  )('filters roles for module combination %s', (mask) => {
+    const modules = optionalModuleIds.filter((_, index) => mask & (1 << index));
+    const expected = ['admin', 'auditor'];
+    if (modules.includes('equipment'))
+      expected.push('chief_engineer', 'engineer', 'operator');
+    if (modules.includes('ppe'))
+      expected.push('ppe_specialist', 'accounting_specialist');
+    if (modules.includes('warehouse')) expected.push('storekeeper');
+    expect(getAssignableRoles(modules).sort()).toEqual(expected.sort());
+    for (const role of USER_ROLES) {
+      if (expected.includes(role))
+        expect(() => assertRoleAvailable(role, modules)).not.toThrow();
+      else
+        expect(() => assertRoleAvailable(role, modules)).toThrow(
+          BadRequestException,
+        );
+    }
+  });
   it.each([
     undefined,
     null,
@@ -185,8 +183,7 @@ describe('module role policy', () => {
   });
   it('rejects an empty assignment independently of module availability', () => {
     expectRoleError(
-      () =>
-        assertRoleAssignmentAvailable([], ['equipment', 'ppe', 'warehouse']),
+      () => assertRoleAssignmentAvailable([], optionalModuleIds),
       'INVALID_ROLE',
     );
     expectRoleError(
@@ -210,12 +207,7 @@ describe('module role policy', () => {
     'rejects invalid compound assignment $role even with all modules enabled',
     ({ role }) => {
       expectRoleError(
-        () =>
-          assertRoleAssignmentAvailable(role, [
-            'equipment',
-            'ppe',
-            'warehouse',
-          ]),
+        () => assertRoleAssignmentAvailable(role, optionalModuleIds),
         'INVALID_ROLE',
       );
       expectRoleError(() => parseUserRoles(role), 'INVALID_ROLE');

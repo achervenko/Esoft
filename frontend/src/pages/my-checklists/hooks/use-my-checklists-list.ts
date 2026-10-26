@@ -1,83 +1,40 @@
-import { useEffect, useState } from "react";
-import { getApiErrorMessage } from "../../../shared/api/api-error";
+import { useIncrementalList } from "../../../shared/lib/useIncrementalList";
 import {
   getChecklistWorkItems,
   type ChecklistWorkListItem,
+  type ChecklistWorkListResponse,
 } from "../../../shared/api/checklists";
 import { tabConfig } from "../my-checklists.config";
 import type {
   MyChecklistsListState,
   UseMyChecklistsListParams,
 } from "../my-checklists.types";
-
 export function useMyChecklistsList({
   activeTab,
 }: UseMyChecklistsListParams): MyChecklistsListState {
-  const [items, setItems] = useState<ChecklistWorkListItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [total, setTotal] = useState(0);
-  const [selection, setSelection] = useState({ tab: activeTab, page: 0 });
-  const page = selection.tab === activeTab ? selection.page : 0;
-  const pageSize = 100;
-  const [totalsByStatus, setTotalsByStatus] = useState<
-    MyChecklistsListState["totalsByStatus"]
-  >({});
-  useEffect(() => {
-    let cancelled = false;
-    setIsLoading(true);
-    setError(null);
-    setItems([]);
-    setTotal(0);
-    setTotalsByStatus({});
-
-    const load = async () => {
-      const response = await getChecklistWorkItems({
-          limit: pageSize,
-          offset: page * pageSize,
-          status: tabConfig[activeTab].statuses,
-        });
-        if (cancelled) return;
-        if (page > 0 && page * pageSize >= response.total) {
-          setSelection({ tab: activeTab, page: Math.max(0, Math.ceil(response.total / pageSize) - 1) });
-          return;
-        }
-        if (response.items.length === 0 && response.total > 0)
-          throw new Error("Не удалось загрузить полный список чек-листов.");
-      setItems(response.items);
-      setTotal(response.total);
-      setTotalsByStatus(response.totalsByStatus);
-    };
-
-    void load()
-      .catch((requestError) => {
-        if (cancelled) {
-          return;
-        }
-
-        setError(getApiErrorMessage(requestError));
-        setItems([]);
-        setTotal(0);
-        setTotalsByStatus({});
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTab, page]);
-
+  const list = useIncrementalList<
+    ChecklistWorkListItem,
+    Pick<ChecklistWorkListResponse, "totalsByStatus">
+  >({
+    queryKey: activeTab,
+    enabled: true,
+    getKey: (item) => item.id,
+    loadPage: async (offset, signal) => {
+      const response = await getChecklistWorkItems(
+        { limit: 100, offset, status: tabConfig[activeTab].statuses },
+        signal,
+      );
+      if (!response.items.length && offset < response.total)
+        throw new Error("Не удалось загрузить полный список чек-листов.");
+      return { ...response, limit: 100 };
+    },
+  });
   return {
-    error,
-    isLoading,
-    items,
-    total,
-    totalsByStatus,
-    page,
-    pageSize,
-    setPage: (nextPage) => setSelection({ tab: activeTab, page: Math.max(0, Math.min(nextPage, Math.ceil(total / pageSize) - 1)) }),
+    list,
+    error: !list.data ? list.error : null,
+    isLoading: list.loading && !list.data,
+    items: list.data?.items ?? [],
+    total: list.data?.total ?? 0,
+    totalsByStatus: list.data?.totalsByStatus ?? {},
   };
 }

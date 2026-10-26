@@ -7,6 +7,23 @@ import type { ActiveDictionariesTab } from "./dictionaries-page-types";
 
 afterEach(() => vi.restoreAllMocks());
 
+it("clears operation errors when switching tabs and does not restore them on return", async () => {
+  mockRequests();
+  const hook = renderHook(
+    ({ tab }: { tab: ActiveDictionariesTab }) =>
+      useDictionariesAdminData(tab, true),
+    { initialProps: { tab: "manufacturers" } },
+  );
+  await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
+  act(() => hook.result.current.setError("Не удалось сохранить производителя"));
+  expect(hook.result.current.error).toBe("Не удалось сохранить производителя");
+  hook.rerender({ tab: "countries" });
+  expect(hook.result.current.error).toBeNull();
+  await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
+  hook.rerender({ tab: "manufacturers" });
+  expect(hook.result.current.error).toBeNull();
+});
+
 function mockRequests() {
   return {
     positions: vi.spyOn(users, "getAdminPositions").mockResolvedValue([]),

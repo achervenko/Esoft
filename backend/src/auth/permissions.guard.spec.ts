@@ -1,3 +1,4 @@
+import optionalModuleIds from '../../prisma/module-catalog.json';
 import { hasPermission } from './permission-policy';
 import { USER_ROLES } from './role-module-policy';
 import {
@@ -47,6 +48,12 @@ class FixtureController {
     return { ok: true };
   }
   @Get('ppe/items') @RequirePermission('ppe.read') ppe() {
+    calls();
+    return { ok: true };
+  }
+  @Get('search-with-modules')
+  @RequirePermission('search.read', 'equipment.read', 'ppe.read')
+  searchWithModules() {
     calls();
     return { ok: true };
   }
@@ -154,7 +161,7 @@ describe('global explicit permissions over HTTP', () => {
   });
   beforeEach(() => {
     calls.mockClear();
-    modules.splice(0, modules.length, 'equipment', 'ppe', 'warehouse');
+    modules.splice(0, modules.length, ...optionalModuleIds);
   });
   const get = (path: string, role?: string, assignedRole?: string) =>
     fetch(base + path, {
@@ -219,6 +226,45 @@ describe('global explicit permissions over HTTP', () => {
       (await get('/api/users/admin', 'engineer', 'admin,engineer')).status,
     ).toBe(403);
     expect(calls).not.toHaveBeenCalled();
+  });
+  it.each([
+    { module: 'equipment', path: '/api/equipment' },
+    { module: 'ppe', path: '/api/ppe/items' },
+    { module: 'warehouse', path: '/api/warehouse/items' },
+  ])(
+    'denies admin primary permission when $module is disabled',
+    async ({ module, path }) => {
+      modules.splice(
+        0,
+        modules.length,
+        ...optionalModuleIds.filter((id) => id !== module),
+      );
+      for (const role of ['admin', 'admin,storekeeper']) {
+        expect((await get(path, role)).status).toBe(403);
+      }
+      expect(calls).not.toHaveBeenCalled();
+      expect((await get('/api/users/admin', 'admin')).status).toBe(200);
+      modules.push(module);
+      expect((await get(path, 'admin')).status).toBe(200);
+    },
+  );
+  it.each(['admin', 'admin,storekeeper'])(
+    'requires every additional module permission for %s',
+    async (role) => {
+      for (const active of [[], ['equipment'], ['ppe']]) {
+        modules.splice(0, modules.length, ...active);
+        expect((await get('/api/search-with-modules', role)).status).toBe(403);
+      }
+      expect(calls).not.toHaveBeenCalled();
+      modules.splice(0, modules.length, 'equipment', 'ppe');
+      expect((await get('/api/search-with-modules', role)).status).toBe(200);
+    },
+  );
+  it('keeps global admin permissions when every optional module is disabled', async () => {
+    modules.splice(0);
+    expect((await get('/api/users/admin', 'admin')).status).toBe(200);
+    expect((await get('/api/search', 'admin')).status).toBe(200);
+    expect((await get('/api/health')).status).toBe(200);
   });
   it('passes effective roles to downstream business code without dropping assignments', async () => {
     modules.splice(0, modules.length, 'equipment');

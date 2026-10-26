@@ -10,6 +10,7 @@ import {
   Search,
   Users,
   HardHat,
+  Warehouse,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -23,6 +24,7 @@ export type SidebarLinkItem = {
 };
 
 export type SidebarGroupItem = {
+  keepGroup?: boolean;
   icon: LucideIcon;
   id: string;
   items: SidebarLinkItem[];
@@ -67,6 +69,21 @@ export const sidebarSections: SidebarSection[] = [
         label: "Календарь",
       },
       {
+        icon: Warehouse,
+        id: "warehouse",
+        label: "Склад",
+        type: "group",
+        keepGroup: true,
+        items: [
+          {
+            href: "#/warehouse/catalog",
+            icon: BookOpen,
+            label: "Номенклатура",
+            permission: "warehouse.catalog.manage",
+          },
+        ],
+      },
+      {
         icon: ListChecks,
         id: "checklists",
         label: "Чек-листы",
@@ -102,10 +119,17 @@ export const sidebarSections: SidebarSection[] = [
             permission: "dictionaries.manage",
           },
           {
-            href: "#/dictionaries",
+            href: "#/dictionaries?tab=employees",
             icon: Users,
             label: "Сотрудники",
             permission: "ppe.employee-sizes.manage",
+            excludePermission: "dictionaries.manage",
+          },
+          {
+            href: "#/dictionaries?tab=storage-locations",
+            icon: BookOpen,
+            label: "Места хранения",
+            permission: "warehouse.storage-locations.read",
             excludePermission: "dictionaries.manage",
           },
           {

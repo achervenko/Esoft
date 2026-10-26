@@ -14,6 +14,7 @@ type AppRouteBase =
   | { kind: "checklist-template-create"; copyFromTemplateId: number | null }
   | { kind: "checklist-template-view"; templateId: number }
   | { kind: "dictionaries" }
+  | { kind: "warehouse-catalog" }
   | {
       kind: "ppe";
       tab: "issue" | "journal" | "norms" | "catalog";
@@ -67,6 +68,11 @@ function parsePositiveParamId(value: string | null) {
 }
 
 export function resolveAppRoute(route: string): AppRoute {
+  if (
+    route === "#/warehouse/catalog" ||
+    route.startsWith("#/warehouse/catalog?")
+  )
+    return { kind: "warehouse-catalog" };
   const ppePositionId = parsePositiveRouteId(
     route.match(/^#\/ppe\/positions\/(\d+)(?:\?.*)?$/),
   );
@@ -122,7 +128,7 @@ export function resolveAppRoute(route: string): AppRoute {
     };
   }
 
-  if (route === "#/dictionaries") {
+  if (route === "#/dictionaries" || route.startsWith("#/dictionaries?")) {
     return { kind: "dictionaries" };
   }
 

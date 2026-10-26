@@ -23,6 +23,59 @@ export class WarehouseIssueSheetExecutionService {
     actor: string,
     execute: (line: WarehouseIssueSheetLine) => Promise<T>,
   ): Promise<T> {
+    const { sheet, line, lineId, itemId, quantity, before, total } =
+      await this.prepare(tx, lineValue, itemValue, quantityValue, actor);
+    const result = await execute(line);
+    const after = await total();
+    const mismatched = await tx.warehouseIssue.count({
+      where: {
+        issueSheetLineId: lineId,
+        OR: [
+          ...(line.projectId
+            ? [{ projectId: { not: line.projectId } }, { projectId: null }]
+            : [{ projectId: { not: null } }]),
+          { positions: { some: { balance: { itemId: { not: itemId } } } } },
+          { type: { not: 'ISSUE_SHEET' } },
+        ],
+      },
+    });
+    if (!after.equals(before.plus(quantity)) || mismatched)
+      sheetConflict(
+        'WAREHOUSE_ISSUE_SHEET_ISSUE_MISMATCH',
+        'Операция выдачи не соответствует заданию.',
+      );
+    if (sheet.status === 'READY') {
+      const updated = await tx.warehouseIssueSheet.update({
+        where: { id: sheet.id },
+        data: { status: 'IN_PROGRESS' },
+      });
+      await this.transactions.writeAudit(
+        tx,
+        actor,
+        sheet.id,
+        sheetDto(sheet),
+        sheetDto(updated),
+      );
+    }
+    return result;
+  }
+  async previewIssueForLine(
+    tx: Prisma.TransactionClient,
+    lineValue: string,
+    itemValue: string,
+    quantityValue: string,
+    actor: string,
+  ) {
+    return (await this.prepare(tx, lineValue, itemValue, quantityValue, actor))
+      .line;
+  }
+  private async prepare(
+    tx: Prisma.TransactionClient,
+    lineValue: string,
+    itemValue: string,
+    quantityValue: string,
+    actor: string,
+  ) {
     const lineId = parseWarehouseId(lineValue),
       itemId = parseWarehouseId(itemValue);
     const quantity = stockQuantity(quantityValue);
@@ -73,38 +126,6 @@ export class WarehouseIssueSheetExecutionService {
         'WAREHOUSE_ISSUE_SHEET_OVERISSUED',
         'Количество превышает остаток задания.',
       );
-    const result = await execute(line);
-    const after = await total();
-    const mismatched = await tx.warehouseIssue.count({
-      where: {
-        issueSheetLineId: lineId,
-        OR: [
-          ...(line.projectId
-            ? [{ projectId: { not: line.projectId } }, { projectId: null }]
-            : [{ projectId: { not: null } }]),
-          { positions: { some: { balance: { itemId: { not: itemId } } } } },
-          { type: { not: 'ISSUE_SHEET' } },
-        ],
-      },
-    });
-    if (!after.equals(before.plus(quantity)) || mismatched)
-      sheetConflict(
-        'WAREHOUSE_ISSUE_SHEET_ISSUE_MISMATCH',
-        'Операция выдачи не соответствует заданию.',
-      );
-    if (sheet.status === 'READY') {
-      const updated = await tx.warehouseIssueSheet.update({
-        where: { id: sheet.id },
-        data: { status: 'IN_PROGRESS' },
-      });
-      await this.transactions.writeAudit(
-        tx,
-        actor,
-        sheet.id,
-        sheetDto(sheet),
-        sheetDto(updated),
-      );
-    }
-    return result;
+    return { sheet, line, lineId, itemId, quantity, before, total };
   }
 }

@@ -8,4 +8,6 @@
   --color-danger: #b42318;
   --radius-control: 8px;
   --radius-dialog: 12px;
+  --optical-inset-modal: 4px;
+  --optical-inset-page: 8px;
 }

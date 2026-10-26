@@ -70,6 +70,11 @@ const ChecklistTemplateViewPage = lazyNamedPage(() =>
 const DictionariesPage = lazyNamedPage(() =>
   import("../pages/DictionariesPage").then((module) => module.DictionariesPage),
 );
+const WarehouseCatalogPage = lazyNamedPage(() =>
+  import("../pages/WarehouseCatalogPage/WarehouseCatalogPage").then(
+    (module) => module.WarehouseCatalogPage,
+  ),
+);
 
 const PpePage = lazyNamedPage(() =>
   import("../pages/PpePage").then((module) => module.PpePage),
@@ -177,7 +182,11 @@ class AppShellRouteBoundary extends Component<
 
 function AppShellPageFallback() {
   return (
-    <div className="app-page-loading app-page-loading--section" role="status" aria-live="polite">
+    <div
+      className="app-page-loading app-page-loading--section"
+      role="status"
+      aria-live="polite"
+    >
       Загрузка раздела...
     </div>
   );
@@ -208,7 +217,9 @@ export function AppShell({
             {!routeAllowed && (
               <div role="alert">
                 Этот раздел недоступен для вашей роли.{" "}
-                {fallbackRoute && <a href={fallbackRoute}>Перейти в доступный раздел</a>}
+                {fallbackRoute && (
+                  <a href={fallbackRoute}>Перейти в доступный раздел</a>
+                )}
               </div>
             )}
             {appRoute.kind === "dashboard" ? <DashboardPage /> : null}
@@ -237,6 +248,11 @@ export function AppShell({
             {appRoute.kind === "dictionaries" ? (
               <DictionariesPage userPermissions={user?.permissions ?? null} />
             ) : null}
+            {appRoute.kind === "warehouse-catalog" ? (
+              <WarehouseCatalogPage
+                userPermissions={user?.permissions ?? null}
+              />
+            ) : null}
             {appRoute.kind === "ppe" ? (
               <PpePage
                 employeeId={appRoute.employeeId}
@@ -258,13 +274,19 @@ export function AppShell({
                 currentUserId={user?.id ?? null}
               />
             ) : null}
-            {appRoute.kind === "search" ? <SearchPage userPermissions={user?.permissions ?? null} /> : null}
+            {appRoute.kind === "search" ? (
+              <SearchPage userPermissions={user?.permissions ?? null} />
+            ) : null}
             {appRoute.kind === "profile" ? <ProfilePage user={user} /> : null}
             {appRoute.kind === "production-calendar" ? (
-              <ProductionCalendarPage userPermissions={user?.permissions ?? null} />
+              <ProductionCalendarPage
+                userPermissions={user?.permissions ?? null}
+              />
             ) : null}
             {appRoute.kind === "equipment-create" ? (
-              <EquipmentCreatePage userPermissions={user?.permissions ?? null} />
+              <EquipmentCreatePage
+                userPermissions={user?.permissions ?? null}
+              />
             ) : null}
             {appRoute.kind === "equipment-edit" ? (
               <EquipmentEditPage

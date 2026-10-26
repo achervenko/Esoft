@@ -23,7 +23,8 @@ export function canShowSidebarItem(
   return (
     canAccessWorkspaceRoute(userPermissions, item.href) &&
     (!item.permission || hasPermission(userPermissions, item.permission)) &&
-    (!item.excludePermission || !hasPermission(userPermissions, item.excludePermission))
+    (!item.excludePermission ||
+      !hasPermission(userPermissions, item.excludePermission))
   );
 }
 
@@ -45,7 +46,10 @@ export function getVisibleSidebarItems(
         return null;
       }
 
-      if (visibleGroupItems.length < MIN_VISIBLE_ITEMS_FOR_COLLAPSIBLE_GROUP) {
+      if (
+        !item.keepGroup &&
+        visibleGroupItems.length < MIN_VISIBLE_ITEMS_FOR_COLLAPSIBLE_GROUP
+      ) {
         return visibleGroupItems[0];
       }
 

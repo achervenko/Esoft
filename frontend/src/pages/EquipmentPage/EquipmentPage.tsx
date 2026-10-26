@@ -1,14 +1,16 @@
 import { LoadingIndicator } from "../../shared/ui/LoadingIndicator";
 import { Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { canCreateEquipment } from "../../modules/equipment-permissions";
-import { getApiErrorMessage } from "../../shared/api/api-error";
 import { getEquipmentRegistry } from "../../shared/api/equipment/equipment.api";
 import type { EquipmentRegistryItem } from "../../shared/api/equipment/equipment.types";
 import { buildHashRoute } from "../../shared/lib/hash-navigation";
-import { useNotifications } from "../../shared/ui/notifications";
-import { EquipmentRegistryTable, type EquipmentSortKey } from "./EquipmentRegistryTable";
-import { PageNavigation } from "../../shared/ui/PageNavigation";
+import { useIncrementalList } from "../../shared/lib/useIncrementalList";
+import { ListLoadMore } from "../../shared/ui/ListLoadMore";
+import {
+  EquipmentRegistryTable,
+  type EquipmentSortKey,
+} from "./EquipmentRegistryTable";
 import type { DataTableSortDirection } from "../../shared/ui/DataTable";
 import "./EquipmentPage.css";
 
@@ -17,51 +19,31 @@ type EquipmentPageProps = {
 };
 
 export function EquipmentPage({ userPermissions }: EquipmentPageProps) {
-  const { notifyError } = useNotifications();
   const isCreateAllowed = canCreateEquipment(userPermissions);
-  const [items, setItems] = useState<EquipmentRegistryItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(0);
-  const [total, setTotal] = useState(0);
-  const [sort, setSort] = useState<{ key: EquipmentSortKey; direction: DataTableSortDirection }>({ key: 'visibleId', direction: 'asc' });
+  const [sort, setSort] = useState<{
+    key: EquipmentSortKey;
+    direction: DataTableSortDirection;
+  }>({ key: "visibleId", direction: "asc" });
 
-  useEffect(() => {
-    let isMounted = true;
-    const controller = new AbortController();
-    setIsLoading(true);
-    setError(null);
-    setItems([]);
-
-    getEquipmentRegistry({ page: page + 1, sort: sort.key, direction: sort.direction }, controller.signal)
-      .then((data) => {
-        if (isMounted) {
-          if (page > 0 && page * 100 >= data.total) {
-            setPage(Math.max(0, Math.ceil(data.total / 100) - 1));
-            return;
-          }
-          setItems(data.items);
-          setTotal(data.total);
-        }
-      })
-      .catch((requestError) => {
-        if (isMounted) {
-          const errorMessage = getApiErrorMessage(requestError);
-          setError(errorMessage);
-          notifyError("Не удалось загрузить оборудование", errorMessage);
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-      controller.abort();
-    };
-  }, [notifyError, page, sort]);
+  const list = useIncrementalList({
+    queryKey: JSON.stringify(sort),
+    enabled: true,
+    getKey: (item: EquipmentRegistryItem) => item.id,
+    loadPage: async (offset, signal) => ({
+      ...(await getEquipmentRegistry(
+        {
+          page: Math.floor(offset / 100) + 1,
+          sort: sort.key,
+          direction: sort.direction,
+        },
+        signal,
+      )),
+      limit: 100,
+    }),
+  });
+  const items = list.data?.items ?? [];
+  const isLoading = list.loading && !list.data;
+  const error = !list.data ? list.error : null;
 
   const openEquipmentCard = (visibleId: number) => {
     window.location.hash = buildHashRoute(`#/equipment/${visibleId}`, {
@@ -86,19 +68,32 @@ export function EquipmentPage({ userPermissions }: EquipmentPageProps) {
         className="equipment-table-section"
         aria-label="Реестр оборудования"
       >
-        <LoadingIndicator loading={isLoading}>Загрузка реестра...</LoadingIndicator>
+        <LoadingIndicator loading={isLoading}>
+          Загрузка реестра...
+        </LoadingIndicator>
         {error ? (
-          <p className="equipment-state-message error">{error}</p>
+          <div className="equipment-state-message error">
+            {error}
+            <button
+              type="button"
+              className="admin-secondary-button"
+              onClick={list.retry}
+            >
+              Повторить загрузку
+            </button>
+          </div>
         ) : null}
         {!isLoading && !error ? (
           <EquipmentRegistryTable
             items={items}
             onOpenEquipment={openEquipmentCard}
             sort={sort}
-            onSortChange={(nextSort) => { setSort(nextSort); setPage(0); }}
+            onSortChange={(nextSort) => {
+              setSort(nextSort);
+            }}
           />
         ) : null}
-        {!error ? <PageNavigation page={page} pageSize={100} total={total} loading={isLoading} onChange={setPage} /> : null}
+        <ListLoadMore list={list} />
       </section>
     </div>
   );

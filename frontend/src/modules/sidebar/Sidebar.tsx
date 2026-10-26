@@ -25,7 +25,7 @@ type SidebarProps = {
     name?: string | null;
     photo?: UserPhoto | null;
     role?: string | null;
-  permissions?: readonly string[];
+    permissions?: readonly string[];
     username?: string | null;
   } | null;
 };
@@ -49,7 +49,9 @@ function getUserInitial(displayName: string) {
 }
 
 function getAccountLabel(user: SidebarProps["user"]) {
-  return user?.username || user?.displayUsername || user?.name || "admin";
+  return (
+    user?.username || user?.displayUsername || user?.name || "Пользователь"
+  );
 }
 
 export function Sidebar({ onLogout, user }: SidebarProps) {
@@ -72,7 +74,10 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
   });
   const [lastActiveGroupId, setLastActiveGroupId] = useState<string | null>(
     () =>
-      getActiveSidebarGroupId(getHashRoute() || DEFAULT_AUTH_ROUTE, userPermissions),
+      getActiveSidebarGroupId(
+        getHashRoute() || DEFAULT_AUTH_ROUTE,
+        userPermissions,
+      ),
   );
 
   useEffect(() => {
@@ -153,7 +158,10 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
 
       <nav className="sidebar-nav" aria-label="Основное меню">
         {sidebarSections.map((section) => {
-          const visibleItems = getVisibleSidebarItems(section.items, userPermissions);
+          const visibleItems = getVisibleSidebarItems(
+            section.items,
+            userPermissions,
+          );
 
           if (visibleItems.length === 0) {
             return null;
@@ -172,12 +180,16 @@ export function Sidebar({ onLogout, user }: SidebarProps) {
                         isOpen={Boolean(openGroups[item.id])}
                         key={item.id}
                         onNavigate={closeMobileSidebar}
-                        onOpenChange={(isOpen) =>
+                        onOpenChange={(isOpen) => {
+                          if (isCollapsed && !isMobileSidebar) {
+                            setIsCollapsed(false);
+                            isOpen = true;
+                          }
                           setOpenGroups((current) => ({
                             ...current,
                             [item.id]: isOpen,
-                          }))
-                        }
+                          }));
+                        }}
                       />
                     );
                   }

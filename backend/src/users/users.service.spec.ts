@@ -24,4 +24,19 @@ describe('user profile permissions', () => {
       permissions: [],
     });
   });
+  it('uses the same module-aware permissions for admin as the session', async () => {
+    const adminPrisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ ...user, role: 'admin' }),
+      },
+    };
+    const service = new UsersService(adminPrisma as never, ['ppe']);
+    const profile = await service.findProfile('u');
+    expect(profile.permissions).toEqual(getUserPermissions('admin', ['ppe']));
+    expect(profile.permissions).toContain('ppe.read');
+    expect(profile.permissions).not.toContain('equipment.read');
+    expect(profile.permissions).not.toContain(
+      'warehouse.storage-locations.read',
+    );
+  });
 });

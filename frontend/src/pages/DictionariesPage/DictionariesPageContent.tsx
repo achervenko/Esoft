@@ -39,6 +39,7 @@ export function DictionariesPageContent({
       {(!page.isLoading || page.employees.length > 0) &&
       page.activeTab === "employees" ? (
         <DictionaryEmployeesTable
+          onCreate={() => page.setEmployeeForm("new")}
           employees={page.employees}
           employeeSizes={employeeSizes}
           isSaving={page.isSaving}

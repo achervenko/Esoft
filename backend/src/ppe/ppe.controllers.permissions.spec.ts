@@ -58,7 +58,7 @@ describe('PPE controllers through the global guard', () => {
       expect((await http.request(operation)).status).toBe(401);
     http.expectNoServiceCalls();
   });
-  it('filters disabled PPE roles while preserving admin access', async () => {
+  it('denies disabled PPE access even to admin', async () => {
     http.modules.splice(0, http.modules.length, 'equipment');
     for (const operation of operations)
       expect(
@@ -73,6 +73,7 @@ describe('PPE controllers through the global guard', () => {
     for (const operation of operations)
       expect(
         (await http.request(operation, 'admin,ppe_specialist')).status,
-      ).toBe(operation.method === 'POST' ? 201 : 200);
+      ).toBe(403);
+    http.expectNoServiceCalls();
   });
 });

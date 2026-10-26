@@ -143,9 +143,13 @@ export function reorderChecklistQuestions(
   );
 }
 
-export function getChecklistTemplates(params: Record<string, QueryValue> = {}) {
+export function getChecklistTemplates(
+  params: Record<string, QueryValue> = {},
+  signal?: AbortSignal,
+) {
   return request<ChecklistPageResponse<ChecklistTemplateListItem>>(
     `/api/checklist-templates${toQuery(params)}`,
+    { signal },
   );
 }
 
@@ -179,7 +183,10 @@ export function archiveChecklistTemplate(
   );
 }
 
-export function getChecklistWorkItems(query: ChecklistWorkQuery = {}) {
+export function getChecklistWorkItems(
+  query: ChecklistWorkQuery = {},
+  signal?: AbortSignal,
+) {
   const status = Array.isArray(query.status)
     ? query.status.join(",")
     : query.status;
@@ -194,6 +201,7 @@ export function getChecklistWorkItems(query: ChecklistWorkQuery = {}) {
       offset: query.offset,
       status,
     })}`,
+    { signal },
   );
 }
 

@@ -220,9 +220,6 @@
   box-shadow: none;
 }
 
-.ppe-search-toolbar:has(.ppe-employee-search) {
-  overflow: visible;
-}
 .ppe-employee-search .search-select-menu[role="status"] {
   position: absolute;
   top: calc(100% + 36px);

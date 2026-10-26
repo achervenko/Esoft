@@ -5,12 +5,8 @@
   gap: 18px;
   min-width: 0;
 }
-.search-toolbar {
+.search-page-toolbar {
   padding: 18px;
-}
-.search-field {
-  display: block;
-  min-width: 0;
 }
 .search-results {
   display: grid;

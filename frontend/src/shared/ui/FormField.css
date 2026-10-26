@@ -21,6 +21,17 @@
   font-weight: var(--field-label-weight, 800);
 }
 
+[role="dialog"]
+  .form-field-label:not(.admin-control-label-hidden):not(
+    .search-select-label-hidden
+  ) {
+  padding-inline-start: var(--optical-inset-modal);
+}
+
+[role="dialog"] fieldset > legend {
+  padding-inline-start: var(--optical-inset-modal);
+}
+
 .form-field input,
 .form-field select,
 .form-field textarea {

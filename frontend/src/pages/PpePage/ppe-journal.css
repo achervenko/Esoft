@@ -78,9 +78,6 @@
   min-height: 0;
   gap: 18px;
 }
-.ppe-journal-toolbar .ppe-journal-search {
-  margin-bottom: 0;
-}
 .ppe-journal-loading {
   flex: 1;
   min-height: 200px;

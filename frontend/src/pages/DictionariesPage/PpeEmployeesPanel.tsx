@@ -6,17 +6,22 @@ import { useState } from "react";
 import { ppeApi } from "../../shared/api/ppe";
 import { usePpeQuery } from "../../modules/ppe-ui/usePpeQuery";
 import { PpeQueryState } from "../../modules/ppe-ui/PpeQueryState";
-import { Search } from "lucide-react";
-import "../../shared/ui/SearchInput.css";
+import { SearchToolbar } from "../../shared/ui/SearchToolbar";
 import { employeeName } from "../../modules/ppe-ui/ppe-presentation";
 import { EmployeeSizesModal, EmployeeSizeSummary } from "./EmployeeSizesModal";
-export function PpeEmployeesPanel() {
+export function PpeEmployeesPanel({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) {
   const employees = usePpeQuery("ppe-employees", (signal) =>
     ppeApi.employees(signal),
   );
   const [search, setSearch] = useState("");
   const [id, setId] = useState<number | null>(null);
-  const [menu, setMenu] = useState<{ id: number; x: number; y: number } | null>(null);
+  const [menu, setMenu] = useState<{ id: number; x: number; y: number } | null>(
+    null,
+  );
   const filtered = employees.data?.filter(
     (item) =>
       item.isActive &&
@@ -26,20 +31,20 @@ export function PpeEmployeesPanel() {
   );
   return (
     <section className="admin-page ppe-page">
-      <header className="admin-page-header">
-        <h1>Сотрудники</h1>
-      </header>
+      {!embedded && (
+        <header className="admin-page-header">
+          <h1>Сотрудники</h1>
+        </header>
+      )}
       <section className="admin-card">
-        <div className="search-input-shell">
-          <Search size={18} aria-hidden="true" />
-          <input
-            aria-label="Поиск сотрудника"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+        <SearchToolbar
+          value={search}
+          onChange={setSearch}
+          label="Поиск сотрудника"
+        />
         <PpeQueryState {...employees} page />
-        {!employees.loading && filtered &&
+        {!employees.loading &&
+          filtered &&
           (filtered.length ? (
             <div className="ppe-table-wrap">
               <AppTable>
@@ -53,10 +58,17 @@ export function PpeEmployeesPanel() {
                 </thead>
                 <tbody>
                   {filtered.map((item) => (
-                    <tr key={item.id} onContextMenu={(event) => {
-                      event.preventDefault();
-                      setMenu({ id: item.id, x: event.clientX, y: event.clientY });
-                    }}>
+                    <tr
+                      key={item.id}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        setMenu({
+                          id: item.id,
+                          x: event.clientX,
+                          y: event.clientY,
+                        });
+                      }}
+                    >
                       <td>{employeeName(item)}</td>
                       <td>{item.position}</td>
                       <td>
@@ -80,9 +92,15 @@ export function PpeEmployeesPanel() {
           ))}
       </section>
       {menu && (
-        <ContextMenu x={menu.x} y={menu.y} label="Действия с размерами сотрудника"
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          label="Действия с размерами сотрудника"
           onClose={() => setMenu(null)}
-          items={[{ id: "edit", label: "Изменить", onSelect: () => setId(menu.id) }]} />
+          items={[
+            { id: "edit", label: "Изменить", onSelect: () => setId(menu.id) },
+          ]}
+        />
       )}
       {id !== null && (
         <EmployeeSizesModal

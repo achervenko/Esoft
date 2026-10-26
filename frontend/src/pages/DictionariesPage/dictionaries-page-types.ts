@@ -1,4 +1,7 @@
-import type { AdminEmployee, AdminPosition } from "../../shared/api/users-admin-api";
+import type {
+  AdminEmployee,
+  AdminPosition,
+} from "../../shared/api/users-admin-api";
 import type {
   DictionaryCountry,
   DictionaryEquipmentModel,
@@ -7,8 +10,7 @@ import type {
   DictionaryObject,
 } from "../../shared/api/dictionaries-admin-api";
 
-export type ActiveDictionariesTab =
-  "positions" | "employees" | "manufacturers" | "countries" | "locations";
+export type { ActiveDictionariesTab } from "./dictionary-tabs";
 
 export type EmployeeDictionaryFormState = AdminEmployee | "new" | null;
 export type PositionFormState = AdminPosition | "new" | null;

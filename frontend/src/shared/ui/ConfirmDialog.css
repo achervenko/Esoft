@@ -48,6 +48,7 @@
 }
 
 .confirm-dialog-message h2 {
+  padding-inline-start: var(--optical-inset-modal);
   font-size: 18px;
   font-weight: 850;
 }

@@ -1,7 +1,6 @@
+import { SearchToolbar } from "../../shared/ui/SearchToolbar";
 import { LoadingIndicator } from "../../shared/ui/LoadingIndicator";
-import { Plus, Search, X } from "lucide-react";
-import "../../shared/ui/SearchInput.css";
-import "../../shared/ui/SearchToolbar.css";
+import { Plus } from "lucide-react";
 import {
   Fragment,
   type PointerEvent as ReactPointerEvent,
@@ -84,21 +83,11 @@ export function CatalogQuestionsColumn({
         </button>
       </header>
 
-      <div className="search-input-shell">
-        <Search size={18} aria-hidden="true" />
-        <input
-          aria-label="Поиск по вопросам"
-          onChange={(event) => onQuestionSearchChange(event.target.value)}
-          value={questionSearch}
-        />
-        {questionSearch && (
-          <button type="button" className="ppe-journal-icon-button"
-            aria-label="Очистить поиск по вопросам"
-            onClick={() => onQuestionSearchChange("")}>
-            <X size={18} aria-hidden="true" />
-          </button>
-        )}
-      </div>
+      <SearchToolbar
+        label="Поиск по вопросам"
+        value={questionSearch}
+        onChange={onQuestionSearchChange}
+      />
       <LoadingIndicator loading={isLoading} />
       {!isLoading && (
         <>

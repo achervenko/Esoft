@@ -13,7 +13,7 @@ import { employee, item, issue } from "./ppe-test-fixtures";
 describe("PPE journal", () => {
   it("searches historical names and articles together with applied filters", async () => {
     vi.spyOn(ppeApi, "journal").mockImplementation(async (query) => {
-      const items = query.search === 'несуществующий СИЗ' ? [] : [issue];
+      const items = query.search === "несуществующий СИЗ" ? [] : [issue];
       return { items, total: items.length, page: 1, limit: 100 };
     });
     render(
@@ -27,7 +27,7 @@ describe("PPE journal", () => {
       />,
     );
     await screen.findByText(issue.employeeName);
-    const search = screen.getByRole("textbox", { name: "Поиск по журналу" });
+    const search = screen.getByRole("searchbox", { name: "Поиск по журналу" });
     fireEvent.change(search, {
       target: {
         value: `${issue.employeeName.split(" ")[0]} ${issue.article.toLowerCase()}`,
@@ -53,7 +53,10 @@ describe("PPE journal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Применить" }));
     await waitFor(() =>
       expect(ppeApi.journal).toHaveBeenLastCalledWith(
-        expect.objectContaining({ status: "ISSUED", ppeItemId: String(item.id) }),
+        expect.objectContaining({
+          status: "ISSUED",
+          ppeItemId: String(item.id),
+        }),
         expect.any(AbortSignal),
       ),
     );
@@ -63,7 +66,12 @@ describe("PPE journal", () => {
     await screen.findByText(issue.employeeName);
   });
   it("combines backend filters and resets them, including inactive references", async () => {
-    vi.spyOn(ppeApi, "journal").mockResolvedValue({ items: [], total: 0, page: 1, limit: 100 });
+    vi.spyOn(ppeApi, "journal").mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      limit: 100,
+    });
     render(
       <JournalPanel
         employees={[{ ...employee, isActive: false }]}
@@ -89,7 +97,11 @@ describe("PPE journal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Применить" }));
     await waitFor(() =>
       expect(ppeApi.journal).toHaveBeenLastCalledWith(
-        expect.objectContaining({ employeeId: "1", status: "CANCELLED", dateFrom: "2026-01-01" }),
+        expect.objectContaining({
+          employeeId: "1",
+          status: "CANCELLED",
+          dateFrom: "2026-01-01",
+        }),
         expect.any(AbortSignal),
       ),
     );
@@ -101,7 +113,13 @@ describe("PPE journal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Сбросить" }));
     await waitFor(() =>
       expect(ppeApi.journal).toHaveBeenLastCalledWith(
-        { page: '1', limit: '100', search: '', sort: 'date', direction: 'desc' },
+        {
+          page: "1",
+          limit: "100",
+          search: "",
+          sort: "date",
+          direction: "desc",
+        },
         expect.any(AbortSignal),
       ),
     );

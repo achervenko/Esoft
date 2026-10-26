@@ -74,7 +74,7 @@ export function DayEditModal({
         </fieldset>
 
         <label className="form-field">
-          Комментарий
+          <span className="form-field-label">Комментарий</span>
           <textarea
             autoFocus
             disabled={isSaving}
@@ -109,7 +109,11 @@ export function DayEditModal({
           >
             Отмена
           </button>
-          <button className="admin-primary-button" disabled={isSaving} type="submit">
+          <button
+            className="admin-primary-button"
+            disabled={isSaving}
+            type="submit"
+          >
             {isSaving ? "Сохранение..." : "Сохранить"}
           </button>
         </div>

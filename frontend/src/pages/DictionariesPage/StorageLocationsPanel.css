@@ -1,0 +1,14 @@
+.storage-locations-panel {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  max-width: 100%;
+}
+.storage-locations-table {
+  min-width: 0;
+  overflow-x: auto;
+}
+.storage-locations-panel .notice {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

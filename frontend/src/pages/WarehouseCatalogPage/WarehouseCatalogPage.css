@@ -1,0 +1,79 @@
+.warehouse-catalog-page {
+  min-width: 0;
+}
+.warehouse-catalog-page > .admin-page-header h1 {
+  padding-inline-start: var(--optical-inset-page);
+}
+.warehouse-catalog-surface {
+  min-width: 0;
+}
+.warehouse-catalog-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 18px;
+}
+.warehouse-catalog-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+}
+.warehouse-catalog-card:not(.inactive-surface) {
+  background: #fff;
+  color: #15171c;
+}
+.warehouse-catalog-photo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  aspect-ratio: 4 / 3;
+  margin: 14px 14px 0;
+  padding: 20px;
+  border: 1px dashed #c5cbd3;
+  border-radius: 6px;
+  background: #f0f2f5;
+  color: #727985;
+  text-align: center;
+  font-size: 14px;
+}
+.warehouse-catalog-card-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 10px;
+  min-width: 0;
+  padding: 18px;
+}
+.warehouse-catalog-article {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.warehouse-catalog-name {
+  margin: 0 0 8px;
+  font-size: 18px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.warehouse-catalog-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+.warehouse-catalog-page .notice {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.warehouse-catalog-form-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}

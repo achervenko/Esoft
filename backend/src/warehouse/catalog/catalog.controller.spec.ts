@@ -152,7 +152,7 @@ describe('Warehouse Catalog authorization through the global guard', () => {
       expect((await request(operation)).status).toBe(401);
     expectNoServiceCalls();
   });
-  it('removes a disabled warehouse role without removing active admin rights', async () => {
+  it('denies disabled warehouse access even to admin', async () => {
     http.modules.splice(0, http.modules.length, 'equipment');
     for (const operation of operations) {
       expect((await request(operation, 'engineer,storekeeper')).status).toBe(
@@ -161,8 +161,9 @@ describe('Warehouse Catalog authorization through the global guard', () => {
     }
     expectNoServiceCalls();
     expect((await request(operations[0], 'admin,storekeeper')).status).toBe(
-      200,
+      403,
     );
+    expectNoServiceCalls();
   });
   it('forwards query, string IDs, payloads and audit actor', async () => {
     for (const operation of operations) await request(operation, 'storekeeper');

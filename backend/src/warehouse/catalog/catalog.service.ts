@@ -1,5 +1,7 @@
+import { hasPermission } from '../../auth/permission-policy';
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -77,8 +79,9 @@ function isWarehouseArticleUniqueViolation(
   return (
     !!constraint &&
     typeof constraint === 'object' &&
-    'fields' in constraint &&
-    isArticleField(constraint.fields)
+    (('fields' in constraint && isArticleField(constraint.fields)) ||
+      ('index' in constraint &&
+        constraint.index === 'uq_warehouse_items_article'))
   );
 }
 
@@ -133,7 +136,7 @@ export class WarehouseCatalogService {
       payload,
       true,
     ) as Prisma.WarehouseItemCreateInput;
-    return this.mutate(async (tx) => {
+    return this.mutate(actorUserId, async (tx) => {
       const item = await tx.warehouseItem.create({ data, select });
       await this.writeAudit(tx, AuditAction.CREATE, null, item, actorUserId);
       return dto(item);
@@ -143,7 +146,7 @@ export class WarehouseCatalogService {
   async update(value: string, payload: unknown, actorUserId: string) {
     const id = parseWarehouseId(value);
     const data = parseCatalogItem(payload);
-    return this.mutate(async (tx) => {
+    return this.mutate(actorUserId, async (tx) => {
       const previous = await this.lock(tx, id);
       if (data.unit !== undefined && data.unit !== previous.unit) {
         const balances = await tx.warehouseBalance.count({
@@ -178,7 +181,7 @@ export class WarehouseCatalogService {
   async setStatus(value: string, payload: unknown, actorUserId: string) {
     const id = parseWarehouseId(value);
     const data = parseCatalogStatus(payload);
-    return this.mutate(async (tx) => {
+    return this.mutate(actorUserId, async (tx) => {
       const previous = await this.lock(tx, id);
       const item = await tx.warehouseItem.update({
         where: { id },
@@ -203,9 +206,24 @@ export class WarehouseCatalogService {
     return item;
   }
 
-  private async mutate<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>) {
+  private async mutate<T>(
+    actor: string,
+    fn: (tx: Prisma.TransactionClient) => Promise<T>,
+  ) {
     try {
-      return await this.prisma.$transaction(fn);
+      return await this.prisma.$transaction(async (tx) => {
+        if (typeof actor !== 'string' || !actor) throw new ForbiddenException();
+        const [user] = await tx.$queryRaw<
+          { role: string | null; banned: boolean | null }[]
+        >`SELECT role, banned FROM "user" WHERE id = ${actor} FOR SHARE`;
+        if (
+          !user ||
+          user.banned ||
+          !hasPermission(user.role, 'warehouse.catalog.manage')
+        )
+          throw new ForbiddenException();
+        return fn(tx);
+      });
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&

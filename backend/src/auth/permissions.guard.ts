@@ -8,7 +8,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { ACTIVE_MODULES } from '../config/active-modules.module';
 import { getEffectiveUserRoles } from './role-module-policy';
-import { hasPermission, isPermission } from './permission-policy';
+import { getUserPermissions, isPermission } from './permission-policy';
 import {
   ADDITIONAL_REQUIRED_PERMISSIONS,
   REQUIRED_PERMISSION,
@@ -61,6 +61,7 @@ export class PermissionsGuard implements CanActivate {
       user?.role,
       this.activeModules,
     ).join(',');
+    const permissions = getUserPermissions(effectiveRole, this.activeModules);
     if (user) {
       const effectiveUser = { ...user, role: effectiveRole };
       request.session = { ...request.session, user: effectiveUser };
@@ -68,11 +69,11 @@ export class PermissionsGuard implements CanActivate {
     }
     if (
       !user ||
-      !hasPermission(effectiveRole, permission) ||
+      !permissions.includes(permission) ||
       (Array.isArray(additional) &&
         !additional.every(
           (required: unknown) =>
-            isPermission(required) && hasPermission(effectiveRole, required),
+            isPermission(required) && permissions.includes(required),
         ))
     ) {
       throw new ForbiddenException({

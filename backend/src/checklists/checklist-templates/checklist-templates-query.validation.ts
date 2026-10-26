@@ -68,7 +68,9 @@ function parseTemplateSortBy(value: unknown) {
     value === 'createdAt' ||
     value === 'updatedAt' ||
     value === 'publishedAt' ||
-    value === 'archivedAt'
+    value === 'archivedAt' ||
+    value === 'state' ||
+    value === 'questionCount'
   ) {
     return value;
   }

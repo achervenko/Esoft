@@ -11,7 +11,7 @@ export function withEffectiveRoles<
       ...value.user,
       assignedRole: value.user.role,
       role,
-      permissions: getUserPermissions(role),
+      permissions: getUserPermissions(role, activeModules),
     },
   };
 }

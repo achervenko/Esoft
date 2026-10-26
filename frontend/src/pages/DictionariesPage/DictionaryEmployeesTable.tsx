@@ -1,13 +1,14 @@
+import { SearchToolbar } from "../../shared/ui/SearchToolbar";
 import { useMediaQuery } from "../../shared/lib/useMediaQuery";
+import { useProgressiveRows } from "../../shared/lib/useProgressiveRows";
+import { LoadMore } from "../../shared/ui/LoadMore";
 import { useEmployeeDictionarySearch } from "./useEmployeeDictionarySearch";
 import { Notice } from "../../shared/ui/Notice";
 import { LoadingIndicator } from "../../shared/ui/LoadingIndicator";
-import "../../shared/ui/SearchInput.css";
-import "../../shared/ui/SearchToolbar.css";
 import { useEffect, useState } from "react";
 import { EmployeeDictionaryDetailsModal } from "./EmployeeDictionaryDetailsModal";
 import { sortDataTableRows } from "../../shared/ui/data-table-model";
-import { ChevronRight, Edit2, Search, X } from "lucide-react";
+import { ChevronRight, Edit2 } from "lucide-react";
 import type { AdminEmployee } from "../../shared/api/users-admin-api";
 import { DataTable, type DataTableColumn } from "../../shared/ui/DataTable";
 import { Switch } from "../../shared/ui/Switch";
@@ -16,6 +17,7 @@ import { employeeSizesStatus } from "../../modules/ppe-ui/employee-sizes-model";
 
 type DictionaryEmployeesTableProps = {
   employees: AdminEmployee[];
+  onCreate?: () => void;
   isSaving?: boolean;
   onEdit: (employee: AdminEmployee) => void;
   onToggleStatus: (employee: AdminEmployee) => void;
@@ -49,7 +51,12 @@ const employeeColumns = (
   {
     key: "gender",
     label: "Пол",
-    render: (employee) => employee.gender === "MALE" ? "Мужской" : employee.gender === "FEMALE" ? "Женский" : "Не указан",
+    render: (employee) =>
+      employee.gender === "MALE"
+        ? "Мужской"
+        : employee.gender === "FEMALE"
+          ? "Женский"
+          : "Не указан",
     sortValue: (employee) => employee.gender ?? "",
   },
   {
@@ -124,6 +131,7 @@ const employeeColumns = (
 
 export function DictionaryEmployeesTable({
   employees,
+  onCreate,
   isSaving = false,
   onEdit,
   onToggleStatus,
@@ -145,49 +153,72 @@ export function DictionaryEmployeesTable({
     },
     onToggleStatus,
     isSaving,
-    onSizes ? (employee) => {
-      setSelectedId(null);
-      onSizes(employee);
-    } : undefined,
+    onSizes
+      ? (employee) => {
+          setSelectedId(null);
+          onSizes(employee);
+        }
+      : undefined,
     employeeSizes,
   );
-  const group = (employee: AdminEmployee) => employee.isActive ? 0 : 1;
+  const group = (employee: AdminEmployee) => (employee.isActive ? 0 : 1);
   const defaultSort = { direction: "asc" as const, key: "fullName" };
 
-  const { filtered, isSearching, error, limited, retry } = useEmployeeDictionarySearch(employees, query);
+  const { filtered, isSearching, error, limited, retry } =
+    useEmployeeDictionarySearch(employees, query);
   const selected = filtered.find(({ id }) => id === selectedId);
   useEffect(() => {
     if (selectedId !== null && !selected) setSelectedId(null);
   }, [selectedId, selected]);
   const search = (
     <>
-    <div className="admin-card dictionary-search-toolbar">
-    <div className="search-input-shell ppe-journal-search">
-      <Search aria-hidden="true" size={18} />
-      <input type="search" aria-label="Поиск сотрудников" placeholder=""
-        value={query} onChange={(event) => setQuery(event.target.value)} />
-      {query && <button type="button" className="ppe-journal-icon-button" aria-label="Очистить поиск сотрудников"
-        onClick={() => setQuery("")}><X size={18} aria-hidden="true" /></button>}
-    </div>
-    </div>
-    <LoadingIndicator loading={isSearching}>Поиск сотрудников…</LoadingIndicator>
-    {error && <Notice tone="error">Не удалось выполнить расширенный поиск: {error}
-      <p>Показаны только точные совпадения по ФИО и должностям.</p>
-      <button className="admin-secondary-button" type="button" onClick={retry}>Повторить поиск</button>
-    </Notice>}
-    {limited && <Notice>Дополнительные совпадения ограничены первыми 100 результатами. Уточните запрос.</Notice>}
+      <SearchToolbar
+        value={query}
+        onChange={setQuery}
+        label="Поиск сотрудников"
+        onCreate={onCreate}
+        createDisabled={isSaving}
+      />
+      <LoadingIndicator loading={isSearching}>
+        Поиск сотрудников…
+      </LoadingIndicator>
+      {error && (
+        <Notice tone="error">
+          Не удалось выполнить расширенный поиск: {error}
+          <p>Показаны только точные совпадения по ФИО и должностям.</p>
+          <button
+            className="admin-secondary-button"
+            type="button"
+            onClick={retry}
+          >
+            Повторить поиск
+          </button>
+        </Notice>
+      )}
+      {limited && (
+        <Notice>
+          Дополнительные совпадения ограничены первыми 100 результатами.
+          Уточните запрос.
+        </Notice>
+      )}
     </>
   );
-  const empty = !isSearching && !error ? <p className="admin-state" role="status">Сотрудники не найдены.</p> : null;
+  const empty =
+    !isSearching && !error ? (
+      <p className="admin-state" role="status">
+        Сотрудники не найдены.
+      </p>
+    ) : null;
 
+  const sorted = sortDataTableRows(filtered, columns, defaultSort, group);
+  const visible = useProgressiveRows(sorted, (employee) => employee.id, query);
   if (isMobile) {
-    const sorted = sortDataTableRows(filtered, columns, defaultSort, group);
     return (
       <>
         {search}
         {filtered.length === 0 && empty}
         <div className="dictionary-employee-cards" aria-label="Сотрудники">
-          {sorted.map((employee) => (
+          {visible.rows.map((employee) => (
             <button
               className="dictionary-employee-card"
               key={employee.id}
@@ -198,13 +229,26 @@ export function DictionaryEmployeesTable({
               <span>
                 <strong>{employee.fullName}</strong>
                 <span className="dictionary-employee-position">
-                  {columns.find(({ key }) => key === "position")?.render(employee)}
+                  {columns
+                    .find(({ key }) => key === "position")
+                    ?.render(employee)}
                 </span>
               </span>
               <ChevronRight aria-hidden="true" size={20} />
             </button>
           ))}
         </div>
+        {sorted.length > 100 && (
+          <LoadMore
+            shown={visible.rows.length}
+            total={sorted.length}
+            hasMore={visible.hasMore}
+            loading={false}
+            error={null}
+            onLoadMore={visible.loadMore}
+            onRetry={visible.loadMore}
+          />
+        )}
         {selected && (
           <EmployeeDictionaryDetailsModal
             title={selected.fullName}
@@ -212,13 +256,19 @@ export function DictionaryEmployeesTable({
             isSaving={isSaving}
             showSizes={Boolean(onSizes)}
             sizes={employeeSizes?.get(selected.id)}
-            details={columns.filter(({ key }) => ["position", "gender", "status"].includes(key)).map((column) => (
-                  <div key={column.key}>
-                    <dt>{column.label}</dt>
-                    <dd>{column.render(selected)}</dd>
-                  </div>
-                ))}
-            actions={columns.find(({ key }) => key === "actions")?.render(selected)}
+            details={columns
+              .filter(({ key }) =>
+                ["position", "gender", "status"].includes(key),
+              )
+              .map((column) => (
+                <div key={column.key}>
+                  <dt>{column.label}</dt>
+                  <dd>{column.render(selected)}</dd>
+                </div>
+              ))}
+            actions={columns
+              .find(({ key }) => key === "actions")
+              ?.render(selected)}
           />
         )}
       </>
@@ -227,15 +277,21 @@ export function DictionaryEmployeesTable({
 
   return (
     <>
-    {search}
-    {filtered.length === 0 ? empty : <div className="dictionary-table-surface"><DataTable
-      columns={columns}
-      defaultSort={defaultSort}
-      getRowKey={(employee) => employee.id}
-      rows={filtered}
-      getRowGroup={group}
-      animateRowMoves
-    /></div>}
+      {search}
+      {filtered.length === 0 ? (
+        empty
+      ) : (
+        <div className="dictionary-table-surface">
+          <DataTable
+            columns={columns}
+            defaultSort={defaultSort}
+            getRowKey={(employee) => employee.id}
+            rows={filtered}
+            getRowGroup={group}
+            animateRowMoves
+          />
+        </div>
+      )}
     </>
   );
 }

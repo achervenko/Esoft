@@ -1,4 +1,9 @@
-import { getUserRoles, type AppRole } from './role-module-policy';
+import {
+  getEffectiveUserRoles,
+  getUserRoles,
+  type AppRole,
+} from './role-module-policy';
+import optionalModuleIds from '../../prisma/module-catalog.json';
 
 // Modules declare their actions; auth binds those action IDs to roles.
 // String bindings avoid importing optional module implementation files into auth.
@@ -37,7 +42,14 @@ export const ROLE_PERMISSIONS = {
     'ppe.issue',
     'ppe.issue.backdate',
     'warehouse.catalog.manage',
+    'warehouse.projects.read',
+    'warehouse.reservations.manage',
+    'warehouse.stock.read',
+    'warehouse.storage-locations.read',
+    'warehouse.storage-locations.manage',
     'warehouse.adjustments.manage',
+    'warehouse.issues.manage',
+    'warehouse.reservations.override',
     'warehouse.issue-sheets.manage',
   ],
   chief_engineer: [
@@ -65,7 +77,13 @@ export const ROLE_PERMISSIONS = {
   ],
   storekeeper: [
     'warehouse.catalog.manage',
+    'warehouse.projects.read',
+    'warehouse.reservations.manage',
+    'warehouse.stock.read',
+    'warehouse.storage-locations.read',
+    'warehouse.storage-locations.manage',
     'warehouse.issue-sheets.manage',
+    'warehouse.issues.manage',
     'users.profile.read',
   ],
 } as const satisfies Record<AppRole, readonly string[]>;
@@ -80,12 +98,24 @@ export function isPermission(value: unknown): value is Permission {
   return typeof value === 'string' && knownPermissions.has(value);
 }
 
-export function getUserPermissions(role: unknown): Permission[] {
-  return [
-    ...new Set(
-      getUserRoles(role).flatMap((value) => [...ROLE_PERMISSIONS[value]]),
-    ),
+export function getUserPermissions(
+  role: unknown,
+  activeModules?: readonly string[],
+): Permission[] {
+  const roles =
+    activeModules === undefined
+      ? getUserRoles(role)
+      : getEffectiveUserRoles(role, activeModules);
+  const permissions = [
+    ...new Set(roles.flatMap((value) => [...ROLE_PERMISSIONS[value]])),
   ];
+  if (activeModules === undefined) return permissions;
+  return permissions.filter((permission) => {
+    const module = optionalModuleIds.find((id) =>
+      permission.startsWith(`${id}.`),
+    );
+    return !module || activeModules.includes(module);
+  });
 }
 
 export function hasPermission(role: unknown, permission: Permission) {

@@ -43,3 +43,15 @@
 .data-table .data-table-row-clickable {
   cursor: pointer;
 }
+
+.data-table-windowed {
+  table-layout: fixed;
+}
+.data-table-windowed td {
+  overflow-wrap: anywhere;
+}
+.data-table .data-table-spacer > td {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}

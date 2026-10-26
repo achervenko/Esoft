@@ -1,3 +1,4 @@
+import optionalModuleIds from '../../prisma/module-catalog.json';
 import { withEffectiveRoles } from './effective-session';
 import { getUserPermissions } from './permission-policy';
 describe('effective session permissions', () => {
@@ -35,5 +36,15 @@ describe('effective session permissions', () => {
     expect(withEffectiveRoles(value, ['warehouse']).user.permissions).toEqual(
       getUserPermissions('storekeeper'),
     );
+  });
+  it('hides warehouse UI permissions for admin when warehouse is disabled', () => {
+    const value = { user: { id: 'admin', role: 'admin' }, session: {} };
+    const disabled = withEffectiveRoles(value, ['equipment', 'ppe']).user
+      .permissions;
+    expect(disabled).toContain('dictionaries.manage');
+    expect(disabled.some((p) => p.startsWith('warehouse.'))).toBe(false);
+    expect(
+      withEffectiveRoles(value, optionalModuleIds).user.permissions,
+    ).toContain('warehouse.storage-locations.read');
   });
 });

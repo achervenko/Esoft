@@ -1,0 +1,27 @@
+.load-more {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin-top: 18px;
+  min-width: 0;
+}
+.load-more p {
+  margin: 0;
+}
+.load-more-count {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+.load-more .notice {
+  width: 100%;
+}
+.load-more .notice button {
+  margin-inline-start: 12px;
+}
+.load-more > button {
+  width: auto;
+}
+.load-more-sentinel {
+  height: 1px;
+  width: 100%;
+}

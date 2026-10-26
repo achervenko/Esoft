@@ -1,25 +1,73 @@
 import { describe, expect, it } from "vitest";
 import { resolveAppRoute } from "./app-router";
+import { sidebarSections } from "../modules/sidebar/sidebarItems";
 
 describe("resolveAppRoute", () => {
+  it("resolves the warehouse catalog with query parameters", () => {
+    for (const route of [
+      "#/warehouse/catalog",
+      "#/warehouse/catalog?q=bolt&isActive=true",
+    ])
+      expect(resolveAppRoute(route)).toEqual({ kind: "warehouse-catalog" });
+    expect(resolveAppRoute("#/warehouse/catalog-other")).toEqual({
+      kind: "unknown",
+    });
+  });
+  it("falls back to norms for the unsupported general PPE issue tab", () => {
+    expect(resolveAppRoute("#/ppe?tab=issue")).toEqual({
+      kind: "ppe",
+      tab: "norms",
+    });
+  });
+  it("resolves every dictionary link published by the sidebar", () => {
+    const links = sidebarSections
+      .flatMap((section) =>
+        section.items.flatMap((item) =>
+          item.type === "group" ? item.items : [item],
+        ),
+      )
+      .filter((item) => item.href.startsWith("#/dictionaries"));
+    expect(links).toHaveLength(3);
+    for (const link of links) {
+      expect(resolveAppRoute(link.href)).toEqual({ kind: "dictionaries" });
+    }
+    expect(resolveAppRoute("#/dictionaries-other")).toEqual({
+      kind: "unknown",
+    });
+  });
   it("accepts preserved search routes on PPE detail links", () => {
-    const query = "?returnTo=" + encodeURIComponent("#/search?q=сок&module=ppe");
-    expect(resolveAppRoute("#/ppe/employees/1" + query)).toEqual({ kind: "ppe", tab: "issue", employeeId: 1 });
-    expect(resolveAppRoute("#/ppe/positions/1" + query)).toEqual({ kind: "ppe", tab: "norms", positionId: 1 });
+    const query =
+      "?returnTo=" + encodeURIComponent("#/search?q=сок&module=ppe");
+    expect(resolveAppRoute("#/ppe/employees/1" + query)).toEqual({
+      kind: "ppe",
+      tab: "issue",
+      employeeId: 1,
+    });
+    expect(resolveAppRoute("#/ppe/positions/1" + query)).toEqual({
+      kind: "ppe",
+      tab: "norms",
+      positionId: 1,
+    });
   });
   it("resolves the employee PPE card", () => {
     expect(resolveAppRoute("#/ppe/employees/1")).toEqual({
-      kind: "ppe", tab: "issue", employeeId: 1,
+      kind: "ppe",
+      tab: "issue",
+      employeeId: 1,
     });
   });
   it("resolves position PPE norms", () => {
     expect(resolveAppRoute("#/ppe/positions/1")).toEqual({
-      kind: "ppe", tab: "norms", positionId: 1,
+      kind: "ppe",
+      tab: "norms",
+      positionId: 1,
     });
   });
   it.each([
-    "#/ppe/employees/0", "#/ppe/employees/abc",
-    "#/ppe/positions/0", "#/ppe/positions/abc",
+    "#/ppe/employees/0",
+    "#/ppe/employees/abc",
+    "#/ppe/positions/0",
+    "#/ppe/positions/abc",
   ])("rejects invalid PPE route %s", (route) => {
     expect(resolveAppRoute(route)).toEqual({ kind: "unknown" });
   });

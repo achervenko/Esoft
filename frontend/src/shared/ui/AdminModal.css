@@ -42,6 +42,10 @@
   font-weight: 850;
 }
 
+.admin-modal > header > h2 {
+  padding-inline-start: var(--optical-inset-modal);
+}
+
 .admin-modal > header button {
   display: grid;
   place-items: center;
