@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { ApiRequestError } from "../../shared/api/api-error";
 import {
   archiveChecklistTemplate,
@@ -11,6 +11,7 @@ import {
 } from "../../shared/api/checklists";
 import { ConfirmDialog } from "../../shared/ui/ConfirmDialog";
 import "./ChecklistTemplateArchiveDialog.css";
+import { TextareaField } from "../../shared/ui/TextField";
 
 const ARCHIVE_REASON_MAX_LENGTH = 500;
 const VISIBLE_USAGE_LIMIT = 10;
@@ -39,7 +40,6 @@ export function ChecklistTemplateArchiveDialog({
   onTemplateReload,
   template,
 }: ChecklistTemplateArchiveDialogProps) {
-  const reasonId = useId();
   const hasInitialUsage = initialUsage !== undefined && initialUsage !== null;
   const [currentTemplate, setCurrentTemplate] = useState(template);
   const [usage, setUsage] = useState<ChecklistTemplateUsage | null>(
@@ -105,6 +105,9 @@ export function ChecklistTemplateArchiveDialog({
   const reasonError =
     isReasonTouched && !trimmedReason ? "Укажите причину удаления." : null;
   const isReasonTooLong = reason.length > ARCHIVE_REASON_MAX_LENGTH;
+  const reasonFieldError =
+    reasonError ??
+    (isReasonTooLong ? "Причина удаления слишком длинная." : undefined);
   const isUsageUnavailable = usage === null;
   const maintenanceSettings = usage?.maintenanceSettings ?? [];
   const visibleSettings = showAllUsage
@@ -218,23 +221,18 @@ export function ChecklistTemplateArchiveDialog({
           </div>
         ) : null}
 
-        <label className="checklist-template-archive-reason" htmlFor={reasonId}>
-          <span>Причина удаления</span>
-          <textarea
-            disabled={isArchiving}
-            id={reasonId}
-            maxLength={ARCHIVE_REASON_MAX_LENGTH + 1}
-            onBlur={() => setIsReasonTouched(true)}
-            onChange={(event) => setReason(event.target.value)}
-            rows={4}
-            value={reason}
-          />
-        </label>
+        <TextareaField
+          fieldClassName="checklist-template-archive-reason"
+          label="Причина удаления"
+          disabled={isArchiving}
+          error={reasonFieldError}
+          maxLength={ARCHIVE_REASON_MAX_LENGTH + 1}
+          onBlur={() => setIsReasonTouched(true)}
+          onChange={setReason}
+          rows={4}
+          value={reason}
+        />
         <div className="checklist-template-archive-reason-footer">
-          <span>
-            {reasonError ??
-              (isReasonTooLong ? "Причина удаления слишком длинная." : "")}
-          </span>
           <span>
             {reason.length}/{ARCHIVE_REASON_MAX_LENGTH}
           </span>

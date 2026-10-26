@@ -1,3 +1,4 @@
+import { AdminTextareaField as TextareaField } from "../../shared/ui/AdminFormControls";
 import { GuardedAdminModal } from "../../shared/ui/GuardedAdminModal";
 import { formatPpeDate } from "../../modules/ppe-ui/ppe-presentation";
 import { formatPpeQuantity } from "../../modules/ppe-ui/ppe-presentation";
@@ -5,7 +6,7 @@ import { useRef, useState } from "react";
 import { ppeApi, type PpeIssue } from "../../shared/api/ppe";
 import { canIssuePpe } from "../../modules/ppe-permissions/ppe-permissions";
 import { AdminModal } from "../../shared/ui/AdminModal";
-import { Field, Message } from "../../modules/ppe-ui/ppe-ui";
+import { Message } from "../../modules/ppe-ui/ppe-ui";
 import {
   ppeError,
   sizeLabel,
@@ -78,7 +79,14 @@ export function IssueSnapshot({
   const fields: [string, string][] = [
     ["Сотрудник", issue.employeeName],
     ["Должность", issue.position],
-    ["Пол нормы", issue.genderSnapshot === "MALE" ? "Мужской" : issue.genderSnapshot === "FEMALE" ? "Женский" : "—"],
+    [
+      "Пол нормы",
+      issue.genderSnapshot === "MALE"
+        ? "Мужской"
+        : issue.genderSnapshot === "FEMALE"
+          ? "Женский"
+          : "—",
+    ],
     [
       "Вид выдачи",
       issue.issueType === "REGULAR" ? "Нормативная" : "Дополнительная",
@@ -169,15 +177,15 @@ function CancelIssueModal({
               });
           }}
         >
-          <Field label="Причина">
-            <textarea
-              required
-              maxLength={1000}
-              disabled={saving}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
-          </Field>
+          <TextareaField
+            fieldClassName="ppe-field"
+            label="Причина"
+            required
+            maxLength={1000}
+            disabled={saving}
+            value={reason}
+            onChange={(value) => setReason(value)}
+          />
           <Message error={error} />
           <div className="ppe-actions">
             <button

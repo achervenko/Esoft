@@ -1,87 +1,41 @@
-import { AdminFormField } from "./AdminFormField";
-import type { Ref } from "react";
+import type { ComponentProps } from "react";
+import { TextField, TextareaField } from "./TextField";
+import "./AdminFormField.css";
 
 export function AdminTextField({
-  autoFocus = false,
-  disabled = false,
-  error,
-  inputRef,
-  label,
-  maxLength,
-  onChange,
-  required = false,
-  selectOnFocus = false,
-  value,
-}: {
-  autoFocus?: boolean;
-  disabled?: boolean;
-  error?: string;
-  inputRef?: Ref<HTMLInputElement>;
-  label: string;
-  maxLength?: number;
-  onChange: (value: string) => void;
-  required?: boolean;
-  selectOnFocus?: boolean;
-  value: string;
-}) {
+  fieldClassName = "",
+  ...props
+}: ComponentProps<typeof TextField>) {
   return (
-    <AdminFormField label={label} required={required} error={error}>
-      <input
-        autoFocus={autoFocus}
-        disabled={disabled}
-        ref={inputRef}
-        maxLength={maxLength}
-        onChange={(event) => onChange(event.target.value)}
-        onFocus={(event) => {
-          if (selectOnFocus) {
-            event.target.select();
-          }
-        }}
-        required={required}
-        value={value}
-      />
-    </AdminFormField>
+    <TextField
+      {...props}
+      fieldClassName={`admin-control-field ${fieldClassName}`.trim()}
+    />
   );
 }
 
 export function AdminTextareaField({
-  autoFocus = false,
-  disabled = false,
-  label,
-  onChange,
-  required = false,
-  textareaRef,
-  value,
-}: {
-  autoFocus?: boolean;
-  disabled?: boolean;
-  label: string;
-  onChange: (value: string) => void;
-  required?: boolean;
-  textareaRef?: Ref<HTMLTextAreaElement>;
-  value: string;
-}) {
+  fieldClassName = "",
+  className = "",
+  ...props
+}: ComponentProps<typeof TextareaField>) {
   return (
-    <AdminFormField label={label} required={required}>
-      <textarea
-        autoFocus={autoFocus}
-        className="admin-control-textarea"
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        ref={textareaRef}
-        required={required}
-        value={value}
-      />
-    </AdminFormField>
+    <TextareaField
+      {...props}
+      fieldClassName={`admin-control-field ${fieldClassName}`.trim()}
+      className={`admin-control-textarea ${className}`.trim()}
+    />
   );
 }
 
 export function AdminFormActions({
   isSaving,
   onClose,
+  submitDisabled = false,
 }: {
   isSaving: boolean;
   onClose: () => void;
+  submitDisabled?: boolean;
 }) {
   return (
     <div className="admin-form-actions">
@@ -95,7 +49,7 @@ export function AdminFormActions({
       </button>
       <button
         className="admin-primary-button"
-        disabled={isSaving}
+        disabled={isSaving || submitDisabled}
         type="submit"
       >
         {isSaving ? "Сохранение..." : "Сохранить"}

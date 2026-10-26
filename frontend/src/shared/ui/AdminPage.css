@@ -102,6 +102,7 @@
 }
 
 .admin-form {
+  scrollbar-gutter: stable;
   display: grid;
   gap: 14px;
   overflow-y: auto;

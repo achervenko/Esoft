@@ -1,4 +1,4 @@
-import { RequiredMark } from "../../shared/ui/RequiredMark";
+import { AdminTextField } from "../../shared/ui/AdminFormControls";
 import { GenderToggle } from "../../shared/ui/GenderToggle";
 import { SelectDropdown } from "../../shared/ui/SelectDropdown";
 import { useRef, useState } from "react";
@@ -24,7 +24,9 @@ export function EmployeeDictionaryFormModal({
   onClose,
   onSubmit,
 }: EmployeeDictionaryFormModalProps) {
-  const [gender, setGender] = useState<"MALE" | "FEMALE" | "">(employee?.gender ?? "");
+  const [gender, setGender] = useState<"MALE" | "FEMALE" | "">(
+    employee?.gender ?? "",
+  );
   const [form, setForm] = useState<Omit<EmployeePayload, "gender">>({
     firstName: employee?.firstName ?? "",
     lastName: employee?.lastName ?? "",
@@ -60,7 +62,12 @@ export function EmployeeDictionaryFormModal({
       return;
     }
 
-    if (!form.lastName.trim() || !form.firstName.trim() || !form.positionId || !gender) {
+    if (
+      !form.lastName.trim() ||
+      !form.firstName.trim() ||
+      !form.positionId ||
+      !gender
+    ) {
       setError("Заполните фамилию, имя, пол и должности.");
       return;
     }
@@ -90,40 +97,31 @@ export function EmployeeDictionaryFormModal({
       title={employee ? "Редактирование сотрудника" : "Новый сотрудник"}
     >
       <form className="admin-form" onSubmit={handleSubmit}>
-        <label className="form-field">
-          <span className="form-field-label">
-            Фамилия
-            <RequiredMark />
-          </span>
-          <input
-            autoFocus
-            data-dialog-autofocus
-            maxLength={64}
-            onChange={(event) => updateField("lastName", event.target.value)}
-            required
-            value={form.lastName}
-          />
-        </label>
-        <label className="form-field">
-          <span className="form-field-label">
-            Имя
-            <RequiredMark />
-          </span>
-          <input
-            maxLength={64}
-            onChange={(event) => updateField("firstName", event.target.value)}
-            required
-            value={form.firstName}
-          />
-        </label>
-        <label className="form-field">
-          <span className="form-field-label">Отчество</span>
-          <input
-            maxLength={64}
-            onChange={(event) => updateField("middleName", event.target.value)}
-            value={form.middleName ?? ""}
-          />
-        </label>
+        <AdminTextField
+          label="Фамилия"
+          disabled={isSaving}
+          required
+          autoFocus
+          data-dialog-autofocus
+          maxLength={64}
+          onChange={(value) => updateField("lastName", value)}
+          value={form.lastName}
+        />
+        <AdminTextField
+          label="Имя"
+          disabled={isSaving}
+          required
+          maxLength={64}
+          onChange={(value) => updateField("firstName", value)}
+          value={form.firstName}
+        />
+        <AdminTextField
+          label="Отчество"
+          disabled={isSaving}
+          maxLength={64}
+          onChange={(value) => updateField("middleName", value)}
+          value={form.middleName ?? ""}
+        />
         <GenderToggle value={gender} onChange={setGender} disabled={isSaving} />
         <SelectDropdown
           label="Должности"
@@ -131,17 +129,44 @@ export function EmployeeDictionaryFormModal({
           disabled={isSaving}
           placeholder="Выберите должности"
           value={form.positionId ? String(form.positionId) : ""}
-          selectedValues={[form.positionId, ...(form.additionalPositionIds ?? [])].filter(Boolean).map(String)}
-          options={positions.filter((item) => item.isActive || item.id === employee?.positionId || employee?.additionalPositions?.some(({ id }) => id === item.id)).map((item) => ({
-            value: String(item.id), label: item.name + (item.isActive ? "" : " (удалена)"),
-            disabled: !item.isActive && item.id !== form.positionId && !form.additionalPositionIds?.includes(item.id),
-          }))}
-          onChange={(value) => setForm((current) => {
-            const id = Number(value);
-            const selected = [current.positionId, ...(current.additionalPositionIds ?? [])].filter(Boolean);
-            const next = selected.includes(id) ? selected.filter((positionId) => positionId !== id) : [...selected, id];
-            return { ...current, positionId: next[0] ?? 0, additionalPositionIds: next.slice(1) };
-          })}
+          selectedValues={[
+            form.positionId,
+            ...(form.additionalPositionIds ?? []),
+          ]
+            .filter(Boolean)
+            .map(String)}
+          options={positions
+            .filter(
+              (item) =>
+                item.isActive ||
+                item.id === employee?.positionId ||
+                employee?.additionalPositions?.some(({ id }) => id === item.id),
+            )
+            .map((item) => ({
+              value: String(item.id),
+              label: item.name + (item.isActive ? "" : " (удалена)"),
+              disabled:
+                !item.isActive &&
+                item.id !== form.positionId &&
+                !form.additionalPositionIds?.includes(item.id),
+            }))}
+          onChange={(value) =>
+            setForm((current) => {
+              const id = Number(value);
+              const selected = [
+                current.positionId,
+                ...(current.additionalPositionIds ?? []),
+              ].filter(Boolean);
+              const next = selected.includes(id)
+                ? selected.filter((positionId) => positionId !== id)
+                : [...selected, id];
+              return {
+                ...current,
+                positionId: next[0] ?? 0,
+                additionalPositionIds: next.slice(1),
+              };
+            })
+          }
         />
         {error ? <p className="admin-form-error">{error}</p> : null}
 

@@ -1,5 +1,5 @@
+import { TextField } from "../../shared/ui/TextField";
 import { AdminTextField } from "../../shared/ui/AdminFormControls";
-import { FormField } from "../../shared/ui/FormField";
 import type { FormEvent } from "react";
 import { SelectDropdown } from "../../shared/ui/SelectDropdown";
 import { useSetupPage } from "./useSetupPage";
@@ -56,75 +56,69 @@ export function SetupPage({ onCompleted }: SetupPageProps) {
                   ["middleName", "Отчество"],
                 ] as const
               ).map(([field, label]) => (
-                  <AdminTextField
-                    key={field}
-                    error={page.fieldErrors[field]}
-                    label={label}
-                    maxLength={64}
-                    required={field !== "middleName"}
-                    value={page.form[field]}
-                    onChange={(value) => page.setField(field, value)}
-                  />
+                <AdminTextField
+                  key={field}
+                  error={page.fieldErrors[field]}
+                  label={label}
+                  maxLength={64}
+                  required={field !== "middleName"}
+                  value={page.form[field]}
+                  onChange={(value) => page.setField(field, value)}
+                />
               ))}
             </fieldset>
           )}
 
-          <FormField label="Email" error={page.fieldErrors.email}>
-            <input
-              autoComplete="email"
-              maxLength={255}
-              name="email"
-              onChange={(event) => page.setField("email", event.target.value)}
-              required
-              type="email"
-              value={page.form.email}
-            />
-          </FormField>
+          <TextField
+            label="Email"
+            error={page.fieldErrors.email}
+            autoComplete="email"
+            maxLength={255}
+            name="email"
+            onChange={(value) => page.setField("email", value)}
+            required
+            type="email"
+            value={page.form.email}
+          />
 
-          <FormField label="Логин" error={page.fieldErrors.username}>
-            <input
-              autoComplete="username"
-              maxLength={64}
-              minLength={3}
-              name="username"
-              onChange={(event) =>
-                page.setField("username", event.target.value)
-              }
-              required
-              type="text"
-              value={page.form.username}
-            />
-          </FormField>
+          <TextField
+            label="Логин"
+            error={page.fieldErrors.username}
+            autoComplete="username"
+            maxLength={64}
+            minLength={3}
+            name="username"
+            onChange={(value) => page.setField("username", value)}
+            required
+            type="text"
+            value={page.form.username}
+          />
 
-          <FormField label="Пароль" error={page.fieldErrors.password}>
-            <input
-              autoComplete="new-password"
-              maxLength={128}
-              minLength={8}
-              name="password"
-              onChange={(event) =>
-                page.setField("password", event.target.value)
-              }
-              required
-              type="password"
-              value={page.form.password}
-            />
-          </FormField>
+          <TextField
+            label="Пароль"
+            error={page.fieldErrors.password}
+            autoComplete="new-password"
+            maxLength={128}
+            minLength={8}
+            name="password"
+            onChange={(value) => page.setField("password", value)}
+            required
+            type="password"
+            value={page.form.password}
+          />
 
-          <FormField label="Повторите пароль" error={page.fieldErrors.passwordConfirmation}>
-            <input
-              autoComplete="new-password"
-              maxLength={128}
-              minLength={8}
-              name="passwordConfirmation"
-              onChange={(event) =>
-                page.setField("passwordConfirmation", event.target.value)
-              }
-              required
-              type="password"
-              value={page.form.passwordConfirmation}
-            />
-          </FormField>
+          <TextField
+            label="Повторите пароль"
+            error={page.fieldErrors.passwordConfirmation}
+            autoComplete="new-password"
+            maxLength={128}
+            minLength={8}
+            name="passwordConfirmation"
+            onChange={(value) => page.setField("passwordConfirmation", value)}
+            required
+            type="password"
+            value={page.form.passwordConfirmation}
+          />
 
           {page.error ? (
             <p className="form-message error">{page.error}</p>

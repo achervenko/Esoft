@@ -1,4 +1,4 @@
-import { RequiredMark } from "../../shared/ui/RequiredMark";
+import { TextareaField, TextField } from "../../shared/ui/TextField";
 import type { EquipmentEventItem } from "./equipment-events.types";
 import type { ChecklistTemplateListItem } from "../../shared/api/checklists";
 import type { MaintenanceSetting } from "../../shared/api/maintenance/maintenance.types";
@@ -61,6 +61,7 @@ export function EquipmentEventFormModal({
         onSubmit={form.handleSubmit}
       >
         <SelectDropdown
+          disabled={isSaving}
           label="Вид обслуживания"
           onChange={form.setMaintenanceTypeId}
           options={form.maintenanceTypeOptions}
@@ -69,19 +70,14 @@ export function EquipmentEventFormModal({
           value={form.maintenanceTypeId}
         />
 
-        <label className="form-field">
-          <span className="form-field-label">
-            Плановая дата<RequiredMark />
-          </span>
-          <input
-            onChange={(inputEvent) =>
-              form.setPlannedDate(inputEvent.target.value)
-            }
-            required
-            type="date"
-            value={form.plannedDate}
-          />
-        </label>
+        <TextField
+          label="Плановая дата"
+          required
+          disabled={isSaving}
+          type="date"
+          value={form.plannedDate}
+          onChange={form.setPlannedDate}
+        />
 
         <EquipmentEventResponsibleFields
           onToggle={form.toggleResponsible}
@@ -90,22 +86,23 @@ export function EquipmentEventFormModal({
         />
 
         <EquipmentEventChecklistAssignments
-          checklistTemplateIdByResponsible={form.checklistTemplateIdsByResponsible}
+          checklistTemplateIdByResponsible={
+            form.checklistTemplateIdsByResponsible
+          }
           checklistTemplateOptions={checklistTemplates}
           onAssign={form.assignChecklistTemplate}
           responsibleUserIds={form.responsibleUserIds}
           users={form.responsibleOptions}
         />
 
-        <label className="form-field">
-          <span className="form-field-label">Комментарий</span>
-          <textarea
-            onChange={(inputEvent) => form.setNote(inputEvent.target.value)}
-            placeholder="Комментарий к событию"
-            rows={4}
-            value={form.note}
-          />
-        </label>
+        <TextareaField
+          disabled={isSaving}
+          label="Комментарий"
+          onChange={(value) => form.setNote(value)}
+          placeholder="Комментарий к событию"
+          rows={4}
+          value={form.note}
+        />
 
         {form.error || serverError ? (
           <p className="admin-form-error">{form.error ?? serverError}</p>

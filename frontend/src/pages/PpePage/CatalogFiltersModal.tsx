@@ -1,3 +1,4 @@
+import { AdminTextField as TextField } from "../../shared/ui/AdminFormControls";
 import { useId, useState } from "react";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import { AppSelect } from "../../shared/ui/SelectDropdown/AppSelect";
@@ -33,7 +34,9 @@ export function CatalogFiltersModal({
             ...draftFilters,
             size: draftFilters.size.trim(),
             height:
-              (draftFilters.type === "BODY" || draftFilters.type === "TSHIRT") ? draftFilters.height.trim() : "",
+              draftFilters.type === "BODY" || draftFilters.type === "TSHIRT"
+                ? draftFilters.height.trim()
+                : "",
           });
         }}
       >
@@ -44,7 +47,10 @@ export function CatalogFiltersModal({
               setDraftFilters({
                 ...draftFilters,
                 type: e.target.value,
-                height: (e.target.value === "BODY" || e.target.value === "TSHIRT") ? draftFilters.height : "",
+                height:
+                  e.target.value === "BODY" || e.target.value === "TSHIRT"
+                    ? draftFilters.height
+                    : "",
               })
             }
           >
@@ -68,14 +74,14 @@ export function CatalogFiltersModal({
             <option value="false">Удалённые</option>
           </AppSelect>
         </Field>
-        <Field label="Размер">
-          <input
-            value={draftFilters.size}
-            onChange={(e) =>
-              setDraftFilters({ ...draftFilters, size: e.target.value })
-            }
-          />
-        </Field>
+        <TextField
+          fieldClassName="ppe-field"
+          label="Размер"
+          value={draftFilters.size}
+          onChange={(value) =>
+            setDraftFilters({ ...draftFilters, size: value })
+          }
+        />
         {(draftFilters.type === "BODY" || draftFilters.type === "TSHIRT") && (
           <Field label="Ростовка">
             <input

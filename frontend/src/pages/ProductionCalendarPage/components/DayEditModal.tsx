@@ -1,3 +1,4 @@
+import { TextareaField } from "../../../shared/ui/TextField";
 import { CalendarDays, RotateCcw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AdminModal } from "../../../shared/ui/AdminModal";
@@ -73,21 +74,19 @@ export function DayEditModal({
           </div>
         </fieldset>
 
-        <label className="form-field">
-          <span className="form-field-label">Комментарий</span>
-          <textarea
-            autoFocus
-            disabled={isSaving}
-            maxLength={220}
-            onChange={(event) =>
-              setDraft((current) => ({
-                ...current,
-                comment: event.target.value,
-              }))
-            }
-            value={draft.comment}
-          />
-        </label>
+        <TextareaField
+          label="Комментарий"
+          autoFocus
+          disabled={isSaving}
+          maxLength={220}
+          onChange={(value) =>
+            setDraft((current) => ({
+              ...current,
+              comment: value,
+            }))
+          }
+          value={draft.comment}
+        />
 
         <div className="admin-form-actions production-calendar-edit-actions">
           <button

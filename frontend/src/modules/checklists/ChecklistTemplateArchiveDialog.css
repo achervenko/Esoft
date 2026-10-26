@@ -95,15 +95,11 @@
 .checklist-template-archive-reason-footer {
   min-height: 18px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   color: #6b7280;
   font-size: 12px;
   font-weight: 800;
-}
-
-.checklist-template-archive-reason-footer span:first-child {
-  color: #b42318;
 }
 
 @media (max-width: 560px) {

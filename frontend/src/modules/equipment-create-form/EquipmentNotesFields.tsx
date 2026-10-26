@@ -1,4 +1,4 @@
-import { FormField } from "../../shared/ui/FormField";
+import { TextareaField } from "../../shared/ui/TextField";
 import type { EquipmentFieldsProps } from "./model/equipment-fields.types";
 
 export function EquipmentNotesFields({
@@ -9,31 +9,25 @@ export function EquipmentNotesFields({
 }: EquipmentFieldsProps) {
   return (
     <>
-      <FormField
+      <TextareaField
         label="Технологическая операция"
         error={fieldErrors.operationText}
-        className="form-field-wide"
-      >
-        <textarea
-          onChange={(event) => onChange("operationText", event.target.value)}
-          onFocus={() => onFieldFocus("operationText")}
-          rows={5}
-          value={form.operationText}
-        />
-      </FormField>
+        fieldClassName="form-field-wide"
+        onChange={(value) => onChange("operationText", value)}
+        onFocus={() => onFieldFocus("operationText")}
+        rows={5}
+        value={form.operationText}
+      />
 
-      <FormField
+      <TextareaField
         label="Примечание"
         error={fieldErrors.notes}
-        className="form-field-wide"
-      >
-        <textarea
-          onChange={(event) => onChange("notes", event.target.value)}
-          onFocus={() => onFieldFocus("notes")}
-          rows={5}
-          value={form.notes}
-        />
-      </FormField>
+        fieldClassName="form-field-wide"
+        onChange={(value) => onChange("notes", value)}
+        onFocus={() => onFieldFocus("notes")}
+        rows={5}
+        value={form.notes}
+      />
     </>
   );
 }

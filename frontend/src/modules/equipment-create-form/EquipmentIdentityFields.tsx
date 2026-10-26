@@ -1,3 +1,4 @@
+import { TextField, TextareaField } from "../../shared/ui/TextField";
 import { FormField } from "../../shared/ui/FormField";
 import { SearchSelect } from "../../shared/ui/SearchSelect";
 import type { EquipmentCreateOptions } from "../../shared/api/equipment/equipment.types";
@@ -36,19 +37,16 @@ export function EquipmentIdentityFields({
         />
       </FormField>
 
-      <FormField
+      <TextField
         label="Название оборудования"
         error={fieldErrors.name}
         required
-        className="form-field-wide"
-      >
-        <input
-          onChange={(event) => onChange("name", event.target.value)}
-          onFocus={() => onFieldFocus("name")}
-          type="text"
-          value={form.name}
-        />
-      </FormField>
+        fieldClassName="form-field-wide"
+        onChange={(value) => onChange("name", value)}
+        onFocus={() => onFieldFocus("name")}
+        type="text"
+        value={form.name}
+      />
 
       <SearchSelect
         label="Производитель"
@@ -70,40 +68,34 @@ export function EquipmentIdentityFields({
         value={form.modelId}
       />
 
-      <FormField
+      <TextareaField
         label="Технические характеристики"
         error={fieldErrors.specifications}
-        className="form-field-wide"
-      >
-        <textarea
-          onChange={(event) => onChange("specifications", event.target.value)}
-          onFocus={() => onFieldFocus("specifications")}
-          rows={5}
-          value={form.specifications}
-        />
-      </FormField>
+        fieldClassName="form-field-wide"
+        onChange={(value) => onChange("specifications", value)}
+        onFocus={() => onFieldFocus("specifications")}
+        rows={5}
+        value={form.specifications}
+      />
 
-      <FormField label="Заводской номер" error={fieldErrors.serialNumber}>
-        <input
-          onChange={(event) => onChange("serialNumber", event.target.value)}
-          onFocus={() => onFieldFocus("serialNumber")}
-          type="text"
-          value={form.serialNumber}
-        />
-      </FormField>
+      <TextField
+        label="Заводской номер"
+        error={fieldErrors.serialNumber}
+        onChange={(value) => onChange("serialNumber", value)}
+        onFocus={() => onFieldFocus("serialNumber")}
+        type="text"
+        value={form.serialNumber}
+      />
 
-      <FormField
+      <TextField
         label="Инвентарный номер"
         error={fieldErrors.inventoryNumber}
         required
-      >
-        <input
-          onChange={(event) => onChange("inventoryNumber", event.target.value)}
-          onFocus={() => onFieldFocus("inventoryNumber")}
-          type="text"
-          value={form.inventoryNumber}
-        />
-      </FormField>
+        onChange={(value) => onChange("inventoryNumber", value)}
+        onFocus={() => onFieldFocus("inventoryNumber")}
+        type="text"
+        value={form.inventoryNumber}
+      />
     </>
   );
 }

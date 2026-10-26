@@ -1,4 +1,7 @@
-import { RequiredMark } from "../../shared/ui/RequiredMark";
+import {
+  AdminTextField,
+  AdminFormActions,
+} from "../../shared/ui/AdminFormControls";
 import { useState } from "react";
 import type { DictionaryNamePayload } from "../../shared/api/dictionaries-admin-api";
 import { AdminModal } from "../../shared/ui/AdminModal";
@@ -47,39 +50,18 @@ export function NameDictionaryFormModal({
   return (
     <AdminModal isCloseDisabled={isSaving} onClose={onClose} title={title}>
       <form className="admin-form" onSubmit={handleSubmit}>
-        <label className="form-field">
-          <span className="form-field-label">
-            Название<RequiredMark />
-          </span>
-          <input
-            autoFocus
-            data-dialog-autofocus
-            maxLength={maxLength}
-            required
-            onChange={(event) => setName(event.target.value)}
-            value={name}
-          />
-        </label>
-
-        {error ? <p className="admin-form-error">{error}</p> : null}
-
-        <div className="admin-form-actions">
-          <button
-            className="admin-secondary-button"
-            disabled={isSaving}
-            onClick={onClose}
-            type="button"
-          >
-            Отмена
-          </button>
-          <button
-            className="admin-primary-button"
-            disabled={isSaving}
-            type="submit"
-          >
-            {isSaving ? "Сохранение..." : "Сохранить"}
-          </button>
-        </div>
+        <AdminTextField
+          label="Название"
+          autoFocus
+          data-dialog-autofocus
+          maxLength={maxLength}
+          required
+          disabled={isSaving}
+          error={error ?? undefined}
+          onChange={setName}
+          value={name}
+        />
+        <AdminFormActions isSaving={isSaving} onClose={onClose} />
       </form>
     </AdminModal>
   );

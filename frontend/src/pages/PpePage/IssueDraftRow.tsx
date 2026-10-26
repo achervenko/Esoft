@@ -1,3 +1,4 @@
+import { AdminTextareaField as TextareaField } from "../../shared/ui/AdminFormControls";
 import { Search } from "lucide-react";
 import { SearchSelect } from "../../shared/ui/SearchSelect";
 import { useLayoutEffect, useState } from "react";
@@ -55,15 +56,23 @@ export function IssueDraftRow({
         maxResults={null}
         value={row.ppeItemId || null}
         options={items
-          .filter((item) => item.isActive && (!row.norm ||
-            (item.type === row.norm.type && item.unit === row.norm.unit)))
-          .map((item) => ({ id: item.id, name: `${item.article} — ${item.name}` }))}
+          .filter(
+            (item) =>
+              item.isActive &&
+              (!row.norm ||
+                (item.type === row.norm.type && item.unit === row.norm.unit)),
+          )
+          .map((item) => ({
+            id: item.id,
+            name: `${item.article} — ${item.name}`,
+          }))}
         onChange={(id) => {
-          if (row.norm && id !== null && id !== row.norm.ppeItemId) setCommentExpanded(true);
+          if (row.norm && id !== null && id !== row.norm.ppeItemId)
+            setCommentExpanded(true);
           onChange(row.key, {
-          ppeItemId: id ?? 0,
-          sizeId: "",
-          ready: false,
+            ppeItemId: id ?? 0,
+            sizeId: "",
+            ready: false,
           });
         }}
       />
@@ -80,62 +89,73 @@ export function IssueDraftRow({
           />
         </Field>
       )}
-      <div className={`ppe-issue-size-block${data?.requiresSelection && !row.sizeId && !recommendation.loading ? " ppe-issue-size-missing" : ""}`} aria-busy={recommendation.loading}>
-      <PpeQueryState {...recommendation} />
-      {data && (
-        <>
-          {data.type !== "OTHER" && data.activeSizes.length > 0 ? (
-            <Field
-              label={
-                (data.type === "BODY" || data.type === "TSHIRT")
-                  ? "Размер / ростовка"
-                  : "Размер"
-              }
-            >
-              <AppSelect
-                required={data.requiresSelection}
-                value={row.sizeId}
-                onChange={(e) => {
-                  if (row.norm && e.target.value !== row.sizeId) setCommentExpanded(true);
-                  onChange(row.key, { sizeId: e.target.value });
-                }}
+      <div
+        className={`ppe-issue-size-block${data?.requiresSelection && !row.sizeId && !recommendation.loading ? " ppe-issue-size-missing" : ""}`}
+        aria-busy={recommendation.loading}
+      >
+        <PpeQueryState {...recommendation} />
+        {data && (
+          <>
+            {data.type !== "OTHER" && data.activeSizes.length > 0 ? (
+              <Field
+                label={
+                  data.type === "BODY" || data.type === "TSHIRT"
+                    ? "Размер / ростовка"
+                    : "Размер"
+                }
               >
-                <option value="">Выберите размер</option>
-                {data.activeSizes.map((size) => (
-                  <option key={size.id} value={size.id}>
-                    {sizeLabel(size.value, size.heightValue)}
-                    {size.id === data.recommendedSizeId
-                      ? " — рекомендуется"
-                      : ""}
-                  </option>
-                ))}
-              </AppSelect>
-            </Field>
-          ) : data.requiresSelection ? (
-            <Message error="Все размеры удалены. Выдача этой позиции заблокирована до активации или добавления размера. Можно выбрать другой СИЗ." />
-          ) : (
-            <p>Выдача без размера.</p>
-          )}
-        </>
-      )}
+                <AppSelect
+                  required={data.requiresSelection}
+                  value={row.sizeId}
+                  onChange={(e) => {
+                    if (row.norm && e.target.value !== row.sizeId)
+                      setCommentExpanded(true);
+                    onChange(row.key, { sizeId: e.target.value });
+                  }}
+                >
+                  <option value="">Выберите размер</option>
+                  {data.activeSizes.map((size) => (
+                    <option key={size.id} value={size.id}>
+                      {sizeLabel(size.value, size.heightValue)}
+                      {size.id === data.recommendedSizeId
+                        ? " — рекомендуется"
+                        : ""}
+                    </option>
+                  ))}
+                </AppSelect>
+              </Field>
+            ) : data.requiresSelection ? (
+              <Message error="Все размеры удалены. Выдача этой позиции заблокирована до активации или добавления размера. Можно выбрать другой СИЗ." />
+            ) : (
+              <p>Выдача без размера.</p>
+            )}
+          </>
+        )}
       </div>
       {row.norm && (
-        <button type="button" className="admin-secondary-button ppe-comment-toggle"
-          aria-expanded={commentExpanded} onClick={() => setCommentExpanded((current) => !current)}>
+        <button
+          type="button"
+          className="admin-secondary-button ppe-comment-toggle"
+          aria-expanded={commentExpanded}
+          onClick={() => setCommentExpanded((current) => !current)}
+        >
           {commentExpanded ? "Скрыть комментарий" : "Добавить комментарий"}
         </button>
       )}
-      <div className={`ppe-employee-clothing-picker${!row.norm || commentExpanded ? " is-expanded" : ""}`}
-        aria-hidden={Boolean(row.norm) && !commentExpanded} inert={Boolean(row.norm) && !commentExpanded}>
+      <div
+        className={`ppe-employee-clothing-picker${!row.norm || commentExpanded ? " is-expanded" : ""}`}
+        aria-hidden={Boolean(row.norm) && !commentExpanded}
+        inert={Boolean(row.norm) && !commentExpanded}
+      >
         <div className="ppe-employee-clothing-picker-clip">
           <div className="ppe-employee-clothing-picker-content">
-      <Field label="Комментарий">
-        <textarea
-          maxLength={2000}
-          value={row.comment}
-          onChange={(e) => onChange(row.key, { comment: e.target.value })}
-        />
-      </Field>
+            <TextareaField
+              fieldClassName="ppe-field"
+              label="Комментарий"
+              maxLength={2000}
+              value={row.comment}
+              onChange={(value) => onChange(row.key, { comment: value })}
+            />
           </div>
         </div>
       </div>

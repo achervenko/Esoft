@@ -1,4 +1,4 @@
-import { RequiredMark } from "../../shared/ui/RequiredMark";
+import { AdminTextField } from "../../shared/ui/AdminFormControls";
 import { useState } from "react";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import { SelectDropdown } from "../../shared/ui/SelectDropdown";
@@ -60,6 +60,7 @@ export function ParentNameDictionaryFormModal({
     <AdminModal isCloseDisabled={isSaving} onClose={onClose} title={title}>
       <form className="admin-form" onSubmit={handleSubmit}>
         <SelectDropdown
+          disabled={isSaving}
           label={parentLabel}
           onChange={(value) =>
             setForm((currentForm) => ({
@@ -76,25 +77,21 @@ export function ParentNameDictionaryFormModal({
           value={form.parentId}
         />
 
-        <label className="form-field">
-          <span className="form-field-label">
-            {nameLabel}
-            <RequiredMark />
-          </span>
-          <input
-            autoFocus
-            data-dialog-autofocus
-            maxLength={128}
-            required
-            onChange={(event) =>
-              setForm((currentForm) => ({
-                ...currentForm,
-                name: event.target.value,
-              }))
-            }
-            value={form.name}
-          />
-        </label>
+        <AdminTextField
+          disabled={isSaving}
+          label={nameLabel}
+          required
+          autoFocus
+          data-dialog-autofocus
+          maxLength={128}
+          onChange={(value) =>
+            setForm((currentForm) => ({
+              ...currentForm,
+              name: value,
+            }))
+          }
+          value={form.name}
+        />
 
         {error ? <p className="admin-form-error">{error}</p> : null}
 

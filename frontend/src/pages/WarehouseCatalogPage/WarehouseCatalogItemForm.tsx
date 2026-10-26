@@ -2,6 +2,11 @@ import { useState } from "react";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import { Notice } from "../../shared/ui/Notice";
 import { Switch } from "../../shared/ui/Switch";
+import {
+  AdminTextField,
+  AdminTextareaField,
+  AdminFormActions,
+} from "../../shared/ui/AdminFormControls";
 import type {
   WarehouseItem,
   WarehouseItemInput,
@@ -66,49 +71,25 @@ export function WarehouseCatalogItemForm({
             ["unit", "Ед. изм.", 50],
           ] as const
         ).map(([key, label, limit]) => (
-          <label className="form-field" key={key}>
-            <span className="form-field-label">{label}</span>
-            <input
-              autoFocus={key === "article"}
-              required
-              maxLength={limit}
-              value={values[key]}
-              disabled={saving}
-              aria-invalid={
-                key === "article" && error?.field === "article"
-                  ? true
-                  : undefined
-              }
-              aria-describedby={
-                key === "article" && error?.field === "article"
-                  ? "warehouse-article-error"
-                  : undefined
-              }
-              onChange={(e) =>
-                setValues((v) => ({ ...v, [key]: e.target.value }))
-              }
-            />
-          </label>
-        ))}
-        <label className="form-field">
-          <span className="form-field-label">Комментарий</span>
-          <textarea
-            value={values.comment}
+          <AdminTextField
+            key={key}
+            label={label}
+            autoFocus={key === "article"}
+            required
+            maxLength={limit}
+            value={values[key]}
             disabled={saving}
-            onChange={(e) =>
-              setValues((v) => ({ ...v, comment: e.target.value }))
-            }
+            error={error?.field === key ? error.message : undefined}
+            onChange={(value) => setValues((v) => ({ ...v, [key]: value }))}
           />
-        </label>
-        {error && (
-          <div
-            id={
-              error.field === "article" ? "warehouse-article-error" : undefined
-            }
-          >
-            <Notice tone="error">{error.message}</Notice>
-          </div>
-        )}
+        ))}
+        <AdminTextareaField
+          label="Комментарий"
+          value={values.comment}
+          disabled={saving}
+          onChange={(value) => setValues((v) => ({ ...v, comment: value }))}
+        />
+        {error && !error.field && <Notice tone="error">{error.message}</Notice>}
         {item && (
           <div className="warehouse-catalog-form-status">
             <span>{item.isActive ? "Активна" : "Неактивна"}</span>
@@ -120,28 +101,16 @@ export function WarehouseCatalogItemForm({
             />
           </div>
         )}
-        <div className="admin-form-actions">
-          <button
-            className="admin-secondary-button"
-            type="button"
-            disabled={saving}
-            onClick={onClose}
-          >
-            Отмена
-          </button>
-          <button
-            className="admin-primary-button"
-            disabled={
-              saving ||
-              unchanged ||
-              !normalized.article ||
-              !normalized.name ||
-              !normalized.unit
-            }
-          >
-            Сохранить
-          </button>
-        </div>
+        <AdminFormActions
+          isSaving={saving}
+          onClose={onClose}
+          submitDisabled={
+            unchanged ||
+            !normalized.article ||
+            !normalized.name ||
+            !normalized.unit
+          }
+        />
       </form>
     </AdminModal>
   );

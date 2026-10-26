@@ -1,3 +1,4 @@
+import { TextField } from "../../shared/ui/TextField";
 import { useId, useRef, useState } from "react";
 import { getUserRoles, USER_ROLES } from "../../shared/lib/user-roles";
 import { getProfileRoleLabel } from "../../modules/user-profile/profile-access";
@@ -16,7 +17,6 @@ import type {
 } from "../../shared/api/users-admin-api";
 import { GuardedAdminModal } from "../../shared/ui/GuardedAdminModal";
 import { SelectDropdown } from "../../shared/ui/SelectDropdown";
-import { FormField } from "../../shared/ui/FormField";
 
 type UserAccountFormModalProps = {
   employees: AdminEmployee[];
@@ -162,36 +162,37 @@ export function UserAccountFormModal({
             required
             value={form.employeeId}
           />
-          <FormField label="Email" required error={fieldErrors.email}>
-            <input
-              disabled={isSaving}
-              maxLength={255}
-              onChange={(event) => updateField("email", event.target.value)}
-              type="email"
-              value={form.email}
-            />
-          </FormField>
-          <FormField label="Логин" required error={fieldErrors.username}>
-            <input
-              disabled={isSaving}
-              maxLength={64}
-              onChange={(event) => updateField("username", event.target.value)}
-              value={form.username}
-            />
-          </FormField>
+          <TextField
+            label="Email"
+            required
+            error={fieldErrors.email}
+            disabled={isSaving}
+            maxLength={255}
+            onChange={(value) => updateField("email", value)}
+            type="email"
+            value={form.email}
+          />
+          <TextField
+            label="Логин"
+            required
+            error={fieldErrors.username}
+            disabled={isSaving}
+            maxLength={64}
+            onChange={(value) => updateField("username", value)}
+            value={form.username}
+          />
           {isCreateMode ? (
-            <FormField label="Пароль" required error={fieldErrors.password}>
-              <input
-                disabled={isSaving}
-                minLength={8}
-                maxLength={MAX_PASSWORD_LENGTH}
-                onChange={(event) =>
-                  updateField("password", event.target.value)
-                }
-                type="password"
-                value={form.password}
-              />
-            </FormField>
+            <TextField
+              label="Пароль"
+              required
+              error={fieldErrors.password}
+              disabled={isSaving}
+              minLength={8}
+              maxLength={MAX_PASSWORD_LENGTH}
+              onChange={(value) => updateField("password", value)}
+              type="password"
+              value={form.password}
+            />
           ) : null}
           <fieldset
             className="user-account-roles"

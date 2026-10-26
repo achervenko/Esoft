@@ -1,4 +1,4 @@
-import { RequiredMark } from "../../shared/ui/RequiredMark";
+import { AdminTextField } from "../../shared/ui/AdminFormControls";
 import { useState } from "react";
 import type {
   CountryPayload,
@@ -56,40 +56,34 @@ export function CountryFormModal({
       title={country ? "Редактирование страны" : "Новая страна"}
     >
       <form className="admin-form" onSubmit={handleSubmit}>
-        <label className="form-field">
-          <span className="form-field-label">
-            Страна<RequiredMark />
-          </span>
-          <input
-            autoFocus
-            data-dialog-autofocus
-            maxLength={128}
-            required
-            onChange={(event) =>
-              setForm((currentForm) => ({
-                ...currentForm,
-                name: event.target.value,
-              }))
-            }
-            value={form.name}
-          />
-        </label>
-        <label className="form-field">
-          <span className="form-field-label">
-            ISO<RequiredMark />
-          </span>
-          <input
-            maxLength={2}
-            required
-            onChange={(event) =>
-              setForm((currentForm) => ({
-                ...currentForm,
-                iso: event.target.value.toUpperCase(),
-              }))
-            }
-            value={form.iso}
-          />
-        </label>
+        <AdminTextField
+          label="Страна"
+          disabled={isSaving}
+          required
+          autoFocus
+          data-dialog-autofocus
+          maxLength={128}
+          onChange={(value) =>
+            setForm((currentForm) => ({
+              ...currentForm,
+              name: value,
+            }))
+          }
+          value={form.name}
+        />
+        <AdminTextField
+          label="ISO"
+          disabled={isSaving}
+          required
+          maxLength={2}
+          onChange={(value) =>
+            setForm((currentForm) => ({
+              ...currentForm,
+              iso: value.toUpperCase(),
+            }))
+          }
+          value={form.iso}
+        />
 
         {error ? <p className="admin-form-error">{error}</p> : null}
 

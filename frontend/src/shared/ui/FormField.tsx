@@ -29,22 +29,32 @@ export function FormField({
   className = "",
 }: FormFieldProps) {
   const errorId = useId();
+  const labelId = useId();
   return (
     <label
       className={`form-field ${className}${error ? " has-error" : warning ? " has-warning" : ""}`.trim()}
     >
-      <span className={`form-field-label${hideLabel ? " admin-control-label-hidden" : ""}`}>
-        {label}
+      <span
+        className={`form-field-label${hideLabel ? " admin-control-label-hidden" : ""}`}
+      >
+        <span id={labelId}>{label}</span>
         {required ? <RequiredMark /> : null}
       </span>
       {Children.map(children, (child) => {
         if (
-          !isValidElement<HTMLAttributes<HTMLElement> & { required?: boolean }>(child) ||
+          !isValidElement<HTMLAttributes<HTMLElement> & { required?: boolean }>(
+            child,
+          ) ||
           typeof child.type !== "string" ||
           !["input", "select", "textarea", "button"].includes(child.type)
         )
           return child;
         return cloneElement(child, {
+          "aria-labelledby":
+            child.props["aria-labelledby"] ??
+            (child.type === "button" || child.props["aria-label"]
+              ? undefined
+              : labelId),
           ...(child.type !== "button"
             ? {
                 "aria-required": required || child.props["aria-required"],

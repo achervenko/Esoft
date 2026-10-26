@@ -1,10 +1,11 @@
-import { Checkbox } from '@chakra-ui/react';
-import { useMemo, useState } from 'react';
-import type { FormEvent } from 'react';
-import { authClient } from '../../lib/auth-client';
-import './LoginForm.css';
+import { TextField } from "../../shared/ui/TextField";
+import { Checkbox } from "@chakra-ui/react";
+import { useId, useMemo, useState } from "react";
+import type { FormEvent } from "react";
+import { authClient } from "../../lib/auth-client";
+import "./LoginForm.css";
 
-type LoginMode = 'username' | 'email';
+type LoginMode = "username" | "email";
 
 type LoginFormProps = {
   onAuthenticated: () => Promise<void>;
@@ -21,14 +22,15 @@ export function LoginForm({
   onTogglePassword,
   showPassword,
 }: LoginFormProps) {
-  const [login, setLogin] = useState('');
-  const [password, setPassword] = useState('');
+  const passwordId = useId();
+  const [login, setLogin] = useState("");
+  const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loginMode = useMemo<LoginMode>(
-    () => (login.includes('@') ? 'email' : 'username'),
+    () => (login.includes("@") ? "email" : "username"),
     [login],
   );
 
@@ -39,7 +41,7 @@ export function LoginForm({
     const cleanLogin = login.trim();
 
     if (!cleanLogin || !password) {
-      setError('Заполните логин и пароль.');
+      setError("Заполните логин и пароль.");
       return;
     }
 
@@ -47,7 +49,7 @@ export function LoginForm({
 
     try {
       const response =
-        loginMode === 'email'
+        loginMode === "email"
           ? await authClient.signIn.email({
               email: cleanLogin,
               password,
@@ -60,14 +62,14 @@ export function LoginForm({
             });
 
       if (response.error) {
-        setError(response.error.message ?? 'Не удалось войти.');
+        setError(response.error.message ?? "Не удалось войти.");
         return;
       }
 
       onSuccessfulLogin();
       await onAuthenticated();
     } catch {
-      setError('Сервер авторизации недоступен. Проверьте backend.');
+      setError("Сервер авторизации недоступен. Проверьте backend.");
     } finally {
       setIsSubmitting(false);
     }
@@ -81,46 +83,48 @@ export function LoginForm({
         </div>
 
         <form className="login-form" onSubmit={handleSubmit}>
-          <label aria-label="Логин">
-            <input
-              autoComplete="username"
-              name="login"
-              onChange={(event) => setLogin(event.target.value)}
-              onFocus={onFocusField}
-              placeholder="Логин"
-              type="text"
-              value={login}
-            />
-          </label>
+          <TextField
+            label="Логин"
+            hideLabel
+            autoComplete="username"
+            name="login"
+            onChange={setLogin}
+            onFocus={onFocusField}
+            placeholder="Логин"
+            type="text"
+            value={login}
+          />
 
-          <label aria-label="Пароль">
+          <div className="login-password-field">
+            <label className="admin-control-label-hidden" htmlFor={passwordId}>
+              Пароль
+            </label>
             <div className="password-field">
               <input
+                id={passwordId}
                 autoComplete="current-password"
                 name="password"
                 onChange={(event) => setPassword(event.target.value)}
                 onFocus={onFocusField}
                 placeholder="Пароль"
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 value={password}
               />
               <button
-                aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
                 className="password-toggle"
                 onClick={onTogglePassword}
                 type="button"
               >
-                {showPassword ? 'Скрыть' : 'Показать'}
+                {showPassword ? "Скрыть" : "Показать"}
               </button>
             </div>
-          </label>
+          </div>
 
           <Checkbox.Root
             checked={remember}
             className="login-remember-checkbox"
-            onCheckedChange={(details) =>
-              setRemember(details.checked === true)
-            }
+            onCheckedChange={(details) => setRemember(details.checked === true)}
           >
             <Checkbox.HiddenInput />
             <Checkbox.Control />
@@ -129,8 +133,12 @@ export function LoginForm({
 
           {error && <p className="form-message error">{error}</p>}
 
-          <button className="submit-button" disabled={isSubmitting} type="submit">
-            {isSubmitting ? 'Выполняется вход...' : 'Войти'}
+          <button
+            className="submit-button"
+            disabled={isSubmitting}
+            type="submit"
+          >
+            {isSubmitting ? "Выполняется вход..." : "Войти"}
           </button>
         </form>
       </div>

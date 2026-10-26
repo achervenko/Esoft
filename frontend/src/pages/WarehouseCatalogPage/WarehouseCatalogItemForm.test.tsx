@@ -32,10 +32,9 @@ it("creates trimmed data, prevents double submission and refreshes the list", as
   render(<WarehouseCatalogPage userPermissions={permissions} />);
   await screen.findByText(item.article);
   const dialog = await openCreate();
-  fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
-  fireEvent.submit(
-    within(dialog).getByRole("button", { name: "Сохранить" }).closest("form")!,
-  );
+  const submit = within(dialog).getByRole("button", { name: "Сохранить" });
+  fireEvent.click(submit);
+  fireEvent.submit(submit.closest("form")!);
   expect(warehouseCatalogApi.create).toHaveBeenCalledTimes(1);
   expect(warehouseCatalogApi.create).toHaveBeenCalledWith({
     article: "NEW",
@@ -44,7 +43,7 @@ it("creates trimmed data, prevents double submission and refreshes the list", as
     comment: null,
   });
   expect(
-    within(dialog).getByRole("button", { name: "Сохранить" }),
+    within(dialog).getByRole("button", { name: "Сохранение..." }),
   ).toBeDisabled();
   await act(async () => finish(item));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());

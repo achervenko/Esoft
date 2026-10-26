@@ -1,8 +1,12 @@
+import { TextField } from "../../shared/ui/TextField";
 import { useState } from "react";
-import { isValidPassword, MAX_PASSWORD_LENGTH, PASSWORD_POLICY_MESSAGE } from "../../shared/lib/password-validation";
+import {
+  isValidPassword,
+  MAX_PASSWORD_LENGTH,
+  PASSWORD_POLICY_MESSAGE,
+} from "../../shared/lib/password-validation";
 import type { AdminUserAccount } from "../../shared/api/users-admin-api";
 import { GuardedAdminModal } from "../../shared/ui/GuardedAdminModal";
-import { FormField } from "../../shared/ui/FormField";
 
 type PasswordFormModalProps = {
   isSaving: boolean;
@@ -49,17 +53,18 @@ export function PasswordFormModal({
             Новый пароль будет установлен для учётной записи{" "}
             {user.username || user.email}.
           </p>
-          <FormField label="Новый пароль" required error={error ?? undefined}>
-            <input
-              disabled={isSaving}
-              autoFocus
-              minLength={8}
-              maxLength={MAX_PASSWORD_LENGTH}
-              onChange={(event) => setPassword(event.target.value)}
-              type="password"
-              value={password}
-            />
-          </FormField>
+          <TextField
+            label="Новый пароль"
+            required
+            error={error ?? undefined}
+            disabled={isSaving}
+            autoFocus
+            minLength={8}
+            maxLength={MAX_PASSWORD_LENGTH}
+            onChange={(value) => setPassword(value)}
+            type="password"
+            value={password}
+          />
 
           <div className="admin-form-actions">
             <button

@@ -15,7 +15,13 @@ export type SelectDropdownOption = {
 };
 
 export type SelectDropdownProps = {
+  searchable?: boolean;
+  alwaysDown?: boolean;
+  className?: string;
+  menuClassName?: string;
+  "aria-label"?: string;
   selectedValues?: string[];
+  onSelectedValuesChange?: (values: string[]) => void;
   disabled?: boolean;
   error?: string;
   label?: string;
@@ -32,6 +38,10 @@ export type SelectDropdownMenuStyle = CSSProperties | null;
 export type SelectDropdownNavigationDirection = 1 | -1;
 
 export type SelectDropdownMenuProps = {
+  className?: string;
+  virtualFocus?: boolean;
+  emptyMessage?: string;
+  label?: string;
   selectedValues?: string[];
   activeIndex: number;
   closeOnFocusLeave: (event: FocusEvent<HTMLElement>) => void;

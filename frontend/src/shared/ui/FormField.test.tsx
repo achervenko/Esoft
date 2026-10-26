@@ -33,20 +33,36 @@ it("keeps the input handler and associates field errors with its control", () =>
   );
 });
 
-it("marks native fields required without applying required attributes to buttons", () => {
+it.each([
+  { kind: "input", control: <input /> },
+  {
+    kind: "select",
+    control: (
+      <select>
+        <option value="">Выберите</option>
+      </select>
+    ),
+  },
+  { kind: "textarea", control: <textarea /> },
+])("marks a native $kind required", ({ kind, control }) => {
   const view = render(
     <FormField label="Поле" required>
-      <input />
-      <select><option value="">Выберите</option></select>
-      <textarea />
+      {control}
+    </FormField>,
+  );
+  const field = view.container.querySelector(kind);
+  expect(field).toHaveAttribute("required");
+  expect(field).toHaveAttribute("aria-required", "true");
+  view.unmount();
+});
+
+it("does not apply required attributes to a button", () => {
+  const view = render(
+    <FormField label="Поле" required>
       <button type="button">Выбрать</button>
     </FormField>,
   );
-  for (const control of view.container.querySelectorAll("input, select, textarea")) {
-    expect(control).toHaveAttribute("required");
-    expect(control).toHaveAttribute("aria-required", "true");
-  }
-  const button = screen.getByRole("button", { name: "Выбрать" });
+  const button = screen.getByRole("button");
   expect(button).not.toHaveAttribute("required");
   expect(button).not.toHaveAttribute("aria-required");
   view.unmount();
@@ -74,10 +90,15 @@ it("identifies the label without marking nested control content", () => {
   const view = render(
     <FormField label="Выбор" hideLabel>
       <span>Подсказка</span>
-      <button type="button"><span>Открыть</span></button>
+      <button type="button">
+        <span>Открыть</span>
+      </button>
     </FormField>,
   );
-  expect(screen.getByText("Выбор")).toHaveClass("form-field-label", "admin-control-label-hidden");
+  expect(screen.getByText("Выбор").closest(".form-field-label")).toHaveClass(
+    "form-field-label",
+    "admin-control-label-hidden",
+  );
   const content = screen.getByText("Открыть");
   expect(screen.getByText("Подсказка")).not.toHaveClass("form-field-label");
   expect(content).not.toHaveClass("form-field-label");

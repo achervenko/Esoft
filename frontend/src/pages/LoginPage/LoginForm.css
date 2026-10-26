@@ -17,7 +17,8 @@
   gap: 18px;
 }
 
-.login-form label {
+.login-form label,
+.login-form .login-password-field {
   display: flex;
   flex-direction: column;
   color: #2d3440;
@@ -36,23 +37,25 @@
   font-weight: 600;
 }
 
-.login-form .login-remember-checkbox [data-part='label'] {
+.login-form .login-remember-checkbox [data-part="label"] {
   display: inline;
   color: inherit;
   font: inherit;
 }
 
-.login-form .login-remember-checkbox [data-part='control'] {
+.login-form .login-remember-checkbox [data-part="control"] {
   border-color: #b9b0b0;
 }
 
-.login-form .login-remember-checkbox [data-part='control'][data-state='checked'] {
+.login-form
+  .login-remember-checkbox
+  [data-part="control"][data-state="checked"] {
   border-color: #111111;
   background: #111111;
 }
 
-.login-form input[type='text'],
-.login-form input[type='password'] {
+.login-form input[type="text"],
+.login-form input[type="password"] {
   width: 100%;
   min-height: 56px;
   border: 0;

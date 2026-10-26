@@ -1,3 +1,4 @@
+import { AdminTextField as TextField } from "../../shared/ui/AdminFormControls";
 import "../../modules/ppe-ui/PpeForm.css";
 import { useRef, useState } from "react";
 import { ApiRequestError } from "../../shared/api/api-error";
@@ -6,12 +7,27 @@ import { ppeApi, type PpeItem, type PpeType } from "../../shared/api/ppe";
 import { GuardedAdminModal } from "../../shared/ui/GuardedAdminModal";
 import { useDraftChanges } from "../../shared/lib/use-draft-changes";
 import { Field, Message } from "../../modules/ppe-ui/ppe-ui";
-import { ppeError, typeLabels, ppeUnits } from "../../modules/ppe-ui/ppe-presentation";
+import {
+  ppeError,
+  typeLabels,
+  ppeUnits,
+} from "../../modules/ppe-ui/ppe-presentation";
 import { SizeRange } from "./SizeRange";
-import { shoeSizeRange, gloveSizeRange, headSizeRange } from "./size-range-options";
-import { defaultShoeSizes, defaultGloveSizes, defaultHeadSizes } from "../../modules/ppe-ui/ppe-size-options";
+import {
+  shoeSizeRange,
+  gloveSizeRange,
+  headSizeRange,
+} from "./size-range-options";
+import {
+  defaultShoeSizes,
+  defaultGloveSizes,
+  defaultHeadSizes,
+} from "../../modules/ppe-ui/ppe-size-options";
 import { ClothingSizeGrid } from "../../modules/ppe-ui/ClothingSizeGrid";
-import { defaultClothingSizes, defaultTshirtSizes } from "../../modules/ppe-ui/ppe-size-options";
+import {
+  defaultClothingSizes,
+  defaultTshirtSizes,
+} from "../../modules/ppe-ui/ppe-size-options";
 
 export function CatalogItemForm({
   item,
@@ -43,7 +59,10 @@ export function CatalogItemForm({
   const [articleConflict, setArticleConflict] = useState<string | null>(null);
   const article = data.article.trim();
   const duplicate = article
-    ? items.find((candidate) => candidate.id !== item?.id && candidate.article === article)
+    ? items.find(
+        (candidate) =>
+          candidate.id !== item?.id && candidate.article === article,
+      )
     : undefined;
   const articleError = duplicate
     ? `Этот артикул уже используется: «${duplicate.name}».${duplicate.isActive ? "" : " Позиция неактивна."}`
@@ -52,7 +71,10 @@ export function CatalogItemForm({
       : undefined;
   const name = data.name.trim();
   const duplicateNames = name
-    ? items.filter((candidate) => candidate.id !== item?.id && candidate.name.trim() === name)
+    ? items.filter(
+        (candidate) =>
+          candidate.id !== item?.id && candidate.name.trim() === name,
+      )
     : [];
   const nameWarning = duplicateNames.length
     ? `Такое наименование уже есть. Артикулы: ${duplicateNames.map((candidate) => `${candidate.article}${candidate.isActive ? "" : " (позиция неактивна)"}`).join(", ")}.`
@@ -83,7 +105,7 @@ export function CatalogItemForm({
                         ? []
                         : sizeRows.map((size) => ({
                             value:
-                              (data.type === "BODY" || data.type === "TSHIRT")
+                              data.type === "BODY" || data.type === "TSHIRT"
                                 ? `${size.value};${size.heightValue}`
                                 : size.value,
                           })),
@@ -95,7 +117,10 @@ export function CatalogItemForm({
               onClose();
             })
             .catch((err) => {
-              if (err instanceof ApiRequestError && err.code === "PPE_ITEM_ARTICLE_CONFLICT") {
+              if (
+                err instanceof ApiRequestError &&
+                err.code === "PPE_ITEM_ARTICLE_CONFLICT"
+              ) {
                 setArticleConflict(article);
               } else {
                 setError(ppeError(err));
@@ -109,19 +134,17 @@ export function CatalogItemForm({
       >
         <div className="ppe-item-fields">
           {(["article", "name"] as const).map((key, index) => (
-            <Field
+            <TextField
+              fieldClassName="ppe-field"
               key={key}
               label={["Артикул", "Наименование", "Единица измерения"][index]}
               error={key === "article" ? articleError : undefined}
               warning={key === "name" ? nameWarning : undefined}
-            >
-              <input
-                required
-                value={data[key]}
-                disabled={saving}
-                onChange={(e) => setData({ ...data, [key]: e.target.value })}
-              />
-            </Field>
+              required
+              value={data[key]}
+              disabled={saving}
+              onChange={(value) => setData({ ...data, [key]: value })}
+            />
           ))}
           <Field label="Тип">
             <AppSelect
@@ -134,15 +157,27 @@ export function CatalogItemForm({
                   type,
                   unit: type === "FEET" || type === "HANDS" ? "пары" : "шт",
                 });
-                if (!item && (type === "FEET" || type === "HANDS" || type === "HEAD")) {
+                if (
+                  !item &&
+                  (type === "FEET" || type === "HANDS" || type === "HEAD")
+                ) {
                   setSizeRows(
-                    (type === "FEET" ? defaultShoeSizes() : type === "HANDS" ? defaultGloveSizes() : defaultHeadSizes()).map((value) => ({
+                    (type === "FEET"
+                      ? defaultShoeSizes()
+                      : type === "HANDS"
+                        ? defaultGloveSizes()
+                        : defaultHeadSizes()
+                    ).map((value) => ({
                       value,
                       heightValue: "",
                     })),
                   );
                 } else if (!item && (type === "BODY" || type === "TSHIRT")) {
-                  setSizeRows(type === "TSHIRT" ? defaultTshirtSizes() : defaultClothingSizes());
+                  setSizeRows(
+                    type === "TSHIRT"
+                      ? defaultTshirtSizes()
+                      : defaultClothingSizes(),
+                  );
                 } else if (type !== data.type) {
                   setSizeRows([]);
                 }
@@ -169,16 +204,23 @@ export function CatalogItemForm({
             </AppSelect>
           </Field>
         </div>
-        {!item && (data.type === "FEET" || data.type === "HANDS" || data.type === "HEAD") && (
-          <SizeRange
-            {...(data.type === "FEET" ? shoeSizeRange : data.type === "HANDS" ? gloveSizeRange : headSizeRange)}
-            values={sizeRows.map((size) => size.value)}
-            disabled={saving}
-            onChange={(values) =>
-              setSizeRows(values.map((value) => ({ value, heightValue: "" })))
-            }
-          />
-        )}
+        {!item &&
+          (data.type === "FEET" ||
+            data.type === "HANDS" ||
+            data.type === "HEAD") && (
+            <SizeRange
+              {...(data.type === "FEET"
+                ? shoeSizeRange
+                : data.type === "HANDS"
+                  ? gloveSizeRange
+                  : headSizeRange)}
+              values={sizeRows.map((size) => size.value)}
+              disabled={saving}
+              onChange={(values) =>
+                setSizeRows(values.map((value) => ({ value, heightValue: "" })))
+              }
+            />
+          )}
         {!item && (data.type === "BODY" || data.type === "TSHIRT") && (
           <ClothingSizeGrid
             variant={data.type === "TSHIRT" ? "tshirt" : "clothing"}
@@ -195,7 +237,10 @@ export function CatalogItemForm({
         )}
         <Message error={error} />
         <div className="ppe-form-actions">
-          <button className="admin-primary-button" disabled={saving || Boolean(articleError)}>
+          <button
+            className="admin-primary-button"
+            disabled={saving || Boolean(articleError)}
+          >
             {saving ? "Сохранение..." : "Сохранить"}
           </button>
         </div>
