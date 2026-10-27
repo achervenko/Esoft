@@ -89,7 +89,12 @@ function date(value: unknown) {
   return result;
 }
 export function parseCreateSheet(value: unknown) {
-  const body = sheetRecord(value, ['name', 'sourceFileName', 'sourceFileHash']);
+  const body = sheetRecord(value, [
+    'warehouseId',
+    'name',
+    'sourceFileName',
+    'sourceFileHash',
+  ]);
   const name = text(body.name, 255)!;
   const sourceFileName =
     body.sourceFileName === undefined
@@ -100,6 +105,7 @@ export function parseCreateSheet(value: unknown) {
       ? null
       : text(body.sourceFileHash, 64, true);
   return {
+    warehouseId: parseWarehouseId(body.warehouseId),
     name,
     sourceFileName,
     sourceFileHash: hash === null ? null : sha256(hash),
@@ -172,6 +178,7 @@ export function parseSheetLine(value: unknown, create: boolean) {
 }
 export function parseSheetFilters(value: unknown) {
   const q = sheetRecord(value ?? {}, [
+    'warehouseId',
     'statuses',
     'createdByUserId',
     'processedByUserId',
@@ -192,6 +199,8 @@ export function parseSheetFilters(value: unknown) {
     'limit',
   ]);
   const result = {
+    warehouseId:
+      q.warehouseId === undefined ? undefined : parseWarehouseId(q.warehouseId),
     statuses:
       q.statuses === undefined
         ? undefined

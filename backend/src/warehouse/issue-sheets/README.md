@@ -1,8 +1,10 @@
 # IssueSheets
 
+Обязательная принадлежность выдач и листов складу, warehouseId-фильтры и состав DTO описаны в [контракте границ складов](../storage-structure/WAREHOUSE-BOUNDARIES.md).
+
 Backend-компонент заданий на выдачу. Использует существующие `WarehouseIssueSheet`,
 `WarehouseIssueSheetLine`, `WarehouseIssue`, `WarehouseIssuePosition` пакета warehouse.
-Новых таблиц и миграций не требует. Физический остаток, резервы и выбор мест фактической
+В схему добавлен обязательный warehouseId листа. Физический остаток, резервы и выбор мест фактической
 выдачи не изменяет. UI и импорт файлов не входят в этот компонент: исходные поля
 принимаются подготовленными данными.
 
@@ -41,7 +43,7 @@ storekeeper, в том числе совмещённые роли). На каж�
 Для ready/finalize/cancel body пустой `{}`. Передача статуса запрещена.
 Автор и время создания/завершения определяются сервером.
 
-Создание: `{ name, sourceFileName?, sourceFileHash? }`. Имя и имя файла до 255
+Создание: `{ warehouseId, name, sourceFileName?, sourceFileHash? }`. Имя и имя файла до 255
 символов, hash — SHA-256 из 64 hex-символов. Hash нормализуется в нижний регистр,
 но не является уникальным: повторный импорт сам по себе не запрещён.
 
@@ -64,7 +66,7 @@ itemId, storageLocationId, projectId, quantity, unitSnapshot, matchingStatus, er
 
 ## Списки и прогресс
 
-GET списка принимает все фильтры ТЗ: statuses, createdByUserId, processedByUserId,
+GET списка принимает: warehouseId, statuses, createdByUserId, processedByUserId,
 projectId, itemId, hasErrors, hasUnmatchedLines, hasShortage, sourceFileHash,
 createdFrom/createdTo, processedFrom/processedTo, search, sortBy, sortOrder, page, limit.
 Статусы можно передать повторёнными query-параметрами или через запятую.

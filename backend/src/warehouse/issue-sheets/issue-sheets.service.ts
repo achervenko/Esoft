@@ -53,7 +53,9 @@ export class WarehouseIssueSheetsService {
     itemId: string,
     quantity: string,
     actor: string,
-    execute: (line: WarehouseIssueSheetLine) => Promise<T>,
+    execute: (
+      line: WarehouseIssueSheetLine & { warehouseId: bigint },
+    ) => Promise<T>,
   ) {
     return this.execution.executeIssueForLine(
       tx,

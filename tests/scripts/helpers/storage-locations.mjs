@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const {
   WarehouseStorageLocationsService,
-} = require("../../../backend/dist/src/warehouse/storage-locations/storage-locations.service.js");
+} = require("../../../backend/dist/src/warehouse/storage-structure/storage-locations.service.js");
 const {
   AuditLogService,
 } = require("../../../backend/dist/src/audit/audit-log.service.js");
@@ -24,6 +24,10 @@ export async function verifyStorageLocations(prisma) {
       role: "storekeeper",
     },
   });
+  const parent = await prisma.warehouse.create({
+    data: { code: "LOCATIONS", name: "Locations warehouse" },
+  });
+  const warehouseId = String(parent.id);
   const denied = await prisma.user.create({
     data: {
       id: "locations-denied",
@@ -33,15 +37,15 @@ export async function verifyStorageLocations(prisma) {
     },
   });
   await assert.rejects(
-    service.create({ code: "DENIED", name: "No" }, denied.id),
+    service.create({ warehouseId, code: "DENIED", name: "No" }, denied.id),
     (e) => e.status === 403,
   );
   await assert.rejects(
-    service.create({ code: "MISSING", name: "No" }, "missing"),
+    service.create({ warehouseId, code: "MISSING", name: "No" }, "missing"),
     (e) => e.status === 403,
   );
   const loc = await service.create(
-    { code: " A-01 ", name: " Полка " },
+    { warehouseId, code: " A-01 ", name: " Полка " },
     user.id,
   );
   assert.equal(loc.code, "A-01");
@@ -49,7 +53,7 @@ export async function verifyStorageLocations(prisma) {
   assert.equal(typeof loc.id, "string");
   assert.equal(loc.isActive, true);
   await assert.rejects(
-    service.create({ code: "A-01", name: "Duplicate" }, user.id),
+    service.create({ warehouseId, code: "A-01", name: "Duplicate" }, user.id),
     (error) => {
       assert.equal(error.getStatus(), 409);
       return code("WAREHOUSE_STORAGE_LOCATION_CODE_CONFLICT")(error);
@@ -66,8 +70,8 @@ export async function verifyStorageLocations(prisma) {
   );
   assert.equal(await prisma.auditLog.count({ where: auditWhere }), auditCount);
   const concurrent = await Promise.allSettled([
-    service.create({ code: "RACE", name: "A" }, user.id),
-    service.create({ code: "RACE", name: "B" }, user.id),
+    service.create({ warehouseId, code: "RACE", name: "A" }, user.id),
+    service.create({ warehouseId, code: "RACE", name: "B" }, user.id),
   ]);
   assert.equal(concurrent.filter((x) => x.status === "fulfilled").length, 1);
   assert.equal(
@@ -117,12 +121,15 @@ export async function verifyStorageLocations(prisma) {
   );
   assert.equal((await service.findOne(loc.id)).name, "Обновлено");
   await assert.rejects(
-    failing.create({ code: "ROLLBACK", name: "Rollback" }, user.id),
+    failing.create(
+      { warehouseId, code: "ROLLBACK", name: "Rollback" },
+      user.id,
+    ),
     /audit unavailable/,
   );
   assert.equal(
     await prisma.warehouseStorageLocation.count({
-      where: { code: "ROLLBACK" },
+      where: { warehouseId, code: "ROLLBACK" },
     }),
     0,
   );

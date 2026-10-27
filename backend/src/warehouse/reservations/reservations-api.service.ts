@@ -35,7 +35,11 @@ export class WarehouseReservationsApiService {
     const where: Prisma.WarehouseProjectReservationWhereInput = {
       balanceId: q.balanceId,
       projectId: q.projectId,
-      balance: { itemId: q.itemId, storageLocationId: q.locationId },
+      balance: {
+        itemId: q.itemId,
+        storageLocationId: q.locationId,
+        storageLocation: { warehouseId: q.warehouseId },
+      },
     };
     return this.prisma.$transaction(
       async (tx) => {

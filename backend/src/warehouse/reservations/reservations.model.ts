@@ -1,3 +1,11 @@
+import {
+  warehouseItemSummarySelect,
+  warehouseItemSummaryDto,
+} from '../catalog/catalog.dto';
+import {
+  locationWithWarehouseSelect,
+  locationWithWarehouseDto,
+} from '../storage-structure/storage-structure.dto';
 import { Prisma } from '@prisma/client';
 export const reservationInclude = {
   project: {
@@ -5,17 +13,9 @@ export const reservationInclude = {
   },
   balance: {
     include: {
-      item: {
-        select: {
-          id: true,
-          article: true,
-          name: true,
-          unit: true,
-          isActive: true,
-        },
-      },
+      item: { select: warehouseItemSummarySelect },
       storageLocation: {
-        select: { id: true, code: true, name: true, isActive: true },
+        select: locationWithWarehouseSelect,
       },
     },
   },
@@ -29,11 +29,8 @@ export function reservationDto(r: Row) {
     balanceId: String(r.balanceId),
     projectId: String(r.projectId),
     quantity: r.quantity.toString(),
-    item: { ...r.balance.item, id: String(r.balance.item.id) },
-    location: {
-      ...r.balance.storageLocation,
-      id: String(r.balance.storageLocation.id),
-    },
+    item: warehouseItemSummaryDto(r.balance.item),
+    location: locationWithWarehouseDto(r.balance.storageLocation),
     project: { ...r.project, id: String(r.project.id) },
   };
 }

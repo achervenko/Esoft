@@ -1,3 +1,4 @@
+import { formatBusinessDateTime } from "../../shared/lib/business-date";
 import type { ChecklistWorkStatus } from "../../shared/api/checklists";
 import { getHashRouteParam } from "../../shared/lib/hash-navigation";
 import type { ChecklistProgressLike } from "./my-checklists.types";
@@ -34,10 +35,10 @@ export function formatDateTime(value: string | null) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("ru-RU", {
+  return formatBusinessDateTime(date, {
     dateStyle: "short",
     timeStyle: "short",
-  }).format(date);
+  });
 }
 
 export function formatProgress(progress: ChecklistProgressLike) {

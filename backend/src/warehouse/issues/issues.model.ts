@@ -1,4 +1,8 @@
 import {
+  issueHeaderSnapshot,
+  type IssuePositionSnapshot,
+} from './issues-history';
+import {
   ConflictException,
   ForbiddenException,
   NotFoundException,
@@ -21,49 +25,42 @@ export function issueNotFound(): never {
   });
 }
 export const issueInclude = {
-  project: { select: { id: true, projectNumber: true, name: true } },
-  issuedBy: { select: { id: true, name: true } },
-  positions: {
-    orderBy: { id: 'asc' },
-    include: { balance: { include: { item: true, storageLocation: true } } },
-  },
+  positions: { orderBy: { id: 'asc' } },
 } satisfies Prisma.WarehouseIssueInclude;
 export type IssueRow = Prisma.WarehouseIssueGetPayload<{
   include: typeof issueInclude;
 }>;
 export function issueDto(issue: IssueRow) {
+  const snapshot = issueHeaderSnapshot(issue.snapshot);
   return {
     id: String(issue.id),
+    warehouseId: String(issue.warehouseId),
+    warehouse: snapshot.warehouse,
     type: issue.type,
     projectId: issue.projectId?.toString() ?? null,
     issueSheetLineId: issue.issueSheetLineId?.toString() ?? null,
-    project: issue.project
-      ? { ...issue.project, id: String(issue.project.id) }
-      : null,
+    project: snapshot.project,
     issuedByUserId: issue.issuedByUserId,
-    issuedBy: issue.issuedBy,
+    issuedBy: snapshot.issuedBy,
+    issueSheet: snapshot.issueSheet,
     createdAt: issue.createdAt,
     comment: issue.comment,
     overrideReservations: issue.overrideReservations,
     totalQuantity: issue.positions
       .reduce((sum, p) => sum.plus(p.quantity), new Prisma.Decimal(0))
       .toString(),
-    positions: issue.positions.map((p) => ({
-      id: String(p.id),
-      issueId: String(p.issueId),
-      balanceId: String(p.balanceId),
-      quantity: p.quantity.toString(),
-      item: {
-        id: String(p.balance.item.id),
-        article: p.balance.item.article,
-        name: p.balance.item.name,
-        unit: p.balance.item.unit,
-      },
-      location: {
-        id: String(p.balance.storageLocation.id),
-        code: p.balance.storageLocation.code,
-        name: p.balance.storageLocation.name,
-      },
-    })),
+    positions: issue.positions.map((p) => {
+      const saved = p.snapshot as unknown as IssuePositionSnapshot;
+      return {
+        id: String(p.id),
+        issueId: String(p.issueId),
+        balanceId: String(p.balanceId),
+        quantity: p.quantity.toString(),
+        item: saved.item,
+        location: saved.location,
+      };
+    }),
+    reservationUsage: snapshot.reservationUsage,
+    foreignReservationsUsed: snapshot.foreignReservationsUsed,
   };
 }

@@ -25,6 +25,11 @@ export function StorageLocationsTable({
   onToggle: (item: StorageLocation) => Promise<void>;
 }) {
   const columns: DataTableColumn<StorageLocation, string>[] = [
+    {
+      key: "warehouse",
+      label: "Склад",
+      render: (r) => `${r.warehouse.name} (${r.warehouse.code})`,
+    },
     { key: "code", label: "Код", render: (r) => r.code },
     { key: "name", label: "Наименование", render: (r) => r.name },
     {

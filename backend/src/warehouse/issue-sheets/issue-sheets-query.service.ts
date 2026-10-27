@@ -39,6 +39,8 @@ export class WarehouseIssueSheetsQueryService {
   async list(value: unknown) {
     const q = parseSheetFilters(value);
     const clauses = [Prisma.sql`TRUE`];
+    if (q.warehouseId)
+      clauses.push(Prisma.sql`s.warehouse_id = ${q.warehouseId}`);
     if (q.statuses)
       clauses.push(Prisma.sql`s.status IN (${Prisma.join(q.statuses)})`);
     if (q.createdByUserId)

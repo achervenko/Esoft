@@ -1,3 +1,7 @@
+import { warehousesApi } from "../../shared/api/warehouses-api";
+vi.mock("../../shared/api/warehouses-api", () => ({
+  warehousesApi: { list: vi.fn() },
+}));
 import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
 import type { ReactElement } from "react";
 import {
@@ -29,12 +33,20 @@ function render(ui: ReactElement) {
 }
 const item = {
   id: "9007199254740993",
+  warehouseId: "1",
+  warehouse: { id: "1", code: "MAIN", name: "Основной склад", isActive: true },
   code: "A-01",
   name: "Полка",
   isActive: true,
 };
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(warehousesApi.list).mockResolvedValue({
+    items: [item.warehouse],
+    total: 1,
+    page: 1,
+    limit: 100,
+  });
   vi.mocked(storageLocationsApi.get).mockResolvedValue({
     ...item,
     hasStock: true,
@@ -131,6 +143,12 @@ it("edits only changed fields and preserves bigint ID", async () => {
   fireEvent.change(within(dialog).getByLabelText("Наименование"), {
     target: { value: "Новая полка" },
   });
+  await waitFor(() =>
+    expect(within(dialog).getByText("Сохранить")).not.toBeDisabled(),
+  );
+  await waitFor(() =>
+    expect(within(dialog).getByText("Сохранить")).not.toBeDisabled(),
+  );
   fireEvent.click(within(dialog).getByText("Сохранить"));
   await waitFor(() =>
     expect(storageLocationsApi.update).toHaveBeenCalledWith(item.id, {
@@ -152,6 +170,9 @@ it("keeps the form open when create fails", async () => {
   fireEvent.change(within(dialog).getByLabelText("Наименование"), {
     target: { value: "Другая" },
   });
+  await waitFor(() =>
+    expect(within(dialog).getByText("Сохранить")).not.toBeDisabled(),
+  );
   fireEvent.click(within(dialog).getByText("Сохранить"));
   await within(dialog).findByText("Код уже существует");
   expect(screen.getByRole("dialog")).toBeTruthy();
@@ -208,10 +229,10 @@ it("does not deactivate when the user cancels the warning", async () => {
   expect(storageLocationsApi.update).not.toHaveBeenCalled();
 });
 
-it("shows exactly code, name and status columns", async () => {
+it("shows warehouse, code, name and status columns", async () => {
   render(<StorageLocationsPanel canManage />);
   await screen.findByText("A-01");
-  expect(screen.getAllByRole("columnheader")).toHaveLength(3);
+  expect(screen.getAllByRole("columnheader")).toHaveLength(4);
   expect(
     screen.getByRole("searchbox", { name: "Поиск мест хранения" }),
   ).toBeTruthy();
@@ -247,4 +268,46 @@ it("applies filter drafts only on submit and supports reset", async () => {
       vi.mocked(storageLocationsApi.list).mock.lastCall?.[0].has("isActive"),
     ).toBe(false),
   );
+});
+
+it("creates a location with its selected warehouse", async () => {
+  render(<StorageLocationsPanel canManage />);
+  await screen.findByText("A-01");
+  fireEvent.click(screen.getByRole("button", { name: "Добавить место" }));
+  const dialog = screen.getByRole("dialog");
+  fireEvent.change(within(dialog).getByLabelText("Код"), {
+    target: { value: "CORNER" },
+  });
+  fireEvent.change(within(dialog).getByLabelText("Наименование"), {
+    target: { value: "Угол ангара" },
+  });
+  await waitFor(() =>
+    expect(within(dialog).getByText("Сохранить")).not.toBeDisabled(),
+  );
+  fireEvent.click(within(dialog).getByText("Сохранить"));
+  await waitFor(() =>
+    expect(storageLocationsApi.create).toHaveBeenCalledWith({
+      warehouseId: "1",
+      code: "CORNER",
+      name: "Угол ангара",
+      isActive: true,
+    }),
+  );
+});
+
+it("blocks location creation when no warehouse is available", async () => {
+  vi.mocked(warehousesApi.list).mockResolvedValue({
+    items: [],
+    total: 0,
+    page: 1,
+    limit: 100,
+  });
+  render(<StorageLocationsPanel canManage />);
+  await screen.findByText("A-01");
+  fireEvent.click(screen.getByRole("button", { name: "Добавить место" }));
+  await screen.findByText("Нет активных складов. Сначала создайте склад.");
+  expect(
+    within(screen.getByRole("dialog")).getByText("Сохранить"),
+  ).toBeDisabled();
+  expect(storageLocationsApi.create).not.toHaveBeenCalled();
 });

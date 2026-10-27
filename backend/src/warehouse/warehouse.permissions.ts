@@ -1,4 +1,8 @@
 export const WAREHOUSE_PERMISSIONS = {
+  TRANSFERS_READ: 'warehouse.transfers.read',
+  TRANSFERS_MANAGE: 'warehouse.transfers.manage',
+  RECEIPTS_READ: 'warehouse.receipts.read',
+  RECEIPTS_MANAGE: 'warehouse.receipts.manage',
   PROJECTS_READ: 'warehouse.projects.read',
   RESERVATIONS_MANAGE: 'warehouse.reservations.manage',
   STOCK_READ: 'warehouse.stock.read',

@@ -1,3 +1,8 @@
+import {
+  captureIssueHeader,
+  captureIssuePosition,
+  issueHistorySearch,
+} from './issues-history';
 import { Injectable } from '@nestjs/common';
 import { AuditAction, AuditModule, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -5,7 +10,11 @@ import { AuditLogService } from '../../audit/audit-log.service';
 import { WarehouseStockService } from '../stock/stock.service';
 import { WarehouseIssueSheetsService } from '../issue-sheets/issue-sheets.service';
 import { WarehouseReservationsService } from '../reservations/reservations.service';
-import { parseIssue, type IssueInput } from './issues.validation';
+import {
+  parseIssue,
+  issueRequestHash,
+  type IssueInput,
+} from './issues.validation';
 import { issueConflict, issueDto, issueInclude } from './issues.model';
 import { WarehouseIssuesAccessService } from './issues-access.service';
 import {
@@ -28,7 +37,7 @@ export class WarehouseIssuesService {
     return this.run(parseIssue(value), actor, false);
   }
   previewOverride(value: unknown, actor: string) {
-    const input = parseIssue(value);
+    const input = parseIssue(value, true);
     if (!input.overrideReservations)
       issueConflict(
         'WAREHOUSE_ISSUE_OVERRIDE_REQUIRED',
@@ -51,7 +60,31 @@ export class WarehouseIssuesService {
   private run(input: IssueInput, actor: string, preview: boolean) {
     return this.prisma.$transaction(
       async (tx) => {
-        await this.access.assertAccess(tx, actor, input.overrideReservations);
+        await this.access.assertAccess(
+          tx,
+          actor,
+          input.overrideReservations,
+          input.issueSheetLineId !== null,
+        );
+        if (!preview) {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:issue', actor, input.requestKey])}, 0))`;
+          const previous = await tx.warehouseIssueRequest.findUnique({
+            where: {
+              actorUserId_requestKey: {
+                actorUserId: actor,
+                requestKey: input.requestKey!,
+              },
+            },
+          });
+          if (previous) {
+            if (previous.requestHash !== issueRequestHash(input))
+              issueConflict(
+                'WAREHOUSE_ISSUE_REQUEST_CONFLICT',
+                'Ключ запроса уже использован для другой выдачи.',
+              );
+            return previous.response;
+          }
+        }
         const execute = async (projectId: bigint | null) => {
           await this.access.assertProject(tx, projectId);
           const plan = await this.plans.build(tx, input, actor, projectId);
@@ -75,7 +108,10 @@ export class WarehouseIssuesService {
           return this.persist(tx, input, actor, projectId, plan);
         };
         if (input.issueSheetLineId !== null) {
-          const { itemId } = await this.plans.resolveItem(tx, input);
+          const { itemId, warehouseId } = await this.plans.resolveItem(
+            tx,
+            input,
+          );
           const quantity = input.positions
             .reduce((sum, p) => sum.plus(p.quantity), new Prisma.Decimal(0))
             .toString();
@@ -96,6 +132,11 @@ export class WarehouseIssuesService {
                 'WAREHOUSE_ISSUE_PROJECT_MISMATCH',
                 'Проект не соответствует строке листа.',
               );
+            if (warehouseId !== line.warehouseId)
+              issueConflict(
+                'WAREHOUSE_ISSUE_SHEET_WAREHOUSE_MISMATCH',
+                'Склад выдачи не соответствует листу.',
+              );
             return execute(line.projectId);
           }
           return this.sheets.executeIssueForLine(
@@ -105,6 +146,11 @@ export class WarehouseIssuesService {
             quantity,
             actor,
             async (line) => {
+              if (warehouseId !== line.warehouseId)
+                issueConflict(
+                  'WAREHOUSE_ISSUE_SHEET_WAREHOUSE_MISMATCH',
+                  'Склад выдачи не соответствует листу.',
+                );
               if (
                 input.projectId !== undefined &&
                 input.projectId !== line.projectId
@@ -132,8 +178,23 @@ export class WarehouseIssuesService {
     projectId: bigint | null,
     plan: IssuePlan,
   ) {
+    const snapshot = await captureIssueHeader(
+      tx,
+      actor,
+      projectId,
+      input.issueSheetLineId,
+      plan,
+    );
+    const positionSnapshots = plan.positions.map(captureIssuePosition);
     const issue = await tx.warehouseIssue.create({
       data: {
+        snapshot,
+        searchText: issueHistorySearch(
+          snapshot,
+          positionSnapshots,
+          input.comment,
+        ),
+        warehouseId: plan.warehouseId,
         type: input.type,
         projectId,
         issueSheetLineId: input.issueSheetLineId,
@@ -152,6 +213,7 @@ export class WarehouseIssuesService {
       );
       await tx.warehouseIssuePosition.create({
         data: {
+          snapshot: captureIssuePosition(position),
           issueId: issue.id,
           balanceId: position.balance.id,
           quantity: position.quantity,
@@ -176,10 +238,17 @@ export class WarehouseIssuesService {
         { fieldName: 'Использование резервов', newValue: plan.changes },
       ],
     });
-    return {
-      ...dto,
-      reservationUsage: plan.changes,
-      foreignReservationsUsed: plan.foreignReservations.length > 0,
-    };
+    // Persist the JSON response so retries do not depend on renamed references or audit retention.
+    const response = JSON.parse(JSON.stringify(dto)) as Prisma.InputJsonObject;
+    await tx.warehouseIssueRequest.create({
+      data: {
+        actorUserId: actor,
+        requestKey: input.requestKey!,
+        requestHash: issueRequestHash(input),
+        issueId: issue.id,
+        response,
+      },
+    });
+    return response;
   }
 }

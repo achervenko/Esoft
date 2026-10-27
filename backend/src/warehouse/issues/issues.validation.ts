@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { BadRequestException } from '@nestjs/common';
 import { parseWarehouseId } from '../catalog/catalog.validation';
 import { stockQuantity } from '../stock/stock.validation';
@@ -27,8 +28,9 @@ function text(value: unknown, max: number) {
     issueInvalid('Некорректное текстовое поле.');
   return value.trim();
 }
-export function parseIssue(value: unknown) {
+export function parseIssue(value: unknown, preview = false) {
   const b = issueRecord(value, [
+    'requestKey',
     'type',
     'projectId',
     'issueSheetLineId',
@@ -37,6 +39,17 @@ export function parseIssue(value: unknown) {
     'overrideReservations',
     'overrideConfirmation',
   ]);
+  let requestKey: string | null = null;
+  if (!preview || b.requestKey !== undefined) {
+    if (
+      typeof b.requestKey !== 'string' ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        b.requestKey,
+      )
+    )
+      issueInvalid('requestKey должен быть UUID.');
+    requestKey = b.requestKey.toLowerCase();
+  }
   if (b.type !== 'MANUAL' && b.type !== 'ISSUE_SHEET')
     issueInvalid('Укажите тип MANUAL или ISSUE_SHEET.');
   const projectId =
@@ -90,6 +103,7 @@ export function parseIssue(value: unknown) {
   )
     issueInvalid('Некорректное подтверждение принудительной выдачи.');
   return {
+    requestKey,
     type: b.type,
     projectId,
     issueSheetLineId,
@@ -102,11 +116,14 @@ export function parseIssue(value: unknown) {
 export type IssueInput = ReturnType<typeof parseIssue>;
 export function parseAvailableQuery(value: unknown) {
   const b = issueRecord(value ?? {}, [
+    'warehouseId',
     'itemId',
     'projectId',
     'includeUnavailable',
   ]);
   return {
+    warehouseId:
+      b.warehouseId === undefined ? undefined : parseWarehouseId(b.warehouseId),
     itemId: parseWarehouseId(b.itemId),
     projectId: b.projectId === undefined ? null : parseWarehouseId(b.projectId),
     includeUnavailable:
@@ -157,6 +174,8 @@ function date(value: unknown): Date | undefined {
 }
 export function parseIssueFilters(value: unknown) {
   const q = issueRecord(value ?? {}, [
+    'warehouseId',
+    'search',
     'types',
     'itemId',
     'itemIds',
@@ -197,6 +216,10 @@ export function parseIssueFilters(value: unknown) {
   if (sortOrder !== 'asc' && sortOrder !== 'desc')
     issueInvalid('Некорректный порядок сортировки.');
   const filters = {
+    search:
+      q.search === undefined ? undefined : text(q.search, 255) || undefined,
+    warehouseId:
+      q.warehouseId === undefined ? undefined : parseWarehouseId(q.warehouseId),
     types: types as string[] | undefined,
     itemIds: ids(q.itemId, q.itemIds),
     projectIds: ids(q.projectId, q.projectIds),
@@ -243,4 +266,25 @@ export function parseIssueFilters(value: unknown) {
   )
     issueInvalid('Начало диапазона больше окончания.');
   return filters;
+}
+
+export function issueRequestHash(input: IssueInput) {
+  return createHash('sha256')
+    .update(
+      JSON.stringify({
+        type: input.type,
+        projectId:
+          input.projectId === undefined && input.type === 'ISSUE_SHEET'
+            ? 'UNSPECIFIED'
+            : (input.projectId?.toString() ?? null),
+        issueSheetLineId: input.issueSheetLineId?.toString() ?? null,
+        positions: input.positions.map((p) => ({
+          balanceId: String(p.balanceId),
+          quantity: p.quantity.toString(),
+        })),
+        comment: input.comment,
+        overrideReservations: input.overrideReservations,
+      }),
+    )
+    .digest('hex');
 }

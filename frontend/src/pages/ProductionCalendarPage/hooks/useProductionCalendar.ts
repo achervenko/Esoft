@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { getBusinessTodayDateString } from "../../../shared/lib/business-date";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getApiErrorMessage } from "../../../shared/api/api-error";
 import {
   getCalendarRange,
@@ -7,21 +8,22 @@ import {
   type CalendarWorkdayDto,
   type CalendarWorkdayUpdatePayload,
 } from "../../../shared/api/calendar";
-import {
-  MAX_CALENDAR_YEAR,
-  MIN_CALENDAR_YEAR,
-} from "../model/constants";
+import { MAX_CALENDAR_YEAR, MIN_CALENDAR_YEAR } from "../model/constants";
 import {
   clampCalendarYear,
   createDefaultYearDays,
   createMonths,
 } from "../model/calendar.utils";
-import type { CalendarDayDraft, CalendarDayState, DayType } from "../model/types";
+import type {
+  CalendarDayDraft,
+  CalendarDayState,
+  DayType,
+} from "../model/types";
 
 const DEFAULT_WORKING_HOURS = 8;
 
 export function useProductionCalendar() {
-  const currentYear = new Date().getFullYear();
+  const currentYear = Number(getBusinessTodayDateString().slice(0, 4));
   const [year, setYear] = useState(clampCalendarYear(currentYear));
   const [daysByYear, setDaysByYear] = useState<
     Record<number, Record<string, CalendarDayState>>
@@ -29,12 +31,13 @@ export function useProductionCalendar() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const daysById = useMemo(() => {
     return daysByYear[year] ?? createDefaultYearDays(year);
   }, [daysByYear, year]);
   const months = useMemo(() => createMonths(year, daysById), [daysById, year]);
-  const selectedDay = selectedDayId ? daysById[selectedDayId] ?? null : null;
+  const selectedDay = selectedDayId ? (daysById[selectedDayId] ?? null) : null;
 
   useEffect(() => {
     let isMounted = true;
@@ -82,10 +85,11 @@ export function useProductionCalendar() {
     day: CalendarDayState,
     draft: CalendarDayDraft,
   ): Promise<void> => {
-    if (isSaving) {
+    if (savingRef.current) {
       return;
     }
 
+    savingRef.current = true;
     setIsSaving(true);
     setError(null);
 
@@ -104,15 +108,17 @@ export function useProductionCalendar() {
         ),
       );
     } finally {
+      savingRef.current = false;
       setIsSaving(false);
     }
   };
 
   const resetDay = async (day: CalendarDayState): Promise<void> => {
-    if (isSaving) {
+    if (savingRef.current) {
       return;
     }
 
+    savingRef.current = true;
     setIsSaving(true);
     setError(null);
 
@@ -129,6 +135,7 @@ export function useProductionCalendar() {
         ),
       );
     } finally {
+      savingRef.current = false;
       setIsSaving(false);
     }
   };

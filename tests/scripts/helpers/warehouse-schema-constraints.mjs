@@ -17,7 +17,16 @@ export async function verifyWarehouseSchemaConstraints({
   );
   await assert.rejects(
     prisma.warehouseStorageLocation.create({
-      data: { code: location.code, name: "Duplicate" },
+      data: {
+        warehouse: {
+          connectOrCreate: {
+            where: { code: "TEST" },
+            create: { code: "TEST", name: "Test warehouse" },
+          },
+        },
+        code: location.code,
+        name: "Duplicate",
+      },
     }),
     { code: "P2002" },
   );

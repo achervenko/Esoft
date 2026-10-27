@@ -1,3 +1,4 @@
+import { getBusinessTodayDateString } from "../../../shared/lib/business-date";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getApiErrorMessage } from "../../../shared/api/api-error";
 import { getCalendar, type CalendarDto } from "../../../shared/api/calendar";
@@ -157,5 +158,7 @@ export function useCalendarMonth(initialDateId?: string | null) {
 }
 
 function getInitialCalendarDate(initialDateId: string | null | undefined) {
-  return isValidDateId(initialDateId) ? parseDateId(initialDateId) : new Date();
+  return parseDateId(
+    isValidDateId(initialDateId) ? initialDateId : getBusinessTodayDateString(),
+  );
 }

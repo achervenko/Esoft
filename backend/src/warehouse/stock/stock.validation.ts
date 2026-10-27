@@ -60,6 +60,7 @@ export function parseBalanceFilters(value: BalanceFilters = {}) {
       'Ожидается объект фильтров.',
     );
   const allowed = [
+    'warehouseId',
     'itemId',
     'itemIds',
     'locationId',
@@ -155,6 +156,10 @@ export function parseBalanceFilters(value: BalanceFilters = {}) {
       'Минимальное количество превышает максимальное.',
     );
   return {
+    warehouseId:
+      value.warehouseId === undefined
+        ? undefined
+        : stockId(value.warehouseId, 'warehouseId'),
     itemIds: ids('itemId', 'itemIds'),
     locationIds: ids('locationId', 'locationIds'),
     quantityState: choice(

@@ -136,3 +136,13 @@ describe('Stock input contract', () => {
       ).toBe('WAREHOUSE_STOCK_TRANSACTION_REQUIRED');
   });
 });
+
+describe('Stock warehouse filter', () => {
+  it('preserves exact IDs and rejects invalid warehouse filters', () => {
+    expect(
+      parseBalanceFilters({ warehouseId: '9007199254740993' }).warehouseId,
+    ).toBe(9007199254740993n);
+    for (const warehouseId of ['0', '01', '9223372036854775808'])
+      expect(() => parseBalanceFilters({ warehouseId })).toThrow();
+  });
+});

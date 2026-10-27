@@ -68,12 +68,13 @@ describe('Stock HTTP API', () => {
     const r = await http.request(
       {
         method: 'GET',
-        path: '/api/warehouse/stock?itemIds=9007199254740993&itemIds=2&locationIds=3,4&itemActive=false&locationActive=true&page=2&limit=10&minQuantity=0.001&maxQuantity=99999999999.999&quantityState=ALL&sortBy=quantity&sortOrder=desc',
+        path: '/api/warehouse/stock?warehouseId=9007199254740995&itemIds=9007199254740993&itemIds=2&locationIds=3,4&itemActive=false&locationActive=true&page=2&limit=10&minQuantity=0.001&maxQuantity=99999999999.999&quantityState=ALL&sortBy=quantity&sortOrder=desc',
       },
       'storekeeper',
     );
     expect(r.status).toBe(200);
     expect(stock.getBalances).toHaveBeenCalledWith({
+      warehouseId: '9007199254740995',
       itemIds: ['9007199254740993', '2'],
       locationIds: ['3', '4'],
       itemActive: false,
@@ -89,6 +90,8 @@ describe('Stock HTTP API', () => {
   });
   it.each([
     'unknown=1',
+    'warehouseId=0',
+    'warehouseId=not-a-bigint',
     'page=0',
     'limit=101',
     'itemActive=0',
@@ -121,6 +124,17 @@ describe('Stock HTTP API', () => {
       itemId: '9007199254740993',
       quantity: '123456789012.123',
     });
+  });
+  it('passes the warehouse filter as the second total argument', async () => {
+    const response = await http.request(
+      {
+        method: 'GET',
+        path: '/api/warehouse/stock/items/1/total?warehouseId=2',
+      },
+      'admin',
+    );
+    expect(response.status).toBe(200);
+    expect(stock.getItemTotal).toHaveBeenCalledWith('1', '2');
   });
   it('returns explicit null for an absent balance', async () => {
     const response = await http.request(

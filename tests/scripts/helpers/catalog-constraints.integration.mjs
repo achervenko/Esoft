@@ -27,7 +27,16 @@ export async function verifyCatalogConstraints({
   assert.equal((await service.findOne(first.id)).article, "CONSTRAINT-1");
   await service.update(first.id, { name: "Новое имя", unit: "м" }, actor.id);
   const location = await prisma.warehouseStorageLocation.create({
-    data: { code: "CAT-LOCATION", name: "Shelf" },
+    data: {
+      warehouse: {
+        connectOrCreate: {
+          where: { code: "TEST" },
+          create: { code: "TEST", name: "Test warehouse" },
+        },
+      },
+      code: "CAT-LOCATION",
+      name: "Shelf",
+    },
   });
   const balance = await prisma.warehouseBalance.create({
     data: {
@@ -72,6 +81,7 @@ export async function verifyCatalogConstraints({
 
   const sheet = await prisma.warehouseIssueSheet.create({
     data: {
+      warehouseId: location.warehouseId,
       name: "Catalog reference",
       status: "draft",
       createdByUserId: actor.id,

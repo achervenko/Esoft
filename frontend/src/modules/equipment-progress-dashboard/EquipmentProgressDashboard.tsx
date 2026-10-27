@@ -1,3 +1,4 @@
+import { formatCalendarDate } from "../../shared/lib/business-date";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getEquipmentProgressDashboard } from "./equipment-progress-dashboard.api";
@@ -273,18 +274,18 @@ function ProgressGauge({ percent }: { percent: number }) {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("ru-RU", {
+  return formatCalendarDate(value, {
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(new Date(`${value}T00:00:00.000`));
+  });
 }
 
 function formatShortDate(value: string) {
-  return new Intl.DateTimeFormat("ru-RU", {
+  return formatCalendarDate(value, {
     day: "2-digit",
     month: "2-digit",
-  }).format(new Date(`${value}T00:00:00.000`));
+  });
 }
 
 function formatDays(value: number) {

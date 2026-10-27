@@ -8,14 +8,41 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
     "SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='idx_warehouse_balances_storage_location'",
   );
   assert.match(locationIndex.rows[0].indexdef, /\(storage_location_id\)/);
+  const transferRequestIndex = await database.query(
+    "SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='uq_warehouse_transfers_request'",
+  );
+  assert.match(
+    transferRequestIndex.rows[0].indexdef,
+    /UNIQUE.*\(created_by_user_id, request_key\)/,
+  );
+  const historyIndexes = await database.query(
+    "SELECT indexname,indexdef FROM pg_indexes WHERE schemaname='public' AND indexname IN ('idx_warehouse_issues_history_search','idx_warehouse_issues_warehouse_created')",
+  );
+  assert.equal(historyIndexes.rows.length, 2);
+  assert.match(
+    historyIndexes.rows.find(
+      (row) => row.indexname === "idx_warehouse_issues_history_search",
+    ).indexdef,
+    /USING gin \(search_text gin_trgm_ops\)/,
+  );
+  assert.match(
+    historyIndexes.rows.find(
+      (row) => row.indexname === "idx_warehouse_issues_warehouse_created",
+    ).indexdef,
+    /\(warehouse_id, created_at, id\)/,
+  );
   const columns = (
     await database.query(
-      "SELECT table_name,column_name,data_type,numeric_precision,numeric_scale,character_maximum_length FROM information_schema.columns WHERE table_schema='public' AND table_name LIKE 'warehouse_%'",
+      "SELECT table_name,column_name,data_type,numeric_precision,numeric_scale,character_maximum_length FROM information_schema.columns WHERE table_schema='public' AND (table_name LIKE 'warehouse_%' OR table_name = 'warehouses')",
     )
   ).rows;
   assert.deepEqual(
     [...new Set(columns.map((column) => column.table_name))].sort(),
     [
+      "warehouses",
+      "warehouse_receipts",
+      "warehouse_transfers",
+      "warehouse_receipt_lines",
       "warehouse_items",
       "warehouse_storage_locations",
       "warehouse_projects",
@@ -24,6 +51,7 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
       "warehouse_issue_sheets",
       "warehouse_issue_sheet_lines",
       "warehouse_issues",
+      "warehouse_issue_requests",
       "warehouse_issue_positions",
       "warehouse_stock_adjustments",
       "warehouse_stock_adjustment_attachments",

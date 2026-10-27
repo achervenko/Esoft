@@ -37,19 +37,25 @@ describe('IssueSheets input contract', () => {
       hash.toLowerCase(),
     );
     expect(
-      parseCreateSheet({ name: 'Лист', sourceFileHash: hash }).sourceFileHash,
+      parseCreateSheet({ warehouseId: '1', name: 'Лист', sourceFileHash: hash })
+        .sourceFileHash,
     ).toBe(hash.toLowerCase());
     for (const sourceFileHash of ['abc', 'g'.repeat(64), 'a'.repeat(65)]) {
       expect(() => parseSheetFilters({ sourceFileHash })).toThrow();
       expect(() =>
-        parseCreateSheet({ name: 'Лист', sourceFileHash }),
+        parseCreateSheet({ warehouseId: '1', name: 'Лист', sourceFileHash }),
       ).toThrow();
     }
   });
   it('normalizes metadata without allowing the client to set status or actor', () => {
     expect(
-      parseCreateSheet({ name: ' Лист ', sourceFileHash: 'A'.repeat(64) }),
+      parseCreateSheet({
+        warehouseId: '1',
+        name: ' Лист ',
+        sourceFileHash: 'A'.repeat(64),
+      }),
     ).toEqual({
+      warehouseId: 1n,
       name: 'Лист',
       sourceFileName: null,
       sourceFileHash: 'a'.repeat(64),
@@ -161,4 +167,15 @@ describe('IssueSheets input contract', () => {
       });
     },
   );
+});
+
+it('requires a warehouse on sheet creation and validates its list filter', () => {
+  expect(() => parseCreateSheet({ name: 'Missing warehouse' })).toThrow();
+  expect(() =>
+    parseCreateSheet({ name: 'Invalid warehouse', warehouseId: '0' }),
+  ).toThrow();
+  expect(
+    parseSheetFilters({ warehouseId: '9007199254740993' }).warehouseId,
+  ).toBe(9007199254740993n);
+  expect(() => parseSheetFilters({ warehouseId: '0' })).toThrow();
 });

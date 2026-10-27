@@ -31,6 +31,7 @@ export function parseReservation(value: unknown, create = false) {
 }
 export function parseReservationQuery(value: unknown) {
   const b = reservationRecord(value ?? {}, [
+    'warehouseId',
     'balanceId',
     'projectId',
     'itemId',
@@ -39,12 +40,19 @@ export function parseReservationQuery(value: unknown) {
     'limit',
   ]);
   const ids: {
+    warehouseId?: bigint;
     balanceId?: bigint;
     projectId?: bigint;
     itemId?: bigint;
     locationId?: bigint;
   } = {};
-  for (const k of ['balanceId', 'projectId', 'itemId', 'locationId'] as const)
+  for (const k of [
+    'warehouseId',
+    'balanceId',
+    'projectId',
+    'itemId',
+    'locationId',
+  ] as const)
     if (b[k] !== undefined) ids[k] = stockId(b[k], k);
   function integer(k: string, fallback: number, max: number) {
     const v = b[k];

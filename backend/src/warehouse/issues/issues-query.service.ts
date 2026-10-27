@@ -1,3 +1,7 @@
+import {
+  locationWithWarehouseSelect,
+  locationWithWarehouseDto,
+} from '../storage-structure/storage-structure.dto';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -37,9 +41,12 @@ export class WarehouseIssuesQueryService {
             );
         }
         const balances = await tx.warehouseBalance.findMany({
-          where: { itemId: q.itemId, storageLocation: { isActive: true } },
+          where: {
+            itemId: q.itemId,
+            storageLocation: { isActive: true, warehouseId: q.warehouseId },
+          },
           include: {
-            storageLocation: true,
+            storageLocation: { select: locationWithWarehouseSelect },
             reservations: {
               include: {
                 project: { select: { projectNumber: true, name: true } },
@@ -59,11 +66,7 @@ export class WarehouseIssuesQueryService {
               return {
                 balanceId: String(balance.id),
                 itemId: String(balance.itemId),
-                location: {
-                  id: String(balance.storageLocation.id),
-                  code: balance.storageLocation.code,
-                  name: balance.storageLocation.name,
-                },
+                location: locationWithWarehouseDto(balance.storageLocation),
                 physical: balance.quantity.toString(),
                 reserved: r.reserved.toString(),
                 reservedForCurrentProject: r.own.toString(),
@@ -89,33 +92,7 @@ export class WarehouseIssuesQueryService {
           include: issueInclude,
         });
         if (!issue) issueNotFound();
-        const usage = await tx.auditLog.findFirst({
-          where: {
-            entityType: 'warehouse_issue',
-            entityStringId: String(id),
-            fieldName: 'Использование резервов',
-            action: 'CREATE',
-          },
-          orderBy: { id: 'asc' },
-          select: { newValue: true },
-        });
-        const reservationUsage: unknown = usage?.newValue
-          ? JSON.parse(usage.newValue)
-          : null;
-        const foreignReservationsUsed = Array.isArray(reservationUsage)
-          ? reservationUsage.some(
-              (row: unknown) =>
-                !!row &&
-                typeof row === 'object' &&
-                'own' in row &&
-                row.own === false,
-            )
-          : null;
-        return {
-          ...issueDto(issue),
-          reservationUsage,
-          foreignReservationsUsed,
-        };
+        return issueDto(issue);
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
@@ -124,6 +101,12 @@ export class WarehouseIssuesQueryService {
     const q = parseIssueFilters(value);
     const conditions = [Prisma.sql`TRUE`],
       positionConditions: Prisma.Sql[] = [];
+    if (q.search) {
+      const pattern = `%${q.search.replace(/[\\%_]/g, (char) => '\\' + char)}%`;
+      conditions.push(Prisma.sql`i.search_text ILIKE ${pattern}`);
+    }
+    if (q.warehouseId)
+      conditions.push(Prisma.sql`i.warehouse_id = ${q.warehouseId}`);
     if (q.types)
       conditions.push(Prisma.sql`i.type IN (${Prisma.join(q.types)})`);
     if (q.projectIds)

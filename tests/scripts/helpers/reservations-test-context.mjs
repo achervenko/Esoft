@@ -91,7 +91,16 @@ export async function createReservationsTestContext(prisma) {
       data: { article: "RES-" + n, name: "Item", unit: "шт" },
     });
     const location = await prisma.warehouseStorageLocation.create({
-      data: { code: "RES-" + n, name: "Shelf" },
+      data: {
+        warehouse: {
+          connectOrCreate: {
+            where: { code: "TEST" },
+            create: { code: "TEST", name: "Test warehouse" },
+          },
+        },
+        code: "RES-" + n,
+        name: "Shelf",
+      },
     });
     const balance = await prisma.warehouseBalance.create({
       data: {

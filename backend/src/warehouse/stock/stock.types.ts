@@ -1,8 +1,17 @@
+import {
+  warehouseItemSummarySelect,
+  warehouseItemSummaryDto,
+} from '../catalog/catalog.dto';
+import {
+  locationWithWarehouseSelect,
+  locationWithWarehouseDto,
+} from '../storage-structure/storage-structure.dto';
 import type { Prisma } from '@prisma/client';
 
 export type StockQuantity = string | Prisma.Decimal;
 
 export type BalanceFilters = {
+  warehouseId?: string;
   itemId?: string;
   itemIds?: string[];
   locationId?: string;
@@ -29,11 +38,9 @@ export const balanceSelect = {
   storageLocationId: true,
   quantity: true,
   item: {
-    select: { id: true, article: true, name: true, unit: true, isActive: true },
+    select: warehouseItemSummarySelect,
   },
-  storageLocation: {
-    select: { id: true, code: true, name: true, isActive: true },
-  },
+  storageLocation: { select: locationWithWarehouseSelect },
 } satisfies Prisma.WarehouseBalanceSelect;
 
 export type StockBalance = Prisma.WarehouseBalanceGetPayload<{
@@ -46,10 +53,7 @@ export function balanceDto(balance: StockBalance) {
     itemId: balance.itemId.toString(),
     locationId: balance.storageLocationId.toString(),
     quantity: balance.quantity.toString(),
-    item: { ...balance.item, id: balance.item.id.toString() },
-    location: {
-      ...balance.storageLocation,
-      id: balance.storageLocation.id.toString(),
-    },
+    item: warehouseItemSummaryDto(balance.item),
+    location: locationWithWarehouseDto(balance.storageLocation),
   };
 }

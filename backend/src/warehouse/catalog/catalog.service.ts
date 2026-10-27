@@ -1,3 +1,7 @@
+import {
+  warehouseItemSelect as select,
+  warehouseItemDto as dto,
+} from './catalog.dto';
 import { hasPermission } from '../../auth/permission-policy';
 import {
   ConflictException,
@@ -27,18 +31,6 @@ const labels = {
   comment: 'Комментарий',
   isActive: 'Активность',
 };
-const select = {
-  id: true,
-  article: true,
-  name: true,
-  unit: true,
-  comment: true,
-  isActive: true,
-} satisfies Prisma.WarehouseItemSelect;
-
-function dto(item: WarehouseItem) {
-  return { ...item, id: item.id.toString() };
-}
 function notFound(): never {
   throw new NotFoundException({
     code: 'WAREHOUSE_ITEM_NOT_FOUND',

@@ -1,3 +1,7 @@
+import {
+  formatCalendarDate,
+  getCalendarDateId,
+} from "../../../shared/lib/business-date";
 import type { CalendarLayerItemDto } from "../../../shared/api/calendar";
 import { AdminModal } from "../../../shared/ui/AdminModal";
 import { CalendarEventIcon } from "./CalendarEventIcon";
@@ -65,11 +69,7 @@ function DayEventCard({
 }) {
   return (
     <li>
-      <button
-        className="calendar-event-card"
-        onClick={onOpen}
-        type="button"
-      >
+      <button className="calendar-event-card" onClick={onOpen} type="button">
         <span className="calendar-event-card-icon" aria-hidden="true">
           <CalendarEventIcon icon={event.icon} size={17} strokeWidth={2.2} />
         </span>
@@ -118,7 +118,7 @@ function getEventWord(count: number) {
 }
 
 function formatModalDate(value: Date) {
-  return value.toLocaleDateString("ru-RU", {
+  return formatCalendarDate(getCalendarDateId(value), {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -126,7 +126,7 @@ function formatModalDate(value: Date) {
 }
 
 function formatWeekday(value: Date) {
-  return value.toLocaleDateString("ru-RU", {
+  return formatCalendarDate(getCalendarDateId(value), {
     weekday: "long",
   });
 }

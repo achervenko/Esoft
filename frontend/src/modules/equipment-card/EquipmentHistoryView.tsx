@@ -1,6 +1,6 @@
 import { FileCheck2, FileX2 } from "lucide-react";
 import type { EquipmentHistoryItem } from "../../shared/api/equipment/equipment.types";
-import { BUSINESS_TIME_ZONE } from "../../shared/lib/business-date";
+import { formatBusinessDateTime } from "../../shared/lib/business-date";
 import "./EquipmentHistoryView.css";
 
 type EquipmentHistoryViewProps = {
@@ -19,7 +19,7 @@ const HISTORY_GROUP_WINDOW_MS = 15_000;
 const BUSINESS_TIME_ZONE_LABEL = "МСК";
 
 const text = {
-  changeCountOne: "1 поле",
+  changeCountOne: "поле",
   changeCountFew: "поля",
   changeCountMany: "полей",
   create: "Создание",
@@ -77,7 +77,9 @@ export function EquipmentHistoryView({ history }: EquipmentHistoryViewProps) {
                   <strong>
                     {actionLabels[group.action] ?? group.action}
                     <span>
-                      {isFileAction ? text.document : formatFieldsCount(group.items.length)}
+                      {isFileAction
+                        ? text.document
+                        : formatFieldsCount(group.items.length)}
                     </span>
                   </strong>
                   <span>{formatHistoryDate(group.createdAt)}</span>
@@ -116,7 +118,9 @@ function FileHistoryDetails({ group }: { group: EquipmentHistoryGroup }) {
 
       <div className="equipment-history-file-list">
         {group.items.map((item) => (
-          <strong key={item.id}>{getFileHistoryName(group.action, item)}</strong>
+          <strong key={item.id}>
+            {getFileHistoryName(group.action, item)}
+          </strong>
         ))}
       </div>
     </div>
@@ -134,7 +138,9 @@ function HistoryChangesTable({ items }: { items: EquipmentHistoryItem[] }) {
 
       {items.map((item) => (
         <div className="equipment-history-change-row" key={item.id}>
-          <span data-label={text.field}>{formatNullableHistoryText(item.fieldName)}</span>
+          <span data-label={text.field}>
+            {formatNullableHistoryText(item.fieldName)}
+          </span>
           <span data-label={text.oldValue}>
             {formatNullableHistoryText(item.oldValue)}
           </span>
@@ -199,11 +205,18 @@ function getFileHistoryName(
 }
 
 function formatFieldsCount(count: number) {
-  if (count === 1) {
-    return text.changeCountOne;
+  const lastTwoDigits = count % 100;
+  const lastDigit = count % 10;
+
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
+    return `${count} ${text.changeCountMany}`;
   }
 
-  if (count > 1 && count < 5) {
+  if (lastDigit === 1) {
+    return `${count} ${text.changeCountOne}`;
+  }
+
+  if (lastDigit >= 2 && lastDigit <= 4) {
     return `${count} ${text.changeCountFew}`;
   }
 
@@ -217,10 +230,7 @@ function formatNullableHistoryText(value: string | null) {
     return text.notSpecified;
   }
 
-  if (
-    normalizedValue.toLocaleLowerCase("ru-RU") ===
-    "не указано"
-  ) {
+  if (normalizedValue.toLocaleLowerCase("ru-RU") === "не указано") {
     return text.notSpecified;
   }
 
@@ -234,12 +244,11 @@ function formatHistoryDate(value: string) {
     return text.dateFallback;
   }
 
-  return `${new Intl.DateTimeFormat("ru-RU", {
+  return `${formatBusinessDateTime(date, {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
     month: "2-digit",
-    timeZone: BUSINESS_TIME_ZONE,
     year: "numeric",
-  }).format(date)} ${BUSINESS_TIME_ZONE_LABEL}`;
+  })} ${BUSINESS_TIME_ZONE_LABEL}`;
 }

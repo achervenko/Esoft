@@ -1,11 +1,14 @@
+import type { Warehouse } from "./warehouses-api";
 import { request } from "./api-client";
 export type StorageLocation = {
   id: string;
+  warehouseId: string;
+  warehouse: Warehouse;
   code: string;
   name: string;
   isActive: boolean;
 };
-export type StorageLocationInput = Omit<StorageLocation, "id">;
+export type StorageLocationInput = Omit<StorageLocation, "id" | "warehouse">;
 export type StorageLocationList = {
   items: StorageLocation[];
   total: number;
@@ -23,7 +26,10 @@ export const storageLocationsApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
-  update: (id: string, data: Partial<StorageLocationInput>) =>
+  update: (
+    id: string,
+    data: Partial<Omit<StorageLocationInput, "warehouseId">>,
+  ) =>
     request<StorageLocation>(`${base}/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),

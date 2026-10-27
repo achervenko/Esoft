@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import assert from "node:assert/strict";
 
 export async function verifyReservationsConcurrency({
@@ -48,6 +49,7 @@ export async function verifyReservationsConcurrency({
     create(concurrent.balance, projects[0], "8"),
     issues.createIssue(
       {
+        requestKey: randomUUID(),
         type: "MANUAL",
         positions: [
           { balanceId: String(concurrent.balance.id), quantity: "8" },

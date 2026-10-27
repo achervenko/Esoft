@@ -1,30 +1,34 @@
+import { formatCalendarDate } from "./business-date";
 export function formatRuDate(value: string | null) {
   if (!value) {
-    return 'Не указана';
+    return "Не указана";
   }
 
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return 'Не указана';
+    return "Не указана";
   }
 
-  return new Intl.DateTimeFormat('ru-RU').format(date);
+  return formatCalendarDate(date.toISOString().slice(0, 10));
 }
 
 export function formatNullableNumber(value: number | null) {
-  return value === null ? 'Не указан' : String(value);
+  return value === null ? "Не указан" : String(value);
 }
 
-export function formatNullableText(value: string | null, fallback = 'Не указано') {
+export function formatNullableText(
+  value: string | null,
+  fallback = "Не указано",
+) {
   const normalizedValue = value?.trim();
 
   if (!normalizedValue) {
     return fallback;
   }
 
-  if (normalizedValue.toLocaleLowerCase('ru-RU') === 'не указано') {
-    return 'Не указано';
+  if (normalizedValue.toLocaleLowerCase("ru-RU") === "не указано") {
+    return "Не указано";
   }
 
   return normalizedValue;

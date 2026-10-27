@@ -28,10 +28,10 @@ export class WarehouseStockQueryService {
         query.itemActive === undefined
           ? undefined
           : { isActive: query.itemActive },
-      storageLocation:
-        query.locationActive === undefined
-          ? undefined
-          : { isActive: query.locationActive },
+      storageLocation: {
+        warehouseId: query.warehouseId,
+        isActive: query.locationActive,
+      },
       quantity,
     };
     const order: Prisma.WarehouseBalanceOrderByWithRelationInput =
@@ -81,9 +81,17 @@ export class WarehouseStockQueryService {
     return row ? balanceDto(row) : null;
   }
 
-  async getItemTotal(itemId: string, tx?: Prisma.TransactionClient) {
+  async getItemTotal(
+    itemId: string,
+    warehouseValue?: string,
+    tx?: Prisma.TransactionClient,
+  ) {
     if (tx) assertStockTransaction(tx);
     const id = stockId(itemId, 'itemId');
+    const warehouseId =
+      warehouseValue === undefined
+        ? undefined
+        : stockId(warehouseValue, 'warehouseId');
     const read = async (client: Prisma.TransactionClient) => {
       if (
         !(await client.warehouseItem.findUnique({
@@ -98,7 +106,7 @@ export class WarehouseStockQueryService {
           { itemId },
         );
       const result = await client.warehouseBalance.aggregate({
-        where: { itemId: id },
+        where: { itemId: id, storageLocation: { warehouseId } },
         _sum: { quantity: true },
       });
       return result._sum.quantity?.toString() ?? '0';

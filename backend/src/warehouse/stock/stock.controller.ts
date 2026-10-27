@@ -16,8 +16,14 @@ export class WarehouseStockController {
 
   @Get('items/:itemId/total')
   @RequirePermission(WAREHOUSE_PERMISSIONS.STOCK_READ)
-  async total(@Param('itemId') itemId: string) {
-    return { itemId, quantity: await this.stock.getItemTotal(itemId) };
+  async total(
+    @Param('itemId') itemId: string,
+    @Query('warehouseId') warehouseId?: string,
+  ) {
+    return {
+      itemId,
+      quantity: await this.stock.getItemTotal(itemId, warehouseId),
+    };
   }
 
   @Get('items/:itemId/locations/:locationId')

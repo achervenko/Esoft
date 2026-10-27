@@ -4,7 +4,7 @@ export function locationBadRequest(code: string, message: string): never {
   throw new BadRequestException({ code, message });
 }
 
-function record(value: unknown, allowed: string[]) {
+export function storageRecord(value: unknown, allowed: string[]) {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     locationBadRequest('INVALID_PAYLOAD', 'Ожидается объект.');
   const result = value as Record<string, unknown>;
@@ -23,11 +23,11 @@ export function parseLocationId(value: unknown): bigint {
 }
 
 type LocationFields = { code: string; name: string; isActive: boolean };
-export function parseLocation(
+export function parseStorageEntry(
   value: unknown,
   create = false,
 ): Partial<LocationFields> {
-  const body = record(value, ['code', 'name', 'isActive']);
+  const body = storageRecord(value, ['code', 'name', 'isActive']);
   if (!Object.keys(body).length)
     locationBadRequest('EMPTY_PAYLOAD', 'Укажите изменяемые поля.');
   const data: Partial<LocationFields> = {};
@@ -57,7 +57,7 @@ export function parseLocation(
   return data;
 }
 export function parseLocationQuery(value: unknown) {
-  const q = record(value ?? {}, [
+  const q = storageRecord(value ?? {}, [
     'search',
     'isActive',
     'page',
@@ -107,5 +107,36 @@ export function parseLocationQuery(value: unknown) {
     offset,
     sortBy,
     sortOrder,
+  };
+}
+
+export function parseLocation(value: unknown, create = false) {
+  const body = storageRecord(
+    value,
+    create
+      ? ['code', 'name', 'isActive', 'warehouseId']
+      : ['code', 'name', 'isActive'],
+  );
+  const { warehouseId, ...entry } = body;
+  return {
+    ...parseStorageEntry(entry, create),
+    ...(create ? { warehouseId: parseLocationId(warehouseId) } : {}),
+  };
+}
+export function parseStorageLocationQuery(value: unknown) {
+  const body = storageRecord(value ?? {}, [
+    'search',
+    'isActive',
+    'page',
+    'limit',
+    'sortBy',
+    'sortOrder',
+    'warehouseId',
+  ]);
+  const { warehouseId, ...query } = body;
+  return {
+    ...parseLocationQuery(query),
+    warehouseId:
+      warehouseId === undefined ? undefined : parseLocationId(warehouseId),
   };
 }

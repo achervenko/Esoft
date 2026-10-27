@@ -1,4 +1,7 @@
 model User {
+  warehouseTransfers WarehouseTransfer[]
+  warehouseIssueRequests WarehouseIssueRequest[]
+  warehouseReceipts WarehouseReceipt[]
   pendingStorageUploads StorageUpload[]
   warehouseStockAdjustments WarehouseStockAdjustment[]
   id                          String              @id

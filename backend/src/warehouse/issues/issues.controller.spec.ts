@@ -69,6 +69,21 @@ describe('Issues HTTP permissions', () => {
     ).toBe(403);
     expect(issues.previewOverride).not.toHaveBeenCalled();
   });
+  it('forwards historical search and period filters unchanged', async () => {
+    await http.request(
+      {
+        method: 'GET',
+        path: '/api/warehouse/issues?search=OLD-ARTICLE&warehouseId=9007199254740995&createdFrom=2025-01-01&createdTo=2025-12-31T23%3A59%3A59.999Z',
+      },
+      'storekeeper',
+    );
+    expect(queries.list).toHaveBeenCalledWith({
+      search: 'OLD-ARTICLE',
+      warehouseId: '9007199254740995',
+      createdFrom: '2025-01-01',
+      createdTo: '2025-12-31T23:59:59.999Z',
+    });
+  });
   it('allows override preview to admin', async () => {
     expect(
       (

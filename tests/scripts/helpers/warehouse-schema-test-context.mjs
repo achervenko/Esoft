@@ -14,13 +14,8 @@ export async function verifyWarehouseSchema(prisma, database, actor, test) {
   await test.test("unique, FK and quantity constraints", () =>
     verifyWarehouseSchemaConstraints(context),
   );
-  await test.test("Issues schema", () =>
-    verifyWarehouseIssues(prisma, database, {
-      item: context.item,
-      balance: context.balance,
-      line: context.line,
-      project: context.projectRow,
-    }),
+  await test.test("Issues schema", (scenario) =>
+    verifyWarehouseIssues(prisma, scenario),
   );
   await test.test("schema metadata and indexes", () =>
     verifyWarehouseSchemaMetadata(context),

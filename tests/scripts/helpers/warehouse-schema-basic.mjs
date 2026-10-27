@@ -11,7 +11,16 @@ export async function verifyWarehouseSchemaBasic({ prisma }) {
   assert.equal(item.id, 9007199254740993n);
   assert.equal(item.isActive, true);
   const location = await prisma.warehouseStorageLocation.create({
-    data: { code: "A-1", name: "Shelf" },
+    data: {
+      warehouse: {
+        connectOrCreate: {
+          where: { code: "TEST" },
+          create: { code: "TEST", name: "Test warehouse" },
+        },
+      },
+      code: "A-1",
+      name: "Shelf",
+    },
   });
   assert.equal(location.isActive, true);
   await prisma.warehouseStorageLocation.update({

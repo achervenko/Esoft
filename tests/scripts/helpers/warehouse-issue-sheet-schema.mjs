@@ -9,6 +9,7 @@ export async function verifyWarehouseIssueSheetSchema({
 }) {
   const sheet = await prisma.warehouseIssueSheet.create({
     data: {
+      warehouseId: location.warehouseId,
       name: "Imported sheet",
       sourceFileName: "sheet.xlsx",
       sourceFileHash: "a".repeat(64),
@@ -64,6 +65,7 @@ export async function verifyWarehouseIssueSheetSchema({
   );
   const secondSheet = await prisma.warehouseIssueSheet.create({
     data: {
+      warehouseId: location.warehouseId,
       name: "Second sheet",
       status: "draft",
       createdByUserId: actor.id,

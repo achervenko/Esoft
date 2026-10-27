@@ -1,21 +1,22 @@
 import {
+  locationWithWarehouseSelect as select,
+  locationWithWarehouseDto as dto,
+  type LocationWithWarehouse as Location,
+} from './storage-structure.dto';
+import {
   ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  AuditAction,
-  AuditModule,
-  Prisma,
-  type WarehouseStorageLocation,
-} from '@prisma/client';
+import { AuditAction, AuditModule, Prisma } from '@prisma/client';
+import { lockWarehouse } from './storage-structure.policy';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { hasPermission } from '../../auth/permission-policy';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   parseLocation,
-  parseLocationQuery,
+  parseStorageLocationQuery,
   parseLocationId,
 } from './storage-locations.validation';
 
@@ -23,17 +24,8 @@ const labels = {
   code: 'Код',
   name: 'Наименование',
   isActive: 'Активность',
+  warehouseId: 'Склад',
 };
-const select = {
-  id: true,
-  code: true,
-  name: true,
-  isActive: true,
-} satisfies Prisma.WarehouseStorageLocationSelect;
-
-function dto(item: WarehouseStorageLocation) {
-  return { ...item, id: item.id.toString() };
-}
 function notFound(): never {
   throw new NotFoundException({
     code: 'WAREHOUSE_STORAGE_LOCATION_NOT_FOUND',
@@ -51,11 +43,14 @@ function isWarehouseCodeUniqueViolation(
   )
     return false;
   const target: unknown = meta?.target;
-  if (target === 'uq_warehouse_storage_locations_code') return true;
+  if (target === 'uq_warehouse_storage_locations_warehouse_code') return true;
   // A field name alone is meaningful only for this model.
   if (meta?.modelName !== 'WarehouseStorageLocation') return false;
   const isCodeField = (fields: unknown) =>
-    Array.isArray(fields) && fields.length === 1 && fields[0] === 'code';
+    Array.isArray(fields) &&
+    fields.length === 2 &&
+    fields.includes('code') &&
+    (fields.includes('warehouseId') || fields.includes('warehouse_id'));
   if (target !== undefined) return isCodeField(target);
 
   // PrismaPg exposes the constraint fields here instead of meta.target.
@@ -79,7 +74,7 @@ function isWarehouseCodeUniqueViolation(
     typeof constraint === 'object' &&
     (('fields' in constraint && isCodeField(constraint.fields)) ||
       ('index' in constraint &&
-        constraint.index === 'uq_warehouse_storage_locations_code'))
+        constraint.index === 'uq_warehouse_storage_locations_warehouse_code'))
   );
 }
 
@@ -93,15 +88,17 @@ export class WarehouseStorageLocationsService {
   async list(query: unknown) {
     const {
       search: q,
+      warehouseId,
       isActive,
       limit,
       page,
       offset,
       sortBy,
       sortOrder,
-    } = parseLocationQuery(query);
+    } = parseStorageLocationQuery(query);
     const search = q?.replace(/[\\%_]/g, '\\$&');
     const where: Prisma.WarehouseStorageLocationWhereInput = {
+      ...(warehouseId === undefined ? {} : { warehouseId }),
       ...(isActive === undefined ? {} : { isActive }),
       ...(search
         ? {
@@ -149,8 +146,9 @@ export class WarehouseStorageLocationsService {
     const data = parseLocation(
       payload,
       true,
-    ) as Prisma.WarehouseStorageLocationCreateInput;
+    ) as Prisma.WarehouseStorageLocationUncheckedCreateInput;
     return this.mutate(actorUserId, async (tx) => {
+      await lockWarehouse(tx, BigInt(data.warehouseId), true);
       const item = await tx.warehouseStorageLocation.create({ data, select });
       await this.writeAudit(tx, AuditAction.CREATE, null, item, actorUserId);
       return dto(item);
@@ -161,6 +159,13 @@ export class WarehouseStorageLocationsService {
     const id = parseLocationId(value);
     const data = parseLocation(payload);
     return this.mutate(actorUserId, async (tx) => {
+      // Parent before child: same order as warehouse deactivation and location creation.
+      const reference = await tx.warehouseStorageLocation.findUnique({
+        where: { id },
+        select: { warehouseId: true },
+      });
+      if (!reference) notFound();
+      await lockWarehouse(tx, reference.warehouseId, data.isActive === true);
       const previous = await this.lock(tx, id);
       const item = await tx.warehouseStorageLocation.update({
         where: { id },
@@ -214,7 +219,8 @@ export class WarehouseStorageLocationsService {
       )
         throw new ConflictException({
           code: 'WAREHOUSE_STORAGE_LOCATION_CODE_CONFLICT',
-          message: 'Место хранения с таким кодом уже существует.',
+          message:
+            'Место хранения с таким кодом уже существует на этом складе.',
         });
       throw error;
     }
@@ -223,8 +229,8 @@ export class WarehouseStorageLocationsService {
   private writeAudit(
     tx: Prisma.TransactionClient,
     action: AuditAction,
-    previous: WarehouseStorageLocation | null,
-    next: WarehouseStorageLocation,
+    previous: Location | null,
+    next: Location,
     userId: string,
   ) {
     return this.audit.writeFieldChanges({
@@ -238,8 +244,12 @@ export class WarehouseStorageLocationsService {
         .filter((key) => previous === null || previous[key] !== next[key])
         .map((key) => ({
           fieldName: labels[key],
-          oldValue: previous?.[key],
-          newValue: next[key],
+          oldValue:
+            key === 'warehouseId'
+              ? previous?.warehouseId.toString()
+              : previous?.[key],
+          newValue:
+            key === 'warehouseId' ? next.warehouseId.toString() : next[key],
         })),
     });
   }

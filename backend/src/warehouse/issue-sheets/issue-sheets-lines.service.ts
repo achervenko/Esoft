@@ -1,3 +1,4 @@
+import { lockWarehouse } from '../storage-structure/storage-structure.policy';
 import { Injectable } from '@nestjs/common';
 import { type Prisma } from '@prisma/client';
 import { parseWarehouseId } from '../catalog/catalog.validation';
@@ -16,7 +17,11 @@ import { parseSheetLine, type SheetLineInput } from './issue-sheets.validation';
 @Injectable()
 export class WarehouseIssueSheetLinesService {
   constructor(private readonly transactions: WarehouseIssueSheetTransactions) {}
-  async validateReferences(tx: Prisma.TransactionClient, data: SheetLineInput) {
+  async validateReferences(
+    tx: Prisma.TransactionClient,
+    data: SheetLineInput,
+    warehouseId: bigint,
+  ) {
     if (data.itemId) {
       const rows = await tx.$queryRaw<
         { id: bigint; is_active: boolean; unit: string }[]
@@ -36,12 +41,17 @@ export class WarehouseIssueSheetLinesService {
     }
     if (data.storageLocationId) {
       const rows = await tx.$queryRaw<
-        { is_active: boolean }[]
-      >`SELECT is_active FROM warehouse_storage_locations WHERE id = ${data.storageLocationId} FOR SHARE`;
+        { is_active: boolean; warehouse_id: bigint }[]
+      >`SELECT is_active, warehouse_id FROM warehouse_storage_locations WHERE id = ${data.storageLocationId} FOR SHARE`;
       if (!rows[0]?.is_active)
         sheetConflict(
           'WAREHOUSE_ISSUE_SHEET_LOCATION_UNAVAILABLE',
           'Место хранения недоступно.',
+        );
+      if (rows[0].warehouse_id !== warehouseId)
+        sheetConflict(
+          'WAREHOUSE_ISSUE_SHEET_LOCATION_MISMATCH',
+          'Место не принадлежит складу листа.',
         );
     }
     if (data.projectId) {
@@ -71,7 +81,8 @@ export class WarehouseIssueSheetLinesService {
     return this.transactions.run(actor, async (tx) => {
       const sheet = await lockIssueSheet(tx, sheetId);
       assertSheetOpen(sheet.status);
-      await this.validateReferences(tx, data);
+      await lockWarehouse(tx, sheet.warehouseId, true);
+      await this.validateReferences(tx, data, sheet.warehouseId);
       const duplicate = await tx.warehouseIssueSheetLine.findUnique({
         where: {
           issueSheetId_rowNumber: {
@@ -145,7 +156,8 @@ export class WarehouseIssueSheetLinesService {
         patch.unitSnapshot === undefined
       )
         next.unitSnapshot = null;
-      await this.validateReferences(tx, next);
+      await lockWarehouse(tx, sheet.warehouseId, true);
+      await this.validateReferences(tx, next, sheet.warehouseId);
       const updated = await tx.warehouseIssueSheetLine.update({
         where: { id: lineId },
         data: { ...patch, unitSnapshot: next.unitSnapshot },

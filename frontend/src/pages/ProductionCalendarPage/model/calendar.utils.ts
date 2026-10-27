@@ -1,8 +1,9 @@
 import {
-  MAX_CALENDAR_YEAR,
-  MIN_CALENDAR_YEAR,
-  MONTH_NAMES,
-} from "./constants";
+  getBusinessTodayDateString,
+  getCalendarDateId,
+  formatCalendarDate,
+} from "../../../shared/lib/business-date";
+import { MAX_CALENDAR_YEAR, MIN_CALENDAR_YEAR, MONTH_NAMES } from "./constants";
 import type { CalendarDayState, DayType, MonthModel } from "./types";
 
 export function createDefaultYearDays(
@@ -66,22 +67,18 @@ export function getIsoWeekday(date: Date): number {
 }
 
 export function formatDateId(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+  return getCalendarDateId(date);
 }
 
 export function formatLongDate(date: Date): string {
-  return new Intl.DateTimeFormat("ru-RU", {
+  return formatCalendarDate(formatDateId(date), {
     day: "numeric",
     month: "long",
     weekday: "long",
     year: "numeric",
-  }).format(date);
+  });
 }
 
 export function isToday(date: Date): boolean {
-  return formatDateId(date) === formatDateId(new Date());
+  return formatDateId(date) === getBusinessTodayDateString();
 }

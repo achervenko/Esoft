@@ -33,8 +33,12 @@ export class WarehouseStockService {
     return this.queries.getBalance(itemId, locationId, tx);
   }
 
-  getItemTotal(itemId: string, tx?: Prisma.TransactionClient) {
-    return this.queries.getItemTotal(itemId, tx);
+  getItemTotal(
+    itemId: string,
+    warehouseId?: string,
+    tx?: Prisma.TransactionClient,
+  ) {
+    return this.queries.getItemTotal(itemId, warehouseId, tx);
   }
 
   // Call once for the full set of locations BEFORE checking/updating reservations.

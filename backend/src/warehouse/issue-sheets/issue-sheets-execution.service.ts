@@ -21,7 +21,9 @@ export class WarehouseIssueSheetExecutionService {
     itemValue: string,
     quantityValue: string,
     actor: string,
-    execute: (line: WarehouseIssueSheetLine) => Promise<T>,
+    execute: (
+      line: WarehouseIssueSheetLine & { warehouseId: bigint },
+    ) => Promise<T>,
   ): Promise<T> {
     const { sheet, line, lineId, itemId, quantity, before, total } =
       await this.prepare(tx, lineValue, itemValue, quantityValue, actor);
@@ -31,6 +33,16 @@ export class WarehouseIssueSheetExecutionService {
       where: {
         issueSheetLineId: lineId,
         OR: [
+          { warehouseId: { not: sheet.warehouseId } },
+          {
+            positions: {
+              some: {
+                balance: {
+                  storageLocation: { warehouseId: { not: sheet.warehouseId } },
+                },
+              },
+            },
+          },
           ...(line.projectId
             ? [{ projectId: { not: line.projectId } }, { projectId: null }]
             : [{ projectId: { not: null } }]),
@@ -126,6 +138,14 @@ export class WarehouseIssueSheetExecutionService {
         'WAREHOUSE_ISSUE_SHEET_OVERISSUED',
         'Количество превышает остаток задания.',
       );
-    return { sheet, line, lineId, itemId, quantity, before, total };
+    return {
+      sheet,
+      line: { ...line, warehouseId: sheet.warehouseId },
+      lineId,
+      itemId,
+      quantity,
+      before,
+      total,
+    };
   }
 }

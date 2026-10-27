@@ -4,7 +4,10 @@ import {
   EQUIPMENT_CONTROLLED_FIELDS_COUNT,
   type EquipmentProgressSummary,
 } from './equipment-progress-query';
-import { BUSINESS_TIME_ZONE } from '../application/business-date';
+import {
+  getBusinessTodayDateString,
+  getBusinessDayStart,
+} from '../application/business-date';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   EQUIPMENT_PROGRESS_RECENT_DAYS,
@@ -17,7 +20,7 @@ export class EquipmentProgressDashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getProgress(): Promise<EquipmentProgressDashboardDto> {
-    const today = getBusinessDateId(new Date());
+    const today = getBusinessTodayDateString();
     const recentDates = getRecentDateIds(today, EQUIPMENT_PROGRESS_RECENT_DAYS);
     const periodStart = getBusinessDayStart(recentDates[0]);
     const periodEnd = getBusinessDayStart(addDays(today, 1));
@@ -114,61 +117,6 @@ function getRecentDateIds(today: string, days: number) {
   return Array.from({ length: days }, (_, index) =>
     addDays(today, index - days + 1),
   );
-}
-
-function getBusinessDateId(value: Date) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    day: '2-digit',
-    month: '2-digit',
-    timeZone: BUSINESS_TIME_ZONE,
-    year: 'numeric',
-  }).formatToParts(value);
-  const values = Object.fromEntries(
-    parts
-      .filter((part) => part.type !== 'literal')
-      .map((part) => [part.type, part.value]),
-  );
-
-  return `${values.year}-${values.month}-${values.day}`;
-}
-
-function getBusinessDayStart(dateId: string) {
-  const [year, month, day] = dateId.split('-').map(Number);
-  const utcMidnight = new Date(Date.UTC(year, month - 1, day));
-  const offsetMinutes = getTimeZoneOffsetMinutes(
-    utcMidnight,
-    BUSINESS_TIME_ZONE,
-  );
-
-  return new Date(utcMidnight.getTime() - offsetMinutes * 60_000);
-}
-
-function getTimeZoneOffsetMinutes(value: Date, timeZone: string) {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    day: '2-digit',
-    hour: '2-digit',
-    hourCycle: 'h23',
-    minute: '2-digit',
-    month: '2-digit',
-    second: '2-digit',
-    timeZone,
-    year: 'numeric',
-  }).formatToParts(value);
-  const values = Object.fromEntries(
-    parts
-      .filter((part) => part.type !== 'literal')
-      .map((part) => [part.type, part.value]),
-  );
-  const timeZoneDateAsUtc = Date.UTC(
-    Number(values.year),
-    Number(values.month) - 1,
-    Number(values.day),
-    Number(values.hour),
-    Number(values.minute),
-    Number(values.second),
-  );
-
-  return (timeZoneDateAsUtc - value.getTime()) / 60_000;
 }
 
 function addDays(dateId: string, days: number) {

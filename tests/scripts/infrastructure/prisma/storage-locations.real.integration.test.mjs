@@ -7,6 +7,8 @@ import { createIsolatedPostgres } from "../../helpers/isolated-postgres.mjs";
 import { runPackageMigrations } from "../../../../scripts/database/migrate.mjs";
 import { verifyStorageLocations } from "../../helpers/storage-locations.mjs";
 
+import { verifyStorageStructure } from "../../helpers/storage-structure.mjs";
+
 const require = createRequire(import.meta.url);
 const project = resolve(import.meta.dirname, "../../../..");
 test(
@@ -51,6 +53,7 @@ test(
       });
       try {
         await verifyStorageLocations(prisma);
+        await verifyStorageStructure(prisma);
       } finally {
         await prisma.$disconnect();
       }

@@ -104,7 +104,19 @@ test('administrative adjustments and generic staged storage are atomic and prese
         }
       });
       const item = await prisma.warehouseItem.create({ data: { id: 9007199254740993n, article: 'ADJUST-A', name: 'Bearing', unit: 'шт' } });
-      const location = await prisma.warehouseStorageLocation.create({ data: { id: 9007199254740993n, code: 'A', name: 'Shelf' } });
+      const location = await prisma.warehouseStorageLocation.create({
+        data: {
+          warehouse: {
+            connectOrCreate: {
+              where: { code: "TEST" },
+              create: { code: "TEST", name: "Test warehouse" },
+            },
+          },
+          id: 9007199254740993n,
+          code: "A",
+          name: "Shelf",
+        },
+      });
       const audit = new AuditLogService(prisma);
       const stock = new WarehouseStockService(new WarehouseStockQueryService(prisma), audit);
       const policy = new StorageFilePolicyService({ primaryDocumentTypes: [], singleDocumentTypes: [], documentRules: {

@@ -41,3 +41,10 @@ describe('Reservation validation', () => {
     expect(() => parseReservationQuery(v)).toThrow(),
   );
 });
+
+it('validates warehouse filters without losing bigint precision', () => {
+  expect(
+    parseReservationQuery({ warehouseId: '9007199254740993' }).warehouseId,
+  ).toBe(9007199254740993n);
+  expect(() => parseReservationQuery({ warehouseId: '0' })).toThrow();
+});

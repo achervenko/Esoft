@@ -1,3 +1,4 @@
+import { lockWarehouse } from '../storage-structure/storage-structure.policy';
 import { Injectable } from '@nestjs/common';
 import { AuditAction } from '@prisma/client';
 import { parseWarehouseId } from '../catalog/catalog.validation';
@@ -19,6 +20,7 @@ export class WarehouseIssueSheetLifecycleService {
   create(value: unknown, actor: string) {
     const data = parseCreateSheet(value);
     return this.transactions.run(actor, async (tx) => {
+      await lockWarehouse(tx, data.warehouseId, true);
       const sheet = await tx.warehouseIssueSheet.create({
         data: { ...data, status: 'DRAFT', createdByUserId: actor },
       });
@@ -41,6 +43,7 @@ export class WarehouseIssueSheetLifecycleService {
       assertSheetOpen(sheet.status);
       if (!['DRAFT', 'READY'].includes(sheet.status))
         sheetConflict('WAREHOUSE_ISSUE_SHEET_STATE', 'Лист уже исполняется.');
+      await lockWarehouse(tx, sheet.warehouseId, true);
       const lines = await tx.warehouseIssueSheetLine.findMany({
         where: { issueSheetId: id },
         orderBy: { itemId: 'asc' },
@@ -61,7 +64,7 @@ export class WarehouseIssueSheetLifecycleService {
             'WAREHOUSE_ISSUE_SHEET_NOT_READY',
             'Исправьте ошибки и сопоставьте все строки листа.',
           );
-        await this.lines.validateReferences(tx, { ...line });
+        await this.lines.validateReferences(tx, { ...line }, sheet.warehouseId);
       }
       if (sheet.status === 'READY') return sheetDto(sheet);
       const updated = await tx.warehouseIssueSheet.update({

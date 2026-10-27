@@ -1,4 +1,11 @@
-import type { CalendarDto, CalendarLayerItemDto } from "../../../shared/api/calendar";
+import {
+  getBusinessTodayDateString,
+  getCalendarDateId,
+} from "../../../shared/lib/business-date";
+import type {
+  CalendarDto,
+  CalendarLayerItemDto,
+} from "../../../shared/api/calendar";
 import {
   CALENDAR_MONTH_NAMES,
   CALENDAR_ZOOM_LEVELS,
@@ -35,11 +42,7 @@ export function getPreviousWeek(value: Date): Date {
 }
 
 export function formatDateId(value: Date): string {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+  return getCalendarDateId(value);
 }
 
 export function formatMonthTitle(value: Date): string {
@@ -95,10 +98,9 @@ export function createCalendarWeek(
   };
 }
 
-export function getMonthRequestRange(value: Date): Pick<
-  CalendarPeriodModel,
-  "dateFrom" | "dateTo"
-> {
+export function getMonthRequestRange(
+  value: Date,
+): Pick<CalendarPeriodModel, "dateFrom" | "dateTo"> {
   const monthStart = new Date(value.getFullYear(), value.getMonth(), 1);
   const monthEnd = new Date(value.getFullYear(), value.getMonth() + 1, 0);
 
@@ -108,10 +110,9 @@ export function getMonthRequestRange(value: Date): Pick<
   };
 }
 
-export function getWeekRequestRange(value: Date): Pick<
-  CalendarPeriodModel,
-  "dateFrom" | "dateTo"
-> {
+export function getWeekRequestRange(
+  value: Date,
+): Pick<CalendarPeriodModel, "dateFrom" | "dateTo"> {
   return {
     dateFrom: formatDateId(startOfCalendarWeek(value)),
     dateTo: formatDateId(endOfCalendarWeek(value)),
@@ -173,7 +174,7 @@ function createCalendarCells(params: {
   dateFrom: Date;
   dateTo: Date;
 }): CalendarPeriodCell[] {
-  const todayId = formatDateId(new Date());
+  const todayId = getBusinessTodayDateString();
   const daysByDate = new Map(
     params.calendar?.days.map((day) => [day.date, day]) ?? [],
   );

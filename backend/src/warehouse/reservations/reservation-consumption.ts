@@ -1,5 +1,9 @@
 import { Prisma } from '@prisma/client';
-import { issueConflict } from '../issues/issues.model';
+import { ConflictException } from '@nestjs/common';
+
+function consumptionConflict(code: string, message: string): never {
+  throw new ConflictException({ code, message });
+}
 
 export type ReservationRow = {
   id: bigint;
@@ -53,12 +57,12 @@ export function planReservationConsumption(
     projectId,
   );
   if (quantity.gt(physical))
-    issueConflict(
+    consumptionConflict(
       'WAREHOUSE_ISSUE_INSUFFICIENT_STOCK',
       'Количество превышает физический остаток.',
     );
   if (!override && quantity.gt(availability.available))
-    issueConflict(
+    consumptionConflict(
       'WAREHOUSE_ISSUE_RESERVED_STOCK',
       'Количество превышает доступный остаток с учётом резервов.',
     );
@@ -89,7 +93,7 @@ export function planReservationConsumption(
       consume(r, Prisma.Decimal.min(r.quantity, remaining));
   }
   if (remaining.gt(0))
-    issueConflict(
+    consumptionConflict(
       'WAREHOUSE_ISSUE_RESERVED_STOCK',
       'Недостаточно доступного количества.',
     );

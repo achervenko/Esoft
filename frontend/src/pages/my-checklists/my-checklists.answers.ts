@@ -1,3 +1,4 @@
+import { formatCalendarDate } from "../../shared/lib/business-date";
 import type {
   ChecklistAnswerType,
   ChecklistWorkAnswerPayload,
@@ -45,9 +46,7 @@ function toRuDateDraftValue(value: string) {
     return "";
   }
 
-  return new Intl.DateTimeFormat("ru-RU", {
-    timeZone: "UTC",
-  }).format(parsedDate);
+  return formatCalendarDate(parsedDate.toISOString().slice(0, 10));
 }
 
 function toBooleanAnswerValue(value: string) {
@@ -65,7 +64,8 @@ function toBooleanAnswerValue(value: string) {
 export function buildDraftAnswers(detail: ChecklistWorkDetail): DraftAnswers {
   const entries = detail.modules.flatMap((module) =>
     module.questions.map(
-      (question) => [question.checklistDetailId, toDraftValue(question)] as const,
+      (question) =>
+        [question.checklistDetailId, toDraftValue(question)] as const,
     ),
   );
 
@@ -112,7 +112,10 @@ export function getChangedAnswers(
   );
 }
 
-export function toApiAnswerValue(answerType: ChecklistAnswerType, value: string) {
+export function toApiAnswerValue(
+  answerType: ChecklistAnswerType,
+  value: string,
+) {
   const trimmedValue = value.trim();
 
   if (answerType === "BOOLEAN") {

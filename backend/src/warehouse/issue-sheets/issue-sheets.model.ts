@@ -43,7 +43,11 @@ export function assertSheetOpen(status: string) {
   );
 }
 export function sheetDto(sheet: WarehouseIssueSheet) {
-  return { ...sheet, id: String(sheet.id) };
+  return {
+    ...sheet,
+    id: String(sheet.id),
+    warehouseId: String(sheet.warehouseId),
+  };
 }
 export function lineProgress(
   required: Prisma.Decimal,

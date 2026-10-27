@@ -1,4 +1,19 @@
+model Warehouse {
+  issues WarehouseIssue[]
+  issueSheets WarehouseIssueSheet[]
+  receipts WarehouseReceipt[]
+  id               BigInt                     @id @default(autoincrement())
+  code             String                     @unique(map: "uq_warehouses_code") @db.VarChar(100)
+  name             String                     @db.VarChar(255)
+  isActive         Boolean                    @default(true) @map("is_active")
+  storageLocations WarehouseStorageLocation[]
+
+  @@map("warehouses")
+}
+
 model WarehouseItem {
+  transfers WarehouseTransfer[]
+  receiptLines WarehouseReceiptLine[]
   id              BigInt                    @id @default(autoincrement())
   article         String                    @unique(map: "uq_warehouse_items_article") @db.VarChar(100)
   name            String                    @db.VarChar(255)
@@ -12,13 +27,19 @@ model WarehouseItem {
 }
 
 model WarehouseStorageLocation {
+  transfersFrom WarehouseTransfer[] @relation("WarehouseTransferFrom")
+  transfersTo WarehouseTransfer[] @relation("WarehouseTransferTo")
+  receiptLines WarehouseReceiptLine[]
+  warehouseId     BigInt                    @map("warehouse_id")
+  warehouse       Warehouse                 @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_storage_locations_warehouse")
   id              BigInt                    @id @default(autoincrement())
-  code            String                    @unique(map: "uq_warehouse_storage_locations_code") @db.VarChar(100)
+  code            String                    @db.VarChar(100)
   name            String                    @db.VarChar(255)
   isActive        Boolean                   @default(true) @map("is_active")
   balances        WarehouseBalance[]
   issueSheetLines WarehouseIssueSheetLine[]
 
+  @@unique([warehouseId, code], map: "uq_warehouse_storage_locations_warehouse_code")
   @@map("warehouse_storage_locations")
 }
 
@@ -66,6 +87,9 @@ model WarehouseProjectReservation {
 }
 
 model WarehouseIssueSheet {
+  warehouseId BigInt @map("warehouse_id")
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
   id                BigInt                    @id @default(autoincrement())
   name              String                    @db.VarChar(255)
   sourceFileName    String?                   @map("source_file_name") @db.VarChar(255)
@@ -79,6 +103,7 @@ model WarehouseIssueSheet {
   createdBy         User                      @relation("WarehouseIssueSheetCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_issue_sheets_created_by")
   processedBy       User?                     @relation("WarehouseIssueSheetProcessedBy", fields: [processedByUserId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_issue_sheets_processed_by")
 
+  @@index([warehouseId], map: "idx_warehouse_issue_sheets_warehouse")
   @@map("warehouse_issue_sheets")
 }
 
@@ -110,6 +135,12 @@ model WarehouseIssueSheetLine {
 }
 
 model WarehouseIssue {
+  snapshot Json @db.JsonB
+  searchText String @map("search_text") @db.Text
+  warehouseId BigInt @map("warehouse_id")
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  request WarehouseIssueRequest?
   id                   BigInt                   @id @default(autoincrement())
   // DB-only chk_warehouse_issues_type_line: MANUAL has no line; ISSUE_SHEET requires a line.
   type                 String                   @db.VarChar(50)
@@ -129,10 +160,14 @@ model WarehouseIssue {
   @@index([issueSheetLineId], map: "idx_warehouse_issues_sheet_line")
   @@index([issuedByUserId], map: "idx_warehouse_issues_issued_by")
   @@index([createdAt], map: "idx_warehouse_issues_created_at")
+  @@index([warehouseId], map: "idx_warehouse_issues_warehouse")
+  @@index([warehouseId, createdAt, id], map: "idx_warehouse_issues_warehouse_created")
+  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin, map: "idx_warehouse_issues_history_search")
   @@map("warehouse_issues")
 }
 
 model WarehouseIssuePosition {
+  snapshot Json @db.JsonB
   id        BigInt           @id @default(autoincrement())
   issueId   BigInt           @map("issue_id")
   balanceId BigInt           @map("balance_id")
@@ -154,20 +189,20 @@ enum WarehouseAdjustmentType {
 }
 
 model WarehouseStockAdjustment {
-  id              BigInt                  @id @default(autoincrement())
-  balanceId       BigInt                  @map("balance_id")
-  balance         WarehouseBalance        @relation(fields: [balanceId], references: [id], onDelete: Restrict, map: "fk_warehouse_stock_adjustments_balance")
+  id              BigInt                               @id @default(autoincrement())
+  balanceId       BigInt                               @map("balance_id")
+  balance         WarehouseBalance                     @relation(fields: [balanceId], references: [id], onDelete: Restrict, map: "fk_warehouse_stock_adjustments_balance")
   type            WarehouseAdjustmentType
-  quantity        Decimal                 @db.Decimal(14, 3)
-  quantityBefore  Decimal                 @map("quantity_before") @db.Decimal(14, 3)
-  quantityAfter   Decimal                 @map("quantity_after") @db.Decimal(14, 3)
-  reason          String                  @db.VarChar(1000)
-  comment         String?                 @db.Text
-  requestKey      String                  @map("request_key") @db.Uuid
-  requestHash     String                  @map("request_hash") @db.VarChar(64)
-  createdByUserId String                  @map("created_by_user_id")
-  createdBy       User                    @relation(fields: [createdByUserId], references: [id], onDelete: Restrict, map: "fk_warehouse_stock_adjustments_user")
-  createdAt       DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  quantity        Decimal                              @db.Decimal(14, 3)
+  quantityBefore  Decimal                              @map("quantity_before") @db.Decimal(14, 3)
+  quantityAfter   Decimal                              @map("quantity_after") @db.Decimal(14, 3)
+  reason          String                               @db.VarChar(1000)
+  comment         String?                              @db.Text
+  requestKey      String                               @map("request_key") @db.Uuid
+  requestHash     String                               @map("request_hash") @db.VarChar(64)
+  createdByUserId String                               @map("created_by_user_id")
+  createdBy       User                                 @relation(fields: [createdByUserId], references: [id], onDelete: Restrict, map: "fk_warehouse_stock_adjustments_user")
+  createdAt       DateTime                             @default(now()) @map("created_at") @db.Timestamptz(6)
   attachments     WarehouseStockAdjustmentAttachment[]
 
   @@unique([createdByUserId, requestKey], map: "uq_warehouse_stock_adjustments_request")
@@ -178,9 +213,90 @@ model WarehouseStockAdjustment {
 model WarehouseStockAdjustmentAttachment {
   adjustmentId BigInt                   @map("adjustment_id")
   fileId       Int                      @unique(map: "uq_warehouse_stock_adjustment_attachments_file") @map("file_id")
-  adjustment   WarehouseStockAdjustment  @relation(fields: [adjustmentId], references: [id], onDelete: Restrict, map: "fk_warehouse_stock_adjustment_attachments_adjustment")
+  adjustment   WarehouseStockAdjustment @relation(fields: [adjustmentId], references: [id], onDelete: Restrict, map: "fk_warehouse_stock_adjustment_attachments_adjustment")
   file         StorageFile              @relation(fields: [fileId], references: [id], onDelete: Restrict, map: "fk_warehouse_stock_adjustment_attachments_file")
 
   @@id([adjustmentId, fileId], map: "pk_warehouse_stock_adjustment_attachments")
   @@map("warehouse_stock_adjustment_attachments")
+}
+
+model WarehouseReceipt {
+ id BigInt @id @default(autoincrement())
+ warehouseId BigInt @map("warehouse_id")
+ warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+ source String @db.VarChar(20)
+ sourceSystem String @map("source_system") @db.VarChar(100)
+ sourceOperationId String @map("source_operation_id") @db.VarChar(255)
+ requestHash String @map("request_hash") @db.VarChar(64)
+ documentNumber String? @map("document_number") @db.VarChar(100)
+ documentDate DateTime? @map("document_date") @db.Date
+ comment String? @db.VarChar(4000)
+ warehouseCodeSnapshot String @map("warehouse_code_snapshot") @db.VarChar(100)
+ warehouseNameSnapshot String @map("warehouse_name_snapshot") @db.VarChar(255)
+ createdByUserId String @map("created_by_user_id")
+ createdBy User @relation(fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+ lines WarehouseReceiptLine[]
+ @@unique([source, sourceSystem, sourceOperationId], map: "uq_warehouse_receipts_source_operation")
+ @@index([warehouseId, createdAt], map: "idx_warehouse_receipts_warehouse_created")
+ @@index([createdAt, id], map: "idx_warehouse_receipts_created")
+ @@map("warehouse_receipts")
+}
+model WarehouseReceiptLine {
+ id BigInt @id @default(autoincrement())
+ receiptId BigInt @map("receipt_id")
+ receipt WarehouseReceipt @relation(fields: [receiptId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+ rowNumber Int @map("row_number")
+ itemId BigInt @map("item_id")
+ item WarehouseItem @relation(fields: [itemId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+ storageLocationId BigInt @map("storage_location_id")
+ storageLocation WarehouseStorageLocation @relation(fields: [storageLocationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+ // SQL CHECK: quantity > 0, row_number > 0.
+ quantity Decimal @db.Decimal(14,3)
+ unitSnapshot String @map("unit_snapshot") @db.VarChar(50)
+ itemArticleSnapshot String @map("item_article_snapshot") @db.VarChar(100)
+ itemNameSnapshot String @map("item_name_snapshot") @db.VarChar(255)
+ storageLocationCodeSnapshot String @map("storage_location_code_snapshot") @db.VarChar(100)
+ storageLocationNameSnapshot String @map("storage_location_name_snapshot") @db.VarChar(255)
+ @@unique([receiptId, rowNumber], map: "uq_warehouse_receipt_lines_row")
+ @@unique([receiptId, itemId, storageLocationId], map: "uq_warehouse_receipt_lines_item_location")
+ @@index([itemId, storageLocationId], map: "idx_warehouse_receipt_lines_item_location")
+ @@index([storageLocationId], map: "idx_warehouse_receipt_lines_location")
+ @@map("warehouse_receipt_lines")
+}
+
+model WarehouseIssueRequest {
+ actorUserId String @map("actor_user_id")
+ requestKey String @map("request_key") @db.Uuid
+ requestHash String @map("request_hash") @db.VarChar(64)
+ issueId BigInt @unique(map: "uq_warehouse_issue_requests_issue") @map("issue_id")
+ response Json @db.JsonB
+ actor User @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+ issue WarehouseIssue @relation(fields: [issueId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+ @@id([actorUserId, requestKey])
+ @@map("warehouse_issue_requests")
+}
+
+model WarehouseTransfer {
+  id BigInt @id @default(autoincrement())
+  itemId BigInt @map("item_id")
+  item WarehouseItem @relation(fields:[itemId],references:[id],onDelete:Restrict,onUpdate:Cascade)
+  fromLocationId BigInt @map("from_location_id")
+  fromLocation WarehouseStorageLocation @relation("WarehouseTransferFrom",fields:[fromLocationId],references:[id],onDelete:Restrict,onUpdate:Cascade)
+  toLocationId BigInt @map("to_location_id")
+  toLocation WarehouseStorageLocation @relation("WarehouseTransferTo",fields:[toLocationId],references:[id],onDelete:Restrict,onUpdate:Cascade)
+  quantity Decimal @db.Decimal(14,3)
+  comment String? @db.VarChar(4000)
+  createdByUserId String @map("created_by_user_id")
+  createdBy User @relation(fields:[createdByUserId],references:[id],onDelete:Restrict,onUpdate:Cascade)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  requestKey String @map("request_key") @db.Uuid
+  requestHash String @map("request_hash") @db.VarChar(64)
+  snapshot Json @db.JsonB
+  @@unique([createdByUserId,requestKey],map:"uq_warehouse_transfers_request")
+  @@index([itemId,createdAt],map:"idx_warehouse_transfers_item")
+  @@index([fromLocationId,createdAt],map:"idx_warehouse_transfers_from")
+  @@index([toLocationId,createdAt],map:"idx_warehouse_transfers_to")
+  @@index([createdAt,id],map:"idx_warehouse_transfers_created")
+  @@map("warehouse_transfers")
 }

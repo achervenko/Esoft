@@ -1,3 +1,4 @@
+import { formatBusinessDateTime } from "../../shared/lib/business-date";
 import { AdminTextareaField as TextareaField } from "../../shared/ui/AdminFormControls";
 import { GuardedAdminModal } from "../../shared/ui/GuardedAdminModal";
 import { formatPpeDate } from "../../modules/ppe-ui/ppe-presentation";
@@ -112,7 +113,14 @@ export function IssueSnapshot({
       [
         "Дата отмены",
         issue.cancelledAt
-          ? new Date(issue.cancelledAt).toLocaleString("ru-RU")
+          ? formatBusinessDateTime(issue.cancelledAt, {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })
           : "—",
       ],
       ["Отменил", issue.cancelledByName ?? "—"],

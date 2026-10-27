@@ -9,6 +9,7 @@ export class WarehouseIssuesAccessService {
     tx: Prisma.TransactionClient,
     actor: string,
     override: boolean,
+    fromSheet = false,
   ) {
     if (!actor || typeof actor !== 'string') issueForbidden();
     const [user] = await tx.$queryRaw<
@@ -18,6 +19,8 @@ export class WarehouseIssuesAccessService {
       !user ||
       user.banned ||
       !hasPermission(user.role, 'warehouse.issues.manage') ||
+      (fromSheet &&
+        !hasPermission(user.role, 'warehouse.issue-sheets.manage')) ||
       (override && !hasPermission(user.role, 'warehouse.reservations.override'))
     )
       issueForbidden();

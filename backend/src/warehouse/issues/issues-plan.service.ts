@@ -1,3 +1,5 @@
+import { lockWarehouse } from '../storage-structure/storage-structure.policy';
+import { locationWithWarehouseSelect } from '../storage-structure/storage-structure.dto';
 import { Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { Prisma } from '@prisma/client';
@@ -17,7 +19,12 @@ export class WarehouseIssuePlanService {
     const ids = input.positions.map((p) => p.balanceId);
     const balances = await tx.warehouseBalance.findMany({
       where: { id: { in: ids } },
-      select: { id: true, itemId: true, storageLocationId: true },
+      select: {
+        id: true,
+        itemId: true,
+        storageLocationId: true,
+        storageLocation: { select: { warehouseId: true } },
+      },
     });
     if (balances.length !== ids.length)
       issueConflict(
@@ -29,7 +36,16 @@ export class WarehouseIssuePlanService {
         'WAREHOUSE_ISSUE_MULTIPLE_ITEMS',
         'Все позиции выдачи должны относиться к одной номенклатуре.',
       );
+    if (
+      new Set(balances.map((b) => String(b.storageLocation.warehouseId)))
+        .size !== 1
+    )
+      issueConflict(
+        'WAREHOUSE_ISSUE_MULTIPLE_WAREHOUSES',
+        'Все места выдачи должны принадлежать одному складу.',
+      );
     return {
+      warehouseId: balances[0].storageLocation.warehouseId,
       itemId: balances[0].itemId,
       locationIds: balances.map((b) => String(b.storageLocationId)),
     };
@@ -40,11 +56,18 @@ export class WarehouseIssuePlanService {
     actor: string,
     projectId: bigint | null,
   ) {
-    const { itemId, locationIds } = await this.resolveItem(tx, input);
+    const { itemId, locationIds, warehouseId } = await this.resolveItem(
+      tx,
+      input,
+    );
+    await lockWarehouse(tx, warehouseId, true);
     await this.stock.lockBalances(tx, String(itemId), locationIds);
     const balances = await tx.warehouseBalance.findMany({
       where: { id: { in: input.positions.map((p) => p.balanceId) } },
-      include: { item: true, storageLocation: true },
+      include: {
+        item: true,
+        storageLocation: { select: locationWithWarehouseSelect },
+      },
     });
     if (
       balances.length !== input.positions.length ||
@@ -105,6 +128,7 @@ export class WarehouseIssuePlanService {
       )
       .digest('hex');
     return {
+      warehouseId,
       itemId,
       positions,
       changes,

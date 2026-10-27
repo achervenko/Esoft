@@ -1,5 +1,7 @@
 # Резервы проектов
 
+Обязательная принадлежность выдач и листов складу, warehouseId-фильтры и состав DTO описаны в [контракте границ складов](../storage-structure/WAREHOUSE-BOUNDARIES.md).
+
 Один `WarehouseProjectReservation` связывает конкретный `WarehouseBalance`
 (номенклатура + место) с `projectId` и положительным количеством.
 Используется существующая схема БД без миграций.
@@ -11,7 +13,7 @@
 контроллер не подключается. `warehouse.reservations.override` остаётся отдельным
 правом только admin и используется Issues, а не обычным управлением резервами.
 
-- `GET /` — список `{items,total,page,limit}`. Фильтры `balanceId`, `projectId`,
+- `GET /` — список `{items,total,page,limit}`. Фильтры `warehouseId`, `balanceId`, `projectId`,
   `itemId`, `locationId` объединяются через AND. `page=1`, `limit=50`, максимум 100.
   Стабильная сортировка id ASC, список и total читаются одним RepeatableRead-снимком.
 - `POST /` — `{balanceId,projectId,quantity}`. Создаёт резерв, возвращает DTO.
@@ -21,8 +23,11 @@
   Повторное снятие отсутствующего резерва даёт 404 `WAREHOUSE_RESERVATION_NOT_FOUND`.
 
 DTO содержит `id`, `balanceId`, `projectId`, `quantity`, `item`
-(id/article/name/unit/isActive), `location` (id/code/name/isActive), `project`
-(id/projectNumber/name/isActive). ID — канонические bigint decimal strings,
+(id/article/name/unit/isActive), `location` (id/code/name/isActive/warehouseId/warehouse), `project`
+(id/projectNumber/name/isActive). Вложенный `location.warehouse` содержит
+`id`, `code`, `name`, `isActive`; место сериализуется общим `locationWithWarehouseDto`.
+Фильтр `warehouseId` применяется через место остатка; без него возвращаются резервы всех складов.
+ID — канонические bigint decimal strings,
 количества — decimal strings до трёх знаков, максимум `99999999999.999`.
 Ноль запрещён: для полного освобождения используется DELETE.
 Неизвестные поля и некорректные значения отклоняются с 400.

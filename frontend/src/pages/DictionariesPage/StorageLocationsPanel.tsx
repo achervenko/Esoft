@@ -184,6 +184,7 @@ export function StorageLocationsPanel({ canManage }: { canManage: boolean }) {
                       Object.entries(values).filter(
                         ([key, value]) =>
                           key !== "isActive" &&
+                          key !== "warehouseId" &&
                           value !== editing[key as "code" | "name"],
                       ),
                     ),
