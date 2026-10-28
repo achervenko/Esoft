@@ -10,5 +10,6 @@ import { WarehousesService } from './warehouses.service';
   imports: [PrismaModule, AuditModule],
   controllers: [WarehousesController, WarehouseStorageLocationsController],
   providers: [WarehousesService, WarehouseStorageLocationsService],
+  exports: [WarehousesService, WarehouseStorageLocationsService],
 })
 export class WarehouseStorageStructureModule {}

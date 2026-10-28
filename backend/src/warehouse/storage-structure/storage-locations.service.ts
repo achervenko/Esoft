@@ -21,7 +21,6 @@ import {
 } from './storage-locations.validation';
 
 const labels = {
-  code: 'Код',
   name: 'Наименование',
   isActive: 'Активность',
   warehouseId: 'Склад',
@@ -33,7 +32,7 @@ function notFound(): never {
   });
 }
 
-function isWarehouseCodeUniqueViolation(
+function isWarehouseNameUniqueViolation(
   error: Prisma.PrismaClientKnownRequestError,
 ) {
   const meta = error.meta;
@@ -43,15 +42,18 @@ function isWarehouseCodeUniqueViolation(
   )
     return false;
   const target: unknown = meta?.target;
-  if (target === 'uq_warehouse_storage_locations_warehouse_code') return true;
+  if (target === 'uq_warehouse_storage_locations_warehouse_name') return true;
   // A field name alone is meaningful only for this model.
-  if (meta?.modelName !== 'WarehouseStorageLocation') return false;
-  const isCodeField = (fields: unknown) =>
+  const isLocationNameFields = (fields: unknown) =>
     Array.isArray(fields) &&
     fields.length === 2 &&
-    fields.includes('code') &&
+    fields.includes('name') &&
     (fields.includes('warehouseId') || fields.includes('warehouse_id'));
-  if (target !== undefined) return isCodeField(target);
+  if (
+    meta?.modelName === 'WarehouseStorageLocation' &&
+    isLocationNameFields(target)
+  )
+    return true;
 
   // PrismaPg exposes the constraint fields here instead of meta.target.
   const adapter: unknown = meta?.driverAdapterError;
@@ -72,9 +74,9 @@ function isWarehouseCodeUniqueViolation(
   return (
     !!constraint &&
     typeof constraint === 'object' &&
-    (('fields' in constraint && isCodeField(constraint.fields)) ||
+    (('fields' in constraint && isLocationNameFields(constraint.fields)) ||
       ('index' in constraint &&
-        constraint.index === 'uq_warehouse_storage_locations_warehouse_code'))
+        constraint.index === 'uq_warehouse_storage_locations_warehouse_name'))
   );
 }
 
@@ -102,7 +104,7 @@ export class WarehouseStorageLocationsService {
       ...(isActive === undefined ? {} : { isActive }),
       ...(search
         ? {
-            OR: ['code', 'name'].map((key) => ({
+            OR: ['name'].map((key) => ({
               [key]: { contains: search, mode: 'insensitive' },
             })),
           }
@@ -149,8 +151,34 @@ export class WarehouseStorageLocationsService {
     ) as Prisma.WarehouseStorageLocationUncheckedCreateInput;
     return this.mutate(actorUserId, async (tx) => {
       await lockWarehouse(tx, BigInt(data.warehouseId), true);
-      const item = await tx.warehouseStorageLocation.create({ data, select });
-      await this.writeAudit(tx, AuditAction.CREATE, null, item, actorUserId);
+      await tx.$queryRaw`SELECT id FROM warehouse_storage_locations
+        WHERE warehouse_id = ${BigInt(data.warehouseId)} AND name = ${data.name} FOR UPDATE`;
+      const previous = await tx.warehouseStorageLocation.findUnique({
+        where: {
+          warehouseId_name: { warehouseId: data.warehouseId, name: data.name },
+        },
+        select,
+      });
+      if (previous?.isActive || (previous && data.isActive === false))
+        throw new ConflictException({
+          code: 'WAREHOUSE_STORAGE_LOCATION_NAME_CONFLICT',
+          message:
+            'Место хранения с таким названием уже существует на этом складе.',
+        });
+      const item = previous
+        ? await tx.warehouseStorageLocation.update({
+            where: { id: previous.id },
+            data: { name: data.name, isActive: true },
+            select,
+          })
+        : await tx.warehouseStorageLocation.create({ data, select });
+      await this.writeAudit(
+        tx,
+        previous ? AuditAction.UPDATE : AuditAction.CREATE,
+        previous,
+        item,
+        actorUserId,
+      );
       return dto(item);
     });
   }
@@ -215,12 +243,12 @@ export class WarehouseStorageLocationsService {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002' &&
-        isWarehouseCodeUniqueViolation(error)
+        isWarehouseNameUniqueViolation(error)
       )
         throw new ConflictException({
-          code: 'WAREHOUSE_STORAGE_LOCATION_CODE_CONFLICT',
+          code: 'WAREHOUSE_STORAGE_LOCATION_NAME_CONFLICT',
           message:
-            'Место хранения с таким кодом уже существует на этом складе.',
+            'Место хранения с таким названием уже существует на этом складе.',
         });
       throw error;
     }

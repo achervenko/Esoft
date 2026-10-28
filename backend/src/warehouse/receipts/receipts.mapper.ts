@@ -10,7 +10,6 @@ export function receiptDto(
     source: row.source,
     documentNumber: row.documentNumber,
     comment: row.comment,
-    warehouseCodeSnapshot: row.warehouseCodeSnapshot,
     warehouseNameSnapshot: row.warehouseNameSnapshot,
     createdByUserId: row.createdByUserId,
     createdBy: row.createdBy,

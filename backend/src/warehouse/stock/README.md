@@ -58,8 +58,8 @@ POST/PATCH/DELETE остатков не предоставляются; чтен
 Все ID принимаются и возвращаются десятичными строками PostgreSQL bigint,
 без преобразования в JS number. В DTO остатка есть `id`, `itemId`, `locationId`,
 `quantity`, `item` (артикул, название, единица, активность) и `location`
-(id/code/name/isActive/warehouseId/warehouse). Вложенный `location.warehouse`
-содержит `id`, `code`, `name`, `isActive`; используется общий `locationWithWarehouseDto`.
+(id/name/isActive/warehouseId/warehouse). Вложенный `location.warehouse`
+содержит `id`, `name`, `isActive`; используется общий `locationWithWarehouseDto`.
 Все ID вложенных объектов, включая `warehouseId` и `warehouse.id`, также строковые.
 
 Количество принимается строкой или `Prisma.Decimal`, возвращается строкой.
@@ -84,7 +84,7 @@ JS number не принимается. Количество операции с�
 - `minQuantity`, `maxQuantity`: включительные границы, допускают ноль,
   применяются вместе с `quantityState`; минимум не может превышать максимум.
 - `itemActive`, `locationActive`: boolean; без них активность не фильтруется.
-- `sortBy`: `item` (артикул, по умолчанию), `location` (код места), `quantity`.
+- `sortBy`: `item` (артикул, по умолчанию), `location` (название места), `quantity`.
 - `sortOrder`: `asc` (по умолчанию) или `desc`; дополнительный ключ — ID остатка
   по возрастанию, в том числе при одинаковых артикулах, местах или количествах.
 - `page`: положительное целое, по умолчанию 1; `limit`: 1–100, по умолчанию 50.
@@ -101,6 +101,44 @@ HTTP-контроллер отдельно разбирает строковые
 необязательный `tx`: `getBalances(filters?, tx?)`, `getBalance(itemId, locationId, tx?)`,
 `getItemTotal(itemId, warehouseId?, tx?)`. Тогда используется снимок и уровень
 изоляции вызывающей транзакции, в том числе её незавершённые изменения.
+
+## Агрегированное представление остатков
+
+Фильтры читаются через `GET /api/warehouse/stock-overview/filters/warehouses`
+и `GET /api/warehouse/stock-overview/filters/storage-locations`: достаточно
+`warehouse.stock.read`, дополнительное `warehouse.storage-locations.read` не требуется.
+Параметры, пагинация и DTO совпадают со списками справочников. Административные
+endpoints справочников сохраняют собственные разрешения.
+
+Используется экраном «Остатки» для представления физических остатков по товару и складу.
+
+`GET /api/warehouse/stock-overview` использует `warehouse.stock.read`. Одна строка —
+товар + склад. Возвращает `{items,total,page,limit}`; `total` считает эти группы,
+а не отдельные балансы. DTO строки: `id` (itemId:warehouseId), `item`, `warehouse`,
+`quantity` (decimal-строка), `locationsCount` (места с положительным количеством),
+`locationsPreview` (до трёх мест с quantity). `item.photo` пока null: в номенклатуре
+ещё нет фотографий. Старый `/stock` остаётся списком отдельных балансов.
+
+Фильтры: `search` (частичное совпадение article/name без учёта регистра, до 255
+символов, SQL wildcard-символы буквальные), `warehouseId`, `locationId`,
+`quantityState=POSITIVE|ZERO|ALL` (по умолчанию POSITIVE), `page`, `limit` (до 100).
+`sortBy=article|name|quantity|warehouse`, `sortOrder=asc|desc`; по умолчанию article ASC.
+Дополнительные ключи itemId/warehouseId обеспечивают стабильную пагинацию.
+
+Фильтр места отбирает группы с балансом в этом месте (для POSITIVE — положительным),
+но quantity и распределение всегда охватывают весь соответствующий склад.
+Отсутствующий баланс не превращается в нулевой. Неактивные справочники не скрывают
+физические остатки. Все чтения ответа выполняются в RepeatableRead-транзакции.
+
+`GET /api/warehouse/stock-overview/items/:itemId/warehouses/:warehouseId` возвращает
+`item`, `warehouse`, `totalQuantity` и полный `locations`:
+`balanceId`, `location`, `quantity`, `reserved`, `available`.
+`available=max(quantity-reserved,0)` — свободная часть для обычного перемещения.
+Перемещение выполняется существующим `POST /api/warehouse/transfers`, с правом
+`warehouse.transfers.manage`; просмотр распределения не требует этого права.
+Фронтенд сохраняет requestKey при повторе одного запроса и обновляет список
+и распределение после успешного перемещения. Перенос проектных резервов в эту
+форму не включён; серверный контракт переноса резервов сохраняется.
 
 ## Запись, блокировки и границы ответственности
 

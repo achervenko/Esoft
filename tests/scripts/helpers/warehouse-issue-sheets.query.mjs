@@ -16,7 +16,7 @@ export async function verifyIssueSheetsQuery(context) {
   } = context;
   const sheet = await create("100%_Лист");
   const foreignWarehouse = await prisma.warehouse.create({
-    data: { code: actor.id + "-foreign", name: "Другой склад" },
+    data: { name: "Другой склад" },
   });
   const foreignSheet = await service.create(
     { warehouseId: String(foreignWarehouse.id), name: "Чужой лист" },

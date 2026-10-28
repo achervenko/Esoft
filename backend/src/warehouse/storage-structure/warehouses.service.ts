@@ -23,19 +23,19 @@ import {
   parseStorageEntry,
 } from './storage-locations.validation';
 
-function isWarehouseCodeUniqueViolation(
+function isWarehouseNameUniqueViolation(
   error: Prisma.PrismaClientKnownRequestError,
 ) {
   const meta = error.meta;
   if (meta?.modelName !== undefined && meta.modelName !== 'Warehouse')
     return false;
-  const constraintName = 'uq_warehouses_code';
-  const isCodeField = (fields: unknown) =>
+  const constraintName = 'uq_warehouses_name';
+  const isNameField = (fields: unknown) =>
     meta?.modelName === 'Warehouse' &&
     Array.isArray(fields) &&
     fields.length === 1 &&
-    fields[0] === 'code';
-  if (meta?.target === constraintName || isCodeField(meta?.target)) return true;
+    fields[0] === 'name';
+  if (meta?.target === constraintName || isNameField(meta?.target)) return true;
   const adapter: unknown = meta?.driverAdapterError;
   if (!adapter || typeof adapter !== 'object' || !('cause' in adapter))
     return false;
@@ -55,7 +55,7 @@ function isWarehouseCodeUniqueViolation(
     !!constraint &&
     typeof constraint === 'object' &&
     (('index' in constraint && constraint.index === constraintName) ||
-      ('fields' in constraint && isCodeField(constraint.fields)))
+      ('fields' in constraint && isNameField(constraint.fields)))
   );
 }
 
@@ -74,7 +74,7 @@ export class WarehousesService {
       ...(isActive === undefined ? {} : { isActive }),
       ...(q
         ? {
-            OR: ['code', 'name'].map((key) => ({
+            OR: ['name'].map((key) => ({
               [key]: { contains: q, mode: 'insensitive' },
             })),
           }
@@ -106,8 +106,24 @@ export class WarehousesService {
   create(value: unknown, actor: string) {
     const data = parseStorageEntry(value, true) as Prisma.WarehouseCreateInput;
     return this.mutate(actor, async (tx) => {
-      const row = await tx.warehouse.create({ data, select });
-      await this.writeAudit(tx, actor, null, row);
+      await tx.$queryRaw`SELECT id FROM warehouses WHERE name = ${data.name} FOR UPDATE`;
+      const previous = await tx.warehouse.findUnique({
+        where: { name: data.name },
+        select,
+      });
+      if (previous?.isActive || (previous && data.isActive === false))
+        throw new ConflictException({
+          code: 'WAREHOUSE_NAME_CONFLICT',
+          message: 'Склад с таким названием уже существует.',
+        });
+      const row = previous
+        ? await tx.warehouse.update({
+            where: { id: previous.id },
+            data: { name: data.name, isActive: true },
+            select,
+          })
+        : await tx.warehouse.create({ data, select });
+      await this.writeAudit(tx, actor, previous, row);
       return dto(row);
     });
   }
@@ -156,11 +172,11 @@ export class WarehousesService {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002' &&
-        isWarehouseCodeUniqueViolation(error)
+        isWarehouseNameUniqueViolation(error)
       )
         throw new ConflictException({
-          code: 'WAREHOUSE_CODE_CONFLICT',
-          message: 'Склад с таким кодом уже существует.',
+          code: 'WAREHOUSE_NAME_CONFLICT',
+          message: 'Склад с таким названием уже существует.',
         });
       throw error;
     }
@@ -172,7 +188,6 @@ export class WarehousesService {
     after: Warehouse,
   ) {
     const labels = {
-      code: 'Код',
       name: 'Наименование',
       isActive: 'Активность',
     };

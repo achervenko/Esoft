@@ -5,6 +5,7 @@ type Page<T> = { items: T[]; total: number; limit: number };
 type State<T, Meta extends object> = {
   token: symbol;
   data: (Page<T> & Meta) | null;
+  isPreviousData: boolean;
   nextOffset: number;
   hasMore: boolean;
   loading: boolean;
@@ -20,7 +21,9 @@ export function useIncrementalList<
   enabled,
   loadPage,
   getKey,
+  keepPreviousData = false,
 }: {
+  keepPreviousData?: boolean;
   queryKey: string;
   enabled: boolean;
   loadPage: (offset: number, signal: AbortSignal) => Promise<Page<T> & Meta>;
@@ -54,7 +57,13 @@ export function useIncrementalList<
       pending.current = controller;
       setState((previous) => ({
         token,
-        data: previous?.token === token ? previous.data : null,
+        data:
+          previous?.token === token || keepPreviousData
+            ? (previous?.data ?? null)
+            : null,
+        isPreviousData:
+          !!previous?.data &&
+          (previous.token !== token || previous.isPreviousData),
         nextOffset: offset,
         hasMore: previous?.token === token && previous.hasMore,
         loading: true,
@@ -75,6 +84,7 @@ export function useIncrementalList<
           return {
             token,
             data: { ...result, items: [...items.values()] },
+            isPreviousData: false,
             nextOffset,
             hasMore: result.items.length > 0 && nextOffset < result.total,
             loading: false,
@@ -96,11 +106,12 @@ export function useIncrementalList<
         if (pending.current === controller) pending.current = null;
       }
     },
-    [enabled, token],
+    [enabled, token, keepPreviousData],
   );
 
   useEffect(() => {
     if (enabled) void request(0);
+    else setState(null);
     return () => {
       pending.current?.abort();
       pending.current = null;
@@ -109,7 +120,13 @@ export function useIncrementalList<
 
   const current = state?.token === token ? state : null;
   return {
-    data: enabled ? (current?.data ?? null) : null,
+    data: enabled
+      ? (current?.data ?? (keepPreviousData ? state?.data : null) ?? null)
+      : null,
+    isPreviousData:
+      enabled &&
+      !!state?.data &&
+      (current ? current.isPreviousData : keepPreviousData),
     loading: enabled && (!current || current.loading),
     error: enabled ? (current?.error ?? null) : null,
     hasMore: enabled && !!current?.hasMore,

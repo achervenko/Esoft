@@ -139,7 +139,6 @@ export class WarehouseStockAdjustmentCommandService {
           name: balance.item.name,
           unit: balance.item.unit,
           locationId: input.locationId,
-          locationCode: balance.location.code,
           locationName: balance.location.name,
           quantity: quantity.toString(),
           quantityBefore: before.toString(),

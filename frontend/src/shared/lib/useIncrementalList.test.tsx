@@ -169,3 +169,79 @@ it("stops on an empty batch and does not fetch without access", async () => {
   await act(async () => hook.result.current.loadMore());
   expect(load).toHaveBeenCalledTimes(1);
 });
+
+it("retains previous pages during a query change, retries first-page failures and replaces rather than appends", async () => {
+  let resolve!: (result: Page) => void;
+  const load = vi
+    .fn()
+    .mockResolvedValueOnce(page("old"))
+    .mockResolvedValueOnce(page("second"))
+    .mockRejectedValueOnce(new Error("Нет сети"))
+    .mockImplementationOnce(
+      () =>
+        new Promise<Page>((done) => {
+          resolve = done;
+        }),
+    );
+  const hook = renderHook(
+    ({ key }) =>
+      useIncrementalList({
+        queryKey: key,
+        enabled: true,
+        loadPage: load,
+        getKey: keyOf,
+        keepPreviousData: true,
+      }),
+    { initialProps: { key: "all" } },
+  );
+  await act(async () => {});
+  await act(async () => hook.result.current.loadMore());
+  const previous = hook.result.current.data;
+  hook.rerender({ key: "filtered" });
+  expect(hook.result.current.data).toBe(previous);
+  await act(async () => {});
+  expect(hook.result.current.isPreviousData).toBe(true);
+  expect(hook.result.current.error).toBe("Нет сети");
+  expect(hook.result.current.hasMore).toBe(false);
+  act(() => hook.result.current.retry());
+  expect(hook.result.current.data).toBe(previous);
+  expect(hook.result.current.loading).toBe(true);
+  await act(async () => resolve(page("filtered", 1)));
+  expect(load.mock.calls.map(([offset]) => offset)).toEqual([0, 1, 0, 0]);
+  expect(hook.result.current.data?.items).toEqual([{ id: "filtered" }]);
+  expect(hook.result.current.isPreviousData).toBe(false);
+});
+it("never restores retained data when access is disabled and ignores late previous-query responses", async () => {
+  let resolve!: (result: Page) => void;
+  const load = vi
+    .fn()
+    .mockResolvedValueOnce(page("old"))
+    .mockImplementationOnce(
+      () =>
+        new Promise<Page>((done) => {
+          resolve = done;
+        }),
+    )
+    .mockResolvedValueOnce(page("latest", 1));
+  const hook = renderHook(
+    ({ key, enabled }) =>
+      useIncrementalList({
+        queryKey: key,
+        enabled,
+        loadPage: load,
+        getKey: keyOf,
+        keepPreviousData: true,
+      }),
+    { initialProps: { key: "all", enabled: true } },
+  );
+  await act(async () => {});
+  hook.rerender({ key: "slow", enabled: true });
+  expect(hook.result.current.data?.items).toEqual([{ id: "old" }]);
+  hook.rerender({ key: "latest", enabled: true });
+  await act(async () => {});
+  await act(async () => resolve(page("late")));
+  expect(hook.result.current.data?.items).toEqual([{ id: "latest" }]);
+  hook.rerender({ key: "latest", enabled: false });
+  expect(hook.result.current.data).toBeNull();
+  expect(hook.result.current.isPreviousData).toBe(false);
+});

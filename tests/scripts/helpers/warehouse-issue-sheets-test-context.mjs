@@ -83,11 +83,11 @@ export async function createIssueSheetsTestContext(prisma) {
     data: {
       warehouse: {
         connectOrCreate: {
-          where: { code: namespace },
-          create: { code: namespace, name: "Test warehouse" },
+          where: { name: namespace },
+          create: { name: namespace },
         },
       },
-      code: "SHEET-A",
+
       name: "Полка",
     },
   });

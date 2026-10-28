@@ -20,12 +20,12 @@ export async function verifyWarehouseSchemaConstraints({
       data: {
         warehouse: {
           connectOrCreate: {
-            where: { code: "TEST" },
-            create: { code: "TEST", name: "Test warehouse" },
+            where: { name: "TEST" },
+            create: { name: "TEST" },
           },
         },
-        code: location.code,
-        name: "Duplicate",
+
+        name: location.name,
       },
     }),
     { code: "P2002" },

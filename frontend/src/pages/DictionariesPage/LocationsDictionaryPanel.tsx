@@ -1,5 +1,5 @@
-import { useId, useState } from "react";
-import { Plus } from "lucide-react";
+import { useState } from "react";
+import { NestedDictionarySections } from "../../shared/ui/NestedDictionarySections";
 import type {
   DictionaryLocation,
   DictionaryObject,
@@ -28,59 +28,38 @@ export function LocationsDictionaryPanel({
   onEditLocation,
   onEditObject,
 }: LocationsDictionaryPanelProps) {
-  const parentHeadingId = useId();
-  const childHeadingId = useId();
   const [parentId, setParentId] = useState<number | null>(null);
-  const selectedParentId = objects.some((item) => item.id === parentId) ? parentId : null;
-  const filtered = selectedParentId !== null
-    ? locations.filter((item) => item.workshopId === selectedParentId)
-    : locations;
+  const selectedParentId = objects.some((item) => item.id === parentId)
+    ? parentId
+    : null;
+  const filtered =
+    selectedParentId !== null
+      ? locations.filter((item) => item.workshopId === selectedParentId)
+      : locations;
   return (
-    <div className="admin-nested-sections">
-      <section className="admin-nested-section" aria-labelledby={parentHeadingId}>
-        <header>
-          <h3 id={parentHeadingId}>Объекты</h3>
-          <button
-            className="admin-primary-button"
-            onClick={onCreateObject}
-            type="button"
-          >
-            <Plus size={18} />
-            Добавить
-          </button>
-        </header>
-        <div className="dictionary-table-surface dictionary-parent-surface">
-          <ObjectsTable
-            objects={objects}
-            selectedId={selectedParentId}
-            onSelect={(item) => setParentId(item.id === selectedParentId ? null : item.id)}
-            onDelete={onDeleteObject}
-            onEdit={onEditObject}
-          />
-        </div>
-      </section>
-
-      <section className="admin-nested-section" aria-labelledby={childHeadingId}>
-        <header>
-          <h3 id={childHeadingId}>Местонахождения</h3>
-          <button
-            className="admin-primary-button"
-            disabled={objects.length === 0}
-            onClick={() => onCreateLocation(selectedParentId)}
-            type="button"
-          >
-            <Plus size={18} />
-            Добавить
-          </button>
-        </header>
-        <div className="dictionary-table-surface">
-          <LocationsTable
-            locations={filtered}
-            onDelete={onDeleteLocation}
-            onEdit={onEditLocation}
-          />
-        </div>
-      </section>
-    </div>
+    <NestedDictionarySections
+      parentTitle="Объекты"
+      childTitle="Местонахождения"
+      onCreateParent={onCreateObject}
+      onCreateChild={() => onCreateLocation(selectedParentId)}
+      childCreateDisabled={objects.length === 0}
+      parent={
+        <ObjectsTable
+          objects={objects}
+          selectedId={selectedParentId}
+          onSelect={(item) =>
+            setParentId(item.id === selectedParentId ? null : item.id)
+          }
+          onDelete={onDeleteObject}
+          onEdit={onEditObject}
+        />
+      }
+    >
+      <LocationsTable
+        locations={filtered}
+        onDelete={onDeleteLocation}
+        onEdit={onEditLocation}
+      />
+    </NestedDictionarySections>
   );
 }

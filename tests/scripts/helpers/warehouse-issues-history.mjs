@@ -77,15 +77,13 @@ export async function verifyWarehouseIssuesHistory(context) {
     await prisma.warehouseStorageLocation.update({
       where: { id: balance.storageLocationId },
       data: {
-        code: "NEW-" + String(balance.id),
-        name: "Новое место",
+        name: "Новое место " + String(balance.id),
         isActive: false,
       },
     });
   await prisma.warehouse.update({
     where: { id: warehouse.id },
     data: {
-      code: warehouse.code + "-new",
       name: "Новый склад",
       isActive: false,
     },
@@ -115,7 +113,7 @@ export async function verifyWarehouseIssuesHistory(context) {
     "Первоначальный кладовщик",
     "Исторический склад",
     "Исторический лист",
-    issued.positions[0].location.code,
+    issued.positions[0].location.name,
     "%_\\",
   ]) {
     const found = await queries.list({

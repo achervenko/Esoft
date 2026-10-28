@@ -82,6 +82,44 @@
   line-height: 1.35;
 }
 
+.form-field-message {
+  display: block;
+  height: 0;
+  margin-top: 0;
+  opacity: 0;
+  overflow: clip;
+  interpolate-size: allow-keywords;
+}
+.form-field-message[data-visible="true"] {
+  height: auto;
+  margin-top: var(--field-gap, 7px);
+  opacity: 1;
+}
+
+.form-field:has(> .form-field-message) {
+  row-gap: 0;
+}
+.form-field:has(> .form-field-message)
+  > :not(:first-child):not(.form-field-message) {
+  margin-top: var(--field-gap, 7px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .form-field-message {
+    transition:
+      height 360ms cubic-bezier(0.22, 1, 0.36, 1),
+      margin-top 360ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 180ms ease;
+  }
+  @starting-style {
+    .form-field-message[data-visible="true"] {
+      height: 0;
+      margin-top: 0;
+      opacity: 0;
+    }
+  }
+}
+
 .form-field.has-warning input,
 .form-field.has-warning select,
 .form-field.has-warning textarea {

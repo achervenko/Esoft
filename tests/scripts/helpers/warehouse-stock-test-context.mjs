@@ -51,12 +51,12 @@ export async function createStockTestContext(prisma, database) {
     data: {
       warehouse: {
         connectOrCreate: {
-          where: { code: namespace },
-          create: { code: namespace, name: "Test warehouse" },
+          where: { name: namespace },
+          create: { name: namespace },
         },
       },
       id: largeId,
-      code: "A",
+
       name: "Shelf A",
     },
   });
@@ -64,11 +64,11 @@ export async function createStockTestContext(prisma, database) {
     data: {
       warehouse: {
         connectOrCreate: {
-          where: { code: namespace },
-          create: { code: namespace, name: "Test warehouse" },
+          where: { name: namespace },
+          create: { name: namespace },
         },
       },
-      code: "B",
+
       name: "Shelf B",
     },
   });
@@ -76,11 +76,11 @@ export async function createStockTestContext(prisma, database) {
     data: {
       warehouse: {
         connectOrCreate: {
-          where: { code: namespace },
-          create: { code: namespace, name: "Test warehouse" },
+          where: { name: namespace },
+          create: { name: namespace },
         },
       },
-      code: "C",
+
       name: "Shelf C",
     },
   });

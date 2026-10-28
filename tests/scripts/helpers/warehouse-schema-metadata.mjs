@@ -57,6 +57,38 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
       "warehouse_stock_adjustment_attachments",
     ].sort(),
   );
+  assert.equal(
+    columns.some(
+      (column) =>
+        ["warehouses", "warehouse_storage_locations"].includes(
+          column.table_name,
+        ) && column.column_name === "code",
+    ),
+    false,
+  );
+  assert.equal(
+    columns.some((column) =>
+      ["warehouse_code_snapshot", "storage_location_code_snapshot"].includes(
+        column.column_name,
+      ),
+    ),
+    false,
+  );
+  const names = await database.query(
+    "SELECT indexname,indexdef FROM pg_indexes WHERE schemaname='public' AND indexname IN ('uq_warehouses_name','uq_warehouse_storage_locations_warehouse_name')",
+  );
+  assert.equal(names.rows.length, 2);
+  assert.match(
+    names.rows.find((row) => row.indexname === "uq_warehouses_name").indexdef,
+    /UNIQUE.*\(name\)/,
+  );
+  assert.match(
+    names.rows.find(
+      (row) =>
+        row.indexname === "uq_warehouse_storage_locations_warehouse_name",
+    ).indexdef,
+    /UNIQUE.*\(warehouse_id, name\)/,
+  );
   for (const column of columns.filter(
     (column) => column.column_name === "quantity",
   )) {

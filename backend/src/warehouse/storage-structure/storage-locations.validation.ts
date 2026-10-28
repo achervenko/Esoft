@@ -22,22 +22,22 @@ export function parseLocationId(value: unknown): bigint {
   return id;
 }
 
-type LocationFields = { code: string; name: string; isActive: boolean };
+type LocationFields = { name: string; isActive: boolean };
 export function parseStorageEntry(
   value: unknown,
   create = false,
 ): Partial<LocationFields> {
-  const body = storageRecord(value, ['code', 'name', 'isActive']);
+  const body = storageRecord(value, ['name', 'isActive']);
   if (!Object.keys(body).length)
     locationBadRequest('EMPTY_PAYLOAD', 'Укажите изменяемые поля.');
   const data: Partial<LocationFields> = {};
-  for (const key of ['code', 'name'] as const) {
+  for (const key of ['name'] as const) {
     if (!(key in body) && !create) continue;
     const v = body[key];
     if (
       typeof v !== 'string' ||
       !v.trim() ||
-      v.trim().length > (key === 'code' ? 100 : 255) ||
+      v.trim().length > 255 ||
       v.includes('\0')
     )
       locationBadRequest(
@@ -81,9 +81,9 @@ export function parseLocationQuery(value: unknown) {
     q.isActive !== 'false'
   )
     locationBadRequest('INVALID_QUERY', 'Некорректная активность.');
-  const sortBy = q.sortBy ?? 'code';
+  const sortBy = q.sortBy ?? 'name';
   const sortOrder = q.sortOrder ?? 'asc';
-  if (sortBy !== 'code' && sortBy !== 'name' && sortBy !== 'isActive')
+  if (sortBy !== 'name' && sortBy !== 'isActive')
     locationBadRequest('INVALID_QUERY', 'Некорректная сортировка.');
   if (sortOrder !== 'asc' && sortOrder !== 'desc')
     locationBadRequest('INVALID_QUERY', 'Некорректный порядок сортировки.');
@@ -113,9 +113,7 @@ export function parseLocationQuery(value: unknown) {
 export function parseLocation(value: unknown, create = false) {
   const body = storageRecord(
     value,
-    create
-      ? ['code', 'name', 'isActive', 'warehouseId']
-      : ['code', 'name', 'isActive'],
+    create ? ['name', 'isActive', 'warehouseId'] : ['name', 'isActive'],
   );
   const { warehouseId, ...entry } = body;
   return {

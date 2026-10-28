@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { hasCode } from "./warehouse-transfers-test-context.mjs";
-
+import { verifyTransferReservationMoves } from "./warehouse-transfers.reservation-moves.mjs";
+import { verifyTransferReservationSafety } from "./warehouse-transfers.reservation-safety.mjs";
 export async function verifyTransfersReservations(run) {
   await run("reserves stay at source and cannot be moved", async (ctx) => {
     const {
@@ -49,4 +50,6 @@ export async function verifyTransfersReservations(run) {
       0,
     );
   });
+  await verifyTransferReservationMoves(run);
+  await verifyTransferReservationSafety(run);
 }

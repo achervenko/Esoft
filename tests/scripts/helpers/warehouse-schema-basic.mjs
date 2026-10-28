@@ -14,11 +14,11 @@ export async function verifyWarehouseSchemaBasic({ prisma }) {
     data: {
       warehouse: {
         connectOrCreate: {
-          where: { code: "TEST" },
-          create: { code: "TEST", name: "Test warehouse" },
+          where: { name: "TEST" },
+          create: { name: "TEST" },
         },
       },
-      code: "A-1",
+
       name: "Shelf",
     },
   });

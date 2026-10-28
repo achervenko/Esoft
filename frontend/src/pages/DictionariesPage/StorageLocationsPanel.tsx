@@ -1,10 +1,13 @@
+import { NestedDictionarySections } from "../../shared/ui/NestedDictionarySections";
+import { warehousesApi, type Warehouse } from "../../shared/api/warehouses-api";
+import { WarehouseForm } from "./WarehouseForm";
+import { WarehousesTable } from "./WarehousesTable";
 import { StorageLocationForm } from "./StorageLocationForm";
 import {
   StorageLocationsTable,
   type StorageLocationsSort,
 } from "./StorageLocationsTable";
 import { SearchToolbar } from "../../shared/ui/SearchToolbar";
-import { StorageLocationsFiltersModal } from "./StorageLocationsFiltersModal";
 import "./StorageLocationsPanel.css";
 import { useRef, useState } from "react";
 import {
@@ -19,10 +22,12 @@ import { useConfirmation } from "../../shared/ui/useConfirmation";
 
 export function StorageLocationsPanel({ canManage }: { canManage: boolean }) {
   const [search, setSearch] = useState("");
-  const [active, setActive] = useState("");
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [warehouseId, setWarehouseId] = useState<string | null>(null);
+  const [warehouseEditing, setWarehouseEditing] = useState<
+    Warehouse | "new" | null
+  >(null);
   const [sort, setSort] = useState<StorageLocationsSort>({
-    key: "code",
+    key: "name",
     direction: "asc",
   });
   const [mutationError, setMutationError] = useState<string | null>(null);
@@ -31,8 +36,27 @@ export function StorageLocationsPanel({ canManage }: { canManage: boolean }) {
   const [saving, setSaving] = useState(false);
   const busy = useRef(false);
   const confirm = useConfirmation();
+  const warehouseList = useIncrementalList({
+    queryKey: JSON.stringify([revision, search]),
+    enabled: true,
+    getKey: (row: Warehouse) => row.id,
+    loadPage: (offset, signal) =>
+      warehousesApi.list(
+        new URLSearchParams({
+          page: String(Math.floor(offset / 50) + 1),
+          limit: "50",
+          search,
+          isActive: "true",
+        }),
+        signal,
+      ),
+  });
+  const selectedWarehouse = warehouseList.data?.items.find(
+    (row) => row.id === warehouseId,
+  );
   const list = useIncrementalList({
-    queryKey: JSON.stringify([search, active, sort, revision]),
+    keepPreviousData: true,
+    queryKey: JSON.stringify([search, sort, revision, warehouseId]),
     enabled: true,
     getKey: (item: StorageLocation) => item.id,
     loadPage: (offset, signal) => {
@@ -43,13 +67,14 @@ export function StorageLocationsPanel({ canManage }: { canManage: boolean }) {
         sortBy: sort.key,
         sortOrder: sort.direction,
       });
-      if (active) q.set("isActive", active);
+      q.set("isActive", "true");
+      if (warehouseId) q.set("warehouseId", warehouseId);
       return storageLocationsApi.list(q, signal);
     },
   });
   const data = list.data;
   const loading = list.loading && !data;
-  const loadError = !data ? list.error : null;
+  const loadError = list.isPreviousData || !data ? list.error : null;
   async function mutate(action: () => Promise<unknown>) {
     if (busy.current) return;
     busy.current = true;
@@ -58,6 +83,7 @@ export function StorageLocationsPanel({ canManage }: { canManage: boolean }) {
     try {
       await action();
       setEditing(null);
+      setWarehouseEditing(null);
       setRevision((v) => v + 1);
       return true;
     } catch (e) {
@@ -68,7 +94,7 @@ export function StorageLocationsPanel({ canManage }: { canManage: boolean }) {
       setSaving(false);
     }
   }
-  async function toggle(item: StorageLocation) {
+  async function deleteLocation(item: StorageLocation) {
     if (busy.current) return;
     if (item.isActive) {
       busy.current = true;
@@ -78,11 +104,11 @@ export function StorageLocationsPanel({ canManage }: { canManage: boolean }) {
       try {
         const current = await storageLocationsApi.get(item.id);
         confirmed = await confirm({
-          title: "Деактивировать место?",
+          title: "Удалить место хранения?",
           description: current.hasStock
             ? "На месте есть остаток. Он и история сохранятся, обычные новые операции будут недоступны."
             : "Место станет недоступно для обычных новых операций. История сохранится.",
-          confirmLabel: "Деактивировать",
+          confirmLabel: "Удалить",
         });
       } catch (e) {
         setMutationError(getApiErrorMessage(e));
@@ -93,18 +119,65 @@ export function StorageLocationsPanel({ canManage }: { canManage: boolean }) {
       if (!confirmed) return;
     }
     await mutate(() =>
-      storageLocationsApi.update(item.id, { isActive: !item.isActive }),
+      storageLocationsApi.update(item.id, { isActive: false }),
     );
   }
+  async function deleteWarehouse(item: Warehouse) {
+    if (busy.current) return;
+    if (item.isActive) {
+      busy.current = true;
+      setSaving(true);
+      setMutationError(null);
+      let accepted = false;
+      try {
+        accepted = await confirm({
+          title: "Удалить склад?",
+          description:
+            "Склад будет скрыт из справочника. Сначала удалите его места хранения. История сохранится.",
+          confirmLabel: "Удалить",
+        });
+      } catch (e) {
+        setMutationError(getApiErrorMessage(e));
+      } finally {
+        busy.current = false;
+        setSaving(false);
+      }
+      if (!accepted) return;
+    }
+    const removed = await mutate(() =>
+      warehousesApi.update(item.id, { isActive: false }),
+    );
+    if (removed && warehouseId === item.id) setWarehouseId(null);
+  }
   return (
-    <section className="storage-locations-panel" aria-label="Места хранения">
+    <section
+      className="storage-locations-panel dictionaries-content"
+      aria-label="Места хранения"
+    >
       <SearchToolbar
         value={search}
         onChange={(value) => {
           setSearch(value);
+          setWarehouseId(null);
         }}
-        label="Поиск мест хранения"
+        label="Поиск складов и мест хранения"
+        inputProps={{ maxLength: 255 }}
         onCreate={
+          canManage
+            ? () => {
+                setMutationError(null);
+                setWarehouseEditing("new");
+              }
+            : undefined
+        }
+        createAriaLabel="Добавить склад"
+        createDisabled={saving}
+      />
+      <NestedDictionarySections
+        parentTitle="Склады"
+        childTitle="Места хранения"
+        childCreateLabel="Добавить место"
+        onCreateChild={
           canManage
             ? () => {
                 setMutationError(null);
@@ -112,61 +185,98 @@ export function StorageLocationsPanel({ canManage }: { canManage: boolean }) {
               }
             : undefined
         }
-        createAriaLabel="Добавить место"
-        createDisabled={saving}
-        filters={{
-          label: "Настройки поиска мест хранения",
-          count: active ? 1 : 0,
-          onOpen: () => setFiltersOpen(true),
-        }}
-      />
-      {loadError && (
-        <Notice tone="error">
-          {loadError}
-          <button type="button" onClick={list.retry}>
-            Повторить загрузку
-          </button>
-        </Notice>
-      )}
-      {!editing && mutationError && (
-        <Notice tone="error">{mutationError}</Notice>
-      )}
-      {loading ? (
-        <p role="status">Загрузка…</p>
-      ) : (
-        data && (
+        childCreateDisabled={
+          saving ||
+          warehouseList.loading ||
+          (!search &&
+            !warehouseList.error &&
+            !warehouseList.data?.items.some((row) => row.isActive)) ||
+          !!(selectedWarehouse && !selectedWarehouse.isActive)
+        }
+        parent={
           <>
-            <StorageLocationsTable
-              rows={data.items}
-              canManage={canManage}
-              saving={saving}
-              sort={sort}
-              onToggle={toggle}
-              onEdit={(item) => {
-                setMutationError(null);
-                setEditing(item);
-              }}
-              onSortChange={(value) => {
-                setSort(value);
-              }}
-            />
-            {!data.items.length && <p>Места хранения не найдены.</p>}
-            <ListLoadMore list={list} disabled={saving || editing !== null} />
+            {warehouseList.error && (
+              <Notice tone="error">
+                {warehouseList.error}
+                <button
+                  type="button"
+                  className="admin-secondary-button"
+                  onClick={warehouseList.retry}
+                >
+                  Повторить загрузку складов
+                </button>
+              </Notice>
+            )}
+            {warehouseList.loading && !warehouseList.data ? (
+              <p role="status">Загрузка складов…</p>
+            ) : (
+              <>
+                <WarehousesTable
+                  rows={warehouseList.data?.items ?? []}
+                  canManage={canManage}
+                  saving={saving}
+                  selectedId={warehouseId}
+                  onSelect={(row) =>
+                    setWarehouseId(row.id === warehouseId ? null : row.id)
+                  }
+                  onEdit={(row) => {
+                    setMutationError(null);
+                    setWarehouseEditing(row);
+                  }}
+                  onDelete={deleteWarehouse}
+                />
+                <ListLoadMore
+                  list={warehouseList}
+                  disabled={saving || warehouseEditing !== null}
+                />
+              </>
+            )}
           </>
-        )
-      )}
-      {filtersOpen && (
-        <StorageLocationsFiltersModal
-          active={active}
-          onClose={() => setFiltersOpen(false)}
-          onApply={(value) => {
-            setActive(value);
-            setFiltersOpen(false);
-          }}
-        />
-      )}
+        }
+      >
+        {loadError && (
+          <Notice tone="error">
+            {loadError}
+            <button type="button" onClick={list.retry}>
+              Повторить загрузку
+            </button>
+          </Notice>
+        )}
+        {!editing && !warehouseEditing && mutationError && (
+          <Notice tone="error">{mutationError}</Notice>
+        )}
+        {loading ? (
+          <p role="status">Загрузка…</p>
+        ) : (
+          data && (
+            <>
+              <StorageLocationsTable
+                rows={data.items}
+                canManage={canManage}
+                saving={saving || list.isPreviousData}
+                sort={sort}
+                onDelete={deleteLocation}
+                onEdit={(item) => {
+                  setMutationError(null);
+                  setEditing(item);
+                }}
+                onSortChange={(value) => {
+                  setSort(value);
+                }}
+              />
+              {!list.isPreviousData && (
+                <ListLoadMore
+                  list={list}
+                  disabled={saving || editing !== null}
+                />
+              )}
+            </>
+          )
+        )}
+      </NestedDictionarySections>
       {editing && (
         <StorageLocationForm
+          initialWarehouseId={warehouseId}
           item={editing === "new" ? null : editing}
           saving={saving}
           error={mutationError}
@@ -185,10 +295,28 @@ export function StorageLocationsPanel({ canManage }: { canManage: boolean }) {
                         ([key, value]) =>
                           key !== "isActive" &&
                           key !== "warehouseId" &&
-                          value !== editing[key as "code" | "name"],
+                          value !== editing[key as "name"],
                       ),
                     ),
                   ),
+            )
+          }
+        />
+      )}
+      {warehouseEditing && (
+        <WarehouseForm
+          item={warehouseEditing === "new" ? null : warehouseEditing}
+          saving={saving}
+          error={mutationError}
+          onClose={() => {
+            setWarehouseEditing(null);
+            setMutationError(null);
+          }}
+          onSave={(values) =>
+            mutate(() =>
+              warehouseEditing === "new"
+                ? warehousesApi.create(values)
+                : warehousesApi.update(warehouseEditing.id, values),
             )
           }
         />

@@ -4,6 +4,8 @@ import {
   cloneElement,
   isValidElement,
   useId,
+  useEffect,
+  useState,
   type HTMLAttributes,
   type ReactNode,
 } from "react";
@@ -30,6 +32,23 @@ export function FormField({
 }: FormFieldProps) {
   const errorId = useId();
   const labelId = useId();
+  const message = error || warning;
+  const [retainedMessage, setRetainedMessage] = useState<{
+    text: string;
+    isError: boolean;
+  } | null>(message ? { text: message, isError: !!error } : null);
+  useEffect(() => {
+    if (message) {
+      setRetainedMessage({ text: message, isError: !!error });
+      return;
+    }
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setRetainedMessage(null);
+      return;
+    }
+    const timer = window.setTimeout(() => setRetainedMessage(null), 360);
+    return () => window.clearTimeout(timer);
+  }, [message, error]);
   return (
     <label
       className={`form-field ${className}${error ? " has-error" : warning ? " has-warning" : ""}`.trim()}
@@ -68,9 +87,14 @@ export function FormField({
               .join(" ") || undefined,
         });
       })}
-      {error || warning ? (
-        <small id={errorId} className={error ? "field-error" : "field-warning"}>
-          {error || warning}
+      {message || retainedMessage ? (
+        <small
+          id={errorId}
+          aria-hidden={!message || undefined}
+          data-visible={!!message}
+          className={`form-field-message ${(message ? !!error : retainedMessage?.isError) ? "field-error" : "field-warning"}`}
+        >
+          {message || retainedMessage?.text}
         </small>
       ) : null}
     </label>

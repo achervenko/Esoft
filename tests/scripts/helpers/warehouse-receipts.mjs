@@ -35,20 +35,20 @@ export async function verifyReceipts(prisma, database) {
     },
   });
   const warehouse = await prisma.warehouse.create({
-    data: { id: 9007199254740993n, code: "RECEIPTS", name: "Приходы" },
+    data: { id: 9007199254740993n, name: "Приходы" },
   });
   const other = await prisma.warehouse.create({
-    data: { code: "OTHER", name: "Другой" },
+    data: { name: "Другой" },
   });
   const locations = await Promise.all(
     ["A", "B", "C"].map((code) =>
       prisma.warehouseStorageLocation.create({
-        data: { warehouseId: warehouse.id, code, name: "Место " + code },
+        data: { warehouseId: warehouse.id, name: "Место " + code },
       }),
     ),
   );
   const foreign = await prisma.warehouseStorageLocation.create({
-    data: { warehouseId: other.id, code: "A", name: "Чужое место" },
+    data: { warehouseId: other.id, name: "Чужое место" },
   });
   const items = await Promise.all(
     ["A", "B", "C"].map((article) =>
@@ -232,7 +232,7 @@ export async function verifyReceipts(prisma, database) {
   });
   await prisma.warehouseStorageLocation.update({
     where: { id: locations[0].id },
-    data: { name: "Новое место", code: "NEW-A", isActive: false },
+    data: { name: "Новое место", isActive: false },
   });
   await prisma.warehouse.update({
     where: { id: warehouse.id },

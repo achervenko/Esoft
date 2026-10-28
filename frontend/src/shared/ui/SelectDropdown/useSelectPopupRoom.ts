@@ -29,6 +29,8 @@ export function useSelectPopupRoom({
     if (!alwaysDown || !isOpen || disabled) return;
     const trigger = triggerRef.current;
     if (!trigger) return;
+    // Dialog menus are portalled overlays; reserving space would resize the dialog.
+    if (trigger.closest('[role="dialog"]')) return;
     const viewport = window.visualViewport;
     const bottom =
       (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight);

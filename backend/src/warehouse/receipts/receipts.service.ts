@@ -147,7 +147,6 @@ export class WarehouseReceiptsService {
             unitSnapshot: item.unit,
             itemArticleSnapshot: item.article,
             itemNameSnapshot: item.name,
-            storageLocationCodeSnapshot: location.code,
             storageLocationNameSnapshot: location.name,
           };
         });
@@ -162,7 +161,6 @@ export class WarehouseReceiptsService {
               ? new Date(input.documentDate + 'T00:00:00Z')
               : null,
             comment: input.comment,
-            warehouseCodeSnapshot: warehouse.code,
             warehouseNameSnapshot: warehouse.name,
             lines: { create: receiptLines },
           },

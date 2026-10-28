@@ -6,8 +6,8 @@ import type { StorageLocation } from "../../shared/api/storage-locations-api";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import { Notice } from "../../shared/ui/Notice";
 import {
-  AdminTextField,
   AdminFormActions,
+  AdminTextField,
 } from "../../shared/ui/AdminFormControls";
 
 export function StorageLocationForm({
@@ -16,21 +16,23 @@ export function StorageLocationForm({
   error,
   onClose,
   onSave,
+  initialWarehouseId,
 }: {
+  initialWarehouseId?: string | null;
   item: StorageLocation | null;
   saving: boolean;
   error: string | null;
   onClose: () => void;
   onSave: (v: {
     warehouseId: string;
-    code: string;
     name: string;
     isActive: boolean;
   }) => Promise<unknown>;
 }) {
-  const [code, setCode] = useState(item?.code ?? "");
   const [name, setName] = useState(item?.name ?? "");
-  const [warehouseId, setWarehouseId] = useState(item?.warehouseId ?? "");
+  const [warehouseId, setWarehouseId] = useState(
+    item?.warehouseId ?? initialWarehouseId ?? "",
+  );
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(!item);
   const [warehouseError, setWarehouseError] = useState<string | null>(null);
@@ -89,21 +91,17 @@ export function StorageLocationForm({
             !loadingWarehouses &&
             !warehouseError &&
             warehouseId &&
-            code.trim() &&
             name.trim()
           )
             void onSave({
               warehouseId,
-              code: code.trim(),
               name: name.trim(),
               isActive: item?.isActive ?? true,
             });
         }}
       >
         {item ? (
-          <p>
-            Склад: {item.warehouse.name} ({item.warehouse.code})
-          </p>
+          <p>Склад: {item.warehouse.name}</p>
         ) : (
           <>
             <SelectField
@@ -118,7 +116,7 @@ export function StorageLocationForm({
               }
               options={warehouses.map((row) => ({
                 value: row.id,
-                label: row.name + " (" + row.code + ")",
+                label: row.name,
               }))}
             />
             {warehouseError && (
@@ -135,21 +133,13 @@ export function StorageLocationForm({
           </>
         )}
         <AdminTextField
-          label="Код"
-          autoFocus
-          required
-          maxLength={100}
-          value={code}
-          disabled={saving}
-          onChange={setCode}
-        />
-        <AdminTextField
           label="Наименование"
+          value={name}
+          onChange={setName}
+          disabled={saving}
           required
           maxLength={255}
-          value={name}
-          disabled={saving}
-          onChange={setName}
+          autoFocus
         />
         {error && <Notice tone="error">{error}</Notice>}
         <AdminFormActions
@@ -159,9 +149,8 @@ export function StorageLocationForm({
             !warehouseId ||
             loadingWarehouses ||
             !!warehouseError ||
-            !code.trim() ||
             !name.trim() ||
-            !!(item && code.trim() === item.code && name.trim() === item.name)
+            !!(item && name.trim() === item.name)
           }
         />
       </form>

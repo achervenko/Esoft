@@ -16,23 +16,21 @@ CREATE UNIQUE INDEX "uq_warehouse_items_article" ON "warehouse_items"("article")
 
 CREATE TABLE "warehouses" (
     "id" BIGSERIAL PRIMARY KEY,
-    "code" VARCHAR(100) NOT NULL,
     "name" VARCHAR(255) NOT NULL,
     "is_active" BOOLEAN NOT NULL DEFAULT true
 );
-CREATE UNIQUE INDEX "uq_warehouses_code" ON "warehouses"("code");
+CREATE UNIQUE INDEX "uq_warehouses_name" ON "warehouses"("name");
 
 CREATE TABLE "warehouse_storage_locations" (
     "warehouse_id" BIGINT NOT NULL,
     "id" BIGSERIAL NOT NULL,
-    "code" VARCHAR(100) NOT NULL,
     "name" VARCHAR(255) NOT NULL,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
     CONSTRAINT "warehouse_storage_locations_pkey" PRIMARY KEY ("id"),
     CONSTRAINT "fk_warehouse_storage_locations_warehouse" FOREIGN KEY ("warehouse_id") REFERENCES "warehouses"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
-CREATE UNIQUE INDEX "uq_warehouse_storage_locations_warehouse_code" ON "warehouse_storage_locations"("warehouse_id", "code");
+CREATE UNIQUE INDEX "uq_warehouse_storage_locations_warehouse_name" ON "warehouse_storage_locations"("warehouse_id", "name");
 
 CREATE TABLE "warehouse_projects" (
     "id" BIGSERIAL NOT NULL,
@@ -203,7 +201,6 @@ CREATE TABLE "warehouse_receipts" (
  "source_operation_id" VARCHAR(255) NOT NULL CHECK (btrim("source_operation_id") <> ''),
  "request_hash" VARCHAR(64) NOT NULL CHECK ("request_hash" ~ '^[0-9a-f]{64}$'),
  "document_number" VARCHAR(100), "document_date" DATE, "comment" VARCHAR(4000),
- "warehouse_code_snapshot" VARCHAR(100) NOT NULL,
  "warehouse_name_snapshot" VARCHAR(255) NOT NULL,
  "created_by_user_id" TEXT NOT NULL REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
  "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT now()
@@ -221,7 +218,6 @@ CREATE TABLE "warehouse_receipt_lines" (
  "unit_snapshot" VARCHAR(50) NOT NULL,
  "item_article_snapshot" VARCHAR(100) NOT NULL,
  "item_name_snapshot" VARCHAR(255) NOT NULL,
- "storage_location_code_snapshot" VARCHAR(100) NOT NULL,
  "storage_location_name_snapshot" VARCHAR(255) NOT NULL
 );
 CREATE UNIQUE INDEX "uq_warehouse_receipt_lines_row" ON "warehouse_receipt_lines"("receipt_id","row_number");

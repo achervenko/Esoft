@@ -5,7 +5,7 @@
   "migrations": [
     {
       "id": "20261016000000_warehouse_init",
-      "sha256": "15439b33bc342ed4b5a9d19a66239b991872123bccdd0024edd50ae03164f551"
+      "sha256": "9c1bdc498fd5d51190b037e32856cd8489b36953dbcd1526b525bf92fe5de8b4"
     }
   ]
 }

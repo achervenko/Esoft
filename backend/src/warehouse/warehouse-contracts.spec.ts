@@ -13,7 +13,6 @@ import { Prisma } from '@prisma/client';
 describe('Warehouse shared API contracts', () => {
   const warehouse = {
     id: 9007199254740993n,
-    code: 'MAIN',
     name: 'Склад',
     isActive: true,
   };
@@ -21,7 +20,6 @@ describe('Warehouse shared API contracts', () => {
     id: 9007199254740995n,
     warehouseId: warehouse.id,
     warehouse,
-    code: 'A-01',
     name: 'Место',
     isActive: true,
   };
@@ -42,6 +40,8 @@ describe('Warehouse shared API contracts', () => {
       item,
       storageLocation: location,
     });
+    expect(dto.location).not.toHaveProperty('code');
+    expect(dto.location.warehouse).not.toHaveProperty('code');
     expect(dto.location).toEqual(locationWithWarehouseDto(location));
     expect(dto.location.warehouse).toEqual(warehouseDto(warehouse));
     expect(dto.location.warehouseId).toBe('9007199254740993');

@@ -23,6 +23,8 @@ export function parseTransfer(value: unknown) {
     'toLocationId',
     'quantity',
     'comment',
+    'moveReservation',
+    'projectId',
   ]);
   if (
     typeof body.requestKey !== 'string' ||
@@ -31,6 +33,15 @@ export function parseTransfer(value: unknown) {
     )
   )
     invalid('requestKey должен быть UUID.');
+  const moveReservation =
+    body.moveReservation === undefined ? false : body.moveReservation;
+  if (typeof moveReservation !== 'boolean')
+    invalid('moveReservation должен быть boolean.');
+  if (!moveReservation && body.projectId !== undefined)
+    invalid('projectId допустим только при переносе резерва.');
+  const projectId = moveReservation
+    ? String(stockId(body.projectId, 'projectId'))
+    : null;
   const itemId = String(stockId(body.itemId, 'itemId'));
   const fromLocationId = String(stockId(body.fromLocationId, 'fromLocationId'));
   const toLocationId = String(stockId(body.toLocationId, 'toLocationId'));
@@ -45,6 +56,8 @@ export function parseTransfer(value: unknown) {
     invalid('Некорректный комментарий.');
   return {
     requestKey: body.requestKey.toLowerCase(),
+    moveReservation,
+    projectId,
     itemId,
     fromLocationId,
     toLocationId,
@@ -55,7 +68,16 @@ export function parseTransfer(value: unknown) {
 }
 export function transferHash(input: ReturnType<typeof parseTransfer>) {
   const { itemId, fromLocationId, toLocationId, quantity, comment } = input;
-  const command = { itemId, fromLocationId, toLocationId, quantity, comment };
+  const command = {
+    itemId,
+    fromLocationId,
+    toLocationId,
+    quantity,
+    comment,
+    ...(input.moveReservation
+      ? { moveReservation: true, projectId: input.projectId }
+      : {}),
+  };
   return createHash('sha256').update(JSON.stringify(command)).digest('hex');
 }
 export function parseTransferQuery(value: unknown) {

@@ -30,11 +30,11 @@ export async function verifyCatalogConstraints({
     data: {
       warehouse: {
         connectOrCreate: {
-          where: { code: "TEST" },
-          create: { code: "TEST", name: "Test warehouse" },
+          where: { name: "TEST" },
+          create: { name: "TEST" },
         },
       },
-      code: "CAT-LOCATION",
+
       name: "Shelf",
     },
   });

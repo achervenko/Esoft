@@ -1,0 +1,140 @@
+.warehouse-stock-page h1 {
+  padding-inline-start: var(--optical-inset-page);
+}
+.stock-results {
+  min-width: 0;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+.stock-results .data-table {
+  min-width: 940px;
+}
+.stock-photo {
+  width: 48px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f2f4f7;
+  border-radius: 6px;
+  flex-shrink: 0;
+  color: #667085;
+}
+.stock-transfer-icon-button {
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
+  padding: 0;
+  justify-content: center;
+}
+.stock-transfer-action-column {
+  width: 1%;
+  white-space: nowrap;
+}
+.stock-distribution-quantity {
+  text-align: center;
+}
+@media (pointer: coarse) {
+  .stock-transfer-icon-button {
+    width: 44px;
+    height: 44px;
+  }
+}
+.stock-results .stock-column-photo {
+  width: 80px;
+}
+.stock-results .stock-column-article {
+  width: 170px;
+}
+.stock-results .stock-column-quantity {
+  width: 120px;
+  text-align: center;
+}
+.stock-results .stock-column-quantity .data-table-sort-button {
+  justify-content: center;
+}
+.stock-results .stock-column-locations {
+  width: 160px;
+}
+.stock-photo img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+}
+.stock-distribution-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: #175cd3;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+.stock-storage-button {
+  max-width: min(100%, 130px);
+  min-width: 0;
+  white-space: nowrap;
+  text-align: left;
+  font-weight: 400;
+}
+.stock-storage-button > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stock-distribution-link:disabled {
+  color: #667085;
+  cursor: default;
+}
+.stock-distribution-link:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 3px;
+}
+.stock-note,
+.stock-inactive {
+  color: #667085;
+  font-size: 13px;
+}
+.stock-inactive {
+  display: block;
+  margin-top: 4px;
+}
+.stock-detail-heading {
+  display: flex;
+  gap: 14px;
+  align-items: start;
+}
+.stock-detail-heading h3,
+.stock-detail-heading h2 {
+  margin: 0;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.stock-detail-heading p {
+  margin: 6px 0;
+}
+.stock-cards {
+  display: grid;
+  gap: 12px;
+}
+.stock-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #e3e6eb;
+  border-radius: 8px;
+  padding: 14px;
+  overflow-wrap: anywhere;
+}
+.stock-card p {
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .stock-results {
+    padding: 12px;
+  }
+}

@@ -15,6 +15,7 @@ type AppRouteBase =
   | { kind: "checklist-template-view"; templateId: number }
   | { kind: "dictionaries" }
   | { kind: "warehouse-catalog" }
+  | { kind: "warehouse-stock" }
   | {
       kind: "ppe";
       tab: "issue" | "journal" | "norms" | "catalog";
@@ -68,6 +69,8 @@ function parsePositiveParamId(value: string | null) {
 }
 
 export function resolveAppRoute(route: string): AppRoute {
+  if (route.split("?")[0] === "#/warehouse/stock")
+    return { kind: "warehouse-stock" };
   if (
     route === "#/warehouse/catalog" ||
     route.startsWith("#/warehouse/catalog?")

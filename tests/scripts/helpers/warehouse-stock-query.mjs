@@ -65,8 +65,8 @@ export async function verifyStockQuery(context, t) {
         sortOrder: "asc",
       });
       assert.deepEqual(
-        all.items.map((row) => row.location.code),
-        ["A", "B", "C"],
+        all.items.map((row) => row.location.name),
+        ["Shelf A", "Shelf B", "Shelf C"],
       );
       const page = await stock.getBalances({
         warehouseId: String(a.warehouseId),

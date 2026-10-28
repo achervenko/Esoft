@@ -1,7 +1,7 @@
 # Границы складов в операциях
 
 Одна выдача и один лист относятся к одному складу. Место остаётся произвольной
-единицей хранения без фиксированного типа. Код места уникален внутри склада,
+единицей хранения без фиксированного типа. Название места уникально внутри склада,
 поэтому A-01 может одновременно существовать на нескольких складах.
 
 ## Выдача
@@ -15,7 +15,7 @@
 лист блокируется до проекта/склада/Stock. Replay по сохранённому ключу, как раньше,
 проверяется до справочников и возвращает первый ответ.
 
-DTO выдачи (POST/GET/список) дополнен warehouseId и warehouse {id,code,name,isActive}.
+DTO выдачи (POST/GET/список) дополнен warehouseId и warehouse {id,name,isActive}.
 Места позиций дополнены warehouseId и тем же вложенным warehouse.
 GET `/api/warehouse/issues` принимает необязательный warehouseId, совмещаемый с
 остальными фильтрами через AND. Отсутствие фильтра означает историю всех складов.
@@ -54,8 +54,8 @@ GET `/api/warehouse/stock/items/:itemId/total?warehouseId=...` считает к
 
 GET `/api/warehouse/issues/available-balances` принимает необязательный warehouseId
 вместе с itemId/projectId/includeUnavailable. DTO места в Stock и availability
-содержит id, code, name, isActive, warehouseId и warehouse {id,code,name,isActive}.
-Все ID строковые. Клиент должен показывать название/код склада рядом с адресом.
+содержит id, name, isActive, warehouseId и warehouse {id,name,isActive}.
+Все ID строковые. Клиент должен показывать название склада рядом с адресом.
 
 ## Резервы
 

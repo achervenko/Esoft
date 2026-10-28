@@ -53,7 +53,7 @@ export class WarehouseIssuesQueryService {
               },
             },
           },
-          orderBy: [{ storageLocation: { code: 'asc' } }, { id: 'asc' }],
+          orderBy: [{ storageLocation: { name: 'asc' } }, { id: 'asc' }],
         });
         return {
           items: balances

@@ -12,9 +12,9 @@
 
 ## Модель
 
-- `Warehouse` (`warehouses`): `id`, `code`, `name`, `isActive`.
+- `Warehouse` (`warehouses`): `id`, `name`, `isActive`.
 - `WarehouseStorageLocation`: те же поля и обязательный `warehouseId`.
-- Код склада уникален глобально; код места уникален только внутри склада.
+- Название склада уникально глобально; название места уникально только внутри склада.
 - Склад места задаётся при создании и не меняется через PATCH: перенос места
   вместе с остатками и историей не является редактированием справочника.
 - Остатки и документы по-прежнему ссылаются на ID места; второй `warehouseId`
@@ -42,37 +42,44 @@ DELETE отсутствует. Нужна активная сессия. Оба 
 Создание склада:
 
 ```json
-{ "code": "PROJECTS", "name": "Проектный склад" }
+{ "name": "Проектный склад" }
 ```
 
 Создание места:
 
 ```json
-{ "warehouseId": "1", "code": "A-01", "name": "Угол ангара" }
+{ "warehouseId": "1", "name": "Угол ангара" }
 ```
 
 `isActive` необязателен при создании, по умолчанию true.
-PATCH обоих ресурсов принимает непустое подмножество `code`, `name`, `isActive`.
+POST с названием неактивной записи и `isActive: true` (либо без этого поля)
+восстанавливает её с прежним ID: склад — по name,
+место — по warehouseId + name. Связи, остатки и история сохраняются, восстановление
+аудируется как UPDATE. Для активного дубликата или повторного создания
+неактивной записи с `isActive: false` остаётся конфликт 409.
+В справочнике UI корзинка отправляет PATCH `isActive: false`; оба списка
+запрашиваются с `isActive=true`. Физического удаления нет.
+PATCH обоих ресурсов принимает непустое подмножество `name`, `isActive`.
 Передача `warehouseId` в PATCH места запрещена, даже если значение не изменяется.
-Строки обрезаются по краям: code 1–100, name 1–255 символов. NUL, неизвестные поля,
+Название обрезается по краям: name 1–255 символов. NUL, неизвестные поля,
 null и некорректные типы отклоняются. ID — канонические положительные bigint-строки.
 
-DTO склада содержит `id`, `code`, `name`, `isActive`.
+DTO склада содержит `id`, `name`, `isActive`.
 DTO места дополнительно содержит `warehouseId` и вложенный `warehouse` с DTO склада.
 GET места `/:id` также возвращает `hasStock`: наличие положительного остатка.
 Все ID в JSON строковые, включая вложенные объекты.
 
 Оба списка возвращают `{items,total,page,limit}` и принимают:
 
-- `search`: поиск по коду и названию, до 255 символов, без учёта регистра;
+- `search`: поиск по названию, до 255 символов, без учёта регистра;
   `%`, `_`, `\` трактуются буквально;
 - `isActive`: строго `true` или `false`, без фильтра возвращаются оба состояния;
 - `page`: от 1; `limit`: от 1 до 100, по умолчанию 50;
-- `sortBy`: `code`, `name`, `isActive`; `sortOrder`: `asc`, `desc`.
+- `sortBy`: `name`, `isActive`; `sortOrder`: `asc`, `desc`.
 
 Список мест дополнительно принимает `warehouseId`. Фильтры объединяются через AND.
 Список и total читаются в одном RepeatableRead-снимке. Сортировка по умолчанию —
-code ASC, дополнительный ключ — id ASC.
+name ASC, дополнительный ключ — id ASC.
 
 ## Активность и конкурентность
 
@@ -98,7 +105,7 @@ code ASC, дополнительный ключ — id ASC.
 ## Ошибки
 
 - 404 `WAREHOUSE_NOT_FOUND`, `WAREHOUSE_STORAGE_LOCATION_NOT_FOUND`.
-- 409 `WAREHOUSE_CODE_CONFLICT`, `WAREHOUSE_STORAGE_LOCATION_CODE_CONFLICT`.
+- 409 `WAREHOUSE_NAME_CONFLICT`, `WAREHOUSE_STORAGE_LOCATION_NAME_CONFLICT`.
 - 409 `WAREHOUSE_INACTIVE`, `WAREHOUSE_HAS_ACTIVE_LOCATIONS`.
 - 400 `INVALID_WAREHOUSE_ID`, `INVALID_STORAGE_LOCATION_FIELD`, `INVALID_QUERY`,
   `INVALID_PAYLOAD`, `UNKNOWN_FIELDS`, `EMPTY_PAYLOAD`.

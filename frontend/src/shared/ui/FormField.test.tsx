@@ -1,7 +1,49 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { FormField } from "./FormField";
 import { AdminTextField } from "./AdminFormControls";
+
+it("keeps a dismissed message only for collapse and cancels removal when an error returns", () => {
+  vi.useFakeTimers();
+  const view = render(
+    <FormField label="Количество" error="Ошибка">
+      <input />
+    </FormField>,
+  );
+  try {
+    view.rerender(
+      <FormField label="Количество">
+        <input />
+      </FormField>,
+    );
+    const message = screen.getByText("Ошибка");
+    expect(message).toHaveAttribute("data-visible", "false");
+    expect(message).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByRole("textbox")).not.toHaveAttribute("aria-describedby");
+    act(() => vi.advanceTimersByTime(180));
+    expect(message).toBeInTheDocument();
+    view.rerender(
+      <FormField label="Количество" error="Другая ошибка">
+        <input />
+      </FormField>,
+    );
+    act(() => vi.advanceTimersByTime(360));
+    expect(screen.getByText("Другая ошибка")).toHaveAttribute(
+      "data-visible",
+      "true",
+    );
+    view.rerender(
+      <FormField label="Количество">
+        <input />
+      </FormField>,
+    );
+    act(() => vi.advanceTimersByTime(360));
+    expect(screen.queryByText("Другая ошибка")).toBeNull();
+  } finally {
+    view.unmount();
+    vi.useRealTimers();
+  }
+});
 
 it("keeps the input handler and associates field errors with its control", () => {
   const onChange = vi.fn();

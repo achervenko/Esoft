@@ -38,7 +38,7 @@ export class WarehouseStockQueryService {
       query.sortBy === 'quantity'
         ? { quantity: query.sortOrder }
         : query.sortBy === 'location'
-          ? { storageLocation: { code: query.sortOrder } }
+          ? { storageLocation: { name: query.sortOrder } }
           : { item: { article: query.sortOrder } };
     const read = async (client: Prisma.TransactionClient) => {
       const items = await client.warehouseBalance.findMany({

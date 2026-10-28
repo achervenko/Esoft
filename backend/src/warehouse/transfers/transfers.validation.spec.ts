@@ -27,6 +27,10 @@ describe('Transfer validation', () => {
     { itemId: '0' },
     { comment: 'x'.repeat(4001) },
     { extra: true },
+    { moveReservation: null },
+    { moveReservation: 'true' },
+    { moveReservation: true },
+    { moveReservation: false, projectId: '1' },
   ])('rejects invalid input %j', (patch) =>
     expect(() => parseTransfer({ ...input, ...patch })).toThrow(),
   );
@@ -47,4 +51,22 @@ describe('Transfer validation', () => {
   ])('rejects invalid filters %j', (q) =>
     expect(() => parseTransferQuery(q)).toThrow(),
   );
+  it('includes reservation mode and project in request identity', () => {
+    const free = parseTransfer(input);
+    expect(transferHash(free)).toBe(
+      transferHash(parseTransfer({ ...input, moveReservation: false })),
+    );
+    const reserved = parseTransfer({
+      ...input,
+      moveReservation: true,
+      projectId: '1',
+    });
+    expect(reserved).toMatchObject({ moveReservation: true, projectId: '1' });
+    expect(transferHash(reserved)).not.toBe(transferHash(free));
+    expect(transferHash(reserved)).not.toBe(
+      transferHash(
+        parseTransfer({ ...input, moveReservation: true, projectId: '2' }),
+      ),
+    );
+  });
 });

@@ -173,3 +173,15 @@ it.each([
   expect(canAccessWorkspaceRoute(["equipment.read"], route)).toBe(false);
   expect(canAccessWorkspaceRoute(["equipment.edit"], route)).toBe(true);
 });
+
+it("stock viewing requires only stock read permission", () => {
+  expect(
+    canAccessWorkspaceRoute(
+      ["warehouse.stock.read"],
+      "#/warehouse/stock?warehouseId=1",
+    ),
+  ).toBe(true);
+  expect(
+    canAccessWorkspaceRoute(["warehouse.catalog.manage"], "#/warehouse/stock"),
+  ).toBe(false);
+});

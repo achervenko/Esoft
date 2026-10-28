@@ -10,7 +10,6 @@ describe('Storage location validation', () => {
     expect(
       parseLocation(
         {
-          code: ' A ',
           name: ' Полка ',
           isActive: false,
           warehouseId: '9007199254740993',
@@ -18,7 +17,6 @@ describe('Storage location validation', () => {
         true,
       ),
     ).toEqual({
-      code: 'A',
       name: 'Полка',
       isActive: false,
       warehouseId: 9007199254740993n,
@@ -44,12 +42,12 @@ describe('Storage location validation', () => {
     'rejects invalid ID %s',
     (id) => expect(() => parseLocationId(id)).toThrow(),
   );
-  it('defaults to all locations sorted by code', () =>
+  it('defaults to all locations sorted by name', () =>
     expect(parseLocationQuery({})).toMatchObject({
       isActive: undefined,
       page: 1,
       limit: 50,
-      sortBy: 'code',
+      sortBy: 'name',
       sortOrder: 'asc',
     }));
   it.each([
@@ -57,6 +55,7 @@ describe('Storage location validation', () => {
     { page: '0' },
     { limit: '101' },
     { sortBy: 'id' },
+    { sortBy: 'code' },
     { sortOrder: 'DESC' },
     { page: '2147483647' },
     { unknown: 'x' },
@@ -67,18 +66,18 @@ describe('Storage location validation', () => {
 
 describe('Warehouse membership validation', () => {
   it('requires an explicit warehouse on creation', () => {
-    expect(() => parseLocation({ code: 'A', name: 'Shelf' }, true)).toThrow();
+    expect(() => parseLocation({ name: 'Shelf' }, true)).toThrow();
     expect(() =>
-      parseLocation({ code: 'A', name: 'Shelf', warehouseId: 1 }, true),
+      parseLocation({ name: 'Shelf', warehouseId: 1 }, true),
     ).toThrow();
     expect(() =>
-      parseLocation({ code: 'A', name: 'Shelf', warehouseId: '01' }, true),
+      parseLocation({ name: 'Shelf', warehouseId: '01' }, true),
     ).toThrow();
   });
   it('keeps warehouse identity out of warehouse entry payloads', () => {
-    expect(
-      parseStorageEntry({ code: ' W ', name: ' Warehouse ' }, true),
-    ).toEqual({ code: 'W', name: 'Warehouse' });
+    expect(parseStorageEntry({ name: ' Warehouse ' }, true)).toEqual({
+      name: 'Warehouse',
+    });
     expect(() => parseStorageEntry({ warehouseId: '1' })).toThrow();
   });
   it('filters locations by a full precision warehouse ID', () => {

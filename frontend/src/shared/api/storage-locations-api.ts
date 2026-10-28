@@ -4,7 +4,6 @@ export type StorageLocation = {
   id: string;
   warehouseId: string;
   warehouse: Warehouse;
-  code: string;
   name: string;
   isActive: boolean;
 };

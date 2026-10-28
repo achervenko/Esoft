@@ -9,9 +9,8 @@
 
 `WarehouseReceipt` хранит склад, источник, идентичность операции, hash,
 необязательные номер/дату основания и комментарий, автора, серверное время и
-снимки кода/названия склада. `WarehouseReceiptLine` хранит исходный порядок,
-товар, место, количество и снимки артикула, названия товара, единицы, кода и
-названия места. Карточка использует эти снимки и не переименовывается вслед за
+снимок названия склада. `WarehouseReceiptLine` хранит исходный порядок,
+товар, место, количество и снимки артикула, названия товара, единицы и названия места. Карточка использует эти снимки и не переименовывается вслед за
 справочниками. Имя автора показывается актуальным из User.
 
 SQL обеспечивает уникальность `(source, source_system, source_operation_id)`,
@@ -100,12 +99,12 @@ documentDate не фильтруется. page от 1, limit 1–100, по ум�
 Товар и место — один lines.some (один EXISTS по одной строке).
 
 Ответ списка `{items,total,page,limit}`. items: id, warehouseId, source,
-documentNumber, documentDate, comment, warehouseCodeSnapshot,
+documentNumber, documentDate, comment,
 warehouseNameSnapshot, createdByUserId, createdBy {id,name}, createdAt, lineCount.
 Список/total читаются одним RepeatableRead-снимком, строки не загружаются.
 Карточка содержит те же реквизиты (без lineCount) и lines: id, receiptId,
 rowNumber, itemId, storageLocationId, quantity, unitSnapshot,
-itemArticleSnapshot, itemNameSnapshot, storageLocationCodeSnapshot,
+itemArticleSnapshot, itemNameSnapshot,
 storageLocationNameSnapshot. ID/quantity строковые, createdAt ISO UTC,
 documentDate YYYY-MM-DD или null. Техническая идентичность и hash не выдаются.
 Сумма количеств разных товаров/единиц не вычисляется.

@@ -43,10 +43,13 @@ export async function verifyTransfersBasic(run) {
         data: { isActive: true },
       });
       const foreign = await prisma.warehouse.create({
-        data: { code: namespace + "-foreign", name: "Foreign" },
+        data: { name: `${namespace}-Foreign` },
       });
       const target = await prisma.warehouseStorageLocation.create({
-        data: { warehouseId: foreign.id, code: "A", name: "Foreign" },
+        data: {
+          warehouseId: foreign.id,
+          name: `${namespace}-Foreign-location`,
+        },
       });
       const cross = await service.create(
         { ...payload(), fromLocationId: loc(b), toLocationId: loc(target) },

@@ -76,6 +76,12 @@ export const sidebarSections: SidebarSection[] = [
         keepGroup: true,
         items: [
           {
+            href: "#/warehouse/stock",
+            icon: Warehouse,
+            label: "Остатки",
+            permission: "warehouse.stock.read",
+          },
+          {
             href: "#/warehouse/catalog",
             icon: BookOpen,
             label: "Номенклатура",

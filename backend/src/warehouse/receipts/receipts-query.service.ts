@@ -45,7 +45,6 @@ export class WarehouseReceiptsQueryService {
             documentNumber: true,
             documentDate: true,
             comment: true,
-            warehouseCodeSnapshot: true,
             warehouseNameSnapshot: true,
             createdAt: true,
             createdByUserId: true,

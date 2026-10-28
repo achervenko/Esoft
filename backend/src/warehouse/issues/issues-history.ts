@@ -81,7 +81,6 @@ export function issueHistorySearch(
   comment: string | null,
 ) {
   return [
-    header.warehouse.code,
     header.warehouse.name,
     header.project?.projectNumber,
     header.project?.name,
@@ -93,7 +92,6 @@ export function issueHistorySearch(
       p.item.article,
       p.item.name,
       p.item.unit,
-      p.location.code,
       p.location.name,
     ]),
   ]

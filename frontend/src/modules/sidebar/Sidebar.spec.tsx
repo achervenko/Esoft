@@ -70,6 +70,20 @@ describe("Sidebar", () => {
       ).toHaveAttribute("aria-current", "page");
     },
   );
+  it("opens stock overview for a stock reader without catalog management", () => {
+    window.location.hash = "#/warehouse/stock";
+    render(
+      <Sidebar
+        onLogout={vi.fn()}
+        user={{ permissions: ["warehouse.stock.read"] }}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Остатки" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.queryByRole("link", { name: "Номенклатура" })).toBeNull();
+  });
   it("hides Warehouse without its permissions", () => {
     render(
       <Sidebar

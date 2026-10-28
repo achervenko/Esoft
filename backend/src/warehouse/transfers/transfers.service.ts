@@ -1,4 +1,9 @@
 import {
+  planReservationTransfer,
+  applyReservationTransfer,
+  auditReservationTransfer,
+} from './transfers-reservations';
+import {
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -38,6 +43,12 @@ function dto(row: WarehouseTransfer) {
     createdByUserId: row.createdByUserId,
     createdAt: row.createdAt,
     requestKey: row.requestKey,
+    moveReservation: !!(
+      row.snapshot &&
+      typeof row.snapshot === 'object' &&
+      !Array.isArray(row.snapshot) &&
+      row.snapshot.reservationTransfer
+    ),
     snapshot: row.snapshot,
   };
 }
@@ -61,7 +72,9 @@ export class WarehouseTransfersService {
         if (
           !user ||
           user.banned ||
-          !hasPermission(user.role, 'warehouse.transfers.manage')
+          !hasPermission(user.role, 'warehouse.transfers.manage') ||
+          (input.moveReservation &&
+            !hasPermission(user.role, 'warehouse.reservations.manage'))
         )
           throw new ForbiddenException({
             code: 'FORBIDDEN',
@@ -83,6 +96,16 @@ export class WarehouseTransfersService {
               message: 'Ключ уже использован с другими данными.',
             });
           return dto(previous);
+        }
+        if (input.projectId !== null) {
+          const [project] = await tx.$queryRaw<
+            { is_active: boolean }[]
+          >`SELECT is_active FROM warehouse_projects WHERE id=${BigInt(input.projectId)} FOR SHARE`;
+          if (!project?.is_active)
+            throw new ConflictException({
+              code: 'WAREHOUSE_TRANSFER_PROJECT_UNAVAILABLE',
+              message: 'Проект не найден или неактивен.',
+            });
         }
         const locationIds = [
           BigInt(input.fromLocationId),
@@ -131,28 +154,23 @@ export class WarehouseTransfersService {
             code: 'WAREHOUSE_BALANCE_NOT_FOUND',
             message: 'Исходный остаток не найден.',
           });
+        const destination = await this.stock.getBalance(
+          input.itemId,
+          input.toLocationId,
+          tx,
+        );
         const reservations = await this.reservations.getLocked(tx, [
           BigInt(balance.id),
+          ...(destination ? [BigInt(destination.id)] : []),
         ]);
-        const reserved = reservations.reduce(
-          (sum, r) => sum.plus(r.quantity),
-          new Prisma.Decimal(0),
+        const reservationPlan = planReservationTransfer(
+          reservations,
+          BigInt(balance.id),
+          destination ? BigInt(destination.id) : undefined,
+          balance.quantity,
+          input.quantity,
+          input.projectId,
         );
-        const free = Prisma.Decimal.max(
-          new Prisma.Decimal(balance.quantity).minus(reserved),
-          0,
-        );
-        if (new Prisma.Decimal(input.quantity).gt(free))
-          throw new ConflictException({
-            code: 'WAREHOUSE_TRANSFER_RESERVED_STOCK',
-            message: 'Недостаточно свободного остатка для перемещения.',
-            details: {
-              physical: balance.quantity,
-              reserved: reserved.toString(),
-              available: free.toString(),
-              requested: input.quantity,
-            },
-          });
         const moved = await this.stock.moveStock(
           { tx, actorUserId: actor },
           input.itemId,
@@ -160,7 +178,15 @@ export class WarehouseTransfersService {
           input.toLocationId,
           input.quantity,
         );
+        const reservationTransfer = reservationPlan
+          ? await applyReservationTransfer(
+              tx,
+              reservationPlan,
+              BigInt(moved.to.id),
+            )
+          : null;
         const snapshot = {
+          reservationTransfer,
           item: warehouseItemIdentityDto(item),
           from: locationWithWarehouseDto(from),
           to: locationWithWarehouseDto(to),
@@ -184,6 +210,14 @@ export class WarehouseTransfersService {
             snapshot,
           },
         });
+        if (reservationTransfer)
+          await auditReservationTransfer(
+            tx,
+            this.audit,
+            actor,
+            operation.id,
+            reservationTransfer,
+          );
         const result = dto(operation);
         await this.audit.writeFieldChanges({
           tx,

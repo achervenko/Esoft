@@ -11,7 +11,7 @@ export const code = (expected) => (error) => {
 export async function createWarehouseIssuesTestContext(prisma) {
   const namespace = "issues-" + randomUUID();
   const warehouse = await prisma.warehouse.create({
-    data: { code: namespace, name: namespace },
+    data: { name: namespace },
   });
   const { AuditLogService } = load("audit/audit-log.service.js");
   const { WarehouseStockService } = load("warehouse/stock/stock.service.js");
@@ -117,8 +117,8 @@ export async function createWarehouseIssuesTestContext(prisma) {
       const location = await prisma.warehouseStorageLocation.create({
         data: {
           warehouseId: warehouse.id,
-          code: `${namespace}-${n}-${i}`,
-          name: "Shelf",
+
+          name: `Shelf ${namespace}-${n}-${i}`,
         },
       });
       const balance = await prisma.warehouseBalance.create({

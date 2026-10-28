@@ -24,17 +24,17 @@ function serviceFor(error: unknown) {
     {} as AuditLogService,
   );
 }
-describe('Warehouse code conflict mapping', () => {
+describe('Warehouse name conflict mapping', () => {
   const duplicates = [
-    { modelName: 'Warehouse', target: ['code'] },
-    { target: 'uq_warehouses_code' },
-    { modelName: 'Warehouse', target: 'uq_warehouses_code' },
-    adapter({ index: 'uq_warehouses_code' }),
-    { modelName: 'Warehouse', ...adapter({ fields: ['code'] }) },
+    { modelName: 'Warehouse', target: ['name'] },
+    { target: 'uq_warehouses_name' },
+    { modelName: 'Warehouse', target: 'uq_warehouses_name' },
+    adapter({ index: 'uq_warehouses_name' }),
+    { modelName: 'Warehouse', ...adapter({ fields: ['name'] }) },
     {
       modelName: 'Warehouse',
       target: null,
-      ...adapter({ index: 'uq_warehouses_code' }),
+      ...adapter({ index: 'uq_warehouses_name' }),
     },
   ];
   it.each(duplicates)(
@@ -42,12 +42,12 @@ describe('Warehouse code conflict mapping', () => {
     async (meta) => {
       const service = serviceFor(known(meta));
       for (const operation of [
-        () => service.create({ code: 'A', name: 'Warehouse' }, 'actor'),
-        () => service.update('1', { code: 'A' }, 'actor'),
+        () => service.create({ name: 'Warehouse' }, 'actor'),
+        () => service.update('1', { name: 'Warehouse' }, 'actor'),
       ])
         await expect(operation()).rejects.toMatchObject({
           status: 409,
-          response: { code: 'WAREHOUSE_CODE_CONFLICT' },
+          response: { code: 'WAREHOUSE_NAME_CONFLICT' },
         });
     },
   );
@@ -55,30 +55,30 @@ describe('Warehouse code conflict mapping', () => {
     known(),
     known({ modelName: 'Warehouse' }),
     known({ modelName: 'Warehouse', target: ['id'] }),
-    known({ target: ['code'] }),
-    known({ modelName: 'AuditLog', target: ['code'] }),
+    known({ target: ['name'] }),
+    known({ modelName: 'AuditLog', target: ['name'] }),
     known({
       modelName: 'AuditLog',
-      ...adapter({ index: 'uq_warehouses_code' }),
+      ...adapter({ index: 'uq_warehouses_name' }),
     }),
     known(adapter({ index: 'another_index' })),
-    known(adapter({ fields: ['code'] })),
+    known(adapter({ fields: ['name'] })),
     known({
       driverAdapterError: {
         cause: {
           kind: 'UniqueConstraintViolation',
           originalCode: '23503',
-          constraint: { index: 'uq_warehouses_code' },
+          constraint: { index: 'uq_warehouses_name' },
         },
       },
     }),
     known({ modelName: 'Warehouse', driverAdapterError: null }),
-    known({ modelName: 'Warehouse', target: ['code'] }, 'P2003'),
+    known({ modelName: 'Warehouse', target: ['name'] }, 'P2003'),
     new Error('connection lost'),
   ];
   it.each(unrelated)('preserves unrelated error %#', async (error) => {
     await expect(
-      serviceFor(error).create({ code: 'A', name: 'Warehouse' }, 'actor'),
+      serviceFor(error).create({ name: 'Warehouse' }, 'actor'),
     ).rejects.toBe(error);
   });
 });

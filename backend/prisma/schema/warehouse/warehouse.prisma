@@ -3,8 +3,7 @@ model Warehouse {
   issueSheets WarehouseIssueSheet[]
   receipts WarehouseReceipt[]
   id               BigInt                     @id @default(autoincrement())
-  code             String                     @unique(map: "uq_warehouses_code") @db.VarChar(100)
-  name             String                     @db.VarChar(255)
+  name             String                     @unique(map: "uq_warehouses_name") @db.VarChar(255)
   isActive         Boolean                    @default(true) @map("is_active")
   storageLocations WarehouseStorageLocation[]
 
@@ -33,13 +32,12 @@ model WarehouseStorageLocation {
   warehouseId     BigInt                    @map("warehouse_id")
   warehouse       Warehouse                 @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_storage_locations_warehouse")
   id              BigInt                    @id @default(autoincrement())
-  code            String                    @db.VarChar(100)
   name            String                    @db.VarChar(255)
   isActive        Boolean                   @default(true) @map("is_active")
   balances        WarehouseBalance[]
   issueSheetLines WarehouseIssueSheetLine[]
 
-  @@unique([warehouseId, code], map: "uq_warehouse_storage_locations_warehouse_code")
+  @@unique([warehouseId, name], map: "uq_warehouse_storage_locations_warehouse_name")
   @@map("warehouse_storage_locations")
 }
 
@@ -231,7 +229,6 @@ model WarehouseReceipt {
  documentNumber String? @map("document_number") @db.VarChar(100)
  documentDate DateTime? @map("document_date") @db.Date
  comment String? @db.VarChar(4000)
- warehouseCodeSnapshot String @map("warehouse_code_snapshot") @db.VarChar(100)
  warehouseNameSnapshot String @map("warehouse_name_snapshot") @db.VarChar(255)
  createdByUserId String @map("created_by_user_id")
  createdBy User @relation(fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
@@ -256,7 +253,6 @@ model WarehouseReceiptLine {
  unitSnapshot String @map("unit_snapshot") @db.VarChar(50)
  itemArticleSnapshot String @map("item_article_snapshot") @db.VarChar(100)
  itemNameSnapshot String @map("item_name_snapshot") @db.VarChar(255)
- storageLocationCodeSnapshot String @map("storage_location_code_snapshot") @db.VarChar(100)
  storageLocationNameSnapshot String @map("storage_location_name_snapshot") @db.VarChar(255)
  @@unique([receiptId, rowNumber], map: "uq_warehouse_receipt_lines_row")
  @@unique([receiptId, itemId, storageLocationId], map: "uq_warehouse_receipt_lines_item_location")

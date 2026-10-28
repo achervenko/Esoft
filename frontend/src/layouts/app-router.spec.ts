@@ -139,3 +139,9 @@ describe("resolveAppRoute", () => {
     });
   });
 });
+
+it("resolves stock overview with filters", () => {
+  expect(
+    resolveAppRoute("#/warehouse/stock?warehouseId=9007199254740993"),
+  ).toEqual({ kind: "warehouse-stock" });
+});

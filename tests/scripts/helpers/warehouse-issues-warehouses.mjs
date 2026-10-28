@@ -35,15 +35,15 @@ export async function verifyWarehouseIssuesWarehouses(context) {
     audit,
   );
   const other = await prisma.warehouse.create({
-    data: { code: warehouse.code + "-OTHER", name: "Другой склад" },
+    data: { name: "Другой склад" },
   });
   const f = await fixture(["20"]);
   const ownLocation = await prisma.warehouseStorageLocation.update({
     where: { id: f.balances[0].storageLocationId },
-    data: { code: "A-01", name: "Полка" },
+    data: { name: "Полка" },
   });
   const foreignLocation = await prisma.warehouseStorageLocation.create({
-    data: { warehouseId: other.id, code: "A-01", name: "Полка" },
+    data: { warehouseId: other.id, name: "Полка" },
   });
   const foreignBalance = await prisma.warehouseBalance.create({
     data: {
@@ -74,7 +74,7 @@ export async function verifyWarehouseIssuesWarehouses(context) {
     new Set([a, b]),
   );
   assert.equal(
-    all.items.every((row) => row.location.code === "A-01"),
+    all.items.every((row) => row.location.name === "Полка"),
     true,
   );
   for (const [warehouseId, locationId, quantity] of [

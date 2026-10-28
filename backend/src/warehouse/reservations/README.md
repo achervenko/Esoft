@@ -23,9 +23,9 @@
   Повторное снятие отсутствующего резерва даёт 404 `WAREHOUSE_RESERVATION_NOT_FOUND`.
 
 DTO содержит `id`, `balanceId`, `projectId`, `quantity`, `item`
-(id/article/name/unit/isActive), `location` (id/code/name/isActive/warehouseId/warehouse), `project`
+(id/article/name/unit/isActive), `location` (id/name/isActive/warehouseId/warehouse), `project`
 (id/projectNumber/name/isActive). Вложенный `location.warehouse` содержит
-`id`, `code`, `name`, `isActive`; место сериализуется общим `locationWithWarehouseDto`.
+`id`, `name`, `isActive`; место сериализуется общим `locationWithWarehouseDto`.
 Фильтр `warehouseId` применяется через место остатка; без него возвращаются резервы всех складов.
 ID — канонические bigint decimal strings,
 количества — decimal strings до трёх знаков, максимум `99999999999.999`.

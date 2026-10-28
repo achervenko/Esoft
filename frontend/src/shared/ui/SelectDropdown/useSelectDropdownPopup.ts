@@ -37,6 +37,7 @@ export function useSelectDropdownPopup({
     }
 
     const rect = trigger.getBoundingClientRect();
+    const overlay = !!trigger.closest('[role="dialog"]');
     const viewportTop = window.visualViewport?.offsetTop ?? 0;
     const viewportLeft = window.visualViewport?.offsetLeft ?? 0;
     const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
@@ -48,7 +49,8 @@ export function useSelectDropdownPopup({
       280,
       Math.max(42, optionCountRef.current * 42) + 2,
     );
-    const opensAbove = !alwaysDown && below < desiredHeight && above > below;
+    const opensAbove =
+      (!alwaysDown || overlay) && below < desiredHeight && above > below;
     const maxHeight = Math.max(0, Math.min(280, opensAbove ? above : below));
     const width = Math.min(rect.width, Math.max(0, viewportWidth - 24));
 
@@ -61,7 +63,7 @@ export function useSelectDropdownPopup({
       bottom: opensAbove ? window.innerHeight - rect.top + 6 : "auto",
       transformOrigin: opensAbove ? "bottom" : "top",
       width,
-      maxHeight: alwaysDown ? 280 : maxHeight,
+      maxHeight: alwaysDown && !overlay ? 280 : maxHeight,
     };
     setMenuStyle((previous) =>
       previous &&

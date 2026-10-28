@@ -23,6 +23,8 @@ export function getDefaultAuthRoute(permissions: unknown) {
 
 export function canAccessWorkspaceRoute(permissions: unknown, route: string) {
   const path = route.split("?")[0];
+  if (path === "#/warehouse/stock")
+    return hasPermission(permissions, "warehouse.stock.read");
   if (path === "#/warehouse/catalog")
     return hasPermission(permissions, "warehouse.catalog.manage");
   if (path === "#/search") return hasPermission(permissions, "search.read");

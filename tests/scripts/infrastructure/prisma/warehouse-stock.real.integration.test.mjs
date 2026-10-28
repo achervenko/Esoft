@@ -1,3 +1,4 @@
+import { verifyStockOverview } from "../../helpers/warehouse-stock-overview.mjs";
 import { createStockTestContext } from "../../helpers/warehouse-stock-test-context.mjs";
 import { verifyStockBasic } from "../../helpers/warehouse-stock.basic.mjs";
 import { verifyStockQuery } from "../../helpers/warehouse-stock-query.mjs";
@@ -61,6 +62,7 @@ test(
         for (const [name, verify] of [
           ["basic", verifyStockBasic],
           ["query", verifyStockQuery],
+          ["overview", verifyStockOverview],
           ["errors", verifyStockErrors],
           ["activity", verifyStockActivity],
           ["atomicity", verifyStockAtomicity],
