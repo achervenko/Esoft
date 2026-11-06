@@ -26,7 +26,10 @@ function createService(activeModules = ['equipment', 'ppe']) {
     employeeUser: { create: jest.fn(), upsert: jest.fn() },
   };
   const prisma = {
-    user: { findUnique: jest.fn().mockResolvedValue({ id: 'user-1' }) },
+    user: {
+      findUnique: jest.fn().mockResolvedValue({ id: 'user-1' }),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
     $transaction: jest.fn((operation: (value: typeof tx) => unknown) =>
       operation(tx),
     ),
@@ -46,6 +49,39 @@ function createService(activeModules = ['equipment', 'ppe']) {
 }
 
 describe('UserAccountsAdminService employee activity', () => {
+  it('excludes the entire system role namespace while retaining users without roles', async () => {
+    const { service, prisma } = createService();
+    await service.listUsers();
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          OR: [{ role: null }, { role: { not: { startsWith: 'system:' } } }],
+        },
+      }),
+    );
+  });
+  it.each(['system:integration', 'system:receipt-exchange', 'system:future'])(
+    'hides %s from direct account administration',
+    async (role) => {
+      const { prisma } = createService();
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', role });
+      const assertions = new UsersAdminAssertionsService(prisma as never);
+      await expect(assertions.assertUserExists('user-1')).rejects.toMatchObject(
+        { status: 404 },
+      );
+    },
+  );
+  it.each([null, 'operator', 'admin'])(
+    'allows ordinary accounts with role %p',
+    async (role) => {
+      const { prisma } = createService();
+      prisma.user.findUnique.mockResolvedValue({ id: 'user-1', role });
+      const assertions = new UsersAdminAssertionsService(prisma as never);
+      await expect(
+        assertions.assertUserExists('user-1'),
+      ).resolves.toBeUndefined();
+    },
+  );
   it('returns only assignable roles', () => {
     expect(
       createService([])

@@ -38,7 +38,14 @@ export async function createStockTestContext(prisma, database) {
     new WarehouseStockQueryService(prisma),
     audit,
   );
-  const catalog = new WarehouseCatalogService(prisma, audit);
+  const {
+    WarehouseCatalogUsagePolicy,
+  } = require("../../../backend/dist/src/warehouse/catalog/catalog-usage.policy.js");
+  const catalog = new WarehouseCatalogService(
+    prisma,
+    audit,
+    new WarehouseCatalogUsagePolicy(),
+  );
   const item = await prisma.warehouseItem.create({
     data: {
       id: largeId,

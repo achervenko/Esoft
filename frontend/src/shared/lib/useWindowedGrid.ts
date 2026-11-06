@@ -60,18 +60,7 @@ export function useWindowedGrid<Element extends HTMLElement = HTMLDivElement>(
         previous.columns !== columns || !Object.keys(previous.rowHeights).length
           ? Object.values(measured)[0] || previous.estimatedHeight
           : previous.estimatedHeight;
-      if (
-        previous.columns === columns &&
-        previous.gap === gap &&
-        previous.scrollTop === scrollTop &&
-        previous.viewportHeight === viewportHeight &&
-        previous.estimatedHeight === estimatedHeight &&
-        Object.entries(measured).every(
-          ([row, height]) => previous.rowHeights[Number(row)] === height,
-        )
-      )
-        return previous;
-      return {
+      const next = {
         columns,
         gap,
         estimatedHeight,
@@ -79,8 +68,25 @@ export function useWindowedGrid<Element extends HTMLElement = HTMLDivElement>(
         scrollTop,
         viewportHeight,
       };
+      const previousWindow = getGridWindow(count, previous);
+      const nextWindow = getGridWindow(count, next);
+      if (
+        previous.columns === columns &&
+        previous.gap === gap &&
+        previousWindow.start === nextWindow.start &&
+        previousWindow.end === nextWindow.end &&
+        previousWindow.before === nextWindow.before &&
+        previousWindow.after === nextWindow.after &&
+        previous.viewportHeight === viewportHeight &&
+        previous.estimatedHeight === estimatedHeight &&
+        Object.entries(measured).every(
+          ([row, height]) => previous.rowHeights[Number(row)] === height,
+        )
+      )
+        return previous;
+      return next;
     });
-  }, []);
+  }, [count]);
   useLayoutEffect(measure, [measure, count, range.start, range.end]);
   useEffect(() => {
     const grid = gridRef.current;

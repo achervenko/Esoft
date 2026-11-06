@@ -1,3 +1,4 @@
+import { StorageModule } from '../storage/storage.module';
 import { Module } from '@nestjs/common';
 import { NumberingModule } from '../application/numbering/numbering.module';
 import { AuditModule } from '../audit/audit.module';
@@ -12,7 +13,13 @@ import { EquipmentService } from './equipment.service';
 import { EquipmentWriteService } from './equipment-write.service';
 
 @Module({
-  imports: [AuditModule, NumberingModule, PrismaModule, SearchModule],
+  imports: [
+    StorageModule,
+    AuditModule,
+    NumberingModule,
+    PrismaModule,
+    SearchModule,
+  ],
   controllers: [EquipmentController, EquipmentFilesController],
   providers: [
     EquipmentHistoryService,

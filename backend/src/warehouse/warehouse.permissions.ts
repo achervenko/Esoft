@@ -3,7 +3,10 @@ export const WAREHOUSE_PERMISSIONS = {
   TRANSFERS_MANAGE: 'warehouse.transfers.manage',
   RECEIPTS_READ: 'warehouse.receipts.read',
   RECEIPTS_MANAGE: 'warehouse.receipts.manage',
+  RECEIPTS_PLACE: 'warehouse.receipts.place',
+  RECEIPTS_MAP: 'warehouse.receipts.map',
   PROJECTS_READ: 'warehouse.projects.read',
+  RESERVATIONS_ADMIN: 'warehouse.reservations.admin',
   RESERVATIONS_MANAGE: 'warehouse.reservations.manage',
   STOCK_READ: 'warehouse.stock.read',
   STORAGE_LOCATIONS_READ: 'warehouse.storage-locations.read',
@@ -12,5 +15,6 @@ export const WAREHOUSE_PERMISSIONS = {
   OVERRIDE_RESERVATION: 'warehouse.reservations.override',
   ISSUE_SHEETS_MANAGE: 'warehouse.issue-sheets.manage',
   CATALOG_MANAGE: 'warehouse.catalog.manage',
+  CATALOG_LINKS_MANAGE: 'warehouse.catalog.links.manage',
   ADJUSTMENTS_MANAGE: 'warehouse.adjustments.manage',
 } as const;

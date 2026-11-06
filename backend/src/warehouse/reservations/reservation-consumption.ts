@@ -10,6 +10,7 @@ export type ReservationRow = {
   balanceId: bigint;
   projectId: bigint;
   quantity: Prisma.Decimal;
+  borrowedQuantity?: Prisma.Decimal;
   project: { projectNumber: string; name: string | null };
 };
 export type ReservationUse = {
@@ -23,6 +24,11 @@ export type ReservationUse = {
   quantity: string;
   own: boolean;
 };
+export function backedReservation(
+  r: Pick<ReservationRow, 'quantity' | 'borrowedQuantity'>,
+) {
+  return r.quantity.minus(r.borrowedQuantity ?? 0);
+}
 export function reservationAvailability(
   physical: Prisma.Decimal,
   reservations: ReservationRow[],
@@ -30,9 +36,9 @@ export function reservationAvailability(
 ) {
   const own = reservations
     .filter((r) => r.projectId === projectId)
-    .reduce((n, r) => n.plus(r.quantity), new Prisma.Decimal(0));
+    .reduce((n, r) => n.plus(backedReservation(r)), new Prisma.Decimal(0));
   const reserved = reservations.reduce(
-    (n, r) => n.plus(r.quantity),
+    (n, r) => n.plus(backedReservation(r)),
     new Prisma.Decimal(0),
   );
   const others = reserved.minus(own);
@@ -84,13 +90,13 @@ export function planReservationConsumption(
     remaining = remaining.minus(amount);
   };
   for (const r of reservations.filter((r) => r.projectId === projectId))
-    consume(r, Prisma.Decimal.min(r.quantity, remaining));
+    consume(r, Prisma.Decimal.min(backedReservation(r), remaining));
   remaining = Prisma.Decimal.max(0, remaining.minus(availability.free));
   if (remaining.gt(0) && override) {
     for (const r of reservations
       .filter((r) => r.projectId !== projectId)
       .sort((a, b) => (a.id < b.id ? -1 : 1)))
-      consume(r, Prisma.Decimal.min(r.quantity, remaining));
+      consume(r, Prisma.Decimal.min(backedReservation(r), remaining));
   }
   if (remaining.gt(0))
     consumptionConflict(

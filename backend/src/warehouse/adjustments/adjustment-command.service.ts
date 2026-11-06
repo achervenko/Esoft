@@ -26,6 +26,26 @@ export class WarehouseStockAdjustmentCommandService {
       async (tx) => {
         await this.access.assertAdmin(tx, actorUserId);
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:adjustment', actorUserId, input.requestKey])}, 0))`;
+        const noOp = await tx.warehouseStockAdjustmentNoop.findUnique({
+          where: {
+            actorUserId_requestKey: {
+              actorUserId,
+              requestKey: input.requestKey,
+            },
+          },
+        });
+        if (noOp) {
+          if (noOp.requestHash !== hash)
+            throw new ConflictException({
+              code: 'WAREHOUSE_ADJUSTMENT_REQUEST_CONFLICT',
+              message: 'Ключ запроса уже использован для другой корректировки.',
+            });
+          return {
+            changed: false,
+            quantity: noOp.quantity.toString(),
+            adjustment: null,
+          };
+        }
         const previous = await tx.warehouseStockAdjustment.findUnique({
           where: {
             createdByUserId_requestKey: {
@@ -43,12 +63,14 @@ export class WarehouseStockAdjustmentCommandService {
             });
           return { changed: true, adjustment: toAdjustmentDto(previous) };
         }
-        const documents = await this.uploads.lockUploads(
-          tx,
-          input.attachments,
-          ADJUSTMENT_OWNER,
-          actorUserId,
-        );
+        const documents = input.attachments.length
+          ? await this.uploads.lockUploads(
+              tx,
+              input.attachments,
+              ADJUSTMENT_OWNER,
+              actorUserId,
+            )
+          : [];
         await this.stock.lockBalances(tx, input.itemId, [input.locationId]);
         const current = await this.stock.getBalance(
           input.itemId,
@@ -69,12 +91,21 @@ export class WarehouseStockAdjustmentCommandService {
           input.mode === 'ACTUAL'
             ? new Prisma.Decimal(input.actualQuantity).minus(before)
             : new Prisma.Decimal(input.quantity);
-        if (delta.isZero())
+        if (delta.isZero()) {
+          await tx.warehouseStockAdjustmentNoop.create({
+            data: {
+              actorUserId,
+              requestKey: input.requestKey,
+              requestHash: hash,
+              quantity: before,
+            },
+          });
           return {
             changed: false,
             quantity: before.toString(),
             adjustment: null,
           };
+        }
         const type =
           input.mode === 'ACTUAL'
             ? delta.lt(0)
@@ -119,13 +150,15 @@ export class WarehouseStockAdjustmentCommandService {
             createdByUserId: actorUserId,
           },
         });
-        const files = await this.uploads.attach(
-          tx,
-          input.attachments,
-          { ...ADJUSTMENT_OWNER, entityId: operation.id.toString() },
-          actorUserId,
-          true,
-        );
+        const files = input.attachments.length
+          ? await this.uploads.attach(
+              tx,
+              input.attachments,
+              { ...ADJUSTMENT_OWNER, entityId: operation.id.toString() },
+              actorUserId,
+              true,
+            )
+          : [];
         await tx.warehouseStockAdjustmentAttachment.createMany({
           data: files.map((file) => ({
             adjustmentId: operation.id,

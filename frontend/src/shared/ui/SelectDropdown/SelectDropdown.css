@@ -1,5 +1,6 @@
 .select-dropdown-field {
   position: relative;
+  grid-template-columns: minmax(0, 1fr);
 }
 .app-select {
   display: block;
@@ -33,6 +34,9 @@
 }
 
 .select-dropdown-trigger {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   width: 100%;
   min-height: 46px;
   display: flex;
@@ -49,6 +53,16 @@
   font-size: 15px;
   outline: none;
   text-align: left;
+}
+
+.select-dropdown-trigger > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.select-dropdown-trigger > svg {
+  flex-shrink: 0;
 }
 
 .select-dropdown-trigger:focus,

@@ -1,3 +1,4 @@
+import { StorageModule } from '../../storage/storage.module';
 import { WarehouseStorageStructureModule } from '../storage-structure/storage-structure.module';
 import { WarehouseStockOverviewController } from './stock-overview.controller';
 import { WarehouseStockOverviewService } from './stock-overview.service';
@@ -9,7 +10,12 @@ import { WarehouseStockService } from './stock.service';
 import { WarehouseStockQueryService } from './stock-query.service';
 
 @Module({
-  imports: [PrismaModule, AuditModule, WarehouseStorageStructureModule],
+  imports: [
+    StorageModule,
+    PrismaModule,
+    AuditModule,
+    WarehouseStorageStructureModule,
+  ],
   controllers: [WarehouseStockController, WarehouseStockOverviewController],
   providers: [
     WarehouseStockService,

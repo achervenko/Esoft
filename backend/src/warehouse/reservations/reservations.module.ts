@@ -1,3 +1,5 @@
+import { StorageModule } from '../../storage/storage.module';
+import { WarehouseReservationOperationsService } from './reservation-operations.service';
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { AuditModule } from '../../audit/audit.module';
@@ -7,9 +9,13 @@ import { WarehouseReservationsApiService } from './reservations-api.service';
 import { WarehouseReservationsService } from './reservations.service';
 
 @Module({
-  imports: [PrismaModule, AuditModule, WarehouseStockModule],
+  imports: [StorageModule, PrismaModule, AuditModule, WarehouseStockModule],
   controllers: [WarehouseReservationsController],
-  providers: [WarehouseReservationsApiService, WarehouseReservationsService],
+  providers: [
+    WarehouseReservationsApiService,
+    WarehouseReservationsService,
+    WarehouseReservationOperationsService,
+  ],
   exports: [WarehouseReservationsService],
 })
 export class WarehouseReservationsModule {}

@@ -5,6 +5,7 @@ model Warehouse {
   id               BigInt                     @id @default(autoincrement())
   name             String                     @unique(map: "uq_warehouses_name") @db.VarChar(255)
   isActive         Boolean                    @default(true) @map("is_active")
+  externalLinks WarehouseExternalWarehouse[]
   storageLocations WarehouseStorageLocation[]
 
   @@map("warehouses")
@@ -12,6 +13,7 @@ model Warehouse {
 
 model WarehouseItem {
   transfers WarehouseTransfer[]
+  externalLinks WarehouseItemExternalLink[]
   receiptLines WarehouseReceiptLine[]
   id              BigInt                    @id @default(autoincrement())
   article         String                    @unique(map: "uq_warehouse_items_article") @db.VarChar(100)
@@ -28,7 +30,7 @@ model WarehouseItem {
 model WarehouseStorageLocation {
   transfersFrom WarehouseTransfer[] @relation("WarehouseTransferFrom")
   transfersTo WarehouseTransfer[] @relation("WarehouseTransferTo")
-  receiptLines WarehouseReceiptLine[]
+  receiptPlacements WarehouseReceiptPlacement[]
   warehouseId     BigInt                    @map("warehouse_id")
   warehouse       Warehouse                 @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_storage_locations_warehouse")
   id              BigInt                    @id @default(autoincrement())
@@ -75,6 +77,7 @@ model WarehouseProjectReservation {
   balanceId BigInt           @map("balance_id")
   projectId BigInt           @map("project_id")
   // DB-only chk_warehouse_project_reservations_quantity: quantity > 0.
+  borrowedQuantity Decimal @default(0) @map("borrowed_quantity") @db.Decimal(14, 3)
   quantity  Decimal          @db.Decimal(14, 3)
   balance   WarehouseBalance @relation(fields: [balanceId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_project_reservations_balance")
   project   WarehouseProject @relation(fields: [projectId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_project_reservations_project")
@@ -201,10 +204,13 @@ model WarehouseStockAdjustment {
   createdByUserId String                               @map("created_by_user_id")
   createdBy       User                                 @relation(fields: [createdByUserId], references: [id], onDelete: Restrict, map: "fk_warehouse_stock_adjustments_user")
   createdAt       DateTime                             @default(now()) @map("created_at") @db.Timestamptz(6)
+  resolvedReceiptId BigInt? @map("resolved_receipt_id")
+  resolvedReceipt WarehouseReceipt? @relation(fields:[resolvedReceiptId],references:[id],onDelete:Restrict)
   attachments     WarehouseStockAdjustmentAttachment[]
 
   @@unique([createdByUserId, requestKey], map: "uq_warehouse_stock_adjustments_request")
   @@index([balanceId, createdAt], map: "idx_warehouse_stock_adjustments_balance")
+  @@index([resolvedReceiptId],map:"idx_warehouse_adjustments_resolved_receipt")
   @@map("warehouse_stock_adjustments")
 }
 
@@ -220,47 +226,122 @@ model WarehouseStockAdjustmentAttachment {
 
 model WarehouseReceipt {
  id BigInt @id @default(autoincrement())
- warehouseId BigInt @map("warehouse_id")
- warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+ warehouseId BigInt? @map("warehouse_id")
+ warehouse Warehouse? @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
  source String @db.VarChar(20)
  sourceSystem String @map("source_system") @db.VarChar(100)
  sourceOperationId String @map("source_operation_id") @db.VarChar(255)
  requestHash String @map("request_hash") @db.VarChar(64)
+ sourceVersion BigInt? @map("source_version")
+ sourcePayload Json? @map("source_payload") @db.JsonB
+ pendingPayload Json? @map("pending_payload") @db.JsonB
+ conflict String? @db.VarChar(100)
+ status String @default("RECEIVED") @db.VarChar(20)
  documentNumber String? @map("document_number") @db.VarChar(100)
  documentDate DateTime? @map("document_date") @db.Date
  comment String? @db.VarChar(4000)
+ externalWarehouseId String? @map("external_warehouse_id") @db.VarChar(255)
  warehouseNameSnapshot String @map("warehouse_name_snapshot") @db.VarChar(255)
  createdByUserId String @map("created_by_user_id")
- createdBy User @relation(fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+ createdBy User @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+ updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+ receivedAt DateTime @default(now()) @map("received_at") @db.Timestamptz(6)
+ placedAt DateTime? @map("placed_at") @db.Timestamptz(6)
  lines WarehouseReceiptLine[]
+ settlementAdjustments WarehouseStockAdjustment[]
  @@unique([source, sourceSystem, sourceOperationId], map: "uq_warehouse_receipts_source_operation")
- @@index([warehouseId, createdAt], map: "idx_warehouse_receipts_warehouse_created")
+ @@index([warehouseId, status, createdAt], map: "idx_warehouse_receipts_work")
+ @@index([status, createdAt, id], map: "idx_warehouse_receipts_status")
  @@index([createdAt, id], map: "idx_warehouse_receipts_created")
  @@map("warehouse_receipts")
 }
 model WarehouseReceiptLine {
  id BigInt @id @default(autoincrement())
  receiptId BigInt @map("receipt_id")
- receipt WarehouseReceipt @relation(fields: [receiptId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+ receipt WarehouseReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
  rowNumber Int @map("row_number")
- itemId BigInt @map("item_id")
- item WarehouseItem @relation(fields: [itemId], references: [id], onDelete: Restrict, onUpdate: Cascade)
- storageLocationId BigInt @map("storage_location_id")
- storageLocation WarehouseStorageLocation @relation(fields: [storageLocationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
- // SQL CHECK: quantity > 0, row_number > 0.
+ externalLineId String @map("external_line_id") @db.VarChar(255)
+ itemId BigInt? @map("item_id")
+ item WarehouseItem? @relation(fields: [itemId], references: [id], onDelete: Restrict)
+ externalItemId String? @map("external_item_id") @db.VarChar(255)
  quantity Decimal @db.Decimal(14,3)
  unitSnapshot String @map("unit_snapshot") @db.VarChar(50)
  itemArticleSnapshot String @map("item_article_snapshot") @db.VarChar(100)
  itemNameSnapshot String @map("item_name_snapshot") @db.VarChar(255)
- storageLocationNameSnapshot String @map("storage_location_name_snapshot") @db.VarChar(255)
- @@unique([receiptId, rowNumber], map: "uq_warehouse_receipt_lines_row")
- @@unique([receiptId, itemId, storageLocationId], map: "uq_warehouse_receipt_lines_item_location")
- @@index([itemId, storageLocationId], map: "idx_warehouse_receipt_lines_item_location")
- @@index([storageLocationId], map: "idx_warehouse_receipt_lines_location")
+ sourceType String @default("GOODS") @map("source_type") @db.VarChar(30)
+ orderId BigInt? @map("order_id")
+ order WarehouseOrder? @relation(fields: [orderId], references: [id], onDelete: Restrict)
+ orderSnapshot Json? @map("order_snapshot") @db.JsonB
+ reconciledToLineId BigInt? @map("reconciled_to_line_id")
+ reconciledToLine WarehouseReceiptLine? @relation("ReceiptReconciliation", fields: [reconciledToLineId], references: [id], onDelete: Restrict)
+ reconciledLines WarehouseReceiptLine[] @relation("ReceiptReconciliation")
+ placements WarehouseReceiptPlacement[]
+ @@unique([receiptId, externalLineId], map: "uq_warehouse_receipt_lines_external")
+ @@index([itemId], map: "idx_warehouse_receipt_lines_item")
+ @@index([orderId], map: "idx_warehouse_receipt_lines_order")
+ @@index([reconciledToLineId], map: "idx_warehouse_receipt_lines_reconciliation")
  @@map("warehouse_receipt_lines")
 }
-
+model WarehouseReceiptPlacement {
+ id BigInt @id @default(autoincrement())
+ receiptLineId BigInt @map("receipt_line_id")
+ receiptLine WarehouseReceiptLine @relation(fields: [receiptLineId], references: [id], onDelete: Cascade)
+ storageLocationId BigInt @map("storage_location_id")
+ storageLocation WarehouseStorageLocation @relation(fields: [storageLocationId], references: [id], onDelete: Restrict)
+ quantity Decimal @db.Decimal(14,3)
+ itemSnapshot Json @map("item_snapshot") @db.JsonB
+ locationSnapshot Json @map("location_snapshot") @db.JsonB
+ createdByUserId String @map("created_by_user_id")
+ actor User @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+ requestKey String @map("request_key") @db.Uuid
+ requestHash String @map("request_hash") @db.VarChar(64)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+ @@unique([createdByUserId, requestKey], map: "uq_warehouse_receipt_placements_request")
+ @@index([receiptLineId], map: "idx_warehouse_receipt_placements_line")
+ @@index([storageLocationId], map: "idx_warehouse_receipt_placements_location")
+ @@map("warehouse_receipt_placements")
+}
+model WarehouseOrder {
+ id BigInt @id @default(autoincrement())
+ sourceSystem String @map("source_system") @db.VarChar(100)
+ externalId String @map("external_id") @db.VarChar(255)
+ number String @db.VarChar(100)
+ name String @db.VarChar(255)
+ isActive Boolean @default(true) @map("is_active")
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+ updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+ lines WarehouseReceiptLine[]
+ @@unique([sourceSystem, externalId], map: "uq_warehouse_orders_external")
+ @@map("warehouse_orders")
+}
+model WarehouseItemExternalLink {
+ id BigInt @id @default(autoincrement())
+ itemId BigInt @map("item_id")
+ item WarehouseItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+ sourceSystem String @map("source_system") @db.VarChar(100)
+ externalId String @map("external_id") @db.VarChar(255)
+ sourceArticle String @map("source_article") @db.VarChar(100)
+ sourceName String @map("source_name") @db.VarChar(255)
+ confirmedBy String @map("confirmed_by")
+ confirmedByUser User @relation(fields: [confirmedBy], references: [id], onDelete: Restrict, onUpdate: Cascade)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+ @@unique([sourceSystem, externalId], map: "uq_warehouse_item_external_links_identity")
+ @@index([itemId], map: "idx_warehouse_item_external_links_item")
+ @@map("warehouse_item_external_links")
+}
+model WarehouseExternalWarehouse {
+ id BigInt @id @default(autoincrement())
+ warehouseId BigInt @map("warehouse_id")
+ warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+ sourceSystem String @map("source_system") @db.VarChar(100)
+ externalId String @map("external_id") @db.VarChar(255)
+ confirmedBy String @map("confirmed_by")
+ confirmedByUser User @relation(fields: [confirmedBy], references: [id], onDelete: Restrict, onUpdate: Cascade)
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+ @@unique([sourceSystem, externalId], map: "uq_warehouse_external_warehouses_identity")
+ @@map("warehouse_external_warehouses")
+}
 model WarehouseIssueRequest {
  actorUserId String @map("actor_user_id")
  requestKey String @map("request_key") @db.Uuid
@@ -295,4 +376,26 @@ model WarehouseTransfer {
   @@index([toLocationId,createdAt],map:"idx_warehouse_transfers_to")
   @@index([createdAt,id],map:"idx_warehouse_transfers_created")
   @@map("warehouse_transfers")
+}
+
+model WarehouseStockAdjustmentNoop {
+ actorUserId String @map("actor_user_id")
+ requestKey String @map("request_key") @db.Uuid
+ requestHash String @map("request_hash") @db.VarChar(64)
+ quantity Decimal @db.Decimal(14, 3)
+ actor User @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+ @@id([actorUserId, requestKey])
+ @@map("warehouse_stock_adjustment_noops")
+}
+
+model WarehouseReservationOperation {
+ id String @id @default(uuid()) @db.Uuid
+ actorUserId String @map("actor_user_id")
+ requestKey String @map("request_key") @db.Uuid
+ requestHash String @map("request_hash") @db.VarChar(64)
+ result Json @db.JsonB
+ createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+ actor User @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+ @@unique([actorUserId, requestKey])
+ @@map("warehouse_reservation_operations")
 }

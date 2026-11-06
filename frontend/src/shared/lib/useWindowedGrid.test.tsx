@@ -44,7 +44,9 @@ it("skips unconstrained horizontal wrappers and restores distant rows on scroll 
     return 1;
   });
   vi.stubGlobal("cancelAnimationFrame", vi.fn());
+  let renders = 0;
   const hook = renderHook(() => {
+    renders++;
     const result = useWindowedGrid(4003);
     result.gridRef.current = grid;
     return result;
@@ -55,6 +57,13 @@ it("skips unconstrained horizontal wrappers and restores distant rows on scroll 
   });
   act(() => scheduled?.(0));
   expect(hook.result.current.start).toBe(0);
+  const beforeSmallScroll = renders;
+  for (let pixel = 1; pixel <= 20; pixel++) {
+    top = pixel;
+    act(() => window.dispatchEvent(new Event("scroll")));
+    act(() => scheduled?.(0));
+  }
+  expect(renders - beforeSmallScroll).toBeLessThan(5);
   top = 418 * 500;
   card.dataset.gridIndex = "1500";
   cardHeight = 600;

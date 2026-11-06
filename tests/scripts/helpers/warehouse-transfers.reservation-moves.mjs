@@ -14,6 +14,7 @@ export async function verifyTransferReservationMoves(run) {
       service,
       payload,
       namespace,
+      overview,
     }) => {
       const source = await receive(a, "20"),
         target = await receive(b, "5");
@@ -52,6 +53,41 @@ export async function verifyTransferReservationMoves(run) {
       assert.deepEqual(
         rows.map((r) => r.quantity.toString()),
         ["5", "5"],
+      );
+      const distribution = await overview.distribution(
+        String(result.itemId),
+        String(a.warehouseId),
+      );
+      const sourceRow = distribution.locations.find(
+        (row) => row.location.id === String(a.id),
+      );
+      const targetRow = distribution.locations.find(
+        (row) => row.location.id === String(b.id),
+      );
+      assert.equal(sourceRow.available, "12");
+      assert.deepEqual(sourceRow.reservations, [
+        {
+          id: String(
+            rows.find((r) => r.balanceId === BigInt(sourceRow.balanceId)).id,
+          ),
+          borrowedQuantity: "0",
+          movableQuantity: "5",
+          projectId: String(project.id),
+          projectNumber: namespace,
+          projectName: null,
+          quantity: "5",
+        },
+      ]);
+      assert.equal(targetRow.available, "3");
+      assert.deepEqual(
+        targetRow.reservations,
+        sourceRow.reservations.map((r) => ({
+          ...r,
+          id: String(
+            rows.find((row) => row.balanceId === BigInt(targetRow.balanceId))
+              .id,
+          ),
+        })),
       );
       assert.deepEqual(await service.create(input, actor.id), result);
       await assert.rejects(

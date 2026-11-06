@@ -1,11 +1,14 @@
+import { WarehouseCatalogUsagePolicy } from './catalog-usage.policy';
+import { assertCatalogTransaction } from './catalog.transaction';
 import {
   warehouseItemSelect as select,
+  warehouseItemSummarySelect,
+  warehouseItemSummaryDto,
   warehouseItemDto as dto,
 } from './catalog.dto';
-import { hasPermission } from '../../auth/permission-policy';
+import { assertTransactionPermission } from '../../auth/transaction-permission';
 import {
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -82,8 +85,39 @@ export class WarehouseCatalogService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly usage: WarehouseCatalogUsagePolicy,
   ) {}
 
+  private operationItemIds(values: readonly string[]) {
+    return [...new Set(values.map((value) => String(parseWarehouseId(value))))]
+      .map(BigInt)
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  }
+  async getItemsForDisplay(
+    values: readonly string[],
+    tx: Prisma.TransactionClient,
+  ) {
+    assertCatalogTransaction(tx);
+    const ids = this.operationItemIds(values);
+    if (!ids.length) return [];
+    const rows = await tx.warehouseItem.findMany({
+      where: { id: { in: ids } },
+      select: warehouseItemSummarySelect,
+      orderBy: { id: 'asc' },
+    });
+    if (rows.length !== ids.length) notFound();
+    return rows.map(warehouseItemSummaryDto);
+  }
+  async lockItemsForOperation(
+    values: readonly string[],
+    tx: Prisma.TransactionClient,
+  ) {
+    assertCatalogTransaction(tx);
+    const ids = this.operationItemIds(values);
+    if (!ids.length) return [];
+    await tx.$queryRaw`SELECT id FROM warehouse_items WHERE id IN (${Prisma.join(ids)}) ORDER BY id FOR SHARE`;
+    return this.getItemsForDisplay(values, tx);
+  }
   async list(query: unknown) {
     const { q, isActive, limit, offset } = parseCatalogQuery(query);
     const search = q?.replace(/[\\%_]/g, '\\$&');
@@ -123,16 +157,25 @@ export class WarehouseCatalogService {
     return dto(item);
   }
 
-  async create(payload: unknown, actorUserId: string) {
+  async create(
+    payload: unknown,
+    actorUserId: string,
+    tx?: Prisma.TransactionClient,
+  ) {
+    if (tx !== undefined) assertCatalogTransaction(tx);
     const data = parseCatalogItem(
       payload,
       true,
     ) as Prisma.WarehouseItemCreateInput;
-    return this.mutate(actorUserId, async (tx) => {
-      const item = await tx.warehouseItem.create({ data, select });
-      await this.writeAudit(tx, AuditAction.CREATE, null, item, actorUserId);
-      return dto(item);
-    });
+    return this.mutate(
+      actorUserId,
+      async (tx) => {
+        const item = await tx.warehouseItem.create({ data, select });
+        await this.writeAudit(tx, AuditAction.CREATE, null, item, actorUserId);
+        return dto(item);
+      },
+      tx,
+    );
   }
 
   async update(value: string, payload: unknown, actorUserId: string) {
@@ -147,11 +190,11 @@ export class WarehouseCatalogService {
         const lines = await tx.warehouseIssueSheetLine.count({
           where: { itemId: id },
         });
-        if (balances || lines)
+        if (balances || lines || (await this.usage.isUsed(tx, id)))
           throw new ConflictException({
             code: 'WAREHOUSE_UNIT_IN_USE',
             message:
-              'Нельзя менять единицу номенклатуры, используемой в остатках или листах выдачи.',
+              'Нельзя менять единицу номенклатуры, используемой в складских операциях или незавершённых документах.',
           });
       }
       const item = await tx.warehouseItem.update({
@@ -201,21 +244,20 @@ export class WarehouseCatalogService {
   private async mutate<T>(
     actor: string,
     fn: (tx: Prisma.TransactionClient) => Promise<T>,
+    transaction?: Prisma.TransactionClient,
   ) {
     try {
-      return await this.prisma.$transaction(async (tx) => {
-        if (typeof actor !== 'string' || !actor) throw new ForbiddenException();
-        const [user] = await tx.$queryRaw<
-          { role: string | null; banned: boolean | null }[]
-        >`SELECT role, banned FROM "user" WHERE id = ${actor} FOR SHARE`;
-        if (
-          !user ||
-          user.banned ||
-          !hasPermission(user.role, 'warehouse.catalog.manage')
-        )
-          throw new ForbiddenException();
+      const run = async (tx: Prisma.TransactionClient) => {
+        await assertTransactionPermission(
+          tx,
+          actor,
+          'warehouse.catalog.manage',
+        );
         return fn(tx);
-      });
+      };
+      return transaction
+        ? await run(transaction)
+        : await this.prisma.$transaction(run);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&

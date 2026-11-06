@@ -1,3 +1,4 @@
+import { WarehouseReservationOperationsService } from './reservation-operations.service';
 jest.mock('@thallesp/nestjs-better-auth', () => {
   const common =
     jest.requireActual<typeof import('@nestjs/common')>('@nestjs/common');
@@ -25,6 +26,13 @@ describe('Reservations HTTP permissions', () => {
       controllers: [WarehouseReservationsController],
       providers: [
         { provide: WarehouseReservationsApiService, useValue: service },
+        {
+          provide: WarehouseReservationOperationsService,
+          useValue: {
+            execute: jest.fn().mockResolvedValue({}),
+            upload: jest.fn().mockResolvedValue({}),
+          },
+        },
       ],
     });
     http.modules.push('warehouse');
@@ -47,6 +55,14 @@ describe('Reservations HTTP permissions', () => {
     for (const op of operations)
       expect((await http.request(op, role)).status).toBe(403);
     expect(service.create).not.toHaveBeenCalled();
+  });
+  it('only admins can borrow, release and restore through the audited operation', async () => {
+    const op = {
+      method: 'POST',
+      path: '/api/warehouse/reservations/1/operations',
+    };
+    expect((await http.request(op, 'storekeeper')).status).toBe(403);
+    expect((await http.request(op, 'admin')).status).toBeLessThan(300);
   });
   it('requires authentication for every operation', async () => {
     for (const operation of operations)

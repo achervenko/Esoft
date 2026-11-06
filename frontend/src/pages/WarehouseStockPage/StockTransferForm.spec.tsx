@@ -94,7 +94,7 @@ it("blocks amounts above free stock and reuses the request key after a network f
     new Error("Нет ответа"),
   );
   const summary = screen.getByRole("region", { name: "Итог перемещения" });
-  expect(within(summary).getByText("Останется: 9 шт")).toBeTruthy();
+  expect(within(summary).getByText("Останется свободно: 7 шт")).toBeTruthy();
   expect(within(summary).getByText("Добавится: 1,001 шт")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Переместить" }));
   await screen.findByText("Нет ответа");
@@ -103,7 +103,9 @@ it("blocks amounts above free stock and reuses the request key after a network f
   expect(first.fromLocationId).toBe(distribution.locations[0].location.id);
   expect(first.toLocationId).toBe(secondLocation.id);
   expect(first.requestKey).toMatch(/^[a-f0-9-]{36}$/);
-  fireEvent.click(screen.getByRole("button", { name: "Переместить" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Повторить перемещение" }),
+  );
   await waitFor(() => expect(saved).toHaveBeenCalledOnce());
   expect(vi.mocked(warehouseStockApi.transfer).mock.calls[1][0]).toEqual(first);
 });
@@ -121,7 +123,7 @@ it("prevents concurrent submits and refreshes distribution and parent after succ
     name: "Места хранения (Основной склад)",
   });
   const backdrop = detail.parentElement;
-  await within(detail).findByText("Угол ангара");
+  await within(detail).findAllByText("Угол ангара");
   fireEvent.click(
     within(detail).getAllByRole("button", { name: "Переместить" })[0],
   );
@@ -152,7 +154,9 @@ it("prevents concurrent submits and refreshes distribution and parent after succ
     .closest("form")!;
   fireEvent.submit(form);
   fireEvent.submit(form);
-  expect(warehouseStockApi.transfer).toHaveBeenCalledTimes(1);
+  await waitFor(() =>
+    expect(warehouseStockApi.transfer).toHaveBeenCalledTimes(1),
+  );
   await act(async () => done({ id: "1" }));
   await screen.findByRole("dialog", {
     name: "Места хранения (Основной склад)",
@@ -167,7 +171,7 @@ it("prevents concurrent submits and refreshes distribution and parent after succ
   );
 });
 
-it("blocks moving reserved or inactive sources while keeping distribution readable", async () => {
+it("allows moving reserved sources but blocks inactive locations", async () => {
   vi.mocked(warehouseStockApi.distribution).mockResolvedValue({
     ...distribution,
     locations: [
@@ -190,9 +194,8 @@ it("blocks moving reserved or inactive sources while keeping distribution readab
     name: "Места хранения (Основной склад)",
   });
   await within(modal).findByText("Место неактивно");
-  for (const button of within(modal).getAllByRole("button", {
-    name: "Переместить",
-  }))
-    expect(button).toBeDisabled();
-  expect(within(modal).getByText("10,001 шт")).toBeTruthy();
+  const buttons = within(modal).getAllByRole("button", { name: "Переместить" });
+  expect(buttons[0]).toBeEnabled();
+  expect(buttons[1]).toBeDisabled();
+  expect(within(modal).getByText("2 шт")).toBeTruthy();
 });

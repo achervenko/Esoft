@@ -1,0 +1,65 @@
+.stock-adjust-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  width: 36px;
+  height: 36px;
+  margin-left: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.stock-adjust-button:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.stock-quantity-editable {
+  display: inline-grid;
+  grid-template-columns: 12ch 36px;
+  align-items: start;
+  column-gap: 4px;
+  vertical-align: middle;
+}
+.stock-quantity-value {
+  display: inline-block;
+  white-space: nowrap;
+}
+.stock-quantity-editable .stock-quantity-value {
+  padding-top: 8px;
+  text-align: end;
+}
+.stock-quantity-editable .stock-adjust-button {
+  margin: 0;
+}
+.stock-quantity-value .stock-inactive {
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+.stock-reservation-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #c62828;
+  cursor: pointer;
+}
+.stock-reservation-action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.stock-reservation-shortage {
+  display: block;
+  margin-top: 4px;
+  color: #b45309;
+  font-size: 12px;
+}

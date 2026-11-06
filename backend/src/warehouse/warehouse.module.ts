@@ -1,3 +1,4 @@
+import { WarehouseReceiptIntegrationModule } from './receipt-integration/receipt-integration.module';
 import { WarehouseTransfersModule } from './transfers/transfers.module';
 import { Module } from '@nestjs/common';
 import { WarehouseStorageStructureModule } from './storage-structure/storage-structure.module';
@@ -20,6 +21,7 @@ import { WarehouseStockAdjustmentsModule } from './adjustments/adjustments.modul
     WarehouseIssueSheetsModule,
     WarehouseIssuesModule,
     WarehouseReceiptsModule,
+    WarehouseReceiptIntegrationModule,
     WarehouseStockAdjustmentsModule,
     WarehouseTransfersModule,
   ],

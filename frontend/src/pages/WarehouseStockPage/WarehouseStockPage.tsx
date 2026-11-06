@@ -1,3 +1,5 @@
+import { pendingReservationPosition } from "./pending-reservation-operation";
+import { pendingStockPosition } from "./pending-stock-movement";
 import { useState } from "react";
 import { SearchToolbar } from "../../shared/ui/SearchToolbar";
 import { AdminModal } from "../../shared/ui/AdminModal";
@@ -27,7 +29,9 @@ export function WarehouseStockPage({
   const page = useWarehouseStock(enabled),
     choices = useStorageChoices(enabled, page.warehouseId);
   const mobile = useMediaQuery("(max-width: 760px)");
-  const [selected, setSelected] = useState<StockPosition | null>(null);
+  const [selected, setSelected] = useState<StockPosition | null>(
+    () => pendingStockPosition() ?? pendingReservationPosition(),
+  );
   const [filtersOpen, setFiltersOpen] = useState(false);
   const list = page.list,
     rows = list.data?.items ?? [];
@@ -106,7 +110,7 @@ export function WarehouseStockPage({
               value={page.quantityState}
               onChange={page.setQuantityState}
               options={[
-                { value: "POSITIVE", label: "Только в наличии" },
+                { value: "POSITIVE", label: "В наличии или в резерве" },
                 { value: "ZERO", label: "Только нулевые" },
                 { value: "ALL", label: "Все остатки" },
               ]}
@@ -211,6 +215,10 @@ export function WarehouseStockPage({
           key={selected.id}
           position={selected}
           canTransfer={canTransfer}
+          canAdjust={hasPermission(
+            userPermissions,
+            "warehouse.adjustments.manage",
+          )}
           onClose={() => setSelected(null)}
           onChanged={page.refresh}
         />

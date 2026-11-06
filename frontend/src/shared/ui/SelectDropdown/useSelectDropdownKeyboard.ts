@@ -9,6 +9,7 @@ import { getNextEnabledIndex } from "./select-dropdown-focus";
 import type { SelectDropdownOption } from "./select-dropdown.types";
 
 type Props = {
+  pointerNavigation: RefObject<boolean>;
   disabled: boolean;
   multiple: boolean;
   isOpen: boolean;
@@ -26,6 +27,7 @@ type Props = {
 };
 
 export function useSelectDropdownKeyboard({
+  pointerNavigation,
   disabled,
   multiple,
   isOpen,
@@ -42,6 +44,7 @@ export function useSelectDropdownKeyboard({
   handleOptionTab,
 }: Props) {
   const handleTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    pointerNavigation.current = false;
     if (disabled) {
       return;
     }
@@ -76,6 +79,7 @@ export function useSelectDropdownKeyboard({
 
   const handleOptionKeyDown = useCallback(
     (event: KeyboardEvent<HTMLElement>, option: SelectDropdownOption) => {
+      pointerNavigation.current = false;
       if (event.key === "Tab") {
         handleOptionTab(event);
         return;
@@ -129,10 +133,12 @@ export function useSelectDropdownKeyboard({
       selectOption,
       setActiveIndex,
       triggerRef,
+      pointerNavigation,
     ],
   );
 
   const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    pointerNavigation.current = false;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       if (!isOpen) {
@@ -173,10 +179,13 @@ export function useSelectDropdownKeyboard({
   };
 
   const handleOptionFocus = useCallback(
-    (optionIndex: number) => {
-      if (!options[optionIndex]?.disabled) setActiveIndex(optionIndex);
+    (optionIndex: number, fromPointer = false) => {
+      if (!options[optionIndex]?.disabled) {
+        pointerNavigation.current = fromPointer;
+        setActiveIndex(optionIndex);
+      }
     },
-    [options, setActiveIndex],
+    [options, setActiveIndex, pointerNavigation],
   );
 
   return {

@@ -1,3 +1,6 @@
+import { verify as verifyReservationLifecycle } from "../../helpers/warehouse-adjustments/reservation-operations.lifecycle.test.mjs";
+import { verify as verifyReservationAtomicity } from "../../helpers/warehouse-adjustments/reservation-operations.atomicity.test.mjs";
+import { verify as verifyReservationStock } from "../../helpers/warehouse-adjustments/reservation-operations.stock.test.mjs";
 import test from "node:test";
 import {
   createAdjustmentsTestEnvironment,
@@ -34,6 +37,9 @@ test(
       await verifyAccess(run);
       await verifyIdempotency(run);
       await verifyCounting(run);
+      await verifyReservationLifecycle(run);
+      await verifyReservationAtomicity(run);
+      await verifyReservationStock(run);
       await verifyDocuments(run);
       await verifyRollback(run);
       await verifyStaging(run);

@@ -1,0 +1,119 @@
+.receipt-list-layout {
+  --receipt-table-min-width: 650px;
+  min-width: 0;
+}
+.receipt-list-table table {
+  table-layout: fixed;
+  width: 100%;
+  min-width: var(--receipt-table-min-width);
+}
+.receipt-list-table thead th {
+  text-align: center;
+}
+.receipt-list-table .data-table-sort-button {
+  justify-content: center;
+}
+.receipt-list-table .receipt-document-cell {
+  width: 34%;
+}
+.receipt-list-table .receipt-warehouse-cell {
+  width: 28%;
+  text-align: center;
+}
+.receipt-list-table .receipt-progress-cell {
+  width: 20%;
+  text-align: center;
+}
+.receipt-list-table .receipt-created-cell {
+  width: 15%;
+  text-align: center;
+}
+.receipt-document-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0;
+}
+.receipt-document-number {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.receipt-document-conflict {
+  position: relative;
+  padding-inline-start: 28px;
+}
+.receipt-conflict-icon {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--receipt-state-icon, #dc2626);
+}
+.receipt-document-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.receipt-conflict-badge {
+  background: #fee2e2;
+  color: #b91c1c;
+  white-space: nowrap;
+}
+.receipt-document-label .receipt-hint {
+  margin: 0;
+}
+.receipt-list-table time {
+  display: block;
+  font-variant-numeric: tabular-nums;
+}
+
+.receipt-progress-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.receipt-progress-caption .receipt-hint {
+  margin: 0;
+}
+.receipt-progress-track {
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #e8ebf0;
+}
+.receipt-progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #e7a114;
+}
+.receipt-progress-placed .receipt-progress-track > span {
+  background: #579568;
+}
+.receipt-list-table .receipt-open-cell {
+  width: 36px;
+  padding-inline: 6px;
+  color: var(--color-text-muted, #697386);
+}
+
+.receipt-conflict-badge,
+.receipt-warning-badge,
+.receipt-info-badge {
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-size: 11px;
+  line-height: 16px;
+}
+.receipt-warning-badge {
+  background: #fef3c7;
+  color: #854d0e;
+}
+.receipt-info-badge {
+  background: #dbeafe;
+  color: #1d4ed8;
+}

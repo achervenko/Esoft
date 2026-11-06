@@ -16,6 +16,10 @@ export function createTransfersTestRunner(prisma, database, t) {
         WarehouseReservationsApiService,
       } = require("../../../backend/dist/src/warehouse/reservations/reservations-api.service.js");
       const ctx = await createStockTestContext(prisma, database);
+      const {
+        WarehouseStockOverviewService,
+      } = require("../../../backend/dist/src/warehouse/stock/stock-overview.service.js");
+      const overview = new WarehouseStockOverviewService(prisma);
       const audit = ctx.audit;
       const reservations = new WarehouseReservationsService(audit);
       const service = new WarehouseTransfersService(
@@ -23,6 +27,14 @@ export function createTransfersTestRunner(prisma, database, t) {
         ctx.stock,
         reservations,
         audit,
+      );
+      const {
+        WarehouseTransferConsolidationService,
+      } = require("../../../backend/dist/src/warehouse/transfers/transfers-consolidation.service.js");
+      const consolidation = new WarehouseTransferConsolidationService(
+        prisma,
+        ctx.stock,
+        service,
       );
       const reservationsApi = new WarehouseReservationsApiService(
         prisma,
@@ -40,6 +52,8 @@ export function createTransfersTestRunner(prisma, database, t) {
       return verify({
         ...ctx,
         service,
+        consolidation,
+        overview,
         reservations,
         reservationsApi,
         payload,

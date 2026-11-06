@@ -1,3 +1,4 @@
+import { SYSTEM_ACTOR_ROLE_PREFIX } from '../auth/system-actors';
 import { isPrismaTransactionConflict } from '../prisma/prisma-transaction-conflict';
 import { Inject, Injectable } from '@nestjs/common';
 import { countOtherActiveAdmins } from '../auth/role-sql';
@@ -41,6 +42,16 @@ export class UserAccountsAdminService {
 
   async listUsers() {
     const users = await this.prisma.user.findMany({
+      where: {
+        OR: [
+          { role: null },
+          {
+            role: {
+              not: { startsWith: SYSTEM_ACTOR_ROLE_PREFIX },
+            },
+          },
+        ],
+      },
       include: {
         employeeUser: {
           include: {

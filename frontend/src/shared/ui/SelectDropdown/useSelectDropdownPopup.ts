@@ -1,3 +1,4 @@
+import { getSelectScrollContainer } from "./select-scroll-container";
 import { useSelectPopupRoom } from "./useSelectPopupRoom";
 import {
   useCallback,
@@ -27,6 +28,7 @@ export function useSelectDropdownPopup({
 }) {
   const [menuStyle, setMenuStyle] = useState<CSSProperties | null>(null);
   const [ownerModalId, setOwnerModalId] = useState<string | null>(null);
+  const keyboardSpacerRef = useRef<HTMLDivElement | null>(null);
   const optionCountRef = useRef(optionCount);
   optionCountRef.current = optionCount;
   const updateMenuPosition = useCallback(() => {
@@ -36,6 +38,51 @@ export function useSelectDropdownPopup({
       return;
     }
 
+    const viewport = window.visualViewport;
+    if (viewport) {
+      const bounds = trigger.getBoundingClientRect();
+      const top = viewport.offsetTop + 36;
+      const bottom = viewport.offsetTop + viewport.height - 12;
+      const delta =
+        bounds.bottom > bottom
+          ? bounds.bottom - bottom
+          : bounds.top < top
+            ? bounds.top - top
+            : 0;
+      if (delta) {
+        let container = getSelectScrollContainer(trigger);
+        while (container && container.scrollHeight <= container.clientHeight)
+          container = getSelectScrollContainer(container);
+        if (delta > 0) {
+          const remaining = container
+            ? container.scrollHeight -
+              container.clientHeight -
+              container.scrollTop
+            : Math.max(
+                0,
+                document.documentElement.scrollHeight -
+                  window.innerHeight -
+                  window.scrollY,
+              );
+          const extra = Math.max(0, delta - remaining);
+          if (extra > 0) {
+            let spacer = keyboardSpacerRef.current;
+            if (!spacer) {
+              spacer = document.createElement("div");
+              spacer.dataset.selectKeyboardSpace = "";
+              spacer.setAttribute("aria-hidden", "true");
+              spacer.style.cssText =
+                "flex-shrink:0;grid-column:1/-1;pointer-events:none;overflow-anchor:none;";
+              (container ?? document.body).append(spacer);
+              keyboardSpacerRef.current = spacer;
+            }
+            spacer.style.height = `${(parseFloat(spacer.style.height) || 0) + extra}px`;
+          }
+        }
+        if (container) container.scrollTop += delta;
+        else window.scrollBy({ top: delta, behavior: "instant" });
+      }
+    }
     const rect = trigger.getBoundingClientRect();
     const overlay = !!trigger.closest('[role="dialog"]');
     const viewportTop = window.visualViewport?.offsetTop ?? 0;
@@ -44,7 +91,10 @@ export function useSelectDropdownPopup({
     const viewportBottom =
       viewportTop + (window.visualViewport?.height ?? window.innerHeight);
     const below = Math.max(0, viewportBottom - rect.bottom - 18);
-    const above = Math.max(0, rect.top - viewportTop - 18);
+    const above = Math.max(
+      0,
+      Math.min(rect.top, viewportBottom) - viewportTop - 18,
+    );
     const desiredHeight = Math.min(
       280,
       Math.max(42, optionCountRef.current * 42) + 2,
@@ -63,7 +113,7 @@ export function useSelectDropdownPopup({
       bottom: opensAbove ? window.innerHeight - rect.top + 6 : "auto",
       transformOrigin: opensAbove ? "bottom" : "top",
       width,
-      maxHeight: alwaysDown && !overlay ? 280 : maxHeight,
+      maxHeight,
     };
     setMenuStyle((previous) =>
       previous &&
@@ -85,13 +135,14 @@ export function useSelectDropdownPopup({
     triggerRef,
     isOpen,
     disabled: disabled || !isDialogReady,
-    alwaysDown,
     optionCountRef,
     updateMenuPosition,
   });
 
   useLayoutEffect(() => {
     if (!isOpen || disabled || !isDialogReady) {
+      keyboardSpacerRef.current?.remove();
+      keyboardSpacerRef.current = null;
       setMenuStyle(null);
       setOwnerModalId(null);
       return;
@@ -133,6 +184,8 @@ export function useSelectDropdownPopup({
     window.addEventListener("scroll", schedulePosition, true);
 
     return () => {
+      keyboardSpacerRef.current?.remove();
+      keyboardSpacerRef.current = null;
       resizeObserver?.disconnect();
       if (positionFrame !== undefined) cancelAnimationFrame(positionFrame);
       window.visualViewport?.removeEventListener("resize", updateMenuPosition);

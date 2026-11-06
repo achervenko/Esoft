@@ -1,0 +1,17 @@
+.receipt-integration-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.receipt-integration-panel .admin-card {
+  overflow-x: auto;
+}
+.receipt-integration-panel table {
+  min-width: 580px;
+}
+.receipt-integration-panel small {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-text-muted, #697386);
+}

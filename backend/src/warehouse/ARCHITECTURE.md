@@ -15,7 +15,8 @@ WarehouseModule
   ├─ ReservationsModule ───── StockModule
   ├─ IssueSheetsModule        задания и их исполнение
   ├─ IssuesModule ─────────── StockModule + ReservationsModule + IssueSheetsModule
-  ├─ ReceiptsModule ───────── StockModule
+  ├─ ReceiptsModule ───────── StockModule + CatalogModule
+  ├─ ReceiptIntegrationModule ─ ReceiptsModule + IntegrationsModule/IntegrationRuntimeModule
   ├─ StockAdjustmentsModule ─ StockModule
   └─ TransfersModule ───────── StockModule + ReservationsModule
 ```
@@ -39,9 +40,12 @@ forwardRef и глобальных складских провайдеров н�
 - IssueSheetsModule экспортирует WarehouseIssueSheetsService — контракт
   жизненного цикла и транзакционного исполнения строк. Внутренние сервисы строк,
   запросов, блокировок и переходов не экспортируются.
-- ReceiptsModule экспортирует WarehouseReceiptsService для ручного прихода
-  и будущего обработчика импорта.
-- Catalog, Issues, Transfers, StockAdjustments, StorageStructure и Projects пока не
+- ReceiptsModule экспортирует WarehouseReceiptsService для ручных документов и чтения карточки и WarehouseReceiptImportService для применения нормализованных внешних документов. Публичный входной контракт — receipts/receipts-import.contract.ts. Только размещение вызывает Stock; сетевых запросов, таймеров и очереди в компоненте нет.
+  Сопоставление товара, связывание ручного прихода и решение конфликтов выполняют отдельные внутренние сервисы; контроллер вызывает их напрямую, общего mapping-фасада нет.
+- ReceiptIntegrationModule регистрирует обработчик warehouse.receipts в общем IntegrationsModule. Он проверяет контракт документа 1С и вызывает публичный import API прихода, не обращаясь к его таблицам напрямую. Источники, credentials, API-ключи, очередь, lease-worker и журнал принадлежат общему IntegrationRuntimeModule. Складских очередей и дублирующих маршрутов приёма нет. Обратной зависимости Receipts → Integration нет.
+- CatalogModule экспортирует WarehouseCatalogService, WarehouseCatalogExternalLinksService и WarehouseCatalogUsagePolicy. Чтение товара для операций идёт через минимальный lockItemsForOperation; таблица внешних связей и её аудит принадлежат Catalog. create(payload, actor, tx?) принимает транзакцию вызывающего компонента; Catalog сам проверяет разрешения, валидирует товар, создаёт запись и аудит. Receipts не пишет warehouse_items напрямую.
+- StorageStructure экспортирует сервисы складов и мест для прикладных read-only API, сохраняя проверки мутаций внутри своего компонента.
+- Issues, Transfers, StockAdjustments и Projects пока не
   экспортируют свои сервисы: существующие потребители используют их HTTP API
   либо чистые контракты данных.
 
@@ -104,3 +108,7 @@ warehouse-contracts.spec.ts проверяет совместимость пре
 и остатков, точность bigint ID, JSON-сериализацию и отсутствие полей каталога
 в сокращённых DTO. Бизнес-интеграции продолжают проверять поведение операций
 на временном PostgreSQL.
+
+Границы Receipts/ReceiptIntegration и запрет прямых мутаций Catalog/Stock из прихода проверяются warehouse-module-boundaries.spec.ts. Общая проверка полномочий автора в транзакции принадлежит auth/transaction-permission.ts, а не модулю прихода.
+
+Проверка использования товара в незавершённом приходе регистрируется Receipts через CatalogUsagePolicy. Catalog не читает таблицы прихода и не импортирует его сервисы. Callback работает read-only в транзакции Catalog; блокировка товара согласована с созданием и сопоставлением строк прихода.

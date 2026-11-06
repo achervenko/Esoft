@@ -15,7 +15,7 @@ test(
     skip: process.env.ESOFT_MODULAR_MIGRATION_TEST !== "1",
     timeout: 120000,
   },
-  async () => {
+  async (t) => {
     const { PrismaClient } = require("@prisma/client");
     const { PrismaPg } = require("@prisma/adapter-pg");
     const environment = await createIsolatedPostgres();
@@ -50,7 +50,7 @@ test(
         adapter: new PrismaPg({ connectionString: url }),
       });
       try {
-        await verifyReceipts(prisma, database);
+        await verifyReceipts(prisma, database, t);
       } finally {
         await prisma.$disconnect();
       }

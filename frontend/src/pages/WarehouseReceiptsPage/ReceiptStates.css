@@ -1,0 +1,35 @@
+.receipt-conflict-row {
+  --receipt-state-background: #fff5f5;
+  --receipt-state-border: #ef4444;
+  --receipt-state-icon: #dc2626;
+}
+.receipt-warning-row {
+  --receipt-state-background: #fffbeb;
+  --receipt-state-border: #eab308;
+  --receipt-state-icon: #a16207;
+}
+.receipt-info-row {
+  --receipt-state-background: #eff6ff;
+  --receipt-state-border: #3b82f6;
+  --receipt-state-icon: #2563eb;
+}
+.receipt-list-table
+  :is(.receipt-conflict-row, .receipt-warning-row, .receipt-info-row)
+  > td,
+.receipt-card:is(
+  .receipt-conflict-row,
+  .receipt-warning-row,
+  .receipt-info-row
+) {
+  background-color: var(--receipt-state-background);
+}
+.receipt-list-table
+  :is(.receipt-conflict-row, .receipt-warning-row, .receipt-info-row)
+  > td:first-child,
+.receipt-card:is(
+  .receipt-conflict-row,
+  .receipt-warning-row,
+  .receipt-info-row
+) {
+  box-shadow: inset 3px 0 var(--receipt-state-border);
+}

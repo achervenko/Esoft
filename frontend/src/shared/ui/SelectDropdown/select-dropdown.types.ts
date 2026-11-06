@@ -46,7 +46,7 @@ export type SelectDropdownMenuProps = {
   activeIndex: number;
   closeOnFocusLeave: (event: FocusEvent<HTMLElement>) => void;
   disabled: boolean;
-  handleOptionFocus: (optionIndex: number) => void;
+  handleOptionFocus: (optionIndex: number, fromPointer?: boolean) => void;
   handleOptionKeyDown: (
     event: KeyboardEvent<HTMLButtonElement>,
     option: SelectDropdownOption,

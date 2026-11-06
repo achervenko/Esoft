@@ -40,6 +40,11 @@ export const WarehouseStockPage = lazyNamedPage(() =>
     (module) => module.WarehouseStockPage,
   ),
 );
+export const WarehouseReceiptsPage = lazyNamedPage(() =>
+  import("../pages/WarehouseReceiptsPage/WarehouseReceiptsPage").then(
+    (module) => module.WarehouseReceiptsPage,
+  ),
+);
 export const WarehouseCatalogPage = lazyNamedPage(() =>
   import("../pages/WarehouseCatalogPage/WarehouseCatalogPage").then(
     (module) => module.WarehouseCatalogPage,

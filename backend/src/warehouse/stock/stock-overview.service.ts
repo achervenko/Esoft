@@ -1,3 +1,4 @@
+import { backedReservation } from '../reservations/reservation-consumption';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -38,12 +39,12 @@ export class WarehouseStockOverviewService {
       ${q.quantityState === 'POSITIVE' ? Prisma.sql`AND matched.quantity > 0` : Prisma.empty})`);
     const having =
       q.quantityState === 'POSITIVE'
-        ? Prisma.sql`HAVING SUM(b.quantity)>0`
+        ? Prisma.sql`HAVING SUM(b.quantity)>0 OR BOOL_OR(EXISTS (SELECT 1 FROM warehouse_project_reservations r WHERE r.balance_id=b.id))`
         : q.quantityState === 'ZERO'
           ? Prisma.sql`HAVING SUM(b.quantity)=0`
           : Prisma.empty;
     const grouped = Prisma.sql`SELECT b.item_id,l.warehouse_id,SUM(b.quantity) AS quantity,
-      COUNT(*) FILTER (WHERE b.quantity>0) AS locations_count
+      COUNT(*) FILTER (WHERE b.quantity>0 OR EXISTS (SELECT 1 FROM warehouse_project_reservations r WHERE r.balance_id=b.id)) AS locations_count
       FROM warehouse_balances b JOIN warehouse_storage_locations l ON l.id=b.storage_location_id
       JOIN warehouse_items i ON i.id=b.item_id WHERE ${Prisma.join(conditions, ' AND ')}
       GROUP BY b.item_id,l.warehouse_id ${having}`;
@@ -80,7 +81,7 @@ export class WarehouseStockOverviewService {
           WITH selected(item_id,warehouse_id,positive) AS (VALUES ${Prisma.join(groups.map((g) => Prisma.sql`(${g.item_id}::bigint,${g.warehouse_id}::bigint,${g.locations_count > 0n}::boolean)`))})
           SELECT preview.id FROM selected s CROSS JOIN LATERAL (
             SELECT b.id FROM warehouse_balances b JOIN warehouse_storage_locations l ON l.id=b.storage_location_id
-            WHERE b.item_id=s.item_id AND l.warehouse_id=s.warehouse_id AND (NOT s.positive OR b.quantity>0)
+            WHERE b.item_id=s.item_id AND l.warehouse_id=s.warehouse_id AND (NOT s.positive OR b.quantity>0 OR EXISTS (SELECT 1 FROM warehouse_project_reservations r WHERE r.balance_id=b.id))
             ORDER BY l.name,b.id LIMIT 3
           ) preview`)
           : [];
@@ -133,7 +134,16 @@ export class WarehouseStockOverviewService {
             orderBy: [{ storageLocation: { name: 'asc' } }, { id: 'asc' }],
             include: {
               storageLocation: { select: locationWithWarehouseSelect },
-              reservations: { select: { quantity: true } },
+              reservations: {
+                select: {
+                  id: true,
+                  quantity: true,
+                  borrowedQuantity: true,
+                  projectId: true,
+                  project: { select: { projectNumber: true, name: true } },
+                },
+                orderBy: { projectId: 'asc' },
+              },
             },
           }),
         ]);
@@ -152,14 +162,46 @@ export class WarehouseStockOverviewService {
           totalQuantity: total.toString(),
           locations: balances.map((b) => {
             const reserved = b.reservations.reduce(
+              (sum, r) => sum.plus(backedReservation(r)),
+              new Prisma.Decimal(0),
+            );
+            const demand = b.reservations.reduce(
               (sum, r) => sum.plus(r.quantity),
               new Prisma.Decimal(0),
             );
+            const borrowed = b.reservations.reduce(
+              (sum, r) => sum.plus(r.borrowedQuantity),
+              new Prisma.Decimal(0),
+            );
             return {
+              shortage: Prisma.Decimal.max(
+                borrowed,
+                demand.minus(b.quantity),
+                0,
+              ).toString(),
+              physicalShortage: Prisma.Decimal.max(
+                reserved.minus(b.quantity),
+                0,
+              ).toString(),
               balanceId: String(b.id),
               location: locationWithWarehouseDto(b.storageLocation),
               quantity: b.quantity.toString(),
               reserved: reserved.toString(),
+              reservations: b.reservations.map((r) => ({
+                id: String(r.id),
+                borrowedQuantity: r.borrowedQuantity.toString(),
+                movableQuantity: Prisma.Decimal.max(
+                  0,
+                  Prisma.Decimal.min(
+                    backedReservation(r),
+                    b.quantity.minus(reserved.minus(backedReservation(r))),
+                  ),
+                ).toString(),
+                projectId: String(r.projectId),
+                projectNumber: r.project.projectNumber,
+                projectName: r.project.name,
+                quantity: r.quantity.toString(),
+              })),
               available: Prisma.Decimal.max(
                 b.quantity.minus(reserved),
                 0,

@@ -5,6 +5,7 @@ export async function verifyCatalogAudit({
   service,
   create,
   WarehouseCatalogService,
+  usage,
 }) {
   const first = await create("AUDIT-1", { comment: "Audit fixture" });
   const createAudit = await prisma.auditLog.findMany({
@@ -60,11 +61,15 @@ export async function verifyCatalogAudit({
     auditCount,
   );
   const second = await create("AUDIT-2");
-  const failedAudit = new WarehouseCatalogService(prisma, {
-    async writeFieldChanges() {
-      throw new Error("Injected audit failure");
+  const failedAudit = new WarehouseCatalogService(
+    prisma,
+    {
+      async writeFieldChanges() {
+        throw new Error("Injected audit failure");
+      },
     },
-  });
+    usage,
+  );
   await assert.rejects(
     failedAudit.create(
       { article: "CAT-ROLLBACK", name: "Rollback", unit: "шт" },
@@ -92,24 +97,28 @@ export async function verifyCatalogAudit({
   });
   const auditCountBefore = await prisma.auditLog.count();
   let auditConflict;
-  const conflictingAudit = new WarehouseCatalogService(prisma, {
-    async writeFieldChanges({ tx }) {
-      try {
-        await tx.auditLog.create({
-          data: {
-            id: existingAudit.id,
-            userId: actor.id,
-            module: "WAREHOUSE",
-            action: "CREATE",
-            entityType: "warehouse_item",
-          },
-        });
-      } catch (error) {
-        auditConflict = error;
-        throw error;
-      }
+  const conflictingAudit = new WarehouseCatalogService(
+    prisma,
+    {
+      async writeFieldChanges({ tx }) {
+        try {
+          await tx.auditLog.create({
+            data: {
+              id: existingAudit.id,
+              userId: actor.id,
+              module: "WAREHOUSE",
+              action: "CREATE",
+              entityType: "warehouse_item",
+            },
+          });
+        } catch (error) {
+          auditConflict = error;
+          throw error;
+        }
+      },
     },
-  });
+    usage,
+  );
   await assert.rejects(
     conflictingAudit.create(
       { article: "CAT-AUDIT-UNIQUE", name: "Rollback", unit: "шт" },

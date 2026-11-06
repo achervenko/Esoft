@@ -1,206 +1,185 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { AuditAction, AuditModule, Prisma } from '@prisma/client';
-import { hasPermission } from '../../auth/permission-policy';
-import { AuditLogService } from '../../audit/audit-log.service';
+import { WarehouseCatalogService } from '../catalog/catalog.service';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, AuditAction } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { WarehouseStockService } from '../stock/stock.service';
+import { AuditLogService } from '../../audit/audit-log.service';
 import { stockId } from '../stock/stock.validation';
 import { lockWarehouse } from '../storage-structure/storage-structure.policy';
+import { parseManualReceipt, receiptHash } from './receipts.validation';
+import { receiptView, receiptInclude } from './receipts.mapper';
 import {
-  invalid,
-  optionalText,
-  orderedLines,
-  parseManualReceipt,
-  parseReceipt,
-  receiptHash,
-} from './receipts.validation';
-import { receiptDto, receiptInclude } from './receipts.mapper';
-
-export type ReceiptOrigin = {
-  source: 'MANUAL' | 'ONE_C';
-  sourceSystem: string;
-  sourceOperationId: string;
-};
+  receiptActor,
+  receiptAudit,
+  receiptConflict,
+  lockReceipt,
+  placedQuantity,
+} from './receipts.policy';
 @Injectable()
 export class WarehouseReceiptsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly stock: WarehouseStockService,
     private readonly audit: AuditLogService,
+    private readonly catalog: WarehouseCatalogService,
   ) {}
   createManual(value: unknown, actor: string) {
-    const { input, requestKey } = parseManualReceipt(value);
-    return this.post(
-      {
+    const { input, requestKey } = parseManualReceipt(value),
+      hash = receiptHash({
         ...input,
-        lines: input.lines.map(({ itemId, storageLocationId, quantity }) => ({
-          itemId,
-          storageLocationId,
-          quantity,
-        })),
-      },
-      {
-        source: 'MANUAL',
-        sourceSystem: 'ESOFT',
-        sourceOperationId: JSON.stringify([actor, requestKey]),
-      },
-      actor,
-    );
-  }
-  // Trusted backend entry point. Integration must supply an authorized service user.
-  post(value: unknown, origin: ReceiptOrigin, actor: string) {
-    const input = parseReceipt(value);
-    if (!origin || (origin.source !== 'MANUAL' && origin.source !== 'ONE_C'))
-      invalid('Некорректный источник.');
-    const sourceSystem = optionalText(origin.sourceSystem, 100),
-      sourceOperationId = optionalText(origin.sourceOperationId, 255);
-    if (!sourceSystem || !sourceOperationId)
-      invalid('Укажите идентичность операции источника.');
-    const identity = { source: origin.source, sourceSystem, sourceOperationId };
-    const hash = receiptHash(input);
+        lines: input.lines
+          .map(({ itemId, draftId, quantity }) => ({
+            itemId,
+            ...(draftId ? { draftId } : {}),
+            quantity,
+          }))
+          .sort((a, b) => {
+            if (a.itemId !== undefined && b.itemId === undefined) return -1;
+            if (a.itemId === undefined && b.itemId !== undefined) return 1;
+            const left = a.itemId !== undefined ? BigInt(a.itemId) : a.draftId!;
+            const right =
+              b.itemId !== undefined ? BigInt(b.itemId) : b.draftId!;
+            if (left < right) return -1;
+            if (left > right) return 1;
+            return new Prisma.Decimal(a.quantity).comparedTo(b.quantity);
+          }),
+      });
+    const identity = {
+      source: 'MANUAL',
+      sourceSystem: 'ESOFT',
+      sourceOperationId: JSON.stringify([actor, requestKey]),
+    };
     return this.prisma.$transaction(
       async (tx) => {
-        if (typeof actor !== 'string' || !actor) throw new ForbiddenException();
-        const [user] = await tx.$queryRaw<
-          { role: string | null; banned: boolean | null }[]
-        >`SELECT role, banned FROM "user" WHERE id = ${actor} FOR SHARE`;
-        if (
-          !user ||
-          user.banned ||
-          !hasPermission(user.role, 'warehouse.receipts.manage')
-        )
-          throw new ForbiddenException();
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:receipt', identity])}, 0))`;
+        await receiptActor(tx, actor, 'warehouse.receipts.manage');
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:receipt', identity])},0))`;
         const previous = await tx.warehouseReceipt.findUnique({
           where: { source_sourceSystem_sourceOperationId: identity },
           include: receiptInclude,
         });
         if (previous) {
           if (previous.requestHash !== hash)
-            throw new ConflictException({
-              code: 'WAREHOUSE_RECEIPT_REQUEST_CONFLICT',
-              message:
-                'Идентификатор операции уже использован с другими данными.',
-            });
-          return receiptDto(previous);
+            receiptConflict(
+              'WAREHOUSE_RECEIPT_REQUEST_CONFLICT',
+              'Ключ уже использован с другими данными.',
+            );
+          return receiptView(previous, this.catalog, tx);
         }
         const warehouseId = BigInt(input.warehouseId);
         await lockWarehouse(tx, warehouseId, true);
         const warehouse = await tx.warehouse.findUniqueOrThrow({
           where: { id: warehouseId },
         });
-        const ordered = orderedLines(input);
-        // Acquire every item/location/balance lock in numeric item then location order before writing.
-        for (const itemId of [...new Set(ordered.map((line) => line.itemId))])
-          await this.stock.lockBalances(
-            tx,
-            itemId,
-            ordered
-              .filter((line) => line.itemId === itemId)
-              .map((line) => line.storageLocationId),
-          );
-        const items = await tx.warehouseItem.findMany({
-          where: { id: { in: ordered.map((line) => BigInt(line.itemId)) } },
-        });
-        const locations = await tx.warehouseStorageLocation.findMany({
-          where: {
-            id: { in: ordered.map((line) => BigInt(line.storageLocationId)) },
-          },
-        });
-        const itemMap = new Map(items.map((item) => [String(item.id), item]));
-        const locationMap = new Map(
-          locations.map((location) => [String(location.id), location]),
+        const draftItems = new Map<string, string>();
+        for (const draft of input.newItems ?? []) {
+          if (!input.lines.some((line) => line.draftId === draft.draftId))
+            continue;
+          const created = await this.catalog.create(draft.item, actor, tx);
+          draftItems.set(draft.draftId, created.id);
+        }
+        const resolvedLines = input.lines.map((line) => ({
+          ...line,
+          itemId: line.itemId ?? draftItems.get(line.draftId!)!,
+        }));
+        const ids = [...new Set(resolvedLines.map((l) => l.itemId))].sort(
+          (a, b) => (BigInt(a) < BigInt(b) ? -1 : 1),
         );
-        const receiptLines = input.lines.map((line) => {
-          const item = itemMap.get(line.itemId);
+        const items = await this.catalog.lockItemsForOperation(ids, tx);
+        const lines = resolvedLines.map((l) => {
+          const item = items.find((i) => i.id === l.itemId);
           if (!item)
             throw new NotFoundException({
               code: 'WAREHOUSE_ITEM_NOT_FOUND',
               message: 'Номенклатура не найдена.',
             });
-          const location = locationMap.get(line.storageLocationId);
-          if (!location)
-            throw new NotFoundException({
-              code: 'WAREHOUSE_LOCATION_NOT_FOUND',
-              message: 'Место хранения не найдено.',
-            });
-          if (!item.isActive || !location.isActive)
-            throw new ConflictException({
-              code: 'WAREHOUSE_RECEIPT_INACTIVE_REFERENCE',
-              message: 'Номенклатура или место неактивны.',
-            });
-          if (location.warehouseId !== warehouseId)
-            throw new ConflictException({
-              code: 'WAREHOUSE_RECEIPT_LOCATION_MISMATCH',
-              message: 'Место не принадлежит выбранному складу.',
-            });
+          if (!item.isActive)
+            receiptConflict(
+              'WAREHOUSE_RECEIPT_INACTIVE_REFERENCE',
+              'Номенклатура неактивна.',
+            );
           return {
-            rowNumber: line.rowNumber,
-            itemId: item.id,
-            storageLocationId: location.id,
-            quantity: line.quantity,
+            rowNumber: l.rowNumber,
+            externalLineId: String(l.rowNumber),
+            itemId: BigInt(item.id),
+            quantity: l.quantity,
             unitSnapshot: item.unit,
             itemArticleSnapshot: item.article,
             itemNameSnapshot: item.name,
-            storageLocationNameSnapshot: location.name,
           };
         });
-        const receipt = await tx.warehouseReceipt.create({
+        const row = await tx.warehouseReceipt.create({
           data: {
             ...identity,
-            warehouseId,
             requestHash: hash,
-            createdByUserId: actor,
+            warehouseId,
+            warehouseNameSnapshot: warehouse.name,
             documentNumber: input.documentNumber,
             documentDate: input.documentDate
               ? new Date(input.documentDate + 'T00:00:00Z')
               : null,
             comment: input.comment,
-            warehouseNameSnapshot: warehouse.name,
-            lines: { create: receiptLines },
+            createdByUserId: actor,
+            lines: { create: lines },
           },
           include: receiptInclude,
         });
-        for (const line of ordered)
-          await this.stock.receiveStock(
-            { tx, actorUserId: actor },
-            line.itemId,
-            line.storageLocationId,
-            line.quantity,
-          );
-        const dto = receiptDto(receipt);
-        await this.audit.writeFieldChanges({
+        const dto = await receiptView(row, this.catalog, tx);
+        await receiptAudit(
+          this.audit,
           tx,
-          userId: actor,
-          module: AuditModule.WAREHOUSE,
-          action: AuditAction.CREATE,
-          entityType: 'warehouse_receipt',
-          entityStringId: String(receipt.id),
-          fields: [{ fieldName: 'Приход на склад', newValue: dto }],
-        });
+          actor,
+          row.id,
+          'Создан ручной приход',
+          dto,
+          AuditAction.CREATE,
+        );
         return dto;
       },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
-        timeout: 15000,
-      },
+      { timeout: 15000 },
     );
   }
-  async findOne(value: string) {
-    const row = await this.prisma.warehouseReceipt.findUnique({
-      where: { id: stockId(value, 'id') },
-      include: receiptInclude,
-    });
-    if (!row)
-      throw new NotFoundException({
-        code: 'WAREHOUSE_RECEIPT_NOT_FOUND',
-        message: 'Приход не найден.',
+  cancelManual(value: string, actor: string) {
+    return this.prisma.$transaction(async (tx) => {
+      await receiptActor(tx, actor, 'warehouse.receipts.manage');
+      const id = await lockReceipt(tx, value);
+      const r = await tx.warehouseReceipt.findUniqueOrThrow({
+        where: { id },
+        include: { lines: true },
       });
-    return receiptDto(row);
+      if (r.source !== 'MANUAL')
+        receiptConflict(
+          'WAREHOUSE_RECEIPT_SOURCE',
+          'Отмена 1С приходит через интеграцию.',
+        );
+      for (const l of r.lines)
+        if ((await placedQuantity(tx, l.id)).gt(0))
+          receiptConflict(
+            'WAREHOUSE_RECEIPT_ALREADY_PLACED',
+            'Размещение уже началось: физические движения не отменяются.',
+          );
+      await tx.warehouseReceipt.update({
+        where: { id },
+        data: { status: 'CANCELLED' },
+      });
+      await receiptAudit(this.audit, tx, actor, id, 'Отмена ручного прихода', {
+        id: String(id),
+      });
+      return { id: String(id), status: 'CANCELLED' };
+    });
+  }
+  findOne(value: string) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        const row = await tx.warehouseReceipt.findUnique({
+          where: { id: stockId(value, 'id') },
+          include: receiptInclude,
+        });
+        if (!row)
+          throw new NotFoundException({
+            code: 'WAREHOUSE_RECEIPT_NOT_FOUND',
+            message: 'Приход не найден.',
+          });
+        return receiptView(row, this.catalog, tx);
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
   }
 }

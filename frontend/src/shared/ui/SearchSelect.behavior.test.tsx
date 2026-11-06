@@ -118,3 +118,23 @@ it("shows all options by default and preserves position substring matching", () 
   fireEvent.keyDown(input, { key: "Enter" });
   expect(change).toHaveBeenLastCalledWith(2);
 });
+
+it("shows the full current text in the hover tooltip and updates it with selection", () => {
+  const name =
+    "Очень длинное название номенклатуры с артикулом и характеристиками";
+  const props = {
+    label: "Номенклатура",
+    options: [{ id: 1, name }],
+    onChange: vi.fn(),
+  };
+  const { rerender } = render(<SearchSelect {...props} value={1} />);
+  const input = screen.getByRole("combobox");
+  expect(input).toHaveAttribute("title", name);
+  fireEvent.change(input, { target: { value: "Поиск" } });
+  expect(input).toHaveAttribute("title", "Поиск");
+  rerender(<SearchSelect {...props} value={null} />);
+  rerender(<SearchSelect {...props} value={1} />);
+  expect(input).toHaveAttribute("title", name);
+  rerender(<SearchSelect {...props} value={null} />);
+  expect(input).not.toHaveAttribute("title");
+});

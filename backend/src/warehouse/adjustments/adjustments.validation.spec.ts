@@ -91,7 +91,6 @@ describe('StockAdjustments contract', () => {
     { locationId: 1 },
     { itemId: '0' },
     { itemId: '9223372036854775808' },
-    { attachments: [] },
     { attachments: ['invalid'] },
     { attachments: Array(11).fill('00000000-0000-0000-0000-000000000001') },
     { requestKey: '' },
@@ -112,4 +111,8 @@ describe('StockAdjustments contract', () => {
     const actual = { ...input, type: undefined, quantity: undefined };
     expect(() => parseAdjustment({ ...actual, actualQuantity: '1' })).toThrow();
   });
+});
+
+it('requires a supporting document', () => {
+  expect(() => parseAdjustment({ ...base(), attachments: [] })).toThrow();
 });

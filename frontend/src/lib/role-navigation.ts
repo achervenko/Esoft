@@ -23,6 +23,17 @@ export function getDefaultAuthRoute(permissions: unknown) {
 
 export function canAccessWorkspaceRoute(permissions: unknown, route: string) {
   const path = route.split("?")[0];
+  if (path === "#/warehouse/receipts/new")
+    return (
+      hasPermission(permissions, "warehouse.receipts.read") &&
+      hasPermission(permissions, "warehouse.receipts.manage")
+    );
+  const receiptMatch = path.match(/^#\/warehouse\/receipts\/([1-9]\d{0,18})$/);
+  if (
+    path === "#/warehouse/receipts" ||
+    (receiptMatch && BigInt(receiptMatch[1]) <= 9223372036854775807n)
+  )
+    return hasPermission(permissions, "warehouse.receipts.read");
   if (path === "#/warehouse/stock")
     return hasPermission(permissions, "warehouse.stock.read");
   if (path === "#/warehouse/catalog")
@@ -42,7 +53,11 @@ export function canAccessWorkspaceRoute(permissions: unknown, route: string) {
       canManageEmployeeSizes(permissions) ||
       hasPermission(permissions, "warehouse.storage-locations.read")
     );
-  if (path === "#/users") return canManageUsers(permissions);
+  if (path === "#/users")
+    return (
+      canManageUsers(permissions) ||
+      hasPermission(permissions, "integrations.manage")
+    );
   if (path === "#/production-calendar")
     return canManageProductionCalendar(permissions);
   if (path === "#/calendar") return canViewCalendar(permissions);

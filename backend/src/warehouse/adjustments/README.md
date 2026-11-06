@@ -21,7 +21,7 @@
 - `POST /api/warehouse/adjustments/documents`: multipart `file`, один документ
   до 25 МБ. Возвращает `uploadId`, имя, размер, SHA-256 и срок действия 24 часа.
   Допускаются PDF, JPEG, PNG и WebP с проверкой содержимого.
-- `POST /api/warehouse/adjustments`: провести корректировку с 1–10 `uploadId`.
+- `POST /api/warehouse/adjustments`: провести корректировку с 1–10 `uploadId`. Вложение и причина обязательны.
 - `GET /api/warehouse/adjustments`: список, фильтры `itemId`, `locationId`, `type`,
   `page` (по умолчанию 1), `limit` (по умолчанию 50, максимум 100).
   Сортировка — время и ID по убыванию. Ответ `{ items, total, page, limit }`.
@@ -107,7 +107,10 @@ MinIO не является участником PostgreSQL-транзакции
 возвращает прежнюю корректировку без повторного изменения остатка. Иное содержимое
 с тем же ключом даёт `409 WAREHOUSE_ADJUSTMENT_REQUEST_CONFLICT`.
 Клиент сохраняет ключ и ID загрузок при повторе после сетевой ошибки;
-для новой операции создаёт новый ключ. Нулевая дельта не резервирует ключ.
+для новой операции создаёт новый ключ. Нулевая дельта также резервирует `requestKey`. Результат сохраняется в
+`warehouse_stock_adjustment_noops` без создания корректировки и движения остатков.
+Повтор возвращает исходный результат, а запрос с другим содержимым и тем же ключом
+отклоняется с `409 WAREHOUSE_ADJUSTMENT_REQUEST_CONFLICT`.
 
 ## Аудит и ошибки
 
@@ -121,7 +124,7 @@ MinIO не является участником PostgreSQL-транзакции
 Ошибки используют `{ code, message, details? }`:
 
 - `403 FORBIDDEN`: нет административного permission или аккаунт заблокирован.
-- `400 WAREHOUSE_ADJUSTMENT_INVALID`: неверный payload или обязательные документы.
+- `400 WAREHOUSE_ADJUSTMENT_INVALID`: неверный payload или некорректные документы.
 - `409 WAREHOUSE_ADJUSTMENT_STALE_BALANCE`: устаревший ожидаемый остаток.
 - `409 WAREHOUSE_ADJUSTMENT_REQUEST_CONFLICT`: повторный ключ с другим содержимым.
 - `404 WAREHOUSE_ADJUSTMENT_NOT_FOUND`: корректировка не найдена.

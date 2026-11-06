@@ -1,7 +1,15 @@
 model User {
+  warehouseReservationOperations WarehouseReservationOperation[]
+  integrationSources IntegrationSource[]
+  integrationSourceActors IntegrationSourceActor[]
+  apiKeys ApiKey[]
   warehouseTransfers WarehouseTransfer[]
   warehouseIssueRequests WarehouseIssueRequest[]
+  warehouseStockAdjustmentNoops WarehouseStockAdjustmentNoop[]
   warehouseReceipts WarehouseReceipt[]
+  warehouseReceiptPlacements WarehouseReceiptPlacement[]
+  warehouseItemExternalLinks WarehouseItemExternalLink[]
+  warehouseExternalWarehouses WarehouseExternalWarehouse[]
   pendingStorageUploads StorageUpload[]
   warehouseStockAdjustments WarehouseStockAdjustment[]
   id                          String              @id
@@ -53,6 +61,37 @@ model User {
   @@map("user")
 }
 
+model ApiKey {
+  id String @id
+  configId String @default("default")
+  name String?
+  start String?
+  referenceId String
+  user User @relation(fields: [referenceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  prefix String?
+  key String
+  refillInterval Int?
+  refillAmount Int?
+  lastRefillAt DateTime? @db.Timestamptz(6)
+  enabled Boolean @default(true)
+  rateLimitEnabled Boolean @default(true)
+  rateLimitTimeWindow Int @default(60000)
+  rateLimitMax Int @default(120)
+  requestCount Int @default(0)
+  remaining Int?
+  lastRequest DateTime? @db.Timestamptz(6)
+  expiresAt DateTime? @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  permissions String?
+  metadata String?
+
+  @@index([configId])
+  @@index([referenceId])
+  @@index([key])
+  @@map("api_key")
+}
+
 model Session {
   id             String   @id
   expiresAt      DateTime @db.Timestamptz(6)
@@ -101,4 +140,13 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model SystemActorPermission {
+  sourceId String @map("source_id") @db.Uuid
+  actorUserId String @map("actor_user_id")
+  permission String @db.VarChar(100)
+  sourceActor IntegrationSourceActor @relation(fields:[sourceId,actorUserId],references:[sourceId,actorUserId],onDelete:Restrict,onUpdate:Cascade,map:"system_actor_permissions_source_actor_fkey")
+  @@id([sourceId,actorUserId,permission])
+  @@map("system_actor_permissions")
 }

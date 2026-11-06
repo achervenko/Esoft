@@ -5,6 +5,7 @@ import { WarehouseStockModule } from '../stock/stock.module';
 import { WarehouseReservationsModule } from '../reservations/reservations.module';
 import { WarehouseTransfersService } from './transfers.service';
 import { WarehouseTransfersController } from './transfers.controller';
+import { WarehouseTransferConsolidationService } from './transfers-consolidation.service';
 @Module({
   imports: [
     PrismaModule,
@@ -13,6 +14,6 @@ import { WarehouseTransfersController } from './transfers.controller';
     WarehouseReservationsModule,
   ],
   controllers: [WarehouseTransfersController],
-  providers: [WarehouseTransfersService],
+  providers: [WarehouseTransfersService, WarehouseTransferConsolidationService],
 })
 export class WarehouseTransfersModule {}

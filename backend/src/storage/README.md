@@ -77,7 +77,7 @@ visibleId из route
 
 ## Архитектура
 
-- `StorageModule` - dynamic global module через `StorageModule.register(policyConfig)`.
+- `StorageModule` — обычный модуль с явными импортами у потребителей. Nest использует один экземпляр модуля и S3-клиента. Правила файлов централизованы в `storage-file-policy.config.ts`; настройки подключения загружаются из корневой конфигурации.
 - `StorageFileService` - facade для `list/upload/download/preview/softDelete/setPrimary`.
 - `StorageOwnerService` - active lookup по owner и owner + file id.
 - `StorageFileUploadService` - normalization, validation, policy check, object upload, compensation.
@@ -133,31 +133,24 @@ Policy-валидация зависит от `documentRules`:
 
 ## Policy configuration
 
-Storage регистрируется в `AppModule`:
+Правила файлов централизованы в `storage-file-policy.config.ts`: константа `storageFilePolicyConfig` содержит `documentRules`, `primaryDocumentTypes` и `singleDocumentTypes`. `StorageModule` предоставляет её через токен `STORAGE_FILE_POLICY_CONFIG`.
+
+`documentRules` задаёт ограничения конкретного `StorageDocumentType`. `primaryDocumentTypes` задаёт типы, для которых можно выбрать основной файл. `singleDocumentTypes` задаёт типы, для которых у одного owner может быть только один active файл. `StorageFilePolicyService` делает snapshot конфига: массивы rules копируются, primary/single хранятся в `Set`.
+
+`StorageModule` — обычный неглобальный модуль. Каждый потребитель импортирует его явно, например:
 
 ```ts
-StorageModule.register({
-  documentRules: {
-    [StorageDocumentType.equipment_photo]: {
-      allowedExtensions: ['jpg', 'jpeg', 'png', 'webp'],
-      allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
-      maxPixelCount: 120_000_000,
-      validateContent: 'image',
-    },
-    [StorageDocumentType.passport]: {
-      allowedExtensions: ['pdf'],
-      allowedMimeTypes: ['application/pdf'],
-      validateContent: 'pdf',
-    },
-  },
-  primaryDocumentTypes: [StorageDocumentType.equipment_photo],
-  singleDocumentTypes: [StorageDocumentType.passport],
-});
+import { Module } from '@nestjs/common';
+import { StorageModule } from '../../storage/storage.module';
+
+@Module({
+  imports: [StorageModule],
+  // Остальные imports, controllers и providers бизнес-модуля.
+})
+export class WarehouseReservationsModule {}
 ```
 
-`documentRules` задает ограничения конкретного `StorageDocumentType`. `primaryDocumentTypes` задает типы, для которых можно выбрать основной файл. `singleDocumentTypes` задает типы, для которых у одного owner может быть только один active файл.
-
-Business-specific правила находятся в composition root (`AppModule`), а не внутри generic storage services. `StorageFilePolicyService` делает snapshot входного конфига: массивы rules копируются, primary/single хранятся в `Set`.
+Повторные импорты используют один экземпляр модуля и S3-клиента. Настройки подключения загружаются через `loadStorageConfig` из корневой конфигурации; потребители не создают отдельные подключения и не передают правила при импорте. `AppModule` не регистрирует хранилище отдельно.
 
 ## Primary files
 
@@ -287,7 +280,7 @@ Consumer обязан объявить проверку права на бизн
 
 1. Добавить значение в Prisma `StorageDocumentType`.
 2. Создать migration.
-3. Добавить policy rule в `StorageModule.register(...)` в composition root.
+3. Добавить policy rule в `storageFilePolicyConfig` в `storage-file-policy.config.ts`; модуль-потребитель должен явно импортировать `StorageModule`.
 4. Определить `allowedExtensions`, `allowedMimeTypes`, `validateContent`, `maxPixelCount`, `primaryDocumentTypes`, `singleDocumentTypes`.
 5. Добавить business endpoint/UI integration.
 6. Использовать только owner-bound context.
@@ -339,7 +332,6 @@ npm run build --workspace backend
 - Audit entity всегда берется из owner; caller передает только `actionModule`.
 - Object key не должен строиться из пользовательского filename.
 - Preview generation сначала проверяет cache, затем применяет size guards.
-
 
 ## Документы транзакционных операций
 

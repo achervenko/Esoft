@@ -15,7 +15,7 @@ export async function verify(run) {
     "storage/storage-file-primary.service.js",
   );
   await run(
-    "documents are required, scoped to their author and operation, and cannot be reused",
+    "attached documents are scoped to their author and operation and cannot be reused",
     async ({
       prisma,
       admin,

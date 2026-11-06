@@ -43,6 +43,10 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
       "warehouse_receipts",
       "warehouse_transfers",
       "warehouse_receipt_lines",
+      "warehouse_receipt_placements",
+      "warehouse_orders",
+      "warehouse_item_external_links",
+      "warehouse_external_warehouses",
       "warehouse_items",
       "warehouse_storage_locations",
       "warehouse_projects",
@@ -76,6 +80,18 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
   );
   const names = await database.query(
     "SELECT indexname,indexdef FROM pg_indexes WHERE schemaname='public' AND indexname IN ('uq_warehouses_name','uq_warehouse_storage_locations_warehouse_name')",
+  );
+  assert.equal(
+    columns.some((column) => column.column_name === "webhook_token_hash"),
+    false,
+  );
+  assert.equal(
+    (
+      await database.query(
+        "SELECT to_regclass('public.api_key') IS NOT NULL AS present",
+      )
+    ).rows[0].present,
+    true,
   );
   assert.equal(names.rows.length, 2);
   assert.match(

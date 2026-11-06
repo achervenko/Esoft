@@ -1,5 +1,9 @@
 import { Logger } from '@nestjs/common';
 import { betterAuth } from 'better-auth';
+import {
+  machineApiKeyPlugin,
+  machineKeyDisabledPaths,
+} from './machine-api-key.plugin';
 import { roleAwarePrismaAdapter } from './role-aware-prisma-adapter';
 import { admin, username, customSession } from 'better-auth/plugins';
 import { withEffectiveRoles } from './effective-session';
@@ -40,6 +44,7 @@ export const auth = betterAuth({
   baseURL: resolvedBetterAuthUrl,
   secret: betterAuthSecret,
   trustedOrigins,
+  disabledPaths: machineKeyDisabledPaths,
   database: roleAwarePrismaAdapter(prisma, activeModules),
   hooks: { before: createRoleRequestHook() },
   databaseHooks: {
@@ -64,6 +69,7 @@ export const auth = betterAuth({
     disableSignUp: true,
   },
   plugins: [
+    machineApiKeyPlugin(),
     customSession((value) =>
       Promise.resolve(withEffectiveRoles(value, activeModules)),
     ),

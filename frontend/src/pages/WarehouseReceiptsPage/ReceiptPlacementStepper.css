@@ -1,0 +1,296 @@
+.receipt-placement {
+  width: min(100%, 640px);
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.receipt-placement-progress {
+  display: flex;
+  gap: 4px;
+}
+.receipt-placement-progress button {
+  flex: 1;
+  min-width: 0;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: var(--color-border-subtle, #e3e6eb);
+  cursor: pointer;
+}
+.receipt-placement-progress button[data-complete="true"] {
+  background: #36745a;
+}
+.receipt-placement-progress button[aria-current="step"] {
+  outline: 2px solid var(--color-text, #15171c);
+  outline-offset: 2px;
+}
+.receipt-placement-position {
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-text-muted, #697386);
+}
+.receipt-placement .receipt-placement-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+}
+.receipt-placement-card h2,
+.receipt-placement-card p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.receipt-placement-totals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  gap: 12px;
+}
+.receipt-placement-totals > div + div {
+  border-inline-start: 1px solid var(--color-border-subtle, #ddd);
+  padding-inline-start: 12px;
+}
+.receipt-placement-totals dt {
+  font-size: 12px;
+  color: var(--color-text-muted, #697386);
+}
+.receipt-placement-totals dd {
+  margin: 6px 0 0;
+  font-size: 22px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.receipt-placement-totals small {
+  font-size: 12px;
+}
+.receipt-placement-navigation {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+  background: var(--color-bg, #fff);
+  padding-block: 8px;
+}
+.receipt-placement-navigation button {
+  flex: 1;
+  min-height: 44px;
+}
+.receipt-placement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 50dvh;
+  overflow: auto;
+}
+.receipt-placement-list button {
+  display: block;
+  min-width: 0;
+  flex-shrink: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: start;
+}
+.receipt-document-info {
+  font-size: 12px;
+}
+.receipt-document-info summary {
+  cursor: pointer;
+}
+@media (max-width: 640px) {
+  .warehouse-receipts-page {
+    gap: 12px;
+  }
+  .warehouse-receipts-page .admin-page-header h1 {
+    font-size: 22px;
+  }
+  .warehouse-receipts-page .admin-page-header p {
+    font-size: 12px;
+  }
+  .receipt-placement .receipt-placement-card {
+    padding: 14px;
+    gap: 12px;
+  }
+  .receipt-placement-card h2 {
+    font-size: 20px;
+  }
+}
+
+.warehouse-receipts-page:has(> .receipt-placement) {
+  max-height: calc(100svh - 56px);
+  min-height: 0;
+}
+.receipt-placement {
+  min-height: 0;
+}
+.receipt-placement .receipt-placement-card {
+  min-height: 0;
+  overflow: auto;
+}
+.receipt-placement-card > h2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.receipt-placement-card > * {
+  flex-shrink: 0;
+}
+.receipt-placement .admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.receipt-placement .receipt-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+.receipt-placement .receipt-fields > .receipt-hint {
+  display: none;
+}
+.receipt-placement .admin-form > button {
+  min-height: 44px;
+  width: 100%;
+}
+@media (max-width: 760px) {
+  .receipt-placement .admin-form {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+  .warehouse-receipts-page:has(> .receipt-placement) {
+    max-height: none;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+    gap: 10px;
+  }
+  .warehouse-receipts-page:has(> .receipt-placement) .admin-page-header {
+    gap: 8px;
+  }
+  .receipt-placement-totals dd {
+    font-size: 20px;
+  }
+  .receipt-placement .receipt-placement-card {
+    overflow: visible;
+    flex-shrink: 0;
+  }
+  .receipt-placement-navigation {
+    position: fixed;
+    isolation: isolate;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    inset: auto 0 0;
+    z-index: 20;
+    padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--color-border-subtle, #e3e6eb);
+    background: #fff;
+    box-shadow: 0 -4px 16px rgb(24 35 52 / 6%);
+  }
+}
+
+.receipt-placement-locations {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+.receipt-placement-location {
+  border: 1px solid var(--color-border-subtle, #e3e6eb);
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.receipt-placement-location-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.receipt-placement-location-heading svg {
+  flex-shrink: 0;
+  color: var(--color-text-muted, #697386);
+}
+.receipt-placement-location-result {
+  flex-shrink: 0;
+}
+.receipt-placement-location-result > strong {
+  font-size: 18px;
+}
+.receipt-placement-location-result small {
+  font-size: 14px;
+}
+
+.receipt-top-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.receipt-top-actions > button {
+  flex: 0 0 auto;
+  width: auto;
+  white-space: nowrap;
+}
+.receipt-top-actions > .page-back-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.receipt-actions-content {
+  gap: 14px;
+}
+.receipt-action-section {
+  border: 1px solid var(--color-border-subtle, #e3e6eb);
+  border-radius: 8px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.receipt-action-section > summary {
+  padding: 14px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.receipt-action-section > :not(summary) {
+  margin: 0 14px 14px;
+}
+.receipt-action-section > .receipt-hint {
+  font-size: 13px;
+}
+.receipt-actions-content > .receipt-actions:empty {
+  display: none;
+}
+
+.receipt-location-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  width: 100%;
+}
+.receipt-location-option > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.receipt-location-option > small {
+  flex-shrink: 0;
+  color: var(--color-text-muted, #697386);
+  font-size: inherit;
+  white-space: nowrap;
+}

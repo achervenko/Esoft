@@ -35,6 +35,7 @@ type SearchSelectProps = {
   className?: string;
   label: string;
   onFocus?: () => void;
+  onSearchChange?: (query: string) => void;
   options: OptionItem[];
   required?: boolean;
   value: number | null;
@@ -60,6 +61,7 @@ export function SearchSelect({
   label,
   onChange,
   onFocus,
+  onSearchChange,
   options,
   required = false,
   value,
@@ -231,6 +233,7 @@ export function SearchSelect({
           onChange={(event) => {
             isInternalClearRef.current = value !== null;
             setQuery(event.target.value);
+            onSearchChange?.(event.target.value);
             setIsOpen(true);
             setActiveOptionIndex(0);
             onChange(null);
@@ -270,6 +273,7 @@ export function SearchSelect({
           }}
           role="combobox"
           type="text"
+          title={query || undefined}
           value={query}
         />
       </div>

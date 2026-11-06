@@ -42,7 +42,7 @@ it("shows one item/warehouse row, exact quantity and distribution without requir
   const modal = await screen.findByRole("dialog", {
     name: "Места хранения (Основной склад)",
   });
-  await within(modal).findByText(location.name);
+  await within(modal).findAllByText(location.name);
   expect(warehouseStockApi.distribution).toHaveBeenCalledWith(
     position.item.id,
     warehouse.id,

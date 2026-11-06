@@ -52,7 +52,7 @@ export const SelectDropdownMenu = memo(function SelectDropdownMenu({
         key={option.value}
         onFocus={() => handleOptionFocus(optionIndex)}
         onMouseMove={
-          virtualFocus ? () => handleOptionFocus(optionIndex) : undefined
+          virtualFocus ? () => handleOptionFocus(optionIndex, true) : undefined
         }
         onKeyDown={(event) => handleOptionKeyDown(event, option)}
         onMouseDown={(event) => event.preventDefault()}

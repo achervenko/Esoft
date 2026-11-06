@@ -1,0 +1,72 @@
+.receipt-cards {
+  display: grid;
+  gap: 12px;
+}
+.receipt-card {
+  min-width: 0;
+  border: 1px solid var(--color-border, #d7dce3);
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+.receipt-card-open {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 16px;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.receipt-card-open > svg {
+  align-self: center;
+  color: var(--color-text-muted, #697386);
+}
+.receipt-card .receipt-document-number {
+  font-weight: 800;
+}
+.receipt-card-warehouse {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--color-text-muted, #697386);
+}
+.receipt-card-metric {
+  grid-column: 1 / -1;
+  margin-top: 6px;
+}
+.receipt-card-caption {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.receipt-card .receipt-progress-caption > span {
+  font-size: 20px;
+  font-weight: 800;
+}
+.receipt-card-received {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12px;
+  color: var(--color-text-muted, #697386);
+  margin-top: 6px;
+}
+.receipt-card-received time {
+  display: flex;
+  gap: 6px;
+}
+.receipt-card-received .receipt-hint {
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .receipt-list-table:has(.receipt-cards) {
+    border: 0;
+    background: transparent;
+    overflow: visible;
+  }
+}

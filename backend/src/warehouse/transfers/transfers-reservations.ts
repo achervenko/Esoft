@@ -2,7 +2,10 @@ import { ConflictException } from '@nestjs/common';
 import { AuditAction, AuditModule, Prisma } from '@prisma/client';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { MAX_STOCK_QUANTITY } from '../stock/stock.validation';
-import type { ReservationRow } from '../reservations/reservation-consumption';
+import {
+  backedReservation,
+  type ReservationRow,
+} from '../reservations/reservation-consumption';
 export function planReservationTransfer(
   rows: ReservationRow[],
   sourceId: bigint,
@@ -13,7 +16,7 @@ export function planReservationTransfer(
 ) {
   const sourceRows = rows.filter((r) => r.balanceId === sourceId);
   const reserved = sourceRows.reduce(
-    (sum, r) => sum.plus(r.quantity),
+    (sum, r) => sum.plus(backedReservation(r)),
     new Prisma.Decimal(0),
   );
   const amount = new Prisma.Decimal(quantity);
@@ -22,10 +25,12 @@ export function planReservationTransfer(
       ? undefined
       : sourceRows.find((r) => String(r.projectId) === projectId);
   const available = Prisma.Decimal.max(
-    new Prisma.Decimal(physical).minus(reserved).plus(own?.quantity ?? 0),
+    new Prisma.Decimal(physical)
+      .minus(reserved)
+      .plus(own ? backedReservation(own) : 0),
     0,
   );
-  if (projectId !== null && (!own || own.quantity.lt(amount)))
+  if (projectId !== null && (!own || backedReservation(own).lt(amount)))
     throw new ConflictException({
       code: 'WAREHOUSE_TRANSFER_RESERVATION_INSUFFICIENT',
       message: 'Недостаточно резерва выбранного проекта на исходном месте.',

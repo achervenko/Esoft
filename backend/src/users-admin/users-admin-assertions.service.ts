@@ -1,3 +1,4 @@
+import { SYSTEM_ACTOR_ROLE_PREFIX } from '../auth/system-actors';
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -33,11 +34,11 @@ export class UsersAdminAssertionsService {
 
   async assertUserExists(userId: string) {
     const user = await this.prisma.user.findUnique({
-      select: { id: true },
+      select: { id: true, role: true },
       where: { id: userId },
     });
 
-    if (!user) {
+    if (!user || user.role?.startsWith(SYSTEM_ACTOR_ROLE_PREFIX)) {
       throwUserAdminNotFound('USER_NOT_FOUND');
     }
   }

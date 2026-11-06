@@ -1,4 +1,4 @@
-import { DynamicModule, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { ImageProcessingModule } from '../image-processing/image-processing.module';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -6,7 +6,7 @@ import { loadStorageConfig } from './config/storage-config.loader';
 import { s3ClientProvider } from './s3/s3-client.provider';
 import {
   STORAGE_FILE_POLICY_CONFIG,
-  type StorageFilePolicyConfig,
+  storageFilePolicyConfig,
 } from './storage-file-policy.config';
 import { StorageFilePrimaryService } from './storage-file-primary.service';
 import { StorageFileService } from './storage-file.service';
@@ -45,21 +45,12 @@ const storageExports = [
   StorageOwnerService,
 ];
 
-@Module({})
-export class StorageModule {
-  static register(policyConfig: StorageFilePolicyConfig): DynamicModule {
-    return {
-      module: StorageModule,
-      global: true,
-      imports: [AuditModule, ImageProcessingModule, PrismaModule],
-      exports: storageExports,
-      providers: [
-        {
-          provide: STORAGE_FILE_POLICY_CONFIG,
-          useValue: policyConfig,
-        },
-        ...storageProviders,
-      ],
-    };
-  }
-}
+@Module({
+  imports: [AuditModule, ImageProcessingModule, PrismaModule],
+  exports: storageExports,
+  providers: [
+    { provide: STORAGE_FILE_POLICY_CONFIG, useValue: storageFilePolicyConfig },
+    ...storageProviders,
+  ],
+})
+export class StorageModule {}

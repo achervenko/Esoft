@@ -16,6 +16,7 @@ type AppRouteBase =
   | { kind: "dictionaries" }
   | { kind: "warehouse-catalog" }
   | { kind: "warehouse-stock" }
+  | { kind: "warehouse-receipts"; receiptId?: string; creating?: boolean }
   | {
       kind: "ppe";
       tab: "issue" | "journal" | "norms" | "catalog";
@@ -69,6 +70,16 @@ function parsePositiveParamId(value: string | null) {
 }
 
 export function resolveAppRoute(route: string): AppRoute {
+  const receiptPath = route.split("?")[0];
+  if (receiptPath === "#/warehouse/receipts")
+    return { kind: "warehouse-receipts" };
+  if (receiptPath === "#/warehouse/receipts/new")
+    return { kind: "warehouse-receipts", creating: true };
+  const receiptMatch = receiptPath.match(
+    /^#\/warehouse\/receipts\/([1-9]\d{0,18})$/,
+  );
+  if (receiptMatch && BigInt(receiptMatch[1]) <= 9223372036854775807n)
+    return { kind: "warehouse-receipts", receiptId: receiptMatch[1] };
   if (route.split("?")[0] === "#/warehouse/stock")
     return { kind: "warehouse-stock" };
   if (

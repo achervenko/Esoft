@@ -60,7 +60,6 @@ export function SelectField(props: SelectFieldProps) {
       </select>
       <SelectDropdown
         className="select-field"
-        alwaysDown
         menuClassName="select-field-menu"
         aria-label={label}
         label={label}

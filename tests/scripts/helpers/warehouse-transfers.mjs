@@ -4,6 +4,7 @@ import { verifyTransfersReservations } from "./warehouse-transfers.reservations.
 import { verifyTransfersIdempotency } from "./warehouse-transfers.idempotency.mjs";
 import { verifyTransfersValidation } from "./warehouse-transfers.validation.mjs";
 import { verifyTransfersConcurrency } from "./warehouse-transfers.concurrency.mjs";
+import { verifyTransfersConsolidation } from "./warehouse-transfers.consolidation.mjs";
 
 export async function verifyTransfers(prisma, database, t) {
   const run = createTransfersTestRunner(prisma, database, t);
@@ -13,6 +14,7 @@ export async function verifyTransfers(prisma, database, t) {
     verifyTransfersIdempotency,
     verifyTransfersValidation,
     verifyTransfersConcurrency,
+    verifyTransfersConsolidation,
   ])
     await verify(run);
 }

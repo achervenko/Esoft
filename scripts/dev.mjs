@@ -1,56 +1,51 @@
-import { createServer } from 'node:net';
-import { mkdir } from 'node:fs/promises';
-import { createRequire } from 'node:module';
+import { createServer } from "node:net";
+import { mkdir } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 
 import {
   createNpmInvocation,
   npmArgs,
-} from './infrastructure/commands/npm-command.mjs';
-import { formatError } from './infrastructure/security/redaction.mjs';
-import {
-  runCommand,
-  runParallel,
-} from './process/run-parallel.mjs';
+} from "./infrastructure/commands/npm-command.mjs";
+import { formatError } from "./infrastructure/security/redaction.mjs";
+import { runCommand, runParallel } from "./process/run-parallel.mjs";
 
 const require = createRequire(import.meta.url);
-const configCore = require('./config/config-core.cjs');
+const configCore = require("./config/config-core.cjs");
 
 const npmInvocation = createNpmInvocation();
 
-const validation = await runCommand(
-  npmInvocation.command,
-  [
-    ...npmInvocation.argsPrefix,
-    ...npmArgs(['run', 'config:validate']),
-  ],
-);
+const validation = await runCommand(npmInvocation.command, [
+  ...npmInvocation.argsPrefix,
+  ...npmArgs(["run", "config:validate"]),
+]);
 
 if (validation.code !== 0) {
   process.exit(validation.code ?? 1);
 }
 
-console.log('[project] Configuration validated');
+console.log("[project] Configuration validated");
 
 const { config } = configCore.loadConfig();
 const portsAvailable = await checkPortsAvailable([
   {
     host: config.backend.host,
-    name: 'backend',
+    name: "backend",
     port: config.backend.port,
   },
   {
     host: config.frontend.host,
-    name: 'frontend',
+    name: "frontend",
     port: config.frontend.port,
   },
   {
     host: config.minio.host,
-    name: 'minio',
+    name: "minio",
     port: config.minio.port,
   },
   {
     host: config.minio.host,
-    name: 'minio console',
+    name: "minio console",
     port: config.minio.consolePort,
   },
 ]);
@@ -71,11 +66,11 @@ try {
 runParallel([
   {
     args: [
-      'server',
+      "server",
       config.minio.dataDir,
-      '--address',
+      "--address",
       `${config.minio.host}:${config.minio.port}`,
-      '--console-address',
+      "--console-address",
       `${config.minio.host}:${config.minio.consolePort}`,
     ],
     command: config.minio.executable,
@@ -84,23 +79,22 @@ runParallel([
       MINIO_ROOT_PASSWORD: config.minio.rootPassword,
       MINIO_ROOT_USER: config.minio.rootUser,
     },
-    name: 'minio',
+    name: "minio",
   },
   {
     args: [
       ...npmInvocation.argsPrefix,
-      ...npmArgs(['run', 'start:dev', '--workspace', 'backend']),
+      ...npmArgs(["run", "start:dev", "--workspace", "backend"]),
     ],
     command: npmInvocation.command,
-    name: 'backend',
+    name: "backend",
   },
   {
     args: [
-      ...npmInvocation.argsPrefix,
-      ...npmArgs(['run', 'dev', '--workspace', 'frontend']),
+      fileURLToPath(new URL("./process/dev-frontend.mjs", import.meta.url)),
     ],
-    command: npmInvocation.command,
-    name: 'frontend',
+    command: process.execPath,
+    name: "frontend",
   },
 ]);
 
@@ -121,7 +115,7 @@ function checkPortAvailable({ host, name, port }) {
   return new Promise((resolve) => {
     const server = createServer();
 
-    server.once('error', (error) => {
+    server.once("error", (error) => {
       resolve({
         available: false,
         host,

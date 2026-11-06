@@ -5,14 +5,12 @@ export function useSelectPopupRoom({
   triggerRef,
   isOpen,
   disabled,
-  alwaysDown,
   optionCountRef,
   updateMenuPosition,
 }: {
   triggerRef: RefObject<HTMLElement | null>;
   isOpen: boolean;
   disabled: boolean;
-  alwaysDown: boolean;
   optionCountRef: RefObject<number>;
   updateMenuPosition: () => void;
 }) {
@@ -26,7 +24,7 @@ export function useSelectPopupRoom({
     }
     moving.current = false;
     setMakingRoom(false);
-    if (!alwaysDown || !isOpen || disabled) return;
+    if (!isOpen || disabled) return;
     const trigger = triggerRef.current;
     if (!trigger) return;
     // Dialog menus are portalled overlays; reserving space would resize the dialog.
@@ -37,6 +35,12 @@ export function useSelectPopupRoom({
     // Reserve once per opening; filtering must not rebuild space or replay scroll.
     const height = Math.min(280, Math.max(42, optionCountRef.current * 42) + 2);
     const rect = trigger.getBoundingClientRect();
+    const viewportTop = viewport?.offsetTop ?? 0;
+    const below = Math.max(0, bottom - rect.bottom - 18);
+    const above = Math.max(0, rect.top - viewportTop - 18);
+    // The portal can cover following content and extend beyond its scroll container.
+    // Reserve space only when neither side of the viewport can fit the menu.
+    if (Math.max(above, below) >= height) return;
     const form = getSelectScrollContainer(trigger);
     const container = form ?? document.body;
     const visibleBottom = form
@@ -143,14 +147,7 @@ export function useSelectPopupRoom({
       };
       returnFrame = requestAnimationFrame(animateReturn);
     };
-  }, [
-    alwaysDown,
-    isOpen,
-    disabled,
-    triggerRef,
-    optionCountRef,
-    updateMenuPosition,
-  ]);
+  }, [isOpen, disabled, triggerRef, optionCountRef, updateMenuPosition]);
 
   useLayoutEffect(
     () => () => {

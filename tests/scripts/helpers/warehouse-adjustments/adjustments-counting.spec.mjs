@@ -4,6 +4,25 @@ import { code } from "./adjustments-test-context.mjs";
 
 export async function verify(run) {
   await run(
+    "simple correction with a document is audited and replay-safe",
+    async ({ prisma, admin, adjustments, request, quantity }) => {
+      const payload = await request();
+      delete payload.type;
+      delete payload.quantity;
+      Object.assign(payload, {
+        actualQuantity: "0",
+        expectedQuantity: "19",
+      });
+      const first = await adjustments.adjustStock(payload, admin.id);
+      assert.equal(first.adjustment.type, "WRITE_OFF");
+      assert.equal(await quantity(), "0");
+      assert.deepEqual(await adjustments.adjustStock(payload, admin.id), first);
+      assert.equal(await prisma.warehouseStockAdjustment.count(), 1);
+      assert.ok((await prisma.auditLog.count()) > 0);
+    },
+    { initialQuantity: "19" },
+  );
+  await run(
     "actual counting uses a locked expected quantity and no-op creates no operation",
     async ({ prisma, admin, adjustments, upload, request, quantity }) => {
       const payload = await request();
@@ -48,6 +67,21 @@ export async function verify(run) {
         "WRITE_OFF",
       );
       assert.equal(await quantity(), "17");
+      assert.deepEqual(await adjustments.adjustStock(noOp, admin.id), {
+        changed: false,
+        quantity: "21",
+        adjustment: null,
+      });
+      assert.equal(await quantity(), "17");
+      await assert.rejects(
+        adjustments.adjustStock(
+          { ...noOp, reason: "Changed request" },
+          admin.id,
+        ),
+        code("WAREHOUSE_ADJUSTMENT_REQUEST_CONFLICT"),
+      );
+      assert.equal(await prisma.warehouseStockAdjustment.count(), count + 1);
+      assert.equal(await prisma.warehouseStockAdjustmentNoop.count(), 1);
     },
     { initialQuantity: "19" },
   );

@@ -1,3 +1,4 @@
+import { StorageModule } from '../storage/storage.module';
 import { EmployeePositionAssignmentsService } from './employee-position-assignments.service';
 import { EmployeesAdminStatusService } from './employees-admin-status.service';
 import { EmployeesAdminEditorService } from './employees-admin-editor.service';
@@ -20,6 +21,7 @@ import { UsersAdminController } from './users-admin.controller';
 
 @Module({
   imports: [
+    StorageModule,
     AuditModule,
     ImageProcessingModule,
     PrismaModule,

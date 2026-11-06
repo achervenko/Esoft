@@ -1,3 +1,4 @@
+import { resolveAppRoute } from "../layouts/app-router";
 import { permissionsForTest } from "../test/permission-fixtures";
 import { expect, it } from "vitest";
 import {
@@ -184,4 +185,29 @@ it("stock viewing requires only stock read permission", () => {
   expect(
     canAccessWorkspaceRoute(["warehouse.catalog.manage"], "#/warehouse/stock"),
   ).toBe(false);
+});
+
+it.each([
+  ["1", true],
+  ["9007199254740995", true],
+  ["9223372036854775807", true],
+  ["9223372036854775808", false],
+  ["9999999999999999999", false],
+  ["0", false],
+  ["01", false],
+  ["-1", false],
+  ["abc", false],
+])("agrees with the receipt router for int64 ID %s", (id, valid) => {
+  const route = `#/warehouse/receipts/${id}?test=1`;
+  expect(canAccessWorkspaceRoute(["warehouse.receipts.read"], route)).toBe(
+    valid,
+  );
+  expect(resolveAppRoute(route).kind === "warehouse-receipts").toBe(valid);
+  expect(canAccessWorkspaceRoute([], route)).toBe(false);
+});
+
+it("allows integration administrators to reach the users workspace independently", () => {
+  expect(canAccessWorkspaceRoute(["integrations.manage"], "#/users")).toBe(
+    true,
+  );
 });

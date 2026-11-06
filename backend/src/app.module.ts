@@ -1,6 +1,6 @@
+import { IntegrationRuntimeModule } from './integrations/integration-runtime.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { StorageDocumentType } from '@prisma/client';
 import { loadRootEnvironment } from './config/root-environment';
 import { loadOptionalWarehouseModule } from './config/optional-warehouse-module';
 import { AppAuthModule } from './auth/auth.module';
@@ -14,7 +14,6 @@ import { EventsModule } from './events/events.module';
 import { HealthModule } from './health/health.module';
 import { SearchModule } from './search/search.module';
 import { SetupModule } from './setup/setup.module';
-import { StorageModule } from './storage/storage.module';
 import { UsersAdminModule } from './users-admin/users-admin.module';
 import { UsersModule } from './users/users.module';
 import { PpeModule } from './ppe/ppe.module';
@@ -28,29 +27,9 @@ const optionalWarehouseModules = loadOptionalWarehouseModule(projectRoot);
       ignoreEnvFile: true,
       isGlobal: true,
     }),
-    StorageModule.register({
-      documentRules: {
-        [StorageDocumentType.equipment_photo]: {
-          allowedExtensions: ['jpg', 'jpeg', 'png', 'webp'],
-          allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
-          maxPixelCount: 120_000_000,
-          validateContent: 'image',
-        },
-        [StorageDocumentType.maintenance_instruction]: {
-          allowedExtensions: ['pdf'],
-          allowedMimeTypes: ['application/pdf'],
-          validateContent: 'pdf',
-        },
-        [StorageDocumentType.passport]: {
-          allowedExtensions: ['pdf'],
-          allowedMimeTypes: ['application/pdf'],
-          validateContent: 'pdf',
-        },
-      },
-      primaryDocumentTypes: [StorageDocumentType.equipment_photo],
-      singleDocumentTypes: [StorageDocumentType.passport],
-    }),
     AppAuthModule,
+    IntegrationRuntimeModule,
+
     CalendarModule,
     ChecklistsModule,
     DictionariesAdminModule,

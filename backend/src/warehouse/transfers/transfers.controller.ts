@@ -4,9 +4,18 @@ import type { Auth } from '../../auth/auth.config';
 import { RequirePermission } from '../../auth/require-permission';
 import { WAREHOUSE_PERMISSIONS } from '../warehouse.permissions';
 import { WarehouseTransfersService } from './transfers.service';
+import { WarehouseTransferConsolidationService } from './transfers-consolidation.service';
 @Controller('api/warehouse/transfers')
 export class WarehouseTransfersController {
-  constructor(private readonly transfers: WarehouseTransfersService) {}
+  constructor(
+    private readonly transfers: WarehouseTransfersService,
+    private readonly consolidation: WarehouseTransferConsolidationService,
+  ) {}
+  @Post('consolidate')
+  @RequirePermission(WAREHOUSE_PERMISSIONS.TRANSFERS_MANAGE)
+  consolidate(@Body() body: unknown, @Session() session: UserSession<Auth>) {
+    return this.consolidation.consolidate(body, session.user.id);
+  }
   @Post()
   @RequirePermission(WAREHOUSE_PERMISSIONS.TRANSFERS_MANAGE)
   create(@Body() body: unknown, @Session() session: UserSession<Auth>) {

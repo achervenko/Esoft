@@ -8,6 +8,7 @@ import {
   ChecklistTemplateViewPage,
   DictionariesPage,
   WarehouseStockPage,
+  WarehouseReceiptsPage,
   WarehouseCatalogPage,
   PpePage,
   EquipmentCreatePage,
@@ -63,6 +64,14 @@ export function AppRouteContent({
       ) : null}
       {appRoute.kind === "warehouse-stock" ? (
         <WarehouseStockPage userPermissions={user?.permissions ?? null} />
+      ) : null}
+      {appRoute.kind === "warehouse-receipts" ? (
+        <WarehouseReceiptsPage
+          actorId={user?.id ?? null}
+          userPermissions={user?.permissions ?? null}
+          receiptId={appRoute.receiptId}
+          creating={appRoute.creating}
+        />
       ) : null}
       {appRoute.kind === "warehouse-catalog" ? (
         <WarehouseCatalogPage userPermissions={user?.permissions ?? null} />

@@ -45,6 +45,7 @@ export function useSelectDropdown<T extends HTMLElement = HTMLButtonElement>({
   );
   const { reset: resetEditor } = editor;
   const keyboardChoice = useRef(false);
+  const pointerNavigation = useRef(false);
   const normalizedOptions = useMemo(
     () =>
       allOptions.map((option) => ({
@@ -120,6 +121,7 @@ export function useSelectDropdown<T extends HTMLElement = HTMLButtonElement>({
       return;
     }
     keyboardChoice.current = false;
+    pointerNavigation.current = false;
 
     const resolvedActiveIndex =
       searchable && nextActiveIndex < 0
@@ -139,6 +141,7 @@ export function useSelectDropdown<T extends HTMLElement = HTMLButtonElement>({
   };
 
   const { closeOnFocusLeave, handleOptionTab } = useSelectDropdownFocus({
+    pointerNavigation,
     triggerRef,
     menuRef,
     optionRefs,
@@ -156,6 +159,7 @@ export function useSelectDropdown<T extends HTMLElement = HTMLButtonElement>({
     handleSearchKeyDown,
     handleOptionFocus,
   } = useSelectDropdownKeyboard({
+    pointerNavigation,
     disabled,
     multiple,
     isOpen,

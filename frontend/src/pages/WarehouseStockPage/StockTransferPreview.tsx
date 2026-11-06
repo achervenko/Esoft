@@ -98,12 +98,14 @@ export function StockTransferPreview({
   destination,
   amount,
   valid,
+  reserved = false,
 }: {
   data: StockDistribution;
   source: StockDistribution["locations"][number];
   destination?: { warehouse: string; location: string };
   amount: bigint | null;
   valid: boolean;
+  reserved?: boolean;
 }) {
   const quantity = valid && amount !== null ? formatAmount(amount) : "—";
   const sourceQuantity = quantityMillis(source.quantity);
@@ -118,8 +120,8 @@ export function StockTransferPreview({
             <p>{data.warehouse.name}</p>
             {valid && amount !== null && sourceQuantity !== null && (
               <span>
-                Останется: {formatAmount(sourceQuantity - amount)}{" "}
-                {data.item.unit}
+                {reserved ? "Останется в резерве" : "Останется свободно"}:{" "}
+                {formatAmount(sourceQuantity - amount)} {data.item.unit}
               </span>
             )}
           </div>

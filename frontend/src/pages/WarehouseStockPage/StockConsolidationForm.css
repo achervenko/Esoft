@@ -1,0 +1,31 @@
+.stock-transfer-icon-button.stock-consolidation-button {
+  margin-inline-start: auto;
+  justify-self: end;
+  align-self: flex-end;
+  flex: none;
+  width: 68px;
+  min-width: 68px;
+}
+.stock-consolidation-icons {
+  display: inline-flex;
+  gap: 6px;
+}
+.stock-consolidation-form > p {
+  margin: 0;
+  padding-inline: var(--optical-inset-modal);
+}
+.stock-consolidation-form fieldset.stock-transfer-section {
+  margin: 0;
+}
+.stock-consolidation-form .stock-transfer-section > h3,
+.stock-consolidation-form .stock-transfer-section > p {
+  padding-inline-start: var(--optical-inset-modal);
+}
+.stock-consolidation-form .data-table th:first-child,
+.stock-consolidation-form .data-table td:first-child {
+  padding-inline-start: var(--optical-inset-modal);
+}
+
+.stock-consolidation-icons svg {
+  flex-shrink: 0;
+}

@@ -1,3 +1,4 @@
+import { StorageModule } from '../../storage/storage.module';
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { AuditModule } from '../../audit/audit.module';
@@ -10,7 +11,7 @@ import { WarehouseStockAdjustmentDocumentService } from './adjustment-document.s
 import { WarehouseStockAdjustmentQueryService } from './adjustment-query.service';
 
 @Module({
-  imports: [PrismaModule, AuditModule, WarehouseStockModule],
+  imports: [StorageModule, PrismaModule, AuditModule, WarehouseStockModule],
   controllers: [WarehouseStockAdjustmentsController],
   providers: [
     WarehouseStockAdjustmentsService,

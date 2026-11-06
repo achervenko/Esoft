@@ -29,6 +29,7 @@ export function reservationDto(r: Row) {
     balanceId: String(r.balanceId),
     projectId: String(r.projectId),
     quantity: r.quantity.toString(),
+    borrowedQuantity: r.borrowedQuantity.toString(),
     item: warehouseItemSummaryDto(r.balance.item),
     location: locationWithWarehouseDto(r.balance.storageLocation),
     project: { ...r.project, id: String(r.project.id) },

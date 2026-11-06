@@ -82,6 +82,12 @@ export const sidebarSections: SidebarSection[] = [
             permission: "warehouse.stock.read",
           },
           {
+            href: "#/warehouse/receipts",
+            icon: ClipboardList,
+            label: "Приход",
+            permission: "warehouse.receipts.read",
+          },
+          {
             href: "#/warehouse/catalog",
             icon: BookOpen,
             label: "Номенклатура",

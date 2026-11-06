@@ -1,3 +1,4 @@
+import { WarehouseCatalogUsagePolicy } from './catalog-usage.policy';
 import { Prisma } from '@prisma/client';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -13,6 +14,7 @@ function failingService(meta?: Record<string, unknown>, code = 'P2002') {
   const service = new WarehouseCatalogService(
     prisma as unknown as PrismaService,
     {} as AuditLogService,
+    new WarehouseCatalogUsagePolicy(),
   );
   return {
     error,
@@ -32,6 +34,36 @@ const adapterMeta = (fields: unknown, extra: Record<string, unknown> = {}) => ({
   },
   ...extra,
 });
+
+it.each([
+  { users: [] },
+  { users: [{ role: 'admin', banned: true }] },
+  { users: [{ role: null, banned: false }] },
+])(
+  'uses the shared forbidden contract for unauthorized actors %p',
+  async ({ users }) => {
+    const tx = {
+      $queryRaw: jest.fn().mockResolvedValue(users),
+      warehouseItem: { create: jest.fn() },
+    };
+    const prisma = {
+      $transaction: (run: (transaction: typeof tx) => Promise<unknown>) =>
+        run(tx),
+    };
+    const service = new WarehouseCatalogService(
+      prisma as unknown as PrismaService,
+      {} as AuditLogService,
+      new WarehouseCatalogUsagePolicy(),
+    );
+    await expect(
+      service.create({ article: 'A', name: 'Item', unit: 'шт' }, 'actor'),
+    ).rejects.toMatchObject({
+      status: 403,
+      response: { code: 'FORBIDDEN', message: 'Недостаточно прав.' },
+    });
+    expect(tx.warehouseItem.create).not.toHaveBeenCalled();
+  },
+);
 
 describe('Catalog unique conflict mapping', () => {
   it.each([

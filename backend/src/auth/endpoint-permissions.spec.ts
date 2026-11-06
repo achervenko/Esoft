@@ -14,6 +14,8 @@ const routeDecorators = new Set([
   'All',
 ]);
 const publicHandlers = new Set([
+  // Machine authentication is enforced by the integration source, not a user session.
+  'integrations/integrations.controller.ts:event',
   'health/health.controller.ts:getHealth',
   'setup/setup.controller.ts:getStatus',
   'setup/setup.controller.ts:listEmployees',

@@ -12,6 +12,7 @@ import {
 import { getFocusableElements } from "../focusable-elements";
 
 type Props = {
+  pointerNavigation: RefObject<boolean>;
   triggerRef: RefObject<HTMLElement | null>;
   menuRef: RefObject<HTMLDivElement | null>;
   optionRefs: RefObject<Array<HTMLButtonElement | null>>;
@@ -25,6 +26,7 @@ type Props = {
 };
 
 export function useSelectDropdownFocus({
+  pointerNavigation,
   triggerRef,
   menuRef,
   optionRefs,
@@ -37,7 +39,12 @@ export function useSelectDropdownFocus({
   closeMenu,
 }: Props) {
   useEffect(() => {
-    if (!isOpen || !isDialogReady || !isPopupPositioned) {
+    if (
+      !isOpen ||
+      !isDialogReady ||
+      !isPopupPositioned ||
+      pointerNavigation.current
+    ) {
       return undefined;
     }
 
@@ -63,6 +70,7 @@ export function useSelectDropdownFocus({
     searchable,
     optionRefs,
     menuRef,
+    pointerNavigation,
   ]);
 
   useEffect(() => {

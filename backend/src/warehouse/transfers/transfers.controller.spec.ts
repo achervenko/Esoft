@@ -11,6 +11,7 @@ jest.mock('@thallesp/nestjs-better-auth', () => {
 import { createPermissionsHttpFixture } from '../../auth/permissions-http.fixture';
 import { WarehouseTransfersController } from './transfers.controller';
 import { WarehouseTransfersService } from './transfers.service';
+import { WarehouseTransferConsolidationService } from './transfers-consolidation.service';
 
 describe('Transfers HTTP permissions', () => {
   let http: Awaited<ReturnType<typeof createPermissionsHttpFixture>>;
@@ -22,7 +23,13 @@ describe('Transfers HTTP permissions', () => {
   beforeAll(async () => {
     http = await createPermissionsHttpFixture({
       controllers: [WarehouseTransfersController],
-      providers: [{ provide: WarehouseTransfersService, useValue: service }],
+      providers: [
+        { provide: WarehouseTransfersService, useValue: service },
+        {
+          provide: WarehouseTransferConsolidationService,
+          useValue: { consolidate: jest.fn().mockResolvedValue({ ids: [] }) },
+        },
+      ],
     });
     http.modules.push('warehouse');
   });
@@ -34,6 +41,7 @@ describe('Transfers HTTP permissions', () => {
     { method: 'GET', path: '/api/warehouse/transfers' },
     { method: 'GET', path: '/api/warehouse/transfers/1' },
     { method: 'POST', path: '/api/warehouse/transfers' },
+    { method: 'POST', path: '/api/warehouse/transfers/consolidate' },
   ];
   it.each(['admin', 'storekeeper'])('allows %s', async (role) => {
     for (const op of operations)

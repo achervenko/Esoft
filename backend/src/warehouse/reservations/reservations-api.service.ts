@@ -11,6 +11,7 @@ import { hasPermission } from '../../auth/permission-policy';
 import { WarehouseStockService } from '../stock/stock.service';
 import { stockId } from '../stock/stock.validation';
 import { WarehouseReservationsService } from './reservations.service';
+import { backedReservation } from './reservation-consumption';
 import { reservationDto, reservationInclude } from './reservations.model';
 import {
   parseReservation,
@@ -145,6 +146,19 @@ export class WarehouseReservationsApiService {
             code: 'WAREHOUSE_BALANCE_NOT_FOUND',
             message: 'Остаток не найден.',
           });
+        const nextBorrowed = new Prisma.Decimal(
+          previous?.borrowedQuantity ?? 0,
+        );
+        if (
+          previous &&
+          nextBorrowed.gt(0) &&
+          (input.release || input.quantity!.lt(previous.quantity))
+        )
+          throw new ConflictException({
+            code: 'WAREHOUSE_RESERVATION_ADMIN_RELEASE_REQUIRED',
+            message:
+              'Для уменьшения резерва с заимствованием используйте административную операцию снятия резерва.',
+          });
         const increasing =
           !input.release &&
           (!previous || input.quantity!.gt(previous.quantity));
@@ -160,9 +174,12 @@ export class WarehouseReservationsApiService {
             });
           const others = locked
             .filter((r) => r.id !== previous?.id)
-            .reduce((sum, r) => sum.plus(r.quantity), new Prisma.Decimal(0));
+            .reduce(
+              (sum, r) => sum.plus(backedReservation(r)),
+              new Prisma.Decimal(0),
+            );
           const maximum = Prisma.Decimal.max(balance.quantity.minus(others), 0);
-          if (input.quantity!.gt(maximum))
+          if (input.quantity!.minus(nextBorrowed).gt(maximum))
             throw new ConflictException({
               code: 'WAREHOUSE_RESERVATION_INSUFFICIENT',
               message: 'Недостаточно свободного остатка.',
@@ -187,6 +204,9 @@ export class WarehouseReservationsApiService {
               balanceId: String(balanceId),
               projectId: String(projectId),
               quantity: previous!.quantity.toString(),
+              borrowedQuantity: (
+                previous!.borrowedQuantity ?? new Prisma.Decimal(0)
+              ).toString(),
             },
             null,
           );
@@ -195,7 +215,10 @@ export class WarehouseReservationsApiService {
         const row = previous
           ? await tx.warehouseProjectReservation.update({
               where: { id: previous.id },
-              data: { quantity: input.quantity },
+              data: {
+                quantity: input.quantity,
+                borrowedQuantity: nextBorrowed,
+              },
               include: reservationInclude,
             })
           : await tx.warehouseProjectReservation.create({
@@ -213,12 +236,16 @@ export class WarehouseReservationsApiService {
                   balanceId: String(balanceId),
                   projectId: String(projectId),
                   quantity: previous.quantity.toString(),
+                  borrowedQuantity: (
+                    previous.borrowedQuantity ?? new Prisma.Decimal(0)
+                  ).toString(),
                 }
               : null,
             {
               balanceId: String(balanceId),
               projectId: String(projectId),
               quantity: row.quantity.toString(),
+              borrowedQuantity: row.borrowedQuantity.toString(),
             },
           );
         return reservationDto(row);

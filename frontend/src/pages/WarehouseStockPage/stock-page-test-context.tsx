@@ -15,6 +15,12 @@ vi.mock("../../shared/api/warehouse-stock-api", () => ({
     list: vi.fn(),
     distribution: vi.fn(),
     transfer: vi.fn(),
+    consolidate: vi.fn(),
+    adjust: vi.fn(),
+    currentUserId: vi.fn(),
+    reservationOperation: vi.fn(),
+    uploadReservationDocument: vi.fn(),
+    uploadAdjustmentDocument: vi.fn(),
   },
 }));
 vi.mock("../../shared/lib/useMediaQuery", () => ({ useMediaQuery: vi.fn() }));
@@ -64,6 +70,14 @@ export const distribution: StockDistribution = {
       quantity: "10.001",
       reserved: "2",
       available: "8.001",
+      reservations: [
+        {
+          projectId: "7",
+          projectNumber: "PROJECT-7",
+          projectName: "Проект 7",
+          quantity: "2",
+        },
+      ],
     },
     {
       balanceId: "11",
@@ -71,6 +85,7 @@ export const distribution: StockDistribution = {
       quantity: "7",
       reserved: "0",
       available: "7",
+      reservations: [],
     },
   ],
 };
@@ -83,6 +98,17 @@ export function render(ui: ReactElement) {
 }
 beforeEach(() => {
   vi.resetAllMocks();
+  sessionStorage.clear();
+  vi.mocked(warehouseStockApi.reservationOperation).mockResolvedValue({});
+  vi.mocked(warehouseStockApi.uploadReservationDocument).mockResolvedValue({
+    uploadId: "11111111-1111-4111-8111-111111111111",
+    originalName: "act.pdf",
+  });
+  vi.mocked(warehouseStockApi.currentUserId).mockResolvedValue("test-actor");
+  vi.mocked(warehouseStockApi.uploadAdjustmentDocument).mockResolvedValue({
+    uploadId: "11111111-1111-4111-8111-111111111111",
+    originalName: "act.pdf",
+  });
   vi.mocked(useMediaQuery).mockReturnValue(false);
   vi.mocked(warehouseStockApi.list).mockResolvedValue({
     items: [position],
@@ -92,6 +118,7 @@ beforeEach(() => {
   });
   vi.mocked(warehouseStockApi.distribution).mockResolvedValue(distribution);
   vi.mocked(warehouseStockApi.transfer).mockResolvedValue({ id: "1" });
+  vi.mocked(warehouseStockApi.consolidate).mockResolvedValue({ ids: ["1"] });
   vi.mocked(warehouseStockApi.warehouses).mockResolvedValue({
     items: [warehouse],
     total: 1,
