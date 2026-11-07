@@ -43,7 +43,7 @@ test(
         join(root, "backend/prisma/schema"),
         { recursive: true },
       );
-      for (const name of ["core", "warehouse"])
+      for (const name of ["core", "orders", "warehouse"])
         await cp(
           join(project, "backend/prisma/packages", name),
           join(root, "backend/prisma/packages", name),

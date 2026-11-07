@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { ACTIVE_MODULES } from '../config/active-modules.module';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { canReadEquipment, canReadPpe } from '../auth/role-permissions';
@@ -31,7 +32,11 @@ type SearchRow = {
 
 @Injectable()
 export class SearchQueryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(ACTIVE_MODULES)
+    private readonly activeModules: readonly string[] = ['equipment', 'ppe'],
+  ) {}
 
   async search(
     params: {
@@ -63,10 +68,13 @@ export class SearchQueryService {
     if (modules.some((entry) => !['equipment', 'ppe'].includes(entry)))
       return [];
     const equipmentAllowed =
+      this.activeModules.includes('equipment') &&
       (!modules.length || modules.includes('equipment')) &&
       canReadEquipment(role);
     const ppeAllowed =
-      (!modules.length || modules.includes('ppe')) && canReadPpe(role);
+      this.activeModules.includes('ppe') &&
+      (!modules.length || modules.includes('ppe')) &&
+      canReadPpe(role);
     const branches: Prisma.Sql[] = [];
     const contains = `%${this.escapeLike(query)}%`;
     const normalize = (value: Prisma.Sql) =>

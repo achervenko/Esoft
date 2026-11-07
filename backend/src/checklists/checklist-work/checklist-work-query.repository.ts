@@ -1,3 +1,5 @@
+import { Inject } from '@nestjs/common';
+import { ACTIVE_MODULES } from '../../config/active-modules.module';
 import { Injectable } from '@nestjs/common';
 import { ChecklistStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -11,7 +13,11 @@ import type { ChecklistWorkQuery } from './checklist-work.types';
 
 @Injectable()
 export class ChecklistWorkQueryRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(ACTIVE_MODULES)
+    private readonly activeModules: readonly string[] = ['equipment'],
+  ) {}
 
   async list(params: { query: ChecklistWorkQuery; userId: string }) {
     const [rows, totalRows, totalsByStatusRows] =
@@ -45,11 +51,11 @@ export class ChecklistWorkQueryRepository {
             event.id AS "eventId",
             event.status AS "eventStatus",
             event.planned_date AS "eventPlannedDate",
-            event_type.id AS "maintenanceTypeId",
-            event_type.name AS "maintenanceTypeName",
-            equipment.visible_id AS "equipmentVisibleId",
-            equipment.name AS "equipmentName",
-            equipment_model.name AS "equipmentModelName",
+            ${this.activeModules.includes('equipment') ? Prisma.sql`event_type.id` : Prisma.sql`NULL::integer`} AS "maintenanceTypeId",
+            ${this.activeModules.includes('equipment') ? Prisma.sql`event_type.name` : Prisma.sql`NULL::text`} AS "maintenanceTypeName",
+            ${this.equipmentVisibleId} AS "equipmentVisibleId",
+            ${this.activeModules.includes('equipment') ? Prisma.sql`equipment.name` : Prisma.sql`NULL::text`} AS "equipmentName",
+            ${this.activeModules.includes('equipment') ? Prisma.sql`equipment_model.name` : Prisma.sql`NULL::text`} AS "equipmentModelName",
             COALESCE(progress.total, 0)::bigint AS total,
             COALESCE(progress.answered, 0)::bigint AS answered,
             COALESCE(progress."requiredTotal", 0)::bigint AS "requiredTotal",
@@ -57,14 +63,7 @@ export class ChecklistWorkQueryRepository {
           FROM checklists checklist
           JOIN events event
             ON event.id = checklist.event_id
-          LEFT JOIN equipment_event_extensions event_extension
-            ON event_extension.event_id = event.id
-          LEFT JOIN equipment_event_types event_type
-            ON event_type.id = event_extension.event_type_id
-          LEFT JOIN equipment
-            ON equipment.id = event_extension.equipment_id
-          LEFT JOIN equipment_models equipment_model
-            ON equipment_model.id = equipment.model_id
+          ${this.equipmentJoins(true)}
           JOIN checklist_templates template
             ON template.id = checklist.checklist_template_id
           JOIN "user" assigned_user
@@ -84,7 +83,7 @@ export class ChecklistWorkQueryRepository {
                 ChecklistStatus.IN_PROGRESS,
               ],
             )}]::checklist_status[])
-            AND (${params.query.equipmentVisibleId ?? null}::int IS NULL OR equipment.visible_id = ${params.query.equipmentVisibleId ?? null})
+            AND (${params.query.equipmentVisibleId ?? null}::int IS NULL OR ${this.equipmentVisibleId} = ${params.query.equipmentVisibleId ?? null})
             AND (${params.query.eventId ?? null}::int IS NULL OR event.id = ${params.query.eventId ?? null})
             AND (${params.query.dateFrom ?? null}::date IS NULL OR event.planned_date >= ${params.query.dateFrom ?? null})
             AND (${params.query.dateTo ?? null}::date IS NULL OR event.planned_date <= ${params.query.dateTo ?? null})
@@ -100,10 +99,7 @@ export class ChecklistWorkQueryRepository {
         FROM checklists checklist
         JOIN events event
           ON event.id = checklist.event_id
-        LEFT JOIN equipment_event_extensions event_extension
-          ON event_extension.event_id = event.id
-        LEFT JOIN equipment
-          ON equipment.id = event_extension.equipment_id
+        ${this.equipmentJoins(false)}
         WHERE checklist.assigned_user_id = ${params.userId}
           AND checklist.status = ANY(ARRAY[${Prisma.join(
             params.query.statuses ?? [
@@ -111,7 +107,7 @@ export class ChecklistWorkQueryRepository {
               ChecklistStatus.IN_PROGRESS,
             ],
           )}]::checklist_status[])
-          AND (${params.query.equipmentVisibleId ?? null}::int IS NULL OR equipment.visible_id = ${params.query.equipmentVisibleId ?? null})
+          AND (${params.query.equipmentVisibleId ?? null}::int IS NULL OR ${this.equipmentVisibleId} = ${params.query.equipmentVisibleId ?? null})
           AND (${params.query.eventId ?? null}::int IS NULL OR event.id = ${params.query.eventId ?? null})
           AND (${params.query.dateFrom ?? null}::date IS NULL OR event.planned_date >= ${params.query.dateFrom ?? null})
           AND (${params.query.dateTo ?? null}::date IS NULL OR event.planned_date <= ${params.query.dateTo ?? null})
@@ -136,12 +132,9 @@ export class ChecklistWorkQueryRepository {
         FROM checklists checklist
         JOIN events event
           ON event.id = checklist.event_id
-        LEFT JOIN equipment_event_extensions event_extension
-          ON event_extension.event_id = event.id
-        LEFT JOIN equipment
-          ON equipment.id = event_extension.equipment_id
+        ${this.equipmentJoins(false)}
         WHERE checklist.assigned_user_id = ${params.userId}
-          AND (${params.query.equipmentVisibleId ?? null}::int IS NULL OR equipment.visible_id = ${params.query.equipmentVisibleId ?? null})
+          AND (${params.query.equipmentVisibleId ?? null}::int IS NULL OR ${this.equipmentVisibleId} = ${params.query.equipmentVisibleId ?? null})
           AND (${params.query.eventId ?? null}::int IS NULL OR event.id = ${params.query.eventId ?? null})
           AND (${params.query.dateFrom ?? null}::date IS NULL OR event.planned_date >= ${params.query.dateFrom ?? null})
           AND (${params.query.dateTo ?? null}::date IS NULL OR event.planned_date <= ${params.query.dateTo ?? null})
@@ -204,6 +197,28 @@ export class ChecklistWorkQueryRepository {
     `;
   }
 
+  private get equipmentVisibleId() {
+    return this.activeModules.includes('equipment')
+      ? Prisma.sql`equipment.visible_id`
+      : Prisma.sql`NULL::int`;
+  }
+
+  private equipmentJoins(details: boolean) {
+    if (!this.activeModules.includes('equipment')) return Prisma.empty;
+    return Prisma.sql`
+      LEFT JOIN equipment_event_extensions event_extension ON event_extension.event_id = event.id
+      LEFT JOIN equipment ON equipment.id = event_extension.equipment_id
+      ${
+        details
+          ? Prisma.sql`
+        LEFT JOIN equipment_event_types event_type ON event_type.id = event_extension.event_type_id
+        LEFT JOIN equipment_models equipment_model ON equipment_model.id = equipment.model_id
+      `
+          : Prisma.empty
+      }
+    `;
+  }
+
   private detailBaseQuery() {
     return Prisma.sql`
       SELECT
@@ -230,11 +245,11 @@ export class ChecklistWorkQueryRepository {
         event.id AS "eventId",
         event.status AS "eventStatus",
         event.planned_date AS "eventPlannedDate",
-        event_type.id AS "maintenanceTypeId",
-        event_type.name AS "maintenanceTypeName",
-        equipment.visible_id AS "equipmentVisibleId",
-        equipment.name AS "equipmentName",
-        equipment_model.name AS "equipmentModelName",
+        ${this.activeModules.includes('equipment') ? Prisma.sql`event_type.id` : Prisma.sql`NULL::integer`} AS "maintenanceTypeId",
+        ${this.activeModules.includes('equipment') ? Prisma.sql`event_type.name` : Prisma.sql`NULL::text`} AS "maintenanceTypeName",
+        ${this.equipmentVisibleId} AS "equipmentVisibleId",
+        ${this.activeModules.includes('equipment') ? Prisma.sql`equipment.name` : Prisma.sql`NULL::text`} AS "equipmentName",
+        ${this.activeModules.includes('equipment') ? Prisma.sql`equipment_model.name` : Prisma.sql`NULL::text`} AS "equipmentModelName",
         COALESCE(progress.total, 0)::bigint AS total,
         COALESCE(progress.answered, 0)::bigint AS answered,
         COALESCE(progress."requiredTotal", 0)::bigint AS "requiredTotal",
@@ -243,14 +258,7 @@ export class ChecklistWorkQueryRepository {
       FROM checklists checklist
       JOIN events event
         ON event.id = checklist.event_id
-      LEFT JOIN equipment_event_extensions event_extension
-        ON event_extension.event_id = event.id
-      LEFT JOIN equipment_event_types event_type
-        ON event_type.id = event_extension.event_type_id
-      LEFT JOIN equipment
-        ON equipment.id = event_extension.equipment_id
-      LEFT JOIN equipment_models equipment_model
-        ON equipment_model.id = equipment.model_id
+      ${this.equipmentJoins(true)}
       JOIN checklist_templates template
         ON template.id = checklist.checklist_template_id
       JOIN "user" assigned_user

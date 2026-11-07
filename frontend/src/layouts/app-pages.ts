@@ -102,3 +102,7 @@ export const SearchPage = lazyNamedPage(() =>
 export const UsersPage = lazyNamedPage(() =>
   import("../pages/UsersPage").then((module) => module.UsersPage),
 );
+
+export const OrdersPage = lazyNamedPage(() =>
+  import("../pages/OrdersPage/OrdersPage").then((module) => module.OrdersPage),
+);

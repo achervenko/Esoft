@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ActiveModulesModule } from '../config/active-modules.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ChecklistModulesController } from './checklist-modules/checklist-modules.controller';
 import { ChecklistModulesOrderLockService } from './checklist-modules/checklist-modules-order-lock.service';
@@ -32,7 +33,7 @@ import { ChecklistTemplatesController } from './checklist-templates/checklist-te
 import { ChecklistTemplatesService } from './checklist-templates/checklist-templates.service';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [ActiveModulesModule, PrismaModule],
   controllers: [
     ChecklistModulesController,
     ChecklistQuestionsController,

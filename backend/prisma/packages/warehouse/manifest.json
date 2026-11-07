@@ -2,6 +2,7 @@
   "id": "warehouse",
   "version": 1,
   "requiresCore": 1,
+  "requiresPackages": { "orders": 1 },
   "migrations": [
     {
       "id": "20261016000000_warehouse_init",

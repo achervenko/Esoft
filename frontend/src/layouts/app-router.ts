@@ -8,6 +8,7 @@ import {
 type EquipmentEditTab = "details" | "documents";
 
 type AppRouteBase =
+  | { kind: "orders"; orderId?: string }
   | { kind: "dashboard" }
   | { date: string | null; kind: "calendar" }
   | { kind: "checklist-admin" }
@@ -71,6 +72,11 @@ function parsePositiveParamId(value: string | null) {
 
 export function resolveAppRoute(route: string): AppRoute {
   const receiptPath = route.split("?")[0];
+  if (receiptPath === "#/orders") return { kind: "orders" };
+  const orderMatch = receiptPath.match(
+    /^#\/orders\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
+  );
+  if (orderMatch) return { kind: "orders", orderId: orderMatch[1] };
   if (receiptPath === "#/warehouse/receipts")
     return { kind: "warehouse-receipts" };
   if (receiptPath === "#/warehouse/receipts/new")

@@ -1,3 +1,5 @@
+import { Inject } from '@nestjs/common';
+import { ACTIVE_MODULES } from '../../config/active-modules.module';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -12,7 +14,11 @@ import {
 
 @Injectable()
 export class ChecklistTemplateRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(ACTIVE_MODULES)
+    private readonly activeModules: readonly string[] = ['equipment'],
+  ) {}
 
   async loadTemplateDetail(
     id: number,
@@ -75,6 +81,7 @@ export class ChecklistTemplateRepository {
     templateId: number,
     tx: Prisma.TransactionClient = this.prisma,
   ) {
+    if (!this.activeModules.includes('equipment')) return [];
     return tx.$queryRaw<TemplateMaintenanceSettingUsage[]>`
       SELECT
         setting.id,

@@ -1,3 +1,5 @@
+import { Inject } from '@nestjs/common';
+import { ACTIVE_MODULES } from '../../config/active-modules.module';
 import { Injectable } from '@nestjs/common';
 import { AuditAction } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -16,6 +18,8 @@ export class ChecklistTemplateLifecycleService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly repository: ChecklistTemplateRepository,
+    @Inject(ACTIVE_MODULES)
+    private readonly activeModules: readonly string[] = ['equipment'],
   ) {}
 
   async archive(id: number, input: ArchiveInput, userId: string) {
@@ -41,14 +45,20 @@ export class ChecklistTemplateLifecycleService {
           );
         }
 
-        const unlinkResult = await tx.equipmentMaintenanceSetting.updateMany({
-          data: {
-            defaultChecklistTemplateId: null,
-          },
-          where: {
-            defaultChecklistTemplateId: id,
-          },
-        });
+        const removedMaintenanceSettingLinks = this.activeModules.includes(
+          'equipment',
+        )
+          ? (
+              await tx.equipmentMaintenanceSetting.updateMany({
+                data: {
+                  defaultChecklistTemplateId: null,
+                },
+                where: {
+                  defaultChecklistTemplateId: id,
+                },
+              })
+            ).count
+          : 0;
 
         await this.repository.updateTemplateByExpectedVersion(tx, {
           data: {
@@ -68,13 +78,13 @@ export class ChecklistTemplateLifecycleService {
           fieldName: 'CHECKLIST_TEMPLATE_ARCHIVED',
           newValue: {
             reason: input.reason,
-            removedMaintenanceSettingLinks: unlinkResult.count,
+            removedMaintenanceSettingLinks,
           },
           userId,
         });
 
         return {
-          removedMaintenanceSettingLinks: unlinkResult.count,
+          removedMaintenanceSettingLinks,
           template: presentTemplateDetail(
             await this.repository.loadTemplateDetail(id, tx),
           ),

@@ -4,12 +4,13 @@ import { CountriesAdminService } from './countries-admin.service';
 import { ObjectsAdminService } from './objects-admin.service';
 import { LocationsAdminService } from './locations-admin.service';
 import { Module } from '@nestjs/common';
+import { ActiveModulesModule } from '../config/active-modules.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { DictionariesAdminController } from './dictionaries-admin.controller';
 import { DictionariesAdminService } from './dictionaries-admin.service';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [ActiveModulesModule, PrismaModule],
   controllers: [DictionariesAdminController],
   providers: [
     DictionariesAdminService,

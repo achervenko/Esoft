@@ -8,7 +8,7 @@ import { validateHistory } from "../../../../scripts/database/migrate.mjs";
 
 const root = resolve(import.meta.dirname, "../../../..");
 
-test("package manifests require version 1 and requiresCore null for core or 1 for modules", async () => {
+test("package manifests validate package versions and dependencies", async () => {
   const fixture = await mkdtemp(resolve(tmpdir(), "esoft-manifest-test-"));
   try {
     await cp(
@@ -26,6 +26,16 @@ test("package manifests require version 1 and requiresCore null for core or 1 fo
       resolve(fixture, "backend/prisma/packages/warehouse"),
       { recursive: true },
     );
+    await cp(
+      resolve(root, "backend/prisma/packages/orders"),
+      resolve(fixture, "backend/prisma/packages/orders"),
+      { recursive: true },
+    );
+    await cp(
+      resolve(root, "backend/prisma/packages/ppe"),
+      resolve(fixture, "backend/prisma/packages/ppe"),
+      { recursive: true },
+    );
     const catalog = JSON.parse(
       await readFile(
         resolve(root, "backend/prisma/module-catalog.json"),
@@ -36,7 +46,10 @@ test("package manifests require version 1 and requiresCore null for core or 1 fo
       resolve(fixture, "database-packages.json"),
       JSON.stringify({ modules: catalog }),
     );
-    assert.deepEqual(packageTools.readPackageSelection(fixture), catalog);
+    assert.deepEqual(
+      packageTools.readPackageSelection(fixture),
+      [...catalog].sort(),
+    );
     for (const modules of [["unknown"], [catalog[0], catalog[0]]]) {
       await writeFile(
         resolve(fixture, "database-packages.json"),
@@ -56,7 +69,54 @@ test("package manifests require version 1 and requiresCore null for core or 1 fo
       "backend/prisma/packages/core/manifest.json",
     );
     const core = JSON.parse(await readFile(corePath, "utf8"));
-    assert.doesNotThrow(() => packageTools.readPackageSet(fixture));
+    assert.deepEqual(
+      packageTools.readPackageSet(fixture).packages.map(({ id }) => id),
+      ["core", "equipment", "orders", "warehouse"],
+    );
+    const ordersPath = resolve(
+      fixture,
+      "backend/prisma/packages/orders/manifest.json",
+    );
+    const orders = JSON.parse(await readFile(ordersPath, "utf8"));
+    await writeFile(ordersPath, JSON.stringify({ ...orders, version: 2 }));
+    assert.throws(
+      () => packageTools.readPackageSet(fixture),
+      /warehouse requires orders@1, found 2/,
+    );
+    await writeFile(ordersPath, JSON.stringify(orders));
+    await writeFile(
+      ordersPath,
+      JSON.stringify({ ...orders, requiresPackages: { warehouse: 1 } }),
+    );
+    assert.throws(() => packageTools.readPackageSet(fixture), {
+      message:
+        "Circular database package dependency: warehouse → orders → warehouse",
+    });
+    const equipmentPath = resolve(
+      fixture,
+      "backend/prisma/packages/equipment/manifest.json",
+    );
+    const equipment = JSON.parse(await readFile(equipmentPath, "utf8"));
+    const warehousePath = resolve(
+      fixture,
+      "backend/prisma/packages/warehouse/manifest.json",
+    );
+    const warehouse = JSON.parse(await readFile(warehousePath, "utf8"));
+    await writeFile(
+      equipmentPath,
+      JSON.stringify({ ...equipment, requiresPackages: { orders: 1 } }),
+    );
+    await writeFile(
+      warehousePath,
+      JSON.stringify({ ...warehouse, requiresPackages: { equipment: 1 } }),
+    );
+    assert.throws(() => packageTools.readPackageSet(fixture), {
+      message:
+        "Circular database package dependency: equipment → orders → warehouse → equipment",
+    });
+    await writeFile(equipmentPath, JSON.stringify(equipment));
+    await writeFile(warehousePath, JSON.stringify(warehouse));
+    await writeFile(ordersPath, JSON.stringify(orders));
     for (const requiresCore of [999, 1, undefined, "null", false]) {
       await writeFile(corePath, JSON.stringify({ ...core, requiresCore }));
       assert.throws(
@@ -89,7 +149,7 @@ test("package manifests require version 1 and requiresCore null for core or 1 fo
     );
     await writeFile(
       modulePath,
-      JSON.stringify({ ...module, version: 2, requiresCore: 1 }),
+      JSON.stringify({ ...module, version: 0, requiresCore: 1 }),
     );
     assert.throws(
       () => packageTools.readPackageSet(fixture),
@@ -130,3 +190,4 @@ test("history preflight rejects missing, changed and failed SQL", () => {
     validateHistory([{ ...applied, rolled_back_at: new Date() }], []),
   );
 });
+

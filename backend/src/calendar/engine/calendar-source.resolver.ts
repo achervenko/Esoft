@@ -1,4 +1,5 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { ACTIVE_MODULES } from '../../config/active-modules.module';
 import type { UserSession } from '@thallesp/nestjs-better-auth';
 import type { Auth } from '../../auth/auth.config';
 import { canViewEvents } from '../../auth/role-permissions';
@@ -11,6 +12,8 @@ export class CalendarSourceResolver {
   constructor(
     private readonly equipmentEventsProvider: EquipmentEventsProvider,
     private readonly productionCalendarProvider: ProductionCalendarProvider,
+    @Inject(ACTIVE_MODULES)
+    private readonly activeModules: readonly string[] = ['equipment'],
   ) {}
 
   resolveProviders(session: UserSession<Auth>): CalendarProvider[] {
@@ -18,7 +21,8 @@ export class CalendarSourceResolver {
 
     if (canViewEvents(session.user.role)) {
       providers.push(this.productionCalendarProvider);
-      providers.push(this.equipmentEventsProvider);
+      if (this.activeModules.includes('equipment'))
+        providers.push(this.equipmentEventsProvider);
     }
 
     if (providers.length === 0) {

@@ -11,11 +11,12 @@ export async function attachWarehousePackage(c) {
   const [before] =
     await prisma.$queryRaw`SELECT to_regclass('warehouse_receipts')::text AS table_name`;
   assert.equal(before.table_name, null);
-  await cp(
-    join(project, "backend/prisma/packages/warehouse"),
-    join(root, "backend/prisma/packages/warehouse"),
-    { recursive: true },
-  );
+  for (const id of ["orders", "warehouse"])
+    await cp(
+      join(project, "backend/prisma/packages", id),
+      join(root, "backend/prisma/packages", id),
+      { recursive: true },
+    );
   await writeFile(
     join(root, "database-packages.json"),
     '{"modules":["warehouse"]}',

@@ -1,0 +1,11 @@
+{
+  "id": "orders",
+  "version": 1,
+  "requiresCore": 1,
+  "migrations": [
+    {
+      "id": "20261030010000_orders_init",
+      "sha256": "4f4886cc2c3ea614bda2a0d95c03642f2b58a489571db9be96f1e5f466c62d0a"
+    }
+  ]
+}

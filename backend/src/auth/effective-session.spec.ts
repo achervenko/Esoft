@@ -21,7 +21,8 @@ describe('effective session permissions', () => {
       session: {},
     };
     expect(
-      withEffectiveRoles(value, ['equipment', 'warehouse']).user.permissions,
+      withEffectiveRoles(value, ['equipment', 'warehouse', 'orders']).user
+        .permissions,
     ).toEqual(getUserPermissions(value.user.role));
     const inactive = withEffectiveRoles(value, []);
     expect(inactive.user.role).toBe('');
@@ -33,9 +34,9 @@ describe('effective session permissions', () => {
       user: { id: 'u', role: 'storekeeper', permissions: ['users.manage'] },
       session: {},
     };
-    expect(withEffectiveRoles(value, ['warehouse']).user.permissions).toEqual(
-      getUserPermissions('storekeeper'),
-    );
+    expect(
+      withEffectiveRoles(value, ['warehouse', 'orders']).user.permissions,
+    ).toEqual(getUserPermissions('storekeeper'));
   });
   it('hides warehouse UI permissions for admin when warehouse is disabled', () => {
     const value = { user: { id: 'admin', role: 'admin' }, session: {} };

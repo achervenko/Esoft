@@ -16,7 +16,7 @@
   background: #f2f4f7;
 }
 .search-toolbar-icon-button:focus-visible {
-  outline-offset: 2px;
+  outline-offset: -3px;
   outline: 2px solid #475467;
 }
 .search-toolbar-filter-count {

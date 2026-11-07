@@ -27,7 +27,7 @@ export async function verifyWarehouseModuleInstallation(test) {
         join(root, "backend/prisma/schema"),
         { recursive: true },
       );
-      for (const id of ["core", ...modules])
+      for (const id of ["core", ...modules, ...(fresh ? ["orders"] : [])])
         await cp(
           join(project, "backend/prisma/packages", id),
           join(root, "backend/prisma/packages", id),
@@ -72,15 +72,24 @@ export async function verifyWarehouseModuleInstallation(test) {
             ).rows[0].name,
             null,
           );
-          await cp(
-            join(project, "backend/prisma/packages/warehouse"),
-            join(root, "backend/prisma/packages/warehouse"),
-            { recursive: true },
-          );
+          for (const id of ["orders", "warehouse"])
+            await cp(
+              join(project, "backend/prisma/packages", id),
+              join(root, "backend/prisma/packages", id),
+              { recursive: true },
+            );
           await select([...modules, "warehouse"]);
           await deploy();
           assert.deepEqual(await prisma.user.findMany(), before);
         }
+        assert.equal(
+          (
+            await database.query(
+              "SELECT to_regclass('public.customer_orders') AS name",
+            )
+          ).rows[0].name,
+          "customer_orders",
+        );
         await test.test(name, (scenario) =>
           verifyWarehouseSchema(prisma, database, actor, scenario),
         );

@@ -1,10 +1,10 @@
 # База данных склада
 
-Пакет `warehouse` зависит только от `core`. Его Prisma-модели находятся в
+Пакет `warehouse` зависит от `core` и автоматически включает `orders`. Его Prisma-модели находятся в
 `backend/prisma/schema/warehouse`, SQL и manifest — в `backend/prisma/packages/warehouse`.
 Init-миграция: `20261016000000_warehouse_init`.
 
-В текущем `database-packages.json` выбран `warehouse` вместе с `equipment` и `ppe`.
+В текущем `database-packages.json` выбран `warehouse` вместе с `equipment`, `ppe` и `orders`.
 Пакетный deploy устанавливает его таблицы. Для других установок состав модулей
 определяется их `database-packages.json`; включение склада требует сохранения
 ранее установленных пакетов и выполнения пакетного deploy.
@@ -32,7 +32,9 @@ Init-миграция: `20261016000000_warehouse_init`.
 - `WarehouseBalance` / `warehouse_balances`: количество номенклатуры в месте хранения;
   пара номенклатуры и места уникальна.
 - `WarehouseProjectReservation` / `warehouse_project_reservations`: резерв остатка
-  под проект; пара остатка и проекта уникальна.
+  под проект; пара остатка и проекта уникальна. `quantity` хранит полную потребность проекта,
+  `borrowedQuantity` (`borrowed_quantity`) — ещё не восстановленную заимствованную часть
+  (по умолчанию 0, от 0 до quantity). Учтённая обеспеченная часть — quantity - borrowedQuantity.
 - `WarehouseIssueSheet` / `warehouse_issue_sheets`: обязательный склад `warehouseId`,
   сведения о листе выдачи, исходном файле, статусе, создателе и обработавшем пользователе.
 - `WarehouseIssueSheetLine` / `warehouse_issue_sheet_lines`: количество,
@@ -115,18 +117,31 @@ ID складских объектов помещаются в `entityStringId`,
 собственные автоматически генерируемые `id`; составные уникальные ключи
 не заменяют их первичные ключи.
 
-Резерв входит в физический остаток:
+Для каждого остатка (номенклатура + место хранения) потребность проекта, заимствование
+и учтённая обеспеченная часть резерва разделяются:
 
 ```text
 physical = warehouse_balances.quantity
-reserved = SUM(warehouse_project_reservations.quantity)
+demand = SUM(warehouse_project_reservations.quantity)
+borrowed = SUM(warehouse_project_reservations.borrowedQuantity)
+reserved = demand - borrowed
 available = MAX(physical - reserved, 0)
-shortage = MAX(reserved - physical, 0)
+physicalShortage = MAX(reserved - physical, 0)
+shortage = MAX(borrowed, demand - physical, 0)
+        = borrowed + physicalShortage
 ```
 
 Новый резерв создаётся только в пределах свободного количества под блокировками
 Stock. Административная корректировка может уменьшить физический остаток ниже
-суммы резервов: потребность проектов сохраняется, нехватка отражается как `shortage`.
+учтённой обеспеченной части резервов: потребность проектов сохраняется, дополнительная
+физическая нехватка отражается как `physicalShortage`. Общая нехватка `shortage`
+включает её и невосстановленное заимствование `borrowed`.
+Учтённая обеспеченная часть `reserved` не всегда фактически покрыта товаром: после
+корректировки она может превышать `physical`. Свободный остаток рассчитывается
+после вычитания `reserved`, а не всей потребности. Например, при physical=8,
+demand=10, borrowed=3 получаем reserved=7, available=1, physicalShortage=0,
+shortage=3. Поступление свободного товара само по себе не восстанавливает заимствование.
+
 Корректировка не уменьшает и не удаляет резервы автоматически. Обычные операции
 выдачи и перемещения должны учитывать существующий дефицит и не увеличивать
 необеспеченность резервов. Межтабличного CHECK в БД нет. Для поиска резервов

@@ -6,7 +6,7 @@ import type {
 import { ReceiptSourceForm } from "./ReceiptSourceForm";
 import { IntegrationWarehousesDialog } from "./IntegrationWarehousesDialog";
 import { DataTable } from "../../shared/ui/DataTable";
-import { formatBusinessDateTime } from "../../shared/lib/business-date";
+import { IntegrationFlowStatus } from "./IntegrationFlowStatus";
 export function IntegrationSourcesSection({
   sources,
   availableFlows,
@@ -61,26 +61,24 @@ export function IntegrationSourcesSection({
               label: "Использование",
               isSortable: false,
               render: (s) =>
-                s.flows
-                  .map(
-                    (f) =>
-                      `${availableFlows.find((a) => a.flowCode === f.flowCode)?.name ?? f.flowCode}${f.isActive ? "" : " (выключен)"}`,
-                  )
-                  .join(", ") || "Не подключены",
-            },
-            {
-              key: "lastSuccess",
-              label: "Последняя обработка",
-              isSortable: false,
-              render: (s) => {
-                const dates = s.flows
-                  .map((f) => f.lastSuccessAt)
-                  .filter((v): v is string => !!v)
-                  .sort();
-                return dates.length
-                  ? formatBusinessDateTime(dates[dates.length - 1])
-                  : "Ещё не было";
-              },
+                s.flows.length ? (
+                  <div className="integration-flow-statuses">
+                    {s.flows.map((flow) => (
+                      <IntegrationFlowStatus
+                        key={flow.flowCode}
+                        flow={flow}
+                        sourceActive={s.isActive}
+                        name={
+                          availableFlows.find(
+                            (item) => item.flowCode === flow.flowCode,
+                          )?.name ?? flow.flowCode
+                        }
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  "Не подключены"
+                ),
             },
             {
               key: "actions",

@@ -27,6 +27,7 @@ const equipmentEditor = [
 export const ROLE_PERMISSIONS = {
   admin: [
     'integrations.manage',
+    'orders.read',
     ...equipmentEditor,
     'equipment.events.manage',
     'equipment.maintenance-types.manage',

@@ -73,7 +73,14 @@ export function IntegrationKeysSection({
         {selected && (
           <>
             {(sources.find((s) => s.code === selected)?.flows ?? [])
-              .filter((f) => f.isActive)
+              .filter(
+                (f) =>
+                  f.isActive &&
+                  availableFlows.some(
+                    (a) =>
+                      a.flowCode === f.flowCode && a.incomingActions.length > 0,
+                  ),
+              )
               .map((flow) => (
                 <TextField
                   key={flow.flowCode}
@@ -86,6 +93,19 @@ export function IntegrationKeysSection({
             <button
               type="button"
               className="admin-primary-button"
+              disabled={
+                !sources
+                  .find((s) => s.code === selected)
+                  ?.flows.some(
+                    (f) =>
+                      f.isActive &&
+                      availableFlows.some(
+                        (a) =>
+                          a.flowCode === f.flowCode &&
+                          a.incomingActions.includes("event:create"),
+                      ),
+                  )
+              }
               onClick={() => setIssuingFor(selected)}
             >
               Выпустить ключ

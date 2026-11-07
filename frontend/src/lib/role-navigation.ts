@@ -23,6 +23,13 @@ export function getDefaultAuthRoute(permissions: unknown) {
 
 export function canAccessWorkspaceRoute(permissions: unknown, route: string) {
   const path = route.split("?")[0];
+  if (
+    path === "#/orders" ||
+    /^#\/orders\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      path,
+    )
+  )
+    return hasPermission(permissions, "orders.read");
   if (path === "#/warehouse/receipts/new")
     return (
       hasPermission(permissions, "warehouse.receipts.read") &&

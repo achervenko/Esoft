@@ -38,6 +38,10 @@ describe('module-aware permissions', () => {
   });
 });
 
+it('grants the orders directory only to administrators', () => {
+  expect(getPermissionRoles('orders.read')).toEqual(['admin']);
+});
+
 it('grants stock adjustments only through the admin role', () => {
   for (const role of USER_ROLES)
     expect(hasPermission(role, 'warehouse.adjustments.manage')).toBe(

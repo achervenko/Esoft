@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ActiveModulesModule } from '../config/active-modules.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { EquipmentSearchProjector } from './equipment-search.projector';
 import { SearchAdminController } from './search-admin.controller';
@@ -8,7 +9,7 @@ import { SearchQueryService } from './search-query.service';
 import { SearchRebuildService } from './search-rebuild.service';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [ActiveModulesModule, PrismaModule],
   controllers: [SearchAdminController, SearchController],
   providers: [
     EquipmentSearchProjector,

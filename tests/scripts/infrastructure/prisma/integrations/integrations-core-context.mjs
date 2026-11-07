@@ -8,7 +8,9 @@ import { runPackageMigrations } from "../../../../../scripts/database/migrate.mj
 const require = createRequire(import.meta.url),
   project = resolve(import.meta.dirname, "../../../../.."),
   load = (p) => require(join(project, "backend/dist/src", p));
-export async function createIntegrationsCoreContext() {
+export async function createIntegrationsCoreContext({
+  withOrders = false,
+} = {}) {
   const environment = await createIsolatedPostgres();
   let prisma;
   const close = async () => {
@@ -31,7 +33,17 @@ export async function createIntegrationsCoreContext() {
       join(root, "backend/prisma/packages/core"),
       { recursive: true },
     );
-    await writeFile(join(root, "database-packages.json"), '{"modules":[]}');
+    if (withOrders) {
+      await cp(
+        join(project, "backend/prisma/packages/orders"),
+        join(root, "backend/prisma/packages/orders"),
+        { recursive: true },
+      );
+    }
+    await writeFile(
+      join(root, "database-packages.json"),
+      JSON.stringify({ modules: withOrders ? ["orders"] : [] }),
+    );
     await environment.database("integrations");
     const url = environment.urlFor("integrations");
     const migrated = await runPackageMigrations({

@@ -1,6 +1,7 @@
 import type { AppRoute } from "./app-router";
 import type { AppShellUser } from "./AppShell";
 import {
+  OrdersPage,
   CalendarPage,
   DashboardPage,
   ChecklistAdminPage,
@@ -36,6 +37,12 @@ export function AppRouteContent({
 }: AppRouteContentProps) {
   return (
     <>
+      {appRoute.kind === "orders" ? (
+        <OrdersPage
+          orderId={appRoute.orderId}
+          userPermissions={user?.permissions ?? null}
+        />
+      ) : null}
       {appRoute.kind === "dashboard" ? <DashboardPage /> : null}
       {appRoute.kind === "calendar" ? (
         <CalendarPage

@@ -15,3 +15,8 @@
   margin-top: 4px;
   color: var(--color-text-muted, #697386);
 }
+
+.integration-flow-statuses {
+  display: grid;
+  gap: 10px;
+}

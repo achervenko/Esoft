@@ -11,9 +11,11 @@ export class IntegrationFailureFilter implements ExceptionFilter {
       .status(error.retryable ? 503 : 400)
       .json({
         code: error.code,
-        message: error.retryable
-          ? 'Компонент обмена временно недоступен.'
-          : 'Некорректные параметры обмена.',
+        message:
+          error.publicMessage ??
+          (error.retryable
+            ? 'Компонент обмена временно недоступен.'
+            : 'Некорректные параметры обмена.'),
       });
   }
 }

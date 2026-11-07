@@ -60,51 +60,73 @@ it("allows configuration but exposes no key generation or secret display", async
   ).not.toBeInTheDocument();
 });
 
-it("creates an exchange using only its name and connection details", async () => {
-  vi.mocked(receiptIntegrationApi.configure).mockResolvedValue({
-    id: "id",
-    code: "code",
-    name: "Обмен склада",
-    systemType: "ONE_C",
-    flows: [],
-    baseUrl: "http://example.test/",
-    actorUserId: "internal",
-    isActive: true,
-  });
-  render(<ReceiptIntegrationPanel permissions={["integrations.manage"]} />);
-  await screen.findByText("Источники обмена не добавлены.");
-  fireEvent.click(screen.getByRole("button", { name: "Добавить базу 1С" }));
-  expect(
-    screen.queryByText("Технический пользователь импорта"),
-  ).not.toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText(/Название обмена/), {
-    target: { value: "Обмен склада" },
-  });
-  fireEvent.change(screen.getByLabelText(/Базовый URL/), {
-    target: { value: "http://example.test/" },
-  });
-  fireEvent.change(screen.getByLabelText(/Authorization для/), {
-    target: { value: "Bearer test" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
-  await waitFor(() =>
-    expect(receiptIntegrationApi.configure).toHaveBeenCalledExactlyOnceWith({
-      code: undefined,
+it.each(["header", "basic"])(
+  "creates an exchange with %s authentication",
+  async (mode) => {
+    vi.mocked(receiptIntegrationApi.configure).mockResolvedValue({
+      id: "id",
+      code: "code",
       name: "Обмен склада",
-      flows: [
-        {
-          flowCode: "warehouse.receipts",
-          configVersion: 1,
-          config: {},
-          isActive: true,
-          lastSuccessAt: null,
-          lastErrorAt: null,
-          lastErrorCode: null,
-        },
-      ],
+      systemType: "ONE_C",
+      flows: [],
       baseUrl: "http://example.test/",
-      authorization: "Bearer test",
+      actorUserId: "internal",
       isActive: true,
-    }),
-  );
-});
+    });
+    render(<ReceiptIntegrationPanel permissions={["integrations.manage"]} />);
+    await screen.findByText("Источники обмена не добавлены.");
+    fireEvent.click(screen.getByRole("button", { name: "Добавить базу 1С" }));
+    expect(
+      screen.queryByText("Технический пользователь импорта"),
+    ).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Название обмена/), {
+      target: { value: "Обмен склада" },
+    });
+    fireEvent.change(screen.getByLabelText(/Базовый адрес 1С/), {
+      target: { value: "http://example.test/" },
+    });
+    if (mode === "basic") {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Способ входа в 1С" }),
+      );
+      fireEvent.click(
+        await screen.findByRole("option", { name: "Логин и пароль (Basic)" }),
+      );
+      fireEvent.change(screen.getByLabelText(/Логин 1С/), {
+        target: { value: "юзер" },
+      });
+      expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
+      fireEvent.change(screen.getByLabelText(/Пароль 1С/), {
+        target: { value: " пароль " },
+      });
+    } else {
+      fireEvent.change(screen.getByLabelText(/Authorization для/), {
+        target: { value: "Bearer test" },
+      });
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    await waitFor(() =>
+      expect(receiptIntegrationApi.configure).toHaveBeenCalledExactlyOnceWith({
+        code: undefined,
+        name: "Обмен склада",
+        flows: [
+          {
+            flowCode: "warehouse.receipts",
+            configVersion: 1,
+            config: {},
+            isActive: true,
+            lastSuccessAt: null,
+            lastErrorAt: null,
+            lastErrorCode: null,
+          },
+        ],
+        baseUrl: "http://example.test/",
+        authorization:
+          mode === "basic"
+            ? "Basic 0Y7Qt9C10YA6INC/0LDRgNC+0LvRjCA="
+            : "Bearer test",
+        isActive: true,
+      }),
+    );
+  },
+);

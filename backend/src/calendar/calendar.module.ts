@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ActiveModulesModule } from '../config/active-modules.module';
 import { AuditModule } from '../audit/audit.module';
 import { EventsModule } from '../events/events.module';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -13,7 +14,7 @@ import { ProductionCalendarProvider } from './engine/production-calendar.provide
 
 @Module({
   controllers: [CalendarController],
-  imports: [AuditModule, EventsModule, PrismaModule],
+  imports: [ActiveModulesModule, AuditModule, EventsModule, PrismaModule],
   providers: [
     CalendarEngineService,
     CalendarRepository,

@@ -64,6 +64,12 @@ export const sidebarSections: SidebarSection[] = [
         label: "СИЗ",
       },
       {
+        href: "#/orders",
+        icon: ClipboardList,
+        label: "Заказы",
+        permission: "orders.read",
+      },
+      {
         href: "#/calendar",
         icon: CalendarDays,
         label: "Календарь",

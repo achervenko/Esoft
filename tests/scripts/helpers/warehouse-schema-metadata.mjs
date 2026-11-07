@@ -59,6 +59,8 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
       "warehouse_issue_positions",
       "warehouse_stock_adjustments",
       "warehouse_stock_adjustment_attachments",
+      "warehouse_stock_adjustment_noops",
+      "warehouse_reservation_operations",
     ].sort(),
   );
   assert.equal(
@@ -128,5 +130,10 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
     64,
   );
   for (const column of columns.filter((column) => column.column_name === "id"))
-    assert.equal(column.data_type, "bigint");
+    assert.equal(
+      column.data_type,
+      column.table_name === "warehouse_reservation_operations"
+        ? "uuid"
+        : "bigint",
+    );
 }

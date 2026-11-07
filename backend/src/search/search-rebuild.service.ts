@@ -1,8 +1,10 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
 } from '@nestjs/common';
+import { ACTIVE_MODULES } from '../config/active-modules.module';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   EQUIPMENT_SEARCH_ENTITY_TYPE,
@@ -21,21 +23,24 @@ export class SearchRebuildService {
   constructor(
     private readonly equipmentProjector: EquipmentSearchProjector,
     private readonly prisma: PrismaService,
+    @Inject(ACTIVE_MODULES)
+    private readonly activeModules: readonly string[] = ['equipment'],
   ) {}
 
   rebuildAll() {
     return this.runWithLock('all', async (tx) => {
-      const equipmentResult = await this.rebuildEquipment(tx);
-
-      return {
-        ...equipmentResult,
-        entityType: 'all',
-      };
+      const processed = this.activeModules.includes('equipment')
+        ? (await this.rebuildEquipment(tx)).processed
+        : 0;
+      return { processed, entityType: 'all' };
     });
   }
 
   rebuildEntityType(entityType: string) {
-    if (entityType !== EQUIPMENT_SEARCH_ENTITY_TYPE) {
+    if (
+      entityType !== EQUIPMENT_SEARCH_ENTITY_TYPE ||
+      !this.activeModules.includes('equipment')
+    ) {
       throw new BadRequestException({
         code: 'UNSUPPORTED_ENTITY_TYPE',
         message: 'Unsupported search index entity type.',

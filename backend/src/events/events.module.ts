@@ -1,7 +1,10 @@
-import { ActiveModulesModule } from '../config/active-modules.module';
-import { Module } from '@nestjs/common';
+import {
+  ActiveModulesModule,
+  loadActiveModules,
+} from '../config/active-modules.module';
+import { Module, type Type } from '@nestjs/common';
+import { createRequire } from 'node:module';
 import { ChecklistsModule } from '../checklists/checklists.module';
-import { EquipmentEventExtensionModule } from '../equipment-event-extension/equipment-event-extension.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { EventExtensionRegistry } from './event-extensions/event-extension.registry';
 import { EventChecklistCreator } from './event-checklists/event-checklist.creator';
@@ -15,12 +18,22 @@ import { EventsService } from './events.service';
 import { EventsUpdateInputLoader } from './events-update-input.loader';
 import { EventsUpdateService } from './events-update.service';
 
+const equipmentExtensions = loadActiveModules().includes('equipment')
+  ? [
+      (
+        createRequire(__filename)(
+          '../equipment-event-extension/equipment-event-extension.module',
+        ) as { EquipmentEventExtensionModule: Type<unknown> }
+      ).EquipmentEventExtensionModule,
+    ]
+  : [];
+
 @Module({
   imports: [
     ActiveModulesModule,
     PrismaModule,
     ChecklistsModule,
-    EquipmentEventExtensionModule,
+    ...equipmentExtensions,
   ],
   controllers: [EventsController],
   providers: [
