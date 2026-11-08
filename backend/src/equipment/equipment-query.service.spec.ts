@@ -11,11 +11,15 @@ describe('equipment page bounds', () => {
       },
       $queryRaw: jest.fn().mockResolvedValue([]),
     };
+    const transaction = jest.fn((fn: (tx: typeof prisma) => unknown) =>
+      fn(prisma),
+    );
+    Object.assign(prisma, { $transaction: transaction });
     const service = new EquipmentQueryService(
       {} as IdentityNumberingService,
       prisma as unknown as PrismaService,
     );
-    return { service, prisma };
+    return { service, prisma, transaction };
   };
 
   it.each([0, 100000])(
@@ -32,6 +36,14 @@ describe('equipment page bounds', () => {
       expect(prisma.equipment.findMany).not.toHaveBeenCalled();
     },
   );
+
+  it('uses one repeatable-read snapshot for count, page IDs and hydration', async () => {
+    const { service, transaction } = setup(1);
+    await service.findAll();
+    expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'RepeatableRead',
+    });
+  });
 
   it('keeps the last existing page accessible', async () => {
     const { service, prisma } = setup(100000);

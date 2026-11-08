@@ -24,12 +24,11 @@ export function checklistProgressSelectFields() {
   `;
 }
 
-export function checklistProgressGroupedByChecklistSql() {
+export function checklistProgressForChecklistSql(checklistId: Prisma.Sql) {
   return Prisma.sql`
     SELECT
-      detail.checklist_id,
       ${checklistProgressSelectFields()}
     FROM checklist_details detail
-    GROUP BY detail.checklist_id
+    WHERE detail.checklist_id = ${checklistId}
   `;
 }

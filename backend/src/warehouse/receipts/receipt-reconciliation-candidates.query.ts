@@ -95,26 +95,34 @@ export async function receiptReconciliationHints(
 ) {
   if (ids && !ids.length) return new Set<bigint>();
   const rows = await tx.$queryRaw<{ id: bigint }[]>`
-    SELECT t.id FROM warehouse_receipts t
-    WHERE ${ids ? Prisma.sql`t.id IN (${Prisma.join(ids)})` : Prisma.sql`TRUE`} AND t.source='ONE_C'
-      AND t.warehouse_id IS NOT NULL AND t.conflict IS NULL AND t.status<>'CANCELLED'
-      AND EXISTS (
-        SELECT 1 FROM warehouse_receipts m
-        WHERE m.source='MANUAL' AND m.warehouse_id=t.warehouse_id
-          AND m.status IN ('PLACING','PLACED') AND m.conflict IS NULL
-          AND EXISTS(SELECT 1 FROM warehouse_receipt_lines l WHERE l.receipt_id=m.id)
-          AND NOT EXISTS(SELECT 1 FROM warehouse_receipt_lines l WHERE l.receipt_id=m.id
-            AND (l.reconciled_to_line_id IS NOT NULL OR l.item_id IS NULL OR l.source_type<>'GOODS'))
-          AND (
-            NULLIF(lower(btrim(m.document_number)),'')=NULLIF(lower(btrim(t.document_number)),'')
-            OR (abs(m.document_date-t.document_date)<=7
-              AND EXISTS (
-                SELECT 1 FROM warehouse_receipt_lines ml
-                JOIN warehouse_receipt_lines tl
-                  ON tl.receipt_id=t.id AND tl.item_id=ml.item_id AND tl.unit_snapshot=ml.unit_snapshot
-                WHERE ml.receipt_id=m.id AND tl.source_type='GOODS'
-              ))
-          )
-      )`;
+    WITH targets AS MATERIALIZED (
+      SELECT id,warehouse_id,document_date,NULLIF(lower(btrim(document_number)),'') AS number
+      FROM warehouse_receipts t
+      WHERE ${ids ? Prisma.sql`t.id IN (${Prisma.join(ids)})` : Prisma.sql`TRUE`}
+        AND t.source='ONE_C' AND t.warehouse_id IS NOT NULL AND t.conflict IS NULL AND t.status<>'CANCELLED'
+    ), manuals AS MATERIALIZED (
+      SELECT m.id,m.warehouse_id,m.document_date,NULLIF(lower(btrim(m.document_number)),'') AS number
+      FROM warehouse_receipts m
+      WHERE m.source='MANUAL' AND m.status IN ('PLACING','PLACED') AND m.conflict IS NULL
+        AND m.warehouse_id IN (SELECT warehouse_id FROM targets)
+        AND EXISTS(SELECT 1 FROM warehouse_receipt_lines l WHERE l.receipt_id=m.id)
+        AND NOT EXISTS(SELECT 1 FROM warehouse_receipt_lines l WHERE l.receipt_id=m.id
+          AND (l.reconciled_to_line_id IS NOT NULL OR l.item_id IS NULL OR l.source_type<>'GOODS'))
+    ), manual_items AS MATERIALIZED (
+      SELECT DISTINCT m.warehouse_id,m.document_date,l.item_id,l.unit_snapshot
+      FROM manuals m JOIN warehouse_receipt_lines l ON l.receipt_id=m.id
+      WHERE m.document_date IS NOT NULL
+    )
+    SELECT t.id FROM targets t WHERE EXISTS (
+      SELECT 1 FROM manuals m WHERE m.warehouse_id=t.warehouse_id AND m.number=t.number
+    )
+    UNION
+    SELECT t.id FROM targets t WHERE EXISTS (
+      SELECT 1 FROM warehouse_receipt_lines tl
+      JOIN manual_items m ON m.item_id=tl.item_id AND m.unit_snapshot=tl.unit_snapshot AND m.warehouse_id=t.warehouse_id
+        AND m.document_date BETWEEN t.document_date-7 AND t.document_date+7
+      WHERE tl.receipt_id=t.id AND tl.source_type='GOODS'
+    )
+  `;
   return new Set(rows.map((row) => row.id));
 }

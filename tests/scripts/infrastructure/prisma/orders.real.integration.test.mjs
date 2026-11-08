@@ -1,3 +1,4 @@
+import { verifyBatching } from "./orders/orders-sync.batching.spec.mjs";
 import test from "node:test";
 import { createOrdersSyncContext } from "./orders/orders-sync.test-context.mjs";
 import {
@@ -26,6 +27,7 @@ test(
       await verifyAccess(context, t);
       await verifySourceSwitch(context, t);
       await verifyListFilters(context, t);
+      await verifyBatching(context, t);
     } finally {
       await context.close();
     }

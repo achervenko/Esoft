@@ -21,6 +21,6 @@ export async function verifyReceipts(prisma, database, t) {
   await receiptsKeyAtomicity(context, t);
   await receiptsCatalogBoundary(context, t);
   await receiptsDisplay(context, t);
-  await receiptsCandidates(await createReceiptTestContext(prisma), t);
+  await receiptsCandidates(prisma, t);
   await receiptsLifecycle(await createReceiptTestContext(prisma), t);
 }

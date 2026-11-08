@@ -152,15 +152,39 @@ export class WarehouseReceiptsQueryService {
           conditions.push({
             lines: { some: { itemId: null, sourceType: 'GOODS' } },
           });
-        const duplicateHints =
-          q.attention === 'MANUAL_DUPLICATE'
-            ? await receiptReconciliationHints(tx)
-            : undefined;
-        if (duplicateHints)
-          conditions.push({ id: { in: [...duplicateHints] } });
         const filteredWhere: Prisma.WarehouseReceiptWhereInput = {
           AND: [where, ...conditions],
         };
+        if (q.attention === 'MANUAL_DUPLICATE') {
+          const targets = await tx.warehouseReceipt.findMany({
+            where: {
+              AND: [
+                filteredWhere,
+                {
+                  source: 'ONE_C',
+                  warehouseId: { not: null },
+                  conflict: null,
+                  status: { not: 'CANCELLED' },
+                },
+              ],
+            },
+            select: { id: true },
+          });
+          const hints = new Set<bigint>();
+          // Bound SQL parameters without applying pagination before the exact duplicate filter.
+          for (let start = 0; start < targets.length; start += 1000) {
+            for (const id of await receiptReconciliationHints(
+              tx,
+              targets.slice(start, start + 1000).map((row) => row.id),
+            ))
+              hints.add(id);
+          }
+          filteredWhere.AND = [
+            where,
+            ...conditions,
+            { id: { in: [...hints] } },
+          ];
+        }
         const rows = await tx.warehouseReceipt.findMany({
           where: filteredWhere,
           skip: q.offset,

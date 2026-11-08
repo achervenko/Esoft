@@ -3,7 +3,7 @@ import { ACTIVE_MODULES } from '../../config/active-modules.module';
 import { Injectable } from '@nestjs/common';
 import { ChecklistStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { checklistProgressGroupedByChecklistSql } from './checklist-work-progress.sql';
+import { checklistProgressForChecklistSql } from './checklist-work-progress.sql';
 import type {
   ChecklistDetailQuestionRow,
   ChecklistDetailRow,
@@ -25,10 +25,7 @@ export class ChecklistWorkQueryRepository {
         async (tx) =>
           Promise.all([
             tx.$queryRaw<ChecklistListRow[]>`
-        WITH checklist_progress AS (
-          ${checklistProgressGroupedByChecklistSql()}
-        ),
-        filtered_checklists AS (
+        WITH filtered_checklists AS MATERIALIZED (
           SELECT
             checklist.id,
             checklist.version,
@@ -55,11 +52,7 @@ export class ChecklistWorkQueryRepository {
             ${this.activeModules.includes('equipment') ? Prisma.sql`event_type.name` : Prisma.sql`NULL::text`} AS "maintenanceTypeName",
             ${this.equipmentVisibleId} AS "equipmentVisibleId",
             ${this.activeModules.includes('equipment') ? Prisma.sql`equipment.name` : Prisma.sql`NULL::text`} AS "equipmentName",
-            ${this.activeModules.includes('equipment') ? Prisma.sql`equipment_model.name` : Prisma.sql`NULL::text`} AS "equipmentModelName",
-            COALESCE(progress.total, 0)::bigint AS total,
-            COALESCE(progress.answered, 0)::bigint AS answered,
-            COALESCE(progress."requiredTotal", 0)::bigint AS "requiredTotal",
-            COALESCE(progress."requiredAnswered", 0)::bigint AS "requiredAnswered"
+            ${this.activeModules.includes('equipment') ? Prisma.sql`equipment_model.name` : Prisma.sql`NULL::text`} AS "equipmentModelName"
           FROM checklists checklist
           JOIN events event
             ON event.id = checklist.event_id
@@ -74,8 +67,6 @@ export class ChecklistWorkQueryRepository {
             ON assigned_employee.id = assigned_employee_user.employee_id
           LEFT JOIN positions assigned_position
             ON assigned_position.id = assigned_employee.position_id
-          LEFT JOIN checklist_progress progress
-            ON progress.checklist_id = checklist.id
           WHERE checklist.assigned_user_id = ${params.userId}
             AND checklist.status = ANY(ARRAY[${Prisma.join(
               params.query.statuses ?? [
@@ -87,12 +78,14 @@ export class ChecklistWorkQueryRepository {
             AND (${params.query.eventId ?? null}::int IS NULL OR event.id = ${params.query.eventId ?? null})
             AND (${params.query.dateFrom ?? null}::date IS NULL OR event.planned_date >= ${params.query.dateFrom ?? null})
             AND (${params.query.dateTo ?? null}::date IS NULL OR event.planned_date <= ${params.query.dateTo ?? null})
+          ORDER BY event.planned_date ASC NULLS LAST,event.id ASC,checklist.sort_order ASC,checklist.id ASC
+          LIMIT ${params.query.limit} OFFSET ${params.query.offset}
         )
-        SELECT *
-        FROM filtered_checklists
+        SELECT checklist.*,
+          progress.total,progress.answered,progress."requiredTotal",progress."requiredAnswered"
+        FROM filtered_checklists checklist
+        LEFT JOIN LATERAL (${checklistProgressForChecklistSql(Prisma.sql`checklist.id`)}) progress ON TRUE
         ORDER BY "eventPlannedDate" ASC NULLS LAST, "eventId" ASC, "sortOrder" ASC, id ASC
-        LIMIT ${params.query.limit}
-        OFFSET ${params.query.offset}
       `,
             tx.$queryRaw<Array<{ total: bigint }>>`
         SELECT COUNT(*)::bigint AS total
@@ -269,10 +262,9 @@ export class ChecklistWorkQueryRepository {
         ON assigned_employee.id = assigned_employee_user.employee_id
       LEFT JOIN positions assigned_position
         ON assigned_position.id = assigned_employee.position_id
-      LEFT JOIN (
-        ${checklistProgressGroupedByChecklistSql()}
-      ) progress
-        ON progress.checklist_id = checklist.id
+      LEFT JOIN LATERAL (
+        ${checklistProgressForChecklistSql(Prisma.sql`checklist.id`)}
+      ) progress ON TRUE
       LEFT JOIN (
         SELECT
           event_id,

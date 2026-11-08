@@ -96,6 +96,26 @@ export async function verifyListFilters({ c, service }, t) {
           },
         });
       }
+      const expectedStatuses = (
+        await c.prisma.customerOrder.findMany({
+          distinct: ["status"],
+          select: { status: true },
+          where: { posted: true },
+          orderBy: { status: "asc" },
+        })
+      ).map((r) => r.status);
+      for (const query of [
+        { search },
+        { search: "no such order", page: "99" },
+        { search, deleted: "true" },
+        { search, statuses: '["Закрыт"]' },
+      ]) {
+        assert.deepEqual(
+          (await service.list(query)).statuses,
+          expectedStatuses,
+        );
+      }
+      assert.equal(new Set(expectedStatuses).size, expectedStatuses.length);
       assert.equal((await service.list({ search })).total, 3);
       assert.equal((await service.list({ search, deleted: "all" })).total, 4);
       assert.equal((await service.list({ search, deleted: "true" })).total, 1);

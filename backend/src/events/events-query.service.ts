@@ -3,7 +3,7 @@ import { getEquipmentResponsibleRoles } from '../auth/role-permissions';
 import { ACTIVE_MODULES } from '../config/active-modules.module';
 import { getUserRoles } from '../auth/role-module-policy';
 import { Prisma } from '@prisma/client';
-import { checklistProgressGroupedByChecklistSql } from '../checklists/checklist-work/checklist-work-progress.sql';
+import { checklistProgressForChecklistSql } from '../checklists/checklist-work/checklist-work-progress.sql';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventExtensionRegistry } from './event-extensions/event-extension.registry';
 import { throwEventNotFound } from './events.errors';
@@ -172,9 +172,6 @@ export class EventsQueryService {
         }
       >
     >`
-      WITH checklist_progress AS (
-        ${checklistProgressGroupedByChecklistSql()}
-      )
       SELECT
         checklist.id,
         checklist.event_id AS "eventId",
@@ -225,8 +222,7 @@ export class EventsQueryService {
         ON assigned_employee.id = assigned_employee_user.employee_id
       LEFT JOIN positions assigned_position
         ON assigned_position.id = assigned_employee.position_id
-      LEFT JOIN checklist_progress progress
-        ON progress.checklist_id = checklist.id
+      LEFT JOIN LATERAL (${checklistProgressForChecklistSql(Prisma.sql`checklist.id`)}) progress ON TRUE
       WHERE checklist.event_id IN (${Prisma.join(eventIds)})
       ORDER BY checklist.event_id, checklist.sort_order, checklist.id
     `;

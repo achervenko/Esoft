@@ -20,49 +20,54 @@ export class EquipmentQueryService {
 
   async findAll(query: EquipmentListQuery = {}) {
     const { page, limit, skip, order } = parseEquipmentListQuery(query);
-    const total = await this.prisma.equipment.count();
-    if (skip >= total) return { items: [], total, page, limit };
-    const ids = await this.prisma.$queryRaw<Array<{ id: number }>>(Prisma.sql`
+    return this.prisma.$transaction(
+      async (tx) => {
+        const total = await tx.equipment.count();
+        if (skip >= total) return { items: [], total, page, limit };
+        const ids = await tx.$queryRaw<Array<{ id: number }>>(Prisma.sql`
       SELECT e.id FROM equipment e
       JOIN equipment_models model ON model.id = e.model_id
       JOIN manufacturers manufacturer ON manufacturer.id = model.manufacturer_id
       ORDER BY ${order} LIMIT ${limit} OFFSET ${skip}
     `);
-    if (ids.length === 0) return { items: [], total, page, limit };
-    const equipment = await this.prisma.equipment.findMany({
-      where: { id: { in: ids.map((item) => item.id) } },
-      select: {
-        id: true,
-        inventoryNumber: true,
-        model: {
+        if (ids.length === 0) return { items: [], total, page, limit };
+        const equipment = await tx.equipment.findMany({
+          where: { id: { in: ids.map((item) => item.id) } },
           select: {
-            name: true,
-            manufacturer: {
+            id: true,
+            inventoryNumber: true,
+            model: {
               select: {
                 name: true,
+                manufacturer: {
+                  select: {
+                    name: true,
+                  },
+                },
               },
             },
+            name: true,
+            serialNumber: true,
+            status: true,
+            visibleId: true,
           },
-        },
-        name: true,
-        serialNumber: true,
-        status: true,
-        visibleId: true,
-      },
-    });
+        });
 
-    const byId = new Map(
-      equipment.map((item) => [item.id, toEquipmentListItem(item)]),
+        const byId = new Map(
+          equipment.map((item) => [item.id, toEquipmentListItem(item)]),
+        );
+        return {
+          items: ids.flatMap(({ id }) => {
+            const item = byId.get(id);
+            return item ? [item] : [];
+          }),
+          total,
+          page,
+          limit,
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
-    return {
-      items: ids.flatMap(({ id }) => {
-        const item = byId.get(id);
-        return item ? [item] : [];
-      }),
-      total,
-      page,
-      limit,
-    };
   }
 
   async getCreateOptions(visibleId?: number) {

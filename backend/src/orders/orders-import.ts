@@ -44,15 +44,30 @@ export async function applyOrders(
     ...rows.filter((row) => row.externalId !== null),
     ...rows.filter((row) => row.externalId === null),
   ];
+  const batchSize = 1000;
+  const byExternalId = new Map<string, CustomerOrder>();
+  const externalIds = [
+    ...new Set(
+      orderedRows.flatMap((row) =>
+        row.externalId === null ? [] : [row.externalId],
+      ),
+    ),
+  ];
+  for (let start = 0; start < externalIds.length; start += batchSize) {
+    const stored = await tx.customerOrder.findMany({
+      where: {
+        sourceId,
+        externalId: { in: externalIds.slice(start, start + batchSize) },
+      },
+    });
+    for (const order of stored) byExternalId.set(order.externalId!, order);
+  }
+  const unchangedIds: string[] = [];
   for (const row of orderedRows) {
     let previous =
       row.externalId === null
         ? null
-        : await tx.customerOrder.findUnique({
-            where: {
-              sourceId_externalId: { sourceId, externalId: row.externalId },
-            },
-          });
+        : (byExternalId.get(row.externalId.toLowerCase()) ?? null);
     if (!previous && row.posted) {
       const matches = await tx.customerOrder.findMany({
         where: {
@@ -82,14 +97,12 @@ export async function applyOrders(
     const after = { ...data, missing: false };
     const before = previous ? storedSnapshot(previous) : null;
     if (previous && isDeepStrictEqual(before, after)) {
-      await tx.customerOrder.update({
-        where: { id: previous.id },
-        data: { checkedAt: observedAt, missingChecks: 0 },
-      });
+      unchangedIds.push(previous.id);
       continue;
     }
+    let saved: CustomerOrder;
     if (previous)
-      await tx.customerOrder.update({
+      saved = await tx.customerOrder.update({
         where: { id },
         data: {
           ...data,
@@ -99,7 +112,7 @@ export async function applyOrders(
         },
       });
     else
-      await tx.customerOrder.create({
+      saved = await tx.customerOrder.create({
         data: {
           id,
           sourceId,
@@ -108,10 +121,20 @@ export async function applyOrders(
           changedAt: observedAt,
         },
       });
+    if (saved.externalId !== null) byExternalId.set(saved.externalId, saved);
     await tx.customerOrderChange.create({
       data: { orderId: id, ...(before ? { before } : {}), after, observedAt },
     });
     changed++;
+  }
+  for (let start = 0; start < unchangedIds.length; start += batchSize) {
+    await tx.customerOrder.updateMany({
+      where: {
+        sourceId,
+        id: { in: unchangedIds.slice(start, start + batchSize) },
+      },
+      data: { checkedAt: observedAt, missingChecks: 0 },
+    });
   }
   const candidates = await tx.customerOrder.findMany({
     where: { sourceId, missingChecks: { lt: 2 } },

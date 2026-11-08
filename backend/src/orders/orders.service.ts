@@ -45,10 +45,9 @@ export class OrdersService {
         }),
         total: await tx.customerOrder.count({ where }),
         statuses: (
-          await tx.customerOrder.findMany({
+          await tx.customerOrder.groupBy({
+            by: ['status'],
             where: { posted: true },
-            distinct: ['status'],
-            select: { status: true },
             orderBy: { status: 'asc' },
           })
         ).map((row) => row.status),
