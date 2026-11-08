@@ -24,6 +24,8 @@ model WarehouseItem {
   balances        WarehouseBalance[]
   issueSheetLines WarehouseIssueSheetLine[]
 
+  @@index([article(ops: raw("gin_trgm_ops"))], type: Gin, map: "idx_warehouse_items_article_trgm")
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "idx_warehouse_items_name_trgm")
   @@map("warehouse_items")
 }
 

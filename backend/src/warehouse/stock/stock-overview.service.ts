@@ -46,7 +46,8 @@ export class WarehouseStockOverviewService {
     const grouped = Prisma.sql`SELECT b.item_id,l.warehouse_id,SUM(b.quantity) AS quantity,
       COUNT(*) FILTER (WHERE b.quantity>0 OR EXISTS (SELECT 1 FROM warehouse_project_reservations r WHERE r.balance_id=b.id)) AS locations_count
       FROM warehouse_balances b JOIN warehouse_storage_locations l ON l.id=b.storage_location_id
-      JOIN warehouse_items i ON i.id=b.item_id WHERE ${Prisma.join(conditions, ' AND ')}
+      ${q.search ? Prisma.sql`JOIN warehouse_items i ON i.id=b.item_id` : Prisma.empty}
+      WHERE ${Prisma.join(conditions, ' AND ')}
       GROUP BY b.item_id,l.warehouse_id ${having}`;
     const order = {
       article: Prisma.sql`i.article`,
@@ -58,14 +59,21 @@ export class WarehouseStockOverviewService {
       q.sortOrder === 'asc' ? Prisma.sql`ASC` : Prisma.sql`DESC`;
     return this.prisma.$transaction(
       async (tx) => {
-        const [count] = await tx.$queryRaw<
-          { total: bigint }[]
-        >`WITH grouped AS (${grouped}) SELECT COUNT(*) AS total FROM grouped`;
-        const groups = await tx.$queryRaw<
-          Group[]
-        >`WITH grouped AS (${grouped}) SELECT g.* FROM grouped g
-        JOIN warehouse_items i ON i.id=g.item_id JOIN warehouses w ON w.id=g.warehouse_id
-        ORDER BY ${order} ${direction},g.item_id ASC,g.warehouse_id ASC LIMIT ${q.limit} OFFSET ${q.offset}`;
+        // Materialize once; the count row survives even when the requested page is empty.
+        const rows = await tx.$queryRaw<
+          ({ [K in keyof Group]: Group[K] | null } & { total: bigint })[]
+        >`WITH grouped AS MATERIALIZED (${grouped}),
+        page AS (
+          SELECT g.*,${order} AS sort_key FROM grouped g
+          JOIN warehouse_items i ON i.id=g.item_id JOIN warehouses w ON w.id=g.warehouse_id
+          ORDER BY ${order} ${direction},g.item_id ASC,g.warehouse_id ASC LIMIT ${q.limit} OFFSET ${q.offset}
+        )
+        SELECT page.*,counts.total FROM (SELECT COUNT(*) AS total FROM grouped) counts
+        LEFT JOIN page ON TRUE
+        ORDER BY page.sort_key ${direction},page.item_id ASC,page.warehouse_id ASC`;
+        const groups = rows.filter(
+          (row): row is Group & { total: bigint } => row.item_id !== null,
+        );
         const [catalog, warehouses] = await Promise.all([
           tx.warehouseItem.findMany({
             where: { id: { in: groups.map((g) => g.item_id) } },
@@ -113,7 +121,7 @@ export class WarehouseStockOverviewService {
         });
         return {
           items,
-          total: Number(count.total),
+          total: Number(rows[0].total),
           page: q.page,
           limit: q.limit,
         };

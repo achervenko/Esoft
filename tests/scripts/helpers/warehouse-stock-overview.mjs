@@ -55,6 +55,39 @@ export async function verifyStockOverview(
     oid = String(other.id),
     iid = String(item.id);
   await t.test(
+    "empty pages preserve total and tied sorts paginate without gaps",
+    async () => {
+      for (const filter of [
+        { search: namespace },
+        { warehouseId: wid, quantityState: "ALL" },
+      ]) {
+        for (const sortBy of ["article", "name", "warehouse", "quantity"]) {
+          for (const sortOrder of ["asc", "desc"]) {
+            const query = { ...filter, sortBy, sortOrder, limit: "1" };
+            const all = await overview.list({ ...query, limit: "100" });
+            const pages = [];
+            for (const page of ["1", "2"])
+              pages.push(await overview.list({ ...query, page }));
+            assert.deepEqual(
+              pages.flatMap((p) => p.items.map((r) => r.id)),
+              all.items.map((r) => r.id),
+            );
+            assert.ok(pages.every((p) => p.total === all.total));
+            const beyond = await overview.list({ ...query, page: "3" });
+            assert.equal(beyond.total, 2);
+            assert.deepEqual(beyond.items, []);
+          }
+        }
+      }
+      const empty = await overview.list({
+        search: "absent impossible",
+        page: "3",
+      });
+      assert.equal(empty.total, 0);
+      assert.deepEqual(empty.items, []);
+    },
+  );
+  await t.test(
     "aggregates across places, separates warehouses, paginates groups and bounds previews",
     async () => {
       const result = await overview.list({ search: namespace });
@@ -153,6 +186,54 @@ export async function verifyStockOverview(
         (await overview.list({ search: "absent impossible" })).items.length,
         0,
       );
+    },
+  );
+  await t.test(
+    "zero physical balances with fully borrowed reservations remain visible",
+    async () => {
+      const project = await prisma.warehouseProject.create({
+        data: { projectNumber: namespace + "-zero" },
+      });
+      const balance = await prisma.warehouseBalance.findUniqueOrThrow({
+        where: {
+          itemId_storageLocationId: {
+            itemId: zero.id,
+            storageLocationId: places[0].location.id,
+          },
+        },
+      });
+      const reservation = await prisma.warehouseProjectReservation.create({
+        data: {
+          balanceId: balance.id,
+          projectId: project.id,
+          quantity: "3",
+          borrowedQuantity: "3",
+        },
+      });
+      try {
+        for (const search of [undefined, namespace]) {
+          const result = await overview.list({ warehouseId: wid, search });
+          const row = result.items.find((r) => r.item.id === String(zero.id));
+          assert.equal(row.quantity, "0");
+          assert.equal(row.locationsCount, 1);
+          assert.equal(row.locationsPreview[0].quantity, "0");
+        }
+        // POSITIVE location filtering still requires physical stock at the selected place.
+        const filtered = await overview.list({
+          warehouseId: wid,
+          locationId: String(places[0].location.id),
+        });
+        assert.ok(!filtered.items.some((r) => r.item.id === String(zero.id)));
+        const zeros = await overview.list({
+          warehouseId: wid,
+          quantityState: "ZERO",
+        });
+        assert.equal(zeros.items[0].item.id, String(zero.id));
+      } finally {
+        await prisma.warehouseProjectReservation.delete({
+          where: { id: reservation.id },
+        });
+      }
     },
   );
   await t.test(

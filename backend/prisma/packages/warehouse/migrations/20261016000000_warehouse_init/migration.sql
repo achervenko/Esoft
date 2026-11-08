@@ -13,6 +13,8 @@ CREATE TABLE "warehouse_items" (
 );
 
 CREATE UNIQUE INDEX "uq_warehouse_items_article" ON "warehouse_items"("article");
+CREATE INDEX "idx_warehouse_items_article_trgm" ON "warehouse_items" USING gin ("article" gin_trgm_ops);
+CREATE INDEX "idx_warehouse_items_name_trgm" ON "warehouse_items" USING gin ("name" gin_trgm_ops);
 
 CREATE TABLE "warehouses" (
     "id" BIGSERIAL PRIMARY KEY,
