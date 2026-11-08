@@ -7,6 +7,9 @@ import { verifyStockActivity } from "../../helpers/warehouse-stock-activity.mjs"
 import { verifyStockAtomicity } from "../../helpers/warehouse-stock-atomicity.mjs";
 import { verifyStockConcurrency } from "../../helpers/warehouse-stock-concurrency.mjs";
 import { verifyStockLocking } from "../../helpers/warehouse-stock-locking.mjs";
+import { verifyStockReservations } from "../../helpers/warehouse-stock-reservations.mjs";
+import { verifyReservations } from "../../helpers/warehouse-reservation-manager.mjs";
+import { verifyReservationApi } from "../../helpers/warehouse-reservation-api.mjs";
 import assert from "node:assert/strict";
 import { cp, mkdir, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -68,6 +71,9 @@ test(
           ["atomicity", verifyStockAtomicity],
           ["concurrency", verifyStockConcurrency],
           ["locking", verifyStockLocking],
+          ["reservation protection", verifyStockReservations],
+          ["reservation manager", verifyReservations],
+          ["reservation HTTP API", verifyReservationApi],
         ]) {
           await t.test(name, async (suite) => {
             await verify(await createStockTestContext(prisma, database), suite);

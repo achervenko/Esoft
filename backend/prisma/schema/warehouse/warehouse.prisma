@@ -12,6 +12,7 @@ model Warehouse {
 }
 
 model WarehouseItem {
+  reservations WarehouseReservation[]
   transfers WarehouseTransfer[]
   externalLinks WarehouseItemExternalLink[]
   receiptLines WarehouseReceiptLine[]
@@ -30,6 +31,7 @@ model WarehouseItem {
 }
 
 model WarehouseStorageLocation {
+  reservationAllocations WarehouseReservationAllocation[]
   transfersFrom WarehouseTransfer[] @relation("WarehouseTransferFrom")
   transfersTo WarehouseTransfer[] @relation("WarehouseTransferTo")
   receiptPlacements WarehouseReceiptPlacement[]

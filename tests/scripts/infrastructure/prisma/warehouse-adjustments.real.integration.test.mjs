@@ -10,6 +10,7 @@ import { verify as verifyIdempotency } from "../../helpers/warehouse-adjustments
 import { verify as verifyCounting } from "../../helpers/warehouse-adjustments/adjustments-counting.spec.mjs";
 import { verify as verifyDocuments } from "../../helpers/warehouse-adjustments/adjustments-documents.spec.mjs";
 import { verify as verifyRollback } from "../../helpers/warehouse-adjustments/adjustments-rollback.spec.mjs";
+import { verify as verifyReservations } from "../../helpers/warehouse-adjustments/adjustments-reservations.spec.mjs";
 import { verify as verifyStaging } from "../../helpers/warehouse-adjustments/storage-staging.spec.mjs";
 import { verify as verifyGenericOwner } from "../../helpers/warehouse-adjustments/storage-generic-owner.spec.mjs";
 
@@ -36,6 +37,7 @@ test(
       await verifyCounting(run);
       await verifyDocuments(run);
       await verifyRollback(run);
+      await verifyReservations(run);
       await verifyStaging(run);
       await verifyGenericOwner(run);
     } finally {

@@ -8,6 +8,7 @@ import { WarehouseIssueSheetsModule } from './issue-sheets/issue-sheets.module';
 import { WarehouseIssuesModule } from './issues/issues.module';
 import { WarehouseReceiptsModule } from './receipts/receipts.module';
 import { WarehouseStockAdjustmentsModule } from './adjustments/adjustments.module';
+import { WarehouseReservationsModule } from './reservations/reservations.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { WarehouseStockAdjustmentsModule } from './adjustments/adjustments.modul
     WarehouseReceiptIntegrationModule,
     WarehouseStockAdjustmentsModule,
     WarehouseTransfersModule,
+    WarehouseReservationsModule,
   ],
   // Preserve the existing Stock, IssueSheets and Receipts injection API for importing modules.
   exports: [

@@ -56,6 +56,9 @@ export const ROLE_PERMISSIONS = {
     'warehouse.storage-locations.read',
     'warehouse.storage-locations.manage',
     'warehouse.adjustments.manage',
+    'warehouse.reservations.read',
+    'warehouse.reservations.manage',
+    'warehouse.reservations.coverage.manage',
     'warehouse.issues.manage',
     'warehouse.issue-sheets.manage',
   ],
@@ -83,6 +86,7 @@ export const ROLE_PERMISSIONS = {
     'search.read',
   ],
   storekeeper: [
+    'warehouse.reservations.read',
     'warehouse.transfers.read',
     'warehouse.transfers.manage',
     'warehouse.receipts.read',

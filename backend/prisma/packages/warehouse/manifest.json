@@ -9,6 +9,10 @@
     {
       "id": "20261016000000_warehouse_init",
       "sha256": "25df7598ff820ff84ab08f653f9c61e89c2169b962635624ef0938be2bfcd4e0"
+    },
+    {
+      "id": "20261108000000_warehouse_reservations",
+      "sha256": "9ba0c957839621de0448552a94e4f36fbc0049792aa7af4642f67119520cd705"
     }
   ]
 }

@@ -13,6 +13,7 @@ model CustomerOrder {
   checkedAt DateTime @map("checked_at") @db.Timestamptz(6)
   changedAt DateTime @map("changed_at") @db.Timestamptz(6)
   history CustomerOrderChange[]
+  reservations WarehouseReservation[]
   @@unique([sourceId,externalId],map:"uq_customer_orders_external")
   @@index([number,id],map:"idx_customer_orders_number")
   @@map("customer_orders")

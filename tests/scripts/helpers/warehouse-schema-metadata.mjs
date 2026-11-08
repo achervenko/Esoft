@@ -1,5 +1,57 @@
 import assert from "node:assert/strict";
 export async function verifyWarehouseSchemaMetadata({ database }) {
+  const reservationForeignKeys = await database.query(`
+    SELECT fk.conrelid::regclass::text AS source_table,
+           source_column.attname AS source_column,
+           fk.confrelid::regclass::text AS target_table,
+           target_column.attname AS target_column,
+           fk.confdeltype AS delete_action,
+           fk.confupdtype AS update_action
+    FROM pg_constraint fk
+    JOIN pg_attribute source_column
+      ON source_column.attrelid = fk.conrelid
+     AND source_column.attnum = fk.conkey[1]
+    JOIN pg_attribute target_column
+      ON target_column.attrelid = fk.confrelid
+     AND target_column.attnum = fk.confkey[1]
+    WHERE fk.contype = 'f'
+      AND cardinality(fk.conkey) = 1
+      AND fk.conrelid IN (
+        'public.warehouse_reservations'::regclass,
+        'public.warehouse_reservation_allocations'::regclass
+      )
+      AND fk.confrelid IN (
+        'public.customer_orders'::regclass,
+        'public.warehouse_items'::regclass,
+        'public.warehouse_reservations'::regclass,
+        'public.warehouse_storage_locations'::regclass
+      )
+    ORDER BY source_table, source_column
+  `);
+  assert.deepEqual(
+    reservationForeignKeys.rows,
+    [
+      [
+        "warehouse_reservation_allocations",
+        "location_id",
+        "warehouse_storage_locations",
+      ],
+      [
+        "warehouse_reservation_allocations",
+        "reservation_id",
+        "warehouse_reservations",
+      ],
+      ["warehouse_reservations", "item_id", "warehouse_items"],
+      ["warehouse_reservations", "order_id", "customer_orders"],
+    ].map(([source_table, source_column, target_table]) => ({
+      source_table,
+      source_column,
+      target_table,
+      target_column: "id",
+      delete_action: "r",
+      update_action: "c",
+    })),
+  );
   const locationIndex = await database.query(
     "SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='idx_warehouse_balances_storage_location'",
   );
@@ -53,16 +105,18 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
       "warehouse_stock_adjustments",
       "warehouse_stock_adjustment_attachments",
       "warehouse_stock_adjustment_noops",
+      "warehouse_reservations",
+      "warehouse_reservation_allocations",
     ].sort(),
   );
   assert.equal(
-    columns.some((column) =>
-      [
-        "project_id",
-        "source_project",
-        "override_reservations",
-        "order_id",
-      ].includes(column.column_name),
+    columns.some(
+      (column) =>
+        ["project_id", "source_project", "override_reservations"].includes(
+          column.column_name,
+        ) ||
+        (column.column_name === "order_id" &&
+          column.table_name !== "warehouse_reservations"),
     ),
     false,
   );
@@ -133,5 +187,12 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
     64,
   );
   for (const column of columns.filter((column) => column.column_name === "id"))
-    assert.equal(column.data_type, "bigint");
+    assert.equal(
+      column.data_type,
+      ["warehouse_reservations", "warehouse_reservation_allocations"].includes(
+        column.table_name,
+      )
+        ? "uuid"
+        : "bigint",
+    );
 }

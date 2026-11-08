@@ -13,4 +13,7 @@ export const WAREHOUSE_PERMISSIONS = {
   CATALOG_MANAGE: 'warehouse.catalog.manage',
   CATALOG_LINKS_MANAGE: 'warehouse.catalog.links.manage',
   ADJUSTMENTS_MANAGE: 'warehouse.adjustments.manage',
+  RESERVATIONS_READ: 'warehouse.reservations.read',
+  RESERVATIONS_MANAGE: 'warehouse.reservations.manage',
+  RESERVATIONS_COVERAGE_MANAGE: 'warehouse.reservations.coverage.manage',
 } as const;

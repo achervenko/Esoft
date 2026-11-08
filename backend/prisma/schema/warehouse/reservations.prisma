@@ -1,0 +1,28 @@
+model WarehouseReservation {
+  id          String                           @id @db.Uuid
+  orderId     String                           @map("order_id") @db.Uuid
+  order       CustomerOrder                    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  itemId      BigInt                           @map("item_id")
+  item        WarehouseItem                    @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  quantity    Decimal                          @db.Decimal(14, 3)
+  createdAt   DateTime                         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime                         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  allocations WarehouseReservationAllocation[]
+
+  @@unique([orderId, itemId], map: "uq_warehouse_reservations_order_item")
+  @@index([itemId], map: "idx_warehouse_reservations_item")
+  @@map("warehouse_reservations")
+}
+
+model WarehouseReservationAllocation {
+  id            String                   @id @db.Uuid
+  reservationId String                   @map("reservation_id") @db.Uuid
+  reservation   WarehouseReservation     @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  locationId    BigInt                   @map("location_id")
+  location      WarehouseStorageLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  quantity      Decimal                  @db.Decimal(14, 3)
+
+  @@unique([reservationId, locationId], map: "uq_warehouse_reservation_allocations_location")
+  @@index([locationId], map: "idx_warehouse_reservation_allocations_location")
+  @@map("warehouse_reservation_allocations")
+}

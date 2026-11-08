@@ -2,7 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { AuditAction, AuditModule, Prisma } from '@prisma/client';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { stockError } from './stock.errors';
-import { assertStockTransaction, lockStockBalances } from './stock-locks';
+import { lockStockBalances } from './stock-locks';
+import {
+  assertFreeStock,
+  assertStockCoverage,
+  assertStockReadCommitted,
+  stockAvailability,
+} from './stock-availability';
 import { WarehouseStockQueryService } from './stock-query.service';
 import {
   balanceDto,
@@ -51,13 +57,28 @@ export class WarehouseStockService {
     await lockStockBalances(tx, itemId, locationIds);
   }
 
+  async lockAvailability(
+    tx: Prisma.TransactionClient,
+    itemId: string,
+    locationId: string,
+  ) {
+    await assertStockReadCommitted(tx);
+    const locked = await lockStockBalances(tx, itemId, [locationId]);
+    return stockAvailability(
+      tx,
+      locked.itemId,
+      locked.locationIds[0],
+      locked.balances.get(locked.locationIds[0]),
+    );
+  }
+
   async receiveStock(
     context: StockMutationContext,
     itemId: string,
     locationId: string,
     value: StockQuantity,
   ) {
-    this.assertContext(context);
+    await this.assertContext(context);
     const quantity = stockQuantity(value);
     const locked = await lockStockBalances(context.tx, itemId, [locationId]);
     const targetId = locked.locationIds[0];
@@ -75,16 +96,24 @@ export class WarehouseStockService {
     locationId: string,
     value: StockQuantity,
   ) {
-    this.assertContext(context);
+    await this.assertContext(context);
     const quantity = stockQuantity(value);
     const locked = await lockStockBalances(context.tx, itemId, [locationId]);
     const sourceId = locked.locationIds[0];
+    const availability = await stockAvailability(
+      context.tx,
+      locked.itemId,
+      sourceId,
+      locked.balances.get(sourceId),
+    );
+    assertStockCoverage(availability, itemId, locationId);
     const previous = this.requireSource(
       locked.balances.get(sourceId),
       itemId,
       locationId,
       quantity,
     );
+    assertFreeStock(availability, itemId, locationId, quantity);
     return balanceDto(
       await this.writeBalance(
         context,
@@ -103,7 +132,7 @@ export class WarehouseStockService {
     toLocationId: string,
     value: StockQuantity,
   ) {
-    this.assertContext(context);
+    await this.assertContext(context);
     const quantity = stockQuantity(value);
     const fromId = stockId(fromLocationId, 'fromLocationId');
     const toId = stockId(toLocationId, 'toLocationId');
@@ -117,13 +146,26 @@ export class WarehouseStockService {
       fromLocationId,
       toLocationId,
     ]);
+    const availability = await stockAvailability(
+      context.tx,
+      locked.itemId,
+      fromId,
+      locked.balances.get(fromId),
+    );
+    assertStockCoverage(availability, itemId, fromLocationId);
     const source = this.requireSource(
       locked.balances.get(fromId),
       itemId,
       fromLocationId,
       quantity,
     );
+    assertFreeStock(availability, itemId, fromLocationId, quantity);
     const destination = locked.balances.get(toId);
+    assertStockCoverage(
+      await stockAvailability(context.tx, locked.itemId, toId, destination),
+      itemId,
+      toLocationId,
+    );
     const destinationQuantity = (
       destination?.quantity ?? new Prisma.Decimal(0)
     ).plus(quantity);
@@ -145,8 +187,8 @@ export class WarehouseStockService {
     return { from: balanceDto(from), to: balanceDto(to) };
   }
 
-  private assertContext(context: StockMutationContext) {
-    assertStockTransaction(context?.tx);
+  private async assertContext(context: StockMutationContext) {
+    await assertStockReadCommitted(context?.tx);
     if (typeof context.actorUserId !== 'string' || !context.actorUserId.trim())
       stockError(
         400,

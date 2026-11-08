@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { ORDERS_FLOW } from './orders.constants';
+import { CLOSED_ORDER_STATUS, ORDERS_FLOW } from './orders.constants';
 import { ordersQuery, orderId } from './orders.validation';
 @Injectable()
 export class OrdersService {
@@ -21,9 +21,9 @@ export class OrdersService {
             : { lt: 2 },
       ...(q.statuses?.length ? { status: { in: q.statuses } } : {}),
       ...(q.closed === 'true'
-        ? { status: 'Закрыт' }
+        ? { status: CLOSED_ORDER_STATUS }
         : q.closed === 'false'
-          ? { status: { not: 'Закрыт' } }
+          ? { status: { not: CLOSED_ORDER_STATUS } }
           : {}),
       ...(search
         ? {

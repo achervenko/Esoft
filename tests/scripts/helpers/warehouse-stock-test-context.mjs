@@ -112,6 +112,19 @@ export async function createStockTestContext(prisma, database) {
     );
   const read = (location, itemId = id) =>
     stock.getBalance(itemId, loc(location));
+  // Inject pre-existing corruption for defensive tests, under the normal Stock locks.
+  const forceBalance = async (tx, location, quantity, itemId) => {
+    await stock.lockBalances(tx, itemId, [loc(location)]);
+    await tx.warehouseBalance.update({
+      where: {
+        itemId_storageLocationId: {
+          itemId: BigInt(itemId),
+          storageLocationId: location.id,
+        },
+      },
+      data: { quantity },
+    });
+  };
   const newItem = (article) =>
     prisma.warehouseItem
       .create({
@@ -141,6 +154,7 @@ export async function createStockTestContext(prisma, database) {
     issue,
     move,
     read,
+    forceBalance,
     newItem,
   };
 }

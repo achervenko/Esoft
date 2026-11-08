@@ -1,4 +1,5 @@
 export const ORDERS_FLOW = 'orders.customers';
+export const CLOSED_ORDER_STATUS = 'Закрыт';
 export const ORDERS_SCHEDULE = {
   hour: 3,
   timeZone: 'Europe/Moscow',
