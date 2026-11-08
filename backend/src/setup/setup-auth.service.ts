@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { auth } from '../auth/auth.config';
+import { AuthService } from '@thallesp/nestjs-better-auth';
+import type { Auth } from '../auth/auth.config';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   type CreateInitialAdminInput,
@@ -11,13 +12,16 @@ import {
 export class SetupAuthService {
   private readonly logger = new Logger(SetupAuthService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auth: AuthService<Auth>,
+  ) {}
 
   async createInitialAdminUser(
     input: CreateInitialAdminInput,
     employee: SetupEmployeeRow,
   ) {
-    const response = await auth.api.createUser({
+    const response = await this.auth.api.createUser({
       body: {
         data: {
           banned: false,

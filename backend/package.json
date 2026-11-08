@@ -36,7 +36,6 @@
     "@better-auth/api-key": "1.6.25",
     "@better-auth/core": "1.6.25",
     "@nestjs/common": "^11.0.1",
-    "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@prisma/adapter-pg": "7.10.1",

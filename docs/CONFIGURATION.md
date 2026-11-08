@@ -9,7 +9,7 @@
 Этот же состав определяет доступность назначения специализированных ролей:
 оператор, инженер и главный инженер требуют `equipment`, специалисты СИЗ — `ppe`,
 кладовщик — `warehouse`. Правила для существующих учётных записей описаны
-в [документации auth](../backend/src/auth/README.md#доступность-ролей-по-модулям).
+в [документации auth](../backend/src/auth/ROLE-POLICY.md#доступность-ролей-по-модулям).
 
 ## Назначение
 
@@ -79,14 +79,14 @@ npm run config:validate
 
 Профиль можно указать явно: `npm run config:validate -- --profile backend`. CLI без аргумента выбирает `production` при `NODE_ENV=production`, иначе `local`. Программные загрузчики выбирают профиль своего сценария.
 
-| Профиль | Что проверяет | Где используется |
-| --- | --- | --- |
-| `local` | Полную конфигурацию, локальные MinIO-файлы, root-реквизиты и конфликты портов | `dev`, локальные `doctor` и `setup` |
-| `backend` | Backend, PostgreSQL, авторизацию, публичный frontend origin для CORS и S3-реквизиты | Запуск backend |
-| `frontend` | Адреса backend/proxy, frontend listener и API URL; без PostgreSQL, авторизации и S3 | Vite build/dev/preview |
-| `production` | Runtime-настройки и заданные backup-пути; без локального MinIO и frontend listener | `doctor:prod`, `setup:prod` |
-| `storage-operation` | PostgreSQL, S3 и заданные `BACKUP_DIR` / `PG_DUMP_PATH` / `PG_RESTORE_PATH`; без адресов приложения и секретов авторизации | backup и restore |
-| `database` | `NODE_ENV` и `DATABASE_URL` | Prisma CLI, адаптер PostgreSQL и seed |
+| Профиль             | Что проверяет                                                                                                              | Где используется                      |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| `local`             | Полную конфигурацию, локальные MinIO-файлы, root-реквизиты и конфликты портов                                              | `dev`, локальные `doctor` и `setup`   |
+| `backend`           | Backend, PostgreSQL, авторизацию, публичный frontend origin для CORS и S3-реквизиты                                        | Запуск backend                        |
+| `frontend`          | Адреса backend/proxy, frontend listener и API URL; без PostgreSQL, авторизации и S3                                        | Vite build/dev/preview                |
+| `production`        | Runtime-настройки и заданные backup-пути; без локального MinIO и frontend listener                                         | `doctor:prod`, `setup:prod`           |
+| `storage-operation` | PostgreSQL, S3 и заданные `BACKUP_DIR` / `PG_DUMP_PATH` / `PG_RESTORE_PATH`; без адресов приложения и секретов авторизации | backup и restore                      |
+| `database`          | `NODE_ENV` и `DATABASE_URL`                                                                                                | Prisma CLI, адаптер PostgreSQL и seed |
 
 `MINIO_EXECUTABLE`, `MINIO_DATA_DIR`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD` и `MINIO_CONSOLE_PORT` обязательны только для `local`. Backend и production-операции используют `MINIO_HOST`, `MINIO_PORT`, `MINIO_USE_SSL`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET` и необязательный `MINIO_REGION`, подключаясь к уже работающему S3-серверу. Совпадение порта внешнего S3 с локальным listener не считается конфликтом. Неизвестный профиль отклоняется.
 

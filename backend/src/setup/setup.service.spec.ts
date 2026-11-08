@@ -1,6 +1,4 @@
-jest.mock('../auth/auth.config', () => ({
-  auth: { api: { createUser: jest.fn() } },
-}));
+jest.mock('@thallesp/nestjs-better-auth', () => ({ AuthService: class {} }));
 import { SetupService } from './setup.service';
 import { SetupStateService } from './setup-state.service';
 import type { PrismaService } from '../prisma/prisma.service';

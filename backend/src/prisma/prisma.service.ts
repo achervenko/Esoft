@@ -23,5 +23,3 @@ export class PrismaService
     await this.$disconnect();
   }
 }
-
-export const prismaService = new PrismaService();

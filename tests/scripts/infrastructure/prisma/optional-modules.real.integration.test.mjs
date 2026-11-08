@@ -150,6 +150,12 @@ const get = (app, file, name) => app.get(require('./backend/dist/src/' + file)[n
   const app = await NestFactory.create(AppModule, { logger: false, abortOnError: false });
   try {
     await app.listen(0, '127.0.0.1');
+    const appConfig = app.get(require('@nestjs/core').ApplicationConfig);
+    const PermissionsGuard = require('./backend/dist/src/auth/permissions.guard').PermissionsGuard;
+    const guards = appConfig.getGlobalGuards();
+    assert.equal(guards.length, 1);
+    assert.ok(guards[0] instanceof PermissionsGuard);
+    assert.equal(appConfig.getGlobalRequestGuards().length, 0);
     const loaded = Object.keys(require.cache).map(path => path.replaceAll('\\', '/'));
     for (const [id, folders] of [
       ['equipment', ['equipment', 'equipment-events', 'equipment-progress-dashboard', 'equipment-event-extension']],
@@ -186,6 +192,18 @@ const get = (app, file, name) => app.get(require('./backend/dist/src/' + file)[n
     const dictionaries = get(app, 'dictionaries-admin/dictionaries-admin.service', 'DictionariesAdminService');
     if (expected.has('equipment')) assert.deepEqual(await dictionaries.listManufacturers(), []);
     else assert.throws(() => dictionaries.listManufacturers(), { status: 404 });
+    const prisma = get(app, 'prisma/prisma.service', 'PrismaService');
+    const auth = app.get(require('@thallesp/nestjs-better-auth').AuthService);
+    const setupAuth = get(app, 'setup/setup-auth.service', 'SetupAuthService');
+    const administrator = await setupAuth.createInitialAdminUser(
+      {email:'probe-admin@test.invalid', username:'probeadmin', password:'Probe-password-12345', employeeId:1},
+      {id:1, first_name:'Проверка', last_name:'Администратор', middle_name:null, position:'Администратор'},
+    );
+    const signedIn = await auth.api.signInUsername({body:{username:'probeadmin',password:'Probe-password-12345'}});
+    assert.equal(signedIn.user.id, administrator.id);
+    assert.ok((await prisma.user.findUniqueOrThrow({where:{id:administrator.id}})).lastLoginAt);
+    assert.ok(await prisma.session.findFirst({where:{userId:administrator.id}}));
+
   } finally {
     await app.close();
   }

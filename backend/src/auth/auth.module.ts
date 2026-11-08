@@ -4,22 +4,34 @@ import {
   AuthGuard,
   AuthService,
 } from '@thallesp/nestjs-better-auth';
-import { auth } from './auth.config';
+import { createAuth } from './auth.config';
+import { PrismaModule } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import type { ExecutionContext } from '@nestjs/common';
 import { AUTHENTICATE_REQUEST, PermissionsGuard } from './permissions.guard';
-import { ActiveModulesModule } from '../config/active-modules.module';
+import {
+  ActiveModulesModule,
+  ACTIVE_MODULES,
+} from '../config/active-modules.module';
 
 @Module({
   imports: [
     ActiveModulesModule,
-    BetterAuthModule.forRoot({
-      auth,
+    BetterAuthModule.forRootAsync({
       disableGlobalAuthGuard: true,
-      bodyParser: {
-        json: { limit: '2mb' },
-        urlencoded: { limit: '2mb', extended: true },
-      },
+      imports: [PrismaModule, ActiveModulesModule],
+      inject: [PrismaService, ACTIVE_MODULES],
+      useFactory: (
+        prisma: PrismaService,
+        activeModules: readonly string[],
+      ) => ({
+        auth: createAuth(prisma, activeModules),
+        bodyParser: {
+          json: { limit: '2mb' },
+          urlencoded: { limit: '2mb', extended: true },
+        },
+      }),
     }),
   ],
   exports: [BetterAuthModule],

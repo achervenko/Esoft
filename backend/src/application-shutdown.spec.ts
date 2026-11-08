@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import type { Request, Response } from 'express';
 import { PrismaModule } from './prisma/prisma.module';
-import { PrismaService, prismaService } from './prisma/prisma.service';
+import { PrismaService } from './prisma/prisma.service';
 import {
   s3ClientProvider,
   StorageS3Client,
@@ -10,10 +10,6 @@ import { S3_CLIENT, STORAGE_CONFIG } from './storage/storage.tokens';
 
 describe('application shutdown', () => {
   it('finishes an active HTTP request before releasing Prisma and S3', async () => {
-    const connect = jest.spyOn(prismaService, '$connect').mockResolvedValue();
-    const disconnect = jest
-      .spyOn(prismaService, '$disconnect')
-      .mockResolvedValue();
     let releaseRequest!: () => void;
     let markStarted!: () => void;
     const requestStarted = new Promise<void>((resolve) => {
@@ -38,6 +34,9 @@ describe('application shutdown', () => {
         },
       ],
     }).compile();
+    const prisma = module.get(PrismaService);
+    const connect = jest.spyOn(prisma, '$connect').mockResolvedValue();
+    const disconnect = jest.spyOn(prisma, '$disconnect').mockResolvedValue();
     const app = module.createNestApplication({ logger: false });
     const s3 = app.get<StorageS3Client>(S3_CLIENT);
     const destroy = jest.spyOn(s3, 'destroy');
@@ -50,7 +49,7 @@ describe('application shutdown', () => {
     });
 
     try {
-      expect(app.get(PrismaService)).toBe(prismaService);
+      expect(app.get(PrismaService)).toBe(prisma);
       await app.listen(0, '127.0.0.1');
       expect(connect).toHaveBeenCalledTimes(1);
       const response = fetch(await app.getUrl());

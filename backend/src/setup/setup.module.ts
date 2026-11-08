@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AppAuthModule } from '../auth/auth.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SetupController } from './setup.controller';
 import { SetupAuditService } from './setup-audit.service';
@@ -9,7 +10,7 @@ import { SetupStateService } from './setup-state.service';
 
 @Module({
   controllers: [SetupController],
-  imports: [PrismaModule],
+  imports: [PrismaModule, AppAuthModule],
   providers: [
     SetupAuditService,
     SetupAuthService,

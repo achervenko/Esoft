@@ -13,10 +13,8 @@ export const integrationOptions = {
 };
 
 export async function withDictionaryFixtures(iso, action) {
-  const {
-    prismaService: prisma,
-  } = require('../../dist/src/prisma/prisma.service.js');
-  suitePrisma = prisma;
+  const { PrismaService } = require('../../dist/src/prisma/prisma.service.js');
+  const prisma = (suitePrisma ??= new PrismaService());
   const {
     DictionariesAdminService,
   } = require('../../dist/src/dictionaries-admin/dictionaries-admin.service.js');

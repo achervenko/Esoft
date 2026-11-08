@@ -1,6 +1,5 @@
 import { IntegrationRuntimeModule } from './integrations/integration-runtime.module';
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { loadRootEnvironment } from './config/root-environment';
 import { loadActiveModules } from './config/active-modules.module';
 import { loadOptionalModules } from './config/optional-modules';
@@ -20,10 +19,6 @@ const optionalModules = loadOptionalModules(loadActiveModules(projectRoot));
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      ignoreEnvFile: true,
-      isGlobal: true,
-    }),
     AppAuthModule,
     IntegrationRuntimeModule,
 
