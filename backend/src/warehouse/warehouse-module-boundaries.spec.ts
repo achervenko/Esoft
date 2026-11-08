@@ -14,7 +14,6 @@ const domainModels = new Set([
   'warehouseReceiptPlacement',
   'warehouseItem',
   'warehouseBalance',
-  'warehouseOrder',
   'warehouseItemExternalLink',
   'warehouseExternalWarehouse',
 ]);
@@ -24,7 +23,6 @@ const domainTables = [
   'warehouse_receipt_placements',
   'warehouse_items',
   'warehouse_balances',
-  'warehouse_orders',
   'warehouse_item_external_links',
   'warehouse_external_warehouses',
 ];

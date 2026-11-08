@@ -43,9 +43,6 @@ export class WarehouseIssueSheetExecutionService {
               },
             },
           },
-          ...(line.projectId
-            ? [{ projectId: { not: line.projectId } }, { projectId: null }]
-            : [{ projectId: { not: null } }]),
           { positions: { some: { balance: { itemId: { not: itemId } } } } },
           { type: { not: 'ISSUE_SHEET' } },
         ],
@@ -70,16 +67,6 @@ export class WarehouseIssueSheetExecutionService {
       );
     }
     return result;
-  }
-  async previewIssueForLine(
-    tx: Prisma.TransactionClient,
-    lineValue: string,
-    itemValue: string,
-    quantityValue: string,
-    actor: string,
-  ) {
-    return (await this.prepare(tx, lineValue, itemValue, quantityValue, actor))
-      .line;
   }
   private async prepare(
     tx: Prisma.TransactionClient,

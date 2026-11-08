@@ -10,7 +10,7 @@ it("routes the independent order directory and UUID card using order permissions
   });
   expect(resolveAppRoute("#/orders/not-id")).toEqual({ kind: "unknown" });
   expect(canAccessWorkspaceRoute(["orders.read"], `#/orders/${id}`)).toBe(true);
-  expect(canAccessWorkspaceRoute(["warehouse.projects.read"], "#/orders")).toBe(
+  expect(canAccessWorkspaceRoute(["warehouse.stock.read"], "#/orders")).toBe(
     false,
   );
 });

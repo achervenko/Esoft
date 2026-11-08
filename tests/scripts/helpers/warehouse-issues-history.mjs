@@ -9,19 +9,13 @@ export async function verifyWarehouseIssuesHistory(context) {
     service,
     queries,
     keeper,
-    projects,
     sheets,
   } = context;
-  const f = await fixture(["20", "10"], [["8"], []]);
-  const project = projects[0];
+  const f = await fixture(["20", "10"]);
   const oldArticle = "Кабель%_\\-2025";
   await prisma.warehouseItem.update({
     where: { id: f.item.id },
     data: { article: oldArticle, name: "Исторический кабель", unit: "м" },
-  });
-  await prisma.warehouseProject.update({
-    where: { id: project.id },
-    data: { projectNumber: "Проект-история", name: "Старый объект" },
   });
   await prisma.user.update({
     where: { id: keeper.id },
@@ -39,7 +33,6 @@ export async function verifyWarehouseIssuesHistory(context) {
     sheet.id,
     {
       itemId: String(f.item.id),
-      projectId: String(project.id),
       quantity: "5",
       matchingStatus: "MATCHED",
       rowNumber: 7,
@@ -55,14 +48,11 @@ export async function verifyWarehouseIssuesHistory(context) {
   assert.equal(issued.positions[0].item.article, oldArticle);
   assert.equal(issued.positions[0].item.unit, "м");
   assert.equal(issued.issuedBy.name, "Первоначальный кладовщик");
-  assert.equal(issued.project.projectNumber, "Проект-история");
   assert.deepEqual(issued.issueSheet, {
     id: sheet.id,
     name: "Исторический лист",
     rowNumber: 7,
   });
-  assert.equal(issued.reservationUsage[0].quantity, "3");
-  assert.equal(issued.foreignReservationsUsed, false);
   assert.deepEqual(json(await queries.get(issued.id)), issued);
   assert.deepEqual(
     json((await queries.list({ itemId: String(f.item.id) })).items[0]),
@@ -88,14 +78,6 @@ export async function verifyWarehouseIssuesHistory(context) {
       isActive: false,
     },
   });
-  await prisma.warehouseProject.update({
-    where: { id: project.id },
-    data: {
-      projectNumber: "NEW-PROJECT",
-      name: "Новый проект",
-      isActive: false,
-    },
-  });
   await prisma.user.update({
     where: { id: keeper.id },
     data: { name: "Новое имя кладовщика" },
@@ -109,7 +91,6 @@ export async function verifyWarehouseIssuesHistory(context) {
   for (const search of [
     oldArticle.toUpperCase(),
     "исторический кабель",
-    "проект-история",
     "Первоначальный кладовщик",
     "Исторический склад",
     "Исторический лист",
@@ -123,12 +104,7 @@ export async function verifyWarehouseIssuesHistory(context) {
     assert.equal(found.total, 1, search);
     assert.equal(found.items[0].id, issued.id);
   }
-  for (const search of [
-    "NEW-ARTICLE",
-    "Новый склад",
-    "NEW-PROJECT",
-    "Переименованный лист",
-  ])
+  for (const search of ["NEW-ARTICLE", "Новый склад", "Переименованный лист"])
     assert.equal(
       (await queries.list({ warehouseId: String(warehouse.id), search })).total,
       0,

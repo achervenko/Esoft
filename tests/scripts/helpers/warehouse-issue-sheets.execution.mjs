@@ -10,7 +10,6 @@ export async function verifyIssueSheetsExecution(context) {
     actor,
     item,
     location,
-    project,
     create,
     add,
     issue,
@@ -21,11 +20,6 @@ export async function verifyIssueSheetsExecution(context) {
   await service.markReady(sheet.id, actor.id);
   const firstIssue = await issue(line, "8");
   const history = await issueQueries.get(String(firstIssue.id));
-  assert.deepEqual(history.project, {
-    id: String(project.id),
-    projectNumber: project.projectNumber,
-    name: project.name,
-  });
   assert.deepEqual(history.issuedBy, { id: actor.id, name: actor.name });
   assert.deepEqual(history.issueSheet, {
     id: sheet.id,
@@ -44,8 +38,6 @@ export async function verifyIssueSheetsExecution(context) {
     history.positions[0].location.warehouse.id,
     history.warehouse.id,
   );
-  assert.deepEqual(history.reservationUsage, []);
-  assert.equal(history.foreignReservationsUsed, false);
   assert.doesNotThrow(() => JSON.stringify(history));
   const found = await issueQueries.list({
     warehouseId: String(location.warehouseId),

@@ -1,7 +1,6 @@
 import { ReceiptIntegrationWarehousesService } from './receipt-source-warehouses.service';
 import { ReceiptCatalogUsagePolicy } from './receipt-catalog-usage.policy';
 import { WarehouseCatalogModule } from '../catalog/catalog.module';
-import { WarehouseReceiptOrdersController } from './receipt-orders.controller';
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { AuditModule } from '../../audit/audit.module';
@@ -21,7 +20,7 @@ import { WarehouseReceiptImportService } from './receipt-import.service';
     WarehouseStockModule,
     WarehouseCatalogModule,
   ],
-  controllers: [WarehouseReceiptOrdersController, WarehouseReceiptsController],
+  controllers: [WarehouseReceiptsController],
   providers: [
     ReceiptIntegrationWarehousesService,
     ReceiptCatalogUsagePolicy,

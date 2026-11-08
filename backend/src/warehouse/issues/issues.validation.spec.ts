@@ -19,7 +19,6 @@ describe('Issues validation', () => {
     expect(input).toMatchObject({
       type: 'ISSUE_SHEET',
       issueSheetLineId: 1n,
-      overrideReservations: false,
     });
     expect(input.positions[0].balanceId).toBe(2n);
     expect(input.positions[0].quantity.toString()).toBe('1');
@@ -28,7 +27,6 @@ describe('Issues validation', () => {
     expect(parseIssue(valid)).toMatchObject({
       type: 'MANUAL',
       issueSheetLineId: null,
-      overrideReservations: false,
     });
     expect(parseIssue(valid).positions[0].balanceId).toBe(9007199254740993n);
     expect(parseIssue(valid).positions[0].quantity.toString()).toBe('1.125');
@@ -53,27 +51,15 @@ describe('Issues validation', () => {
   ])('rejects invalid or ambiguous input %o', (value) => {
     expect(() => parseIssue(value)).toThrow();
   });
-  it('accepts confirmed override only with a reason', () => {
-    expect(
-      parseIssue({
-        ...valid,
-        overrideReservations: true,
-        comment: ' Причина ',
-        overrideConfirmation: 'a'.repeat(64),
-      }),
-    ).toMatchObject({ comment: 'Причина', overrideReservations: true });
-  });
   it('validates filter ranges, lists and pagination', () => {
     expect(
       parseIssueFilters({
         itemIds: '1,2',
-        projectId: '3',
         types: 'MANUAL,ISSUE_SHEET',
         search: ' Исторический кабель ',
       }),
     ).toMatchObject({
       itemIds: [1n, 2n],
-      projectIds: [3n],
       search: 'Исторический кабель',
     });
     for (const filter of [
@@ -101,17 +87,16 @@ describe('Issue request identity', () => {
   ])('requires a valid UUID %s', (requestKey) =>
     expect(() => parseIssue({ ...valid, requestKey })).toThrow(),
   );
-  it('allows preview without key and normalizes UUID case', () => {
+  it('normalizes UUID case', () => {
     const { requestKey, ...body } = valid;
-    expect(parseIssue(body, true).requestKey).toBeNull();
+    expect(() => parseIssue(body)).toThrow();
     expect(
       parseIssue({ ...valid, requestKey: requestKey.toUpperCase() }).requestKey,
     ).toBe(requestKey);
   });
-  it('hashes normalized command without transient confirmation or key', () => {
+  it('hashes normalized command independently of key', () => {
     const a = {
       ...valid,
-      overrideReservations: true,
       comment: ' Reason ',
       positions: [
         { balanceId: '10', quantity: '2.000' },
@@ -122,7 +107,6 @@ describe('Issue request identity', () => {
       ...a,
       comment: 'Reason',
       requestKey: 'bcbf4fd4-89c4-4f5d-b8f2-150665d3c680',
-      overrideConfirmation: 'a'.repeat(64),
       positions: [...a.positions].reverse(),
     };
     expect(issueRequestHash(parseIssue(a))).toBe(

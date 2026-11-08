@@ -64,20 +64,8 @@ export function StockConsolidationForm({
     pending?.moves ??
     data.locations
       .filter((b) => b.location.id !== locationId)
-      .flatMap((b) => [
-        ...((quantityMillis(b.available) ?? 0n) > 0n
-          ? [{ fromLocationId: b.location.id, quantity: b.available }]
-          : []),
-        ...b.reservations
-          .filter(
-            (r) => (quantityMillis(r.movableQuantity ?? r.quantity) ?? 0n) > 0n,
-          )
-          .map((r) => ({
-            fromLocationId: b.location.id,
-            quantity: r.movableQuantity ?? r.quantity,
-            projectId: r.projectId,
-          })),
-      ]);
+      .filter((b) => (quantityMillis(b.quantity) ?? 0n) > 0n)
+      .map((b) => ({ fromLocationId: b.location.id, quantity: b.quantity }));
   const total = moves.reduce(
     (sum, m) => sum + (quantityMillis(m.quantity) ?? 0n),
     0n,
@@ -154,11 +142,7 @@ export function StockConsolidationForm({
       }}
     >
       <StockTransferProduct data={data} />
-      <p>
-        Выберите склад и место назначения.
-        {moves.some((move) => move.projectId) &&
-          " Резервы останутся за теми же проектами."}
-      </p>
+      <p>Выберите склад и место назначения.</p>
       <section
         className="stock-transfer-section"
         aria-label="Откуда перемещается товар"
@@ -176,19 +160,9 @@ export function StockConsolidationForm({
               const balance = data.locations.find(
                 (b) => b.location.id === move.fromLocationId,
               )!;
-              const reservation = balance.reservations.find(
-                (r) => r.projectId === move.projectId,
-              );
               return (
-                <tr key={`${move.fromLocationId}:${move.projectId ?? "free"}`}>
-                  <td>
-                    {balance.location.name}
-                    <small className="stock-inactive">
-                      {reservation
-                        ? `Резерв · ${reservation.projectNumber}${reservation.projectName ? ` · ${reservation.projectName}` : ""}`
-                        : "Свободно"}
-                    </small>
-                  </td>
+                <tr key={move.fromLocationId}>
+                  <td>{balance.location.name}</td>
                   <td className="stock-distribution-quantity">
                     {formatStockQuantity(move.quantity)} {data.item.unit}
                   </td>

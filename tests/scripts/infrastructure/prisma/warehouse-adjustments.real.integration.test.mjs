@@ -1,6 +1,3 @@
-import { verify as verifyReservationLifecycle } from "../../helpers/warehouse-adjustments/reservation-operations.lifecycle.test.mjs";
-import { verify as verifyReservationAtomicity } from "../../helpers/warehouse-adjustments/reservation-operations.atomicity.test.mjs";
-import { verify as verifyReservationStock } from "../../helpers/warehouse-adjustments/reservation-operations.stock.test.mjs";
 import test from "node:test";
 import {
   createAdjustmentsTestEnvironment,
@@ -17,7 +14,7 @@ import { verify as verifyStaging } from "../../helpers/warehouse-adjustments/sto
 import { verify as verifyGenericOwner } from "../../helpers/warehouse-adjustments/storage-generic-owner.spec.mjs";
 
 test(
-  "administrative adjustments and generic staged storage are atomic and preserve project demand",
+  "administrative adjustments and generic staged storage are atomic",
   { skip: process.env.ESOFT_MODULAR_MIGRATION_TEST !== "1", timeout: 120000 },
   async (t) => {
     const environment = await createAdjustmentsTestEnvironment();
@@ -37,9 +34,6 @@ test(
       await verifyAccess(run);
       await verifyIdempotency(run);
       await verifyCounting(run);
-      await verifyReservationLifecycle(run);
-      await verifyReservationAtomicity(run);
-      await verifyReservationStock(run);
       await verifyDocuments(run);
       await verifyRollback(run);
       await verifyStaging(run);

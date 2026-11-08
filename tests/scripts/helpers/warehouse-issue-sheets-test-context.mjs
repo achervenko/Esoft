@@ -91,9 +91,6 @@ export async function createIssueSheetsTestContext(prisma) {
       name: "Полка",
     },
   });
-  const project = await prisma.warehouseProject.create({
-    data: { projectNumber: namespace },
-  });
   const balance = await prisma.warehouseBalance.create({
     data: { itemId: item.id, storageLocationId: location.id, quantity: "100" },
   });
@@ -112,7 +109,6 @@ export async function createIssueSheetsTestContext(prisma) {
       sheet.id,
       {
         itemId: String(item.id),
-        projectId: String(project.id),
         quantity,
         matchingStatus: "MATCHED",
         rowNumber: 1,
@@ -141,7 +137,6 @@ export async function createIssueSheetsTestContext(prisma) {
               warehouseId: location.warehouseId,
               type: "ISSUE_SHEET",
               issueSheetLineId: BigInt(line.id),
-              projectId: current.projectId,
               issuedByUserId: actor.id,
               ...extra,
             };
@@ -149,16 +144,12 @@ export async function createIssueSheetsTestContext(prisma) {
               where: { id: balance.id },
               select: balanceSelect,
             });
-            // This low-level execution fixture does not consume project reservations.
             const snapshot = await captureIssueHeader(
               tx,
               data.issuedByUserId,
-              data.projectId,
               data.issueSheetLineId,
               {
                 warehouseId: data.warehouseId,
-                changes: [],
-                foreignReservations: [],
               },
             );
             const positionSnapshot = captureIssuePosition({
@@ -203,7 +194,6 @@ export async function createIssueSheetsTestContext(prisma) {
     item,
     otherItem,
     location,
-    project,
     balance,
     create,
     add,

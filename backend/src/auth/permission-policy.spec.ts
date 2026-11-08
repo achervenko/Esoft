@@ -85,14 +85,3 @@ describe('profile read permission', () => {
     expect(permissions).not.toContain('users.manage');
   });
 });
-
-it('keeps ordinary reservation management separate from override', () => {
-  expect(hasPermission('storekeeper', 'warehouse.reservations.manage')).toBe(
-    true,
-  );
-  expect(hasPermission('storekeeper', 'warehouse.reservations.override')).toBe(
-    false,
-  );
-  expect(hasPermission('admin', 'warehouse.reservations.manage')).toBe(true);
-  expect(hasPermission('admin', 'warehouse.reservations.override')).toBe(true);
-});

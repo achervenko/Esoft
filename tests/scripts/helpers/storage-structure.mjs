@@ -132,7 +132,7 @@ export async function verifyStorageStructure(prisma) {
     /audit unavailable/,
   );
   assert.equal((await warehouses.findOne(a.id)).name, a.name);
-  // Restoration keeps identifiers, balances, reservations and existing audit rows.
+  // Restoration keeps identifiers, balances and existing audit rows.
   const parent = await warehouses.create({ name: "Restore" }, actor.id);
   const place = await locations.create(
     { warehouseId: parent.id, name: "Restore" },
@@ -147,12 +147,6 @@ export async function verifyStorageStructure(prisma) {
       storageLocationId: BigInt(place.id),
       quantity: "5",
     },
-  });
-  const project = await prisma.warehouseProject.create({
-    data: { projectNumber: "RESTORE" },
-  });
-  const reservation = await prisma.warehouseProjectReservation.create({
-    data: { balanceId: balance.id, projectId: project.id, quantity: "2" },
   });
   const oldAudit = await prisma.auditLog.findMany({
     where: {
@@ -206,14 +200,6 @@ export async function verifyStorageStructure(prisma) {
       })
     ).quantity.toString(),
     "5",
-  );
-  assert.equal(
-    (
-      await prisma.warehouseProjectReservation.findUniqueOrThrow({
-        where: { id: reservation.id },
-      })
-    ).quantity.toString(),
-    "2",
   );
   for (const row of oldAudit)
     assert.deepEqual(

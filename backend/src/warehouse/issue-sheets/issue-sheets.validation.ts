@@ -114,7 +114,6 @@ export function parseCreateSheet(value: unknown) {
 const businessFields = [
   'itemId',
   'storageLocationId',
-  'projectId',
   'quantity',
   'unitSnapshot',
   'matchingStatus',
@@ -124,12 +123,10 @@ const sourceLimits = {
   sourceArticle: 100,
   sourceName: 255,
   sourceLocation: 255,
-  sourceProject: 255,
 };
 export type SheetLineInput = {
   itemId?: bigint | null;
   storageLocationId?: bigint | null;
-  projectId?: bigint | null;
   quantity?: Prisma.Decimal;
   unitSnapshot?: string | null;
   matchingStatus?: string;
@@ -137,7 +134,6 @@ export type SheetLineInput = {
   sourceArticle?: string | null;
   sourceName?: string | null;
   sourceLocation?: string | null;
-  sourceProject?: string | null;
   rowNumber?: number;
 };
 export function parseSheetLine(value: unknown, create: boolean) {
@@ -149,7 +145,7 @@ export function parseSheetLine(value: unknown, create: boolean) {
   );
   if (!Object.keys(body).length) invalid('Укажите поля строки.');
   const data: SheetLineInput = {};
-  for (const key of ['itemId', 'storageLocationId', 'projectId'] as const) {
+  for (const key of ['itemId', 'storageLocationId'] as const) {
     if (key in body)
       data[key] = body[key] === null ? null : parseWarehouseId(body[key]);
   }
@@ -182,7 +178,6 @@ export function parseSheetFilters(value: unknown) {
     'statuses',
     'createdByUserId',
     'processedByUserId',
-    'projectId',
     'itemId',
     'hasErrors',
     'hasUnmatchedLines',
@@ -213,8 +208,6 @@ export function parseSheetFilters(value: unknown) {
       q.processedByUserId === undefined
         ? undefined
         : text(q.processedByUserId, 255)!,
-    projectId:
-      q.projectId === undefined ? undefined : parseWarehouseId(q.projectId),
     itemId: q.itemId === undefined ? undefined : parseWarehouseId(q.itemId),
     hasErrors: q.hasErrors === undefined ? undefined : boolean(q.hasErrors),
     hasUnmatchedLines:
@@ -254,7 +247,6 @@ export function parseLineFilters(value: unknown) {
   const q = sheetRecord(value ?? {}, [
     'matchingStatuses',
     'itemId',
-    'projectId',
     'storageLocationId',
     'hasError',
     'executionState',
@@ -271,8 +263,6 @@ export function parseLineFilters(value: unknown) {
         ? undefined
         : enumList(q.matchingStatuses, MATCHING_STATUSES),
     itemId: q.itemId === undefined ? undefined : parseWarehouseId(q.itemId),
-    projectId:
-      q.projectId === undefined ? undefined : parseWarehouseId(q.projectId),
     storageLocationId:
       q.storageLocationId === undefined
         ? undefined

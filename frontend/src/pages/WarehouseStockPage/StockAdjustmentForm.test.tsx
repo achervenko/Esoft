@@ -37,19 +37,18 @@ it("hides correction actions without administrator permission", async () => {
       onChanged={vi.fn()}
     />,
   );
-  await screen.findByText("PROJECT-7", { exact: false });
+  await screen.findByText("Угол ангара");
   expect(
     screen.queryByRole("button", { name: /Исправить количество/ }),
   ).not.toBeInTheDocument();
 });
-it("corrects physical quantity including reserves, accepts zero and requires a reason", async () => {
+it("corrects physical quantity accepts zero and requires a reason", async () => {
   vi.mocked(warehouseStockApi.adjust).mockResolvedValue({});
   await open();
   expect(screen.getByText("10,001", { exact: false })).toBeVisible();
   fireEvent.change(screen.getByLabelText(/Фактически на месте/), {
     target: { value: "0" },
   });
-  expect(screen.getByText(/Возникнет нехватка/)).toBeVisible();
   const save = screen.getByRole("button", { name: "Сохранить" });
   expect(save).toBeDisabled();
   fireEvent.change(screen.getByLabelText("Причина"), {

@@ -79,12 +79,11 @@ export function lineDto(
     issueSheetId: String(line.issueSheetId),
     itemId: line.itemId?.toString() ?? null,
     storageLocationId: line.storageLocationId?.toString() ?? null,
-    projectId: line.projectId?.toString() ?? null,
     quantity: line.quantity.toString(),
     ...lineProgress(line.quantity, issued),
   };
 }
-// Count actual positions, not the number of issues. No stock/reservation tables are involved.
+// Count actual positions, not the number of issues. No stock tables are involved.
 export const lineProgressSql = Prisma.sql`
  SELECT l.*, COALESCE(p.issued, 0) AS issued, COALESCE(p.issue_count, 0) AS issue_count
  FROM warehouse_issue_sheet_lines l

@@ -1,6 +1,5 @@
 import { StockLocationSummary } from "./StockLocationSummary";
-import { Notice } from "../../shared/ui/Notice";
-import { formatStockQuantity, quantityMillis } from "./stock-page.utils";
+import { formatStockQuantity } from "./stock-page.utils";
 import type { StockAdjustmentFormProps } from "./useStockAdjustmentForm";
 type PreviewProps = Pick<StockAdjustmentFormProps, "data" | "balance">;
 export function StockAdjustmentSummary({ data, balance }: PreviewProps) {
@@ -20,7 +19,6 @@ export function StockAdjustmentSummary({ data, balance }: PreviewProps) {
 }
 export function StockAdjustmentPreview({
   data,
-  balance,
   amount,
   delta,
 }: PreviewProps & { amount: bigint | null; delta: bigint }) {
@@ -50,12 +48,6 @@ export function StockAdjustmentPreview({
           </div>
         </div>
       </div>
-      {amount !== null && amount < (quantityMillis(balance.reserved) ?? 0n) && (
-        <Notice>
-          Фактическое количество меньше резерва. Возникнет нехватка; резервы
-          останутся без изменений.
-        </Notice>
-      )}
     </>
   );
 }

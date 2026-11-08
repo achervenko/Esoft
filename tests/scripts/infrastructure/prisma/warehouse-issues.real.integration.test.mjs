@@ -10,7 +10,7 @@ import { verifyWarehouseIssues } from "../../helpers/warehouse-issues.mjs";
 const require = createRequire(import.meta.url);
 const project = resolve(import.meta.dirname, "../../../..");
 test(
-  "Issues availability, reservations, confirmed overrides, concurrency and atomicity",
+  "Issues availability, history, concurrency and atomicity",
   {
     skip: process.env.ESOFT_MODULAR_MIGRATION_TEST !== "1",
     timeout: 120000,

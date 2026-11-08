@@ -89,7 +89,6 @@ export function receiptDto(
       placed: placed.toString(),
       remaining: l.quantity.minus(placed).toString(),
       order: l.orderSnapshot,
-      orderId: l.orderId === null ? null : String(l.orderId),
       mappingStatus: l.itemId === null ? 'UNMAPPED' : 'MAPPED',
       reconciledToLineId:
         l.reconciledToLineId === null ? null : String(l.reconciledToLineId),

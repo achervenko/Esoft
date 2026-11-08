@@ -3,7 +3,7 @@ import { hasCode } from "./warehouse-transfers-test-context.mjs";
 
 export async function verifyTransfersConsolidation(run) {
   await run(
-    "consolidation moves multiple locations and projects atomically across warehouses with replay",
+    "consolidation moves multiple locations atomically across warehouses with replay",
     async ({
       prisma,
       actor,
@@ -15,28 +15,8 @@ export async function verifyTransfersConsolidation(run) {
       consolidation,
       namespace,
     }) => {
-      const source = await receive(a, "10");
-      const second = await receive(b, "4");
-      const project = await prisma.warehouseProject.create({
-        data: { projectNumber: namespace },
-      });
-      const otherProject = await prisma.warehouseProject.create({
-        data: { projectNumber: namespace + "-other" },
-      });
-      await prisma.warehouseProjectReservation.create({
-        data: {
-          balanceId: BigInt(second.id),
-          projectId: otherProject.id,
-          quantity: "2",
-        },
-      });
-      await prisma.warehouseProjectReservation.create({
-        data: {
-          balanceId: BigInt(source.id),
-          projectId: project.id,
-          quantity: "6",
-        },
-      });
+      await receive(a, "10");
+      await receive(b, "4");
       const warehouse = await prisma.warehouse.create({
         data: { name: namespace + "-target" },
       });
@@ -49,18 +29,8 @@ export async function verifyTransfersConsolidation(run) {
         fromWarehouseId: String(a.warehouseId),
         toLocationId: String(target.id),
         moves: [
-          { fromLocationId: String(a.id), quantity: "4" },
-          {
-            fromLocationId: String(a.id),
-            quantity: "6",
-            projectId: String(project.id),
-          },
-          { fromLocationId: String(b.id), quantity: "2" },
-          {
-            fromLocationId: String(b.id),
-            quantity: "2",
-            projectId: String(otherProject.id),
-          },
+          { fromLocationId: String(a.id), quantity: "10" },
+          { fromLocationId: String(b.id), quantity: "4" },
         ],
       };
       const results = await Promise.all([
@@ -71,21 +41,10 @@ export async function verifyTransfersConsolidation(run) {
         ),
       ]);
       assert.deepEqual(results[0], results[1]);
-      assert.equal(results[0].ids.length, 4);
+      assert.equal(results[0].ids.length, 2);
       assert.equal((await read(a)).quantity, "0");
       assert.equal((await read(b)).quantity, "0");
       assert.equal((await read(target)).quantity, "14");
-      const reserve = await prisma.warehouseProjectReservation.findFirstOrThrow(
-        { where: { projectId: project.id } },
-      );
-      assert.equal(reserve.quantity.toString(), "6");
-      assert.equal(String(reserve.balanceId), (await read(target)).id);
-      const otherReserve =
-        await prisma.warehouseProjectReservation.findFirstOrThrow({
-          where: { projectId: otherProject.id },
-        });
-      assert.equal(otherReserve.quantity.toString(), "2");
-      assert.equal(otherReserve.balanceId, reserve.balanceId);
       await assert.rejects(
         consolidation.consolidate(
           {

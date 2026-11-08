@@ -16,7 +16,7 @@ export function assertStockTransaction(tx: Prisma.TransactionClient) {
     );
 }
 
-// All writers, including reservations, must acquire these locks before balance locks.
+// All stock writers must acquire these locks before balance locks.
 // SHARE on the item coordinates with Catalog's FOR UPDATE (unit and status changes).
 export async function lockStockBalances(
   tx: Prisma.TransactionClient,

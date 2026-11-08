@@ -25,12 +25,10 @@ import { WarehouseReceiptReconciliationService } from './receipts/receipt-reconc
 import { WarehouseReceiptConflictResolutionService } from './receipts/receipt-conflict-resolution.service';
 import { WarehouseIssueSheetsService } from './issue-sheets/issue-sheets.service';
 import { WarehouseIssuesController } from './issues/issues.controller';
-import { WarehouseReservationsController } from './reservations/reservations.controller';
 import { WarehouseStockAdjustmentsController } from './adjustments/adjustments.controller';
 import { WarehouseCatalogController } from './catalog/catalog.controller';
 import { WarehousesController } from './storage-structure/warehouses.controller';
 import { WarehouseStorageLocationsController } from './storage-structure/storage-locations.controller';
-import { WarehouseProjectsController } from './projects/projects.controller';
 import { WarehouseStockController } from './stock/stock.controller';
 import { WarehouseReceiptsController } from './receipts/receipts.controller';
 import { WarehouseIssueSheetsController } from './issue-sheets/issue-sheets.controller';
@@ -98,12 +96,10 @@ describe('Warehouse component wiring', () => {
         WarehouseReceiptsController,
         WarehouseIssueSheetsController,
         WarehouseIssuesController,
-        WarehouseReservationsController,
         WarehouseStockAdjustmentsController,
         WarehouseCatalogController,
         WarehousesController,
         WarehouseStorageLocationsController,
-        WarehouseProjectsController,
       ]) {
         expect(fixture.get(controller)).toBeInstanceOf(controller);
       }

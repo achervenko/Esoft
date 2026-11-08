@@ -11,29 +11,17 @@ export async function verifyWarehouseIssuesBasic(context) {
     queries,
     keeper,
     denied,
-    projects,
     balanceQuantity,
-    reserveQuantity,
   } = context;
-  const base = await fixture(["100"], [["50", "20"]]);
-  for (const [projectId, available] of [
-    [undefined, "30"],
-    [String(projects[0].id), "80"],
-    [String(projects[1].id), "50"],
-  ]) {
-    const row = (
-      await queries.available({
-        itemId: String(base.item.id),
-        ...(projectId ? { projectId } : {}),
-      })
-    ).items[0];
-    assert.equal(row.available, available);
-    assert.equal(row.physical, "100");
-    assert.equal(row.reserved, "70");
-  }
+  const base = await fixture(["100"]);
+  assert.equal(
+    (await queries.available({ itemId: String(base.item.id) })).items[0]
+      .quantity,
+    "100",
+  );
   await assert.rejects(
-    service.createIssue(payload(base, ["31"]), keeper.id),
-    code("WAREHOUSE_ISSUE_RESERVED_STOCK"),
+    service.createIssue(payload(base, ["101"]), keeper.id),
+    code("WAREHOUSE_STOCK_INSUFFICIENT"),
   );
   await assert.rejects(
     service.createIssue(payload(base, ["1"]), denied.id),
@@ -46,37 +34,15 @@ export async function verifyWarehouseIssuesBasic(context) {
   assert.equal(manual.type, "MANUAL");
   assert.equal(manual.issueSheetLineId, null);
   assert.equal(manual.issuedByUserId, keeper.id);
-  assert.equal(
-    await reserveQuantity(base.balances[0].id, projects[0].id),
-    "50",
-  );
-  const own = await service.createIssue(
-    payload(base, ["30"], { projectId: String(projects[0].id) }),
-    keeper.id,
-  );
-  assert.equal(own.reservationUsage[0].quantity, "30");
-  assert.equal(
-    await reserveQuantity(base.balances[0].id, projects[0].id),
-    "20",
-  );
-  assert.equal(await balanceQuantity(base.balances[0].id), "45");
-  const multi = await fixture(
-    ["100", "100"],
-    [
-      ["20", "30"],
-      ["20", "30"],
-    ],
-  );
+  const multi = await fixture(["100", "100"]);
   const multiIssue = await service.createIssue(
-    payload(multi, ["25", "25"], { projectId: String(projects[0].id) }),
+    payload(multi, ["25", "25"]),
     keeper.id,
   );
   assert.equal(multiIssue.positions.length, 2);
   assert.equal(multiIssue.totalQuantity, "50");
   for (const b of multi.balances) {
     assert.equal(await balanceQuantity(b.id), "75");
-    assert.equal(await reserveQuantity(b.id, projects[0].id), "0");
-    assert.equal(await reserveQuantity(b.id, projects[1].id), "30");
   }
   const other = await fixture();
   await assert.rejects(
@@ -93,7 +59,7 @@ export async function verifyWarehouseIssuesBasic(context) {
     ),
     code("WAREHOUSE_ISSUE_MULTIPLE_ITEMS"),
   );
-  const unavailable = await fixture(["10"], [["10"]]);
+  const unavailable = await fixture(["0"]);
   assert.equal(
     (await queries.available({ itemId: String(unavailable.item.id) })).items
       .length,
@@ -105,7 +71,7 @@ export async function verifyWarehouseIssuesBasic(context) {
         itemId: String(unavailable.item.id),
         includeUnavailable: true,
       })
-    ).items[0].available,
+    ).items[0].quantity,
     "0",
   );
   assert.equal(
@@ -123,7 +89,6 @@ export async function verifyWarehouseIssuesBasic(context) {
     (
       await queries.list({
         itemIds: [String(multi.item.id), String(other.item.id)],
-        projectIds: [String(projects[0].id)],
         issuedByUserId: keeper.id,
         createdFrom: new Date(Date.now() - 60000),
         createdTo: new Date(),

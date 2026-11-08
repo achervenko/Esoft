@@ -2,11 +2,13 @@
   "id": "warehouse",
   "version": 1,
   "requiresCore": 1,
-  "requiresPackages": { "orders": 1 },
+  "requiresPackages": {
+    "orders": 1
+  },
   "migrations": [
     {
       "id": "20261016000000_warehouse_init",
-      "sha256": "9398528cc460eb6ca6cf3a2cdb6e4b82f445a2ba3e3b2d011c428d6f26076046"
+      "sha256": "25df7598ff820ff84ab08f653f9c61e89c2169b962635624ef0938be2bfcd4e0"
     }
   ]
 }

@@ -1,9 +1,5 @@
 import assert from "node:assert/strict";
 export async function verifyWarehouseSchemaMetadata({ database }) {
-  const index = await database.query(
-    "SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='idx_warehouse_project_reservations_project'",
-  );
-  assert.match(index.rows[0].indexdef, /\(project_id\)/);
   const locationIndex = await database.query(
     "SELECT indexdef FROM pg_indexes WHERE schemaname='public' AND indexname='idx_warehouse_balances_storage_location'",
   );
@@ -44,14 +40,11 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
       "warehouse_transfers",
       "warehouse_receipt_lines",
       "warehouse_receipt_placements",
-      "warehouse_orders",
       "warehouse_item_external_links",
       "warehouse_external_warehouses",
       "warehouse_items",
       "warehouse_storage_locations",
-      "warehouse_projects",
       "warehouse_balances",
-      "warehouse_project_reservations",
       "warehouse_issue_sheets",
       "warehouse_issue_sheet_lines",
       "warehouse_issues",
@@ -60,8 +53,18 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
       "warehouse_stock_adjustments",
       "warehouse_stock_adjustment_attachments",
       "warehouse_stock_adjustment_noops",
-      "warehouse_reservation_operations",
     ].sort(),
+  );
+  assert.equal(
+    columns.some((column) =>
+      [
+        "project_id",
+        "source_project",
+        "override_reservations",
+        "order_id",
+      ].includes(column.column_name),
+    ),
+    false,
   );
   assert.equal(
     columns.some(
@@ -130,10 +133,5 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
     64,
   );
   for (const column of columns.filter((column) => column.column_name === "id"))
-    assert.equal(
-      column.data_type,
-      column.table_name === "warehouse_reservation_operations"
-        ? "uuid"
-        : "bigint",
-    );
+    assert.equal(column.data_type, "bigint");
 }

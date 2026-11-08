@@ -121,7 +121,6 @@ export function parseReceiptQuery(value: unknown) {
     'hasConflict',
     'sortBy',
     'sortOrder',
-    'orderId',
     'itemId',
     'createdByUserId',
     'documentDateFrom',
@@ -226,7 +225,6 @@ export function parseReceiptQuery(value: unknown) {
     includeConflicts: q.status === undefined || status.includes('CONFLICT'),
     warehouseId: id('warehouseId'),
     itemId: id('itemId'),
-    orderId: id('orderId'),
     source: q.source,
     status: status.filter((s) => s !== 'CONFLICT'),
     attention: q.attention as

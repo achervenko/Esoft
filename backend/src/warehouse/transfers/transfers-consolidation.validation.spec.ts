@@ -6,18 +6,17 @@ const body = {
   toLocationId: '3',
   moves: [
     { fromLocationId: '4', quantity: '2' },
-    { fromLocationId: '4', quantity: '1', projectId: '7' },
+    { fromLocationId: '5', quantity: '1' },
   ],
 };
 describe('Consolidation validation', () => {
-  it('normalizes order and preserves free and reserved rows separately', () => {
+  it('normalizes order and sorts source locations', () => {
     expect(parseConsolidation(body)).toEqual(
       parseConsolidation({ ...body, moves: [...body.moves].reverse() }),
     );
-    expect(parseConsolidation(body).moves.map((m) => m.projectId)).toEqual([
-      null,
-      '7',
-    ]);
+    expect(parseConsolidation(body).moves.map((m) => m.fromLocationId)).toEqual(
+      ['4', '5'],
+    );
   });
   it.each([
     null,

@@ -6,15 +6,11 @@ import {
   warehouseDto,
 } from '../storage-structure/storage-structure.dto';
 import type { IssuePlan } from './issues-plan.service';
-import type { ReservationUse } from '../reservations/reservation-consumption';
 export type IssueHeaderSnapshot = {
   version: 1;
   warehouse: ReturnType<typeof warehouseDto>;
-  project: { id: string; projectNumber: string; name: string | null } | null;
   issuedBy: { id: string; name: string };
   issueSheet: { id: string; name: string; rowNumber: number } | null;
-  reservationUsage: ReservationUse[];
-  foreignReservationsUsed: boolean;
 };
 export type IssuePositionSnapshot = {
   item: ReturnType<typeof warehouseItemIdentityDto>;
@@ -23,7 +19,6 @@ export type IssuePositionSnapshot = {
 export async function captureIssueHeader(
   tx: Prisma.TransactionClient,
   actor: string,
-  projectId: bigint | null,
   lineId: bigint | null,
   plan: IssuePlan,
 ): Promise<IssueHeaderSnapshot> {
@@ -34,13 +29,6 @@ export async function captureIssueHeader(
     where: { id: actor },
     select: { id: true, name: true },
   });
-  const project =
-    projectId === null
-      ? null
-      : await tx.warehouseProject.findUniqueOrThrow({
-          where: { id: projectId },
-          select: { id: true, projectNumber: true, name: true },
-        });
   const line =
     lineId === null
       ? null
@@ -54,7 +42,6 @@ export async function captureIssueHeader(
   return {
     version: 1,
     warehouse: warehouseDto(warehouse),
-    project: project ? { ...project, id: String(project.id) } : null,
     issuedBy: user,
     issueSheet: line
       ? {
@@ -63,8 +50,6 @@ export async function captureIssueHeader(
           rowNumber: line.rowNumber,
         }
       : null,
-    reservationUsage: plan.changes,
-    foreignReservationsUsed: plan.foreignReservations.length > 0,
   };
 }
 export function captureIssuePosition(
@@ -82,12 +67,9 @@ export function issueHistorySearch(
 ) {
   return [
     header.warehouse.name,
-    header.project?.projectNumber,
-    header.project?.name,
     header.issuedBy.name,
     header.issueSheet?.name,
     comment,
-    ...header.reservationUsage.flatMap((r) => [r.projectNumber, r.projectName]),
     ...positions.flatMap((p) => [
       p.item.article,
       p.item.name,

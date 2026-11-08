@@ -63,7 +63,6 @@ export async function adversarialReceiptWorker(c, t) {
       "failed import audit cannot acknowledge the event; a restarted worker recovers it",
       async () => {
         const event = await enqueue(),
-          beforeOrders = await c.prisma.warehouseOrder.count(),
           beforeAudit = await c.prisma.auditLog.count();
         const originalAudit = c.audit.writeFieldChanges;
         c.audit.writeFieldChanges = (params) =>
@@ -82,7 +81,6 @@ export async function adversarialReceiptWorker(c, t) {
           await c.prisma.warehouseReceipt.count({ where: { sourceSystem } }),
           0,
         );
-        assert.equal(await c.prisma.warehouseOrder.count(), beforeOrders);
         assert.equal(await c.prisma.auditLog.count(), beforeAudit);
         const {
           IntegrationWorkerService,

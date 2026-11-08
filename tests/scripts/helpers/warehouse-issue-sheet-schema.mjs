@@ -5,7 +5,6 @@ export async function verifyWarehouseIssueSheetSchema({
   actor,
   item,
   location,
-  projectRow,
 }) {
   const sheet = await prisma.warehouseIssueSheet.create({
     data: {
@@ -30,12 +29,10 @@ export async function verifyWarehouseIssueSheetSchema({
       sourceArticle: "Imported article",
       sourceName: "Imported name",
       sourceLocation: "Shelf",
-      sourceProject: "Project",
     },
   });
   assert.equal(line.itemId, null);
   assert.equal(line.storageLocationId, null);
-  assert.equal(line.projectId, null);
   for (const rowNumber of [0, -1]) {
     await assert.rejects(
       database.query(
@@ -99,13 +96,11 @@ export async function verifyWarehouseIssueSheetSchema({
     data: {
       itemId: item.id,
       storageLocationId: location.id,
-      projectId: projectRow.id,
       unitSnapshot: item.unit,
     },
     include: {
       item: true,
       storageLocation: true,
-      project: true,
       issueSheet: true,
     },
   });

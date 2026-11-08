@@ -9,25 +9,13 @@ export function createTransfersTestRunner(prisma, database, t) {
       const {
         WarehouseTransfersService,
       } = require("../../../backend/dist/src/warehouse/transfers/transfers.service.js");
-      const {
-        WarehouseReservationsService,
-      } = require("../../../backend/dist/src/warehouse/reservations/reservations.service.js");
-      const {
-        WarehouseReservationsApiService,
-      } = require("../../../backend/dist/src/warehouse/reservations/reservations-api.service.js");
       const ctx = await createStockTestContext(prisma, database);
       const {
         WarehouseStockOverviewService,
       } = require("../../../backend/dist/src/warehouse/stock/stock-overview.service.js");
       const overview = new WarehouseStockOverviewService(prisma);
       const audit = ctx.audit;
-      const reservations = new WarehouseReservationsService(audit);
-      const service = new WarehouseTransfersService(
-        prisma,
-        ctx.stock,
-        reservations,
-        audit,
-      );
+      const service = new WarehouseTransfersService(prisma, ctx.stock, audit);
       const {
         WarehouseTransferConsolidationService,
       } = require("../../../backend/dist/src/warehouse/transfers/transfers-consolidation.service.js");
@@ -35,12 +23,6 @@ export function createTransfersTestRunner(prisma, database, t) {
         prisma,
         ctx.stock,
         service,
-      );
-      const reservationsApi = new WarehouseReservationsApiService(
-        prisma,
-        ctx.stock,
-        reservations,
-        audit,
       );
       const payload = (quantity = "2") => ({
         requestKey: randomUUID(),
@@ -54,8 +36,6 @@ export function createTransfersTestRunner(prisma, database, t) {
         service,
         consolidation,
         overview,
-        reservations,
-        reservationsApi,
         payload,
         WarehouseTransfersService,
       });

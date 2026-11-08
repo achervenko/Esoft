@@ -20,7 +20,6 @@ export function StockDistributionOverview({
   canAdjust,
   onTransfer,
   onAdjust,
-  onReservation,
   refresh,
   onConsolidate,
 }: StockDistributionActions & {
@@ -32,7 +31,7 @@ export function StockDistributionOverview({
   onConsolidate: () => void;
 }) {
   const hasLocations = !!data?.locations.some(
-    (b) => (quantityMillis(b.quantity) ?? 0n) > 0n || b.reservations.length > 0,
+    (b) => (quantityMillis(b.quantity) ?? 0n) > 0n,
   );
   const current = data ?? {
     item: position.item,
@@ -55,15 +54,6 @@ export function StockDistributionOverview({
           </button>
         </Notice>
       )}
-      {data &&
-        data.locations.some(
-          (b) => (quantityMillis(b.shortage ?? "0") ?? 0n) > 0n,
-        ) && (
-          <Notice tone="info">
-            Есть необеспеченные резервы. Заимствованный товар восстанавливается
-            отдельно; обычное поступление автоматически резерв не меняет.
-          </Notice>
-        )}
       {data && hasLocations && (
         <StockDistributionTable
           data={data}
@@ -73,7 +63,6 @@ export function StockDistributionOverview({
           canAdjust={canAdjust}
           onTransfer={onTransfer}
           onAdjust={onAdjust}
-          onReservation={onReservation}
         />
       )}
       {data && !hasLocations && <p>Остатки в местах хранения отсутствуют.</p>}
@@ -88,9 +77,6 @@ export function StockDistributionOverview({
             !!error ||
             !data.item.isActive ||
             !data.warehouse.isActive ||
-            data.locations.some(
-              (b) => (quantityMillis(b.physicalShortage ?? "0") ?? 0n) > 0n,
-            ) ||
             (quantityMillis(data.totalQuantity) ?? 0n) <= 0n
           }
           onClick={onConsolidate}

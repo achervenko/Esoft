@@ -14,7 +14,6 @@ type Bindings = Awaited<
 export async function saveReceiptImportLines(
   tx: Tx,
   receiptId: bigint,
-  sourceSystem: string,
   input: SourceReceipt,
   oldLines: WarehouseReceiptLine[],
   bindings: Bindings,
@@ -27,7 +26,6 @@ export async function saveReceiptImportLines(
     await saveLine(
       tx,
       receiptId,
-      sourceSystem,
       line,
       bindings.find((binding) => binding.externalId === line.item.id)?.itemId ??
         null,
@@ -37,31 +35,9 @@ export async function saveReceiptImportLines(
 async function saveLine(
   tx: Tx,
   receiptId: bigint,
-  sourceSystem: string,
   line: SourceReceipt['lines'][number],
   resolvedItemId: string | null,
 ) {
-  const order = line.order
-    ? await tx.warehouseOrder.upsert({
-        where: {
-          sourceSystem_externalId: {
-            sourceSystem,
-            externalId: line.order.id,
-          },
-        },
-        create: {
-          sourceSystem,
-          externalId: line.order.id,
-          number: line.order.number,
-          name: line.order.name,
-        },
-        update: {
-          number: line.order.number,
-          name: line.order.name,
-          isActive: true,
-        },
-      })
-    : null;
   const data = {
     rowNumber: line.rowNumber,
     itemId: resolvedItemId === null ? null : BigInt(resolvedItemId),
@@ -71,7 +47,6 @@ async function saveLine(
     itemArticleSnapshot: line.item.article,
     itemNameSnapshot: line.item.name,
     sourceType: line.item.type,
-    orderId: order?.id ?? null,
     orderSnapshot: line.order ?? Prisma.DbNull,
   };
   await tx.warehouseReceiptLine.upsert({

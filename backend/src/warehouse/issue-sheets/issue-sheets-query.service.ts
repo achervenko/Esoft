@@ -62,10 +62,7 @@ export class WarehouseIssueSheetsQueryService {
       clauses.push(Prisma.sql`s.processed_at >= ${q.processedFrom}`);
     if (q.processedTo)
       clauses.push(Prisma.sql`s.processed_at <= ${q.processedTo}`);
-    for (const [column, id] of [
-      [Prisma.sql`l.item_id`, q.itemId],
-      [Prisma.sql`l.project_id`, q.projectId],
-    ] as const) {
+    for (const [column, id] of [[Prisma.sql`l.item_id`, q.itemId]] as const) {
       if (id !== undefined)
         clauses.push(
           Prisma.sql`EXISTS (SELECT 1 FROM warehouse_issue_sheet_lines l WHERE l.issue_sheet_id = s.id AND ${column} = ${id})`,
@@ -132,7 +129,6 @@ export class WarehouseIssueSheetsQueryService {
         Prisma.sql`p.matching_status IN (${Prisma.join(q.matchingStatuses)})`,
       );
     if (q.itemId) clauses.push(Prisma.sql`p.item_id = ${q.itemId}`);
-    if (q.projectId) clauses.push(Prisma.sql`p.project_id = ${q.projectId}`);
     if (q.storageLocationId)
       clauses.push(Prisma.sql`p.storage_location_id = ${q.storageLocationId}`);
     if (q.hasError !== undefined)

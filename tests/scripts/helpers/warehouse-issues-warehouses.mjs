@@ -16,24 +16,12 @@ export async function verifyWarehouseIssuesWarehouses(context) {
     sheetQueries,
     stock,
     keeper,
-    projects,
     balanceQuantity,
-    audit,
-    reservations,
   } = context;
   const { WarehouseStockQueryService } = load(
     "warehouse/stock/stock-query.service.js",
   );
-  const { WarehouseReservationsApiService } = load(
-    "warehouse/reservations/reservations-api.service.js",
-  );
   const stockQueries = new WarehouseStockQueryService(prisma);
-  const reserveApi = new WarehouseReservationsApiService(
-    prisma,
-    stock,
-    reservations,
-    audit,
-  );
   const other = await prisma.warehouse.create({
     data: { name: "Другой склад" },
   });
@@ -85,7 +73,7 @@ export async function verifyWarehouseIssuesWarehouses(context) {
     assert.equal(available.items.length, 1);
     assert.equal(available.items[0].location.id, locationId);
     assert.equal(available.items[0].location.warehouse.id, warehouseId);
-    assert.equal(available.items[0].physical, quantity);
+    assert.equal(available.items[0].quantity, quantity);
     const physical = await stock.getBalances({ itemId, warehouseId });
     assert.equal(physical.total, 1);
     assert.equal(physical.items[0].location.warehouseId, warehouseId);
@@ -99,26 +87,6 @@ export async function verifyWarehouseIssuesWarehouses(context) {
     (
       await stock.getBalances({
         itemId,
-        warehouseId: a,
-        locationId: String(foreignLocation.id),
-      })
-    ).total,
-    0,
-  );
-  const projectId = String(projects[0].id);
-  const reservation = await reserveApi.create(
-    { balanceId: String(foreignBalance.id), projectId, quantity: "2" },
-    keeper.id,
-  );
-  assert.equal(reservation.location.warehouse.id, b);
-  assert.equal((await reserveApi.list({ warehouseId: a, itemId })).total, 0);
-  assert.equal(
-    (await reserveApi.list({ warehouseId: b, itemId })).items[0].id,
-    reservation.id,
-  );
-  assert.equal(
-    (
-      await reserveApi.list({
         warehouseId: a,
         locationId: String(foreignLocation.id),
       })

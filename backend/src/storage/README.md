@@ -147,7 +147,7 @@ import { StorageModule } from '../../storage/storage.module';
   imports: [StorageModule],
   // Остальные imports, controllers и providers бизнес-модуля.
 })
-export class WarehouseReservationsModule {}
+export class WarehouseStockAdjustmentsModule {}
 ```
 
 Повторные импорты используют один экземпляр модуля и S3-клиента. Настройки подключения загружаются через `loadStorageConfig` из корневой конфигурации; потребители не создают отдельные подключения и не передают правила при импорте. `AppModule` не регистрирует хранилище отдельно.

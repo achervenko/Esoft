@@ -27,7 +27,7 @@ HTTP query преобразуется отдельно через `parseStockHtt
 десятичные строки. `itemIds/locationIds` принимают повторённые параметры или
 один список через запятую. Неизвестные, некорректные и конфликтующие фильтры
 отклоняются с 400. По умолчанию выдаются положительные остатки без фильтра активности.
-Это физические остатки; распределение с учётом резервов предоставляет `stock-overview`.
+Агрегированное распределение физических остатков предоставляет `stock-overview`.
 POST/PATCH/DELETE остатков не предоставляются; чтение не аудируется.
 
 ## Внутренний API чтения
@@ -102,7 +102,7 @@ endpoints справочников сохраняют собственные р�
 `GET /api/warehouse/stock-overview` использует `warehouse.stock.read`. Одна строка —
 товар + склад. Возвращает `{items,total,page,limit}`; `total` считает эти группы,
 а не отдельные балансы. DTO строки: `id` (itemId:warehouseId), `item`, `warehouse`,
-`quantity` (decimal-строка), `locationsCount` (места с положительным количеством или записью резерва),
+`quantity` (decimal-строка), `locationsCount` (места с положительным количеством),
 `locationsPreview` (до трёх мест с quantity). `item.photo` возвращает `null`: фотографии
 номенклатуры текущим контрактом не поддерживаются. `/stock` возвращает отдельные балансы.
 
@@ -113,48 +113,21 @@ endpoints справочников сохраняют собственные р�
 `sortBy=article|name|quantity|warehouse`, `sortOrder=asc|desc`; по умолчанию article ASC.
 Дополнительные ключи itemId/warehouseId по возрастанию обеспечивают стабильную пагинацию.
 
-`POSITIVE` включает группы с положительной суммой физического количества **или**
-записью резерва на одном из балансов, в том числе полностью заимствованного.
-`ZERO` включает группы с нулевой физической суммой независимо от резервов;
-`ALL` не ограничивает группы по количеству. Поэтому POSITIVE и ZERO могут пересекаться.
+`POSITIVE` включает группы с положительной физической суммой, `ZERO` — с нулевой.
+`ALL` не ограничивает количество. POSITIVE и ZERO не пересекаются.
 
 Фильтр места отбирает группы с балансом в этом месте (для POSITIVE — положительным),
 но quantity и распределение всегда охватывают весь соответствующий склад.
 Отсутствующий баланс не превращается в нулевой. Неактивные справочники не скрывают
 физические остатки. Все чтения ответа выполняются в RepeatableRead-транзакции.
 
-### Распределение по местам и резервы
+### Распределение по местам
 
 `GET /api/warehouse/stock-overview/items/:itemId/warehouses/:warehouseId` возвращает
-`item`, `warehouse`, `totalQuantity` и полный массив `locations`. Каждая запись
-содержит `balanceId`, `location`, `quantity`, `reserved`, `available`, `shortage`,
-`physicalShortage` и `reservations`. Отсутствующий товар или склад даёт
-404 `WAREHOUSE_STOCK_NOT_FOUND`. Нулевые и неактивные места с балансами включаются.
-
-Все количества возвращаются decimal-строками. Для одного места используются:
-
-- `physical = quantity` — физический остаток;
-- `demand = SUM(reservations.quantity)` — полная потребность проектов;
-- `borrowed = SUM(reservations.borrowedQuantity)` — заимствованная часть;
-- `reserved = demand - borrowed` — часть потребности за вычетом заимствований;
-- `available = MAX(physical - reserved, 0)` — свободное физическое количество;
-- `physicalShortage = MAX(reserved - physical, 0)` — физический дефицит относительно `reserved`;
-- `shortage = MAX(borrowed, demand - physical, 0)` — нехватка с учётом заимствований.
-
-Резерв содержит `id`, `projectId`, `projectNumber`, `projectName`, `quantity`,
-`borrowedQuantity` и `movableQuantity`. Для отдельного резерва с
-`backed = quantity - borrowedQuantity`:
-
-```text
-movableQuantity = MAX(0, MIN(backed, physical - (reserved - backed)))
-```
-
-Это ограничение доступного для переноса количества; оно не изменяет резерв.
-`totalQuantity` — сумма физических остатков всех мест выбранного товара и склада.
-
-Изменение распределения выполняется через [Transfers](../transfers/README.md).
-Проведение требует `warehouse.transfers.manage`, перенос резерва — также
-`warehouse.reservations.manage`. Просмотр распределения требует только `warehouse.stock.read`.
+`item`, `warehouse`, `totalQuantity` и `locations`: `balanceId`, `location`, `quantity`.
+Количество — decimal-строка. Нулевые и неактивные места с балансами включаются.
+Отсутствующий товар или склад даёт 404 WAREHOUSE_STOCK_NOT_FOUND.
+Просмотр требует warehouse.stock.read; перемещение — warehouse.transfers.manage.
 
 ### Выполнение агрегированного запроса
 
@@ -166,7 +139,7 @@ movableQuantity = MAX(0, MIN(backed, physical - (reserved - backed)))
 
 Гидратация товаров, складов и превью выполняется для выбранной страницы в той же
 транзакции. Превью сортируется по названию места и ID баланса; при наличии мест
-с положительным количеством или резервами выбираются только такие места. Если
+с положительным количеством выбираются только такие места. Если
 их нет, превью может содержать сохранённые нулевые балансы.
 
 ## Ошибки

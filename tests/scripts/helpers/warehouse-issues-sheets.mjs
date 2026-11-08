@@ -13,7 +13,6 @@ export async function verifyWarehouseIssuesSheets(context) {
     sheetQueries,
     keeper,
     admin,
-    projects,
   } = context;
   const forSheet = await fixture(["20", "20"]);
   const sheet = await sheets.create(
@@ -24,7 +23,6 @@ export async function verifyWarehouseIssuesSheets(context) {
     sheet.id,
     {
       itemId: String(forSheet.item.id),
-      projectId: String(projects[0].id),
       quantity: "10",
       rowNumber: 1,
       matchingStatus: "MATCHED",
@@ -37,7 +35,6 @@ export async function verifyWarehouseIssuesSheets(context) {
     issueSheetLineId: line.id,
   });
   const sheetIssue = await service.createIssueFromSheet(sheetInput, keeper.id);
-  assert.equal(sheetIssue.projectId, String(projects[0].id));
   assert.equal((await sheetQueries.findOne(sheet.id)).status, "IN_PROGRESS");
   assert.equal(
     (await sheetQueries.lines(sheet.id, {})).items[0].remainingQuantity,
@@ -52,32 +49,16 @@ export async function verifyWarehouseIssuesSheets(context) {
     requestKey: randomUUID(),
     positions: [{ balanceId: String(forSheet.balances[0].id), quantity: "1" }],
   };
-  await assert.rejects(
-    service.createIssue(
-      { ...smallSheetInput, projectId: String(projects[1].id) },
-      keeper.id,
-    ),
-    code("WAREHOUSE_ISSUE_PROJECT_MISMATCH"),
-  );
-  const previewSheet = await service.previewOverride(
-    { ...smallSheetInput, overrideReservations: true, comment: "Согласовано" },
-    admin.id,
-  );
-  await service.createIssue(
-    {
-      ...smallSheetInput,
-      overrideReservations: true,
-      comment: "Согласовано",
-      overrideConfirmation: previewSheet.confirmationToken,
-    },
-    admin.id,
-  );
+  await service.createIssue(smallSheetInput, keeper.id);
   assert.equal(
     (await sheets.finalize(sheet.id, keeper.id)).status,
     "PROCESSED_WITH_SHORTAGE",
   );
   await assert.rejects(
-    service.createIssue(smallSheetInput, keeper.id),
+    service.createIssue(
+      { ...smallSheetInput, requestKey: randomUUID() },
+      keeper.id,
+    ),
     code("WAREHOUSE_ISSUE_SHEET_STATE"),
   );
   const filtered = await queries.list({
@@ -92,11 +73,9 @@ export async function verifyWarehouseIssuesSheets(context) {
   assert.equal(
     (
       await queries.list({
-        overrideReservations: true,
-        projectId: String(projects[0].id),
         issueSheetLineId: line.id,
       })
     ).total,
-    1,
+    2,
   );
 }

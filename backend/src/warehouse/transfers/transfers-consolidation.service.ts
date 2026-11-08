@@ -32,12 +32,6 @@ export class WarehouseTransferConsolidationService {
           actor,
           'warehouse.transfers.manage',
         );
-        if (input.moves.some((m) => m.moveReservation))
-          await assertTransactionPermission(
-            tx,
-            actor,
-            'warehouse.reservations.manage',
-          );
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:transfer', actor, input.requestKey])},0))`;
         const previous = await tx.warehouseTransfer.findUnique({
           where: {

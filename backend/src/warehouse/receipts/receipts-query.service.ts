@@ -5,12 +5,7 @@ import {
   receiptReconciliationCandidates,
   receiptReconciliationHints,
 } from './receipt-reconciliation-candidates.query';
-import {
-  parseReceiptQuery,
-  record,
-  text,
-  invalid,
-} from './receipts.validation';
+import { parseReceiptQuery } from './receipts.validation';
 @Injectable()
 export class WarehouseReceiptsQueryService {
   constructor(private readonly prisma: PrismaService) {}
@@ -21,47 +16,6 @@ export class WarehouseReceiptsQueryService {
         isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
       },
     );
-  }
-  async orders(value: unknown) {
-    const q = record(value ?? {}, ['page', 'limit', 'search']);
-    const page = q.page === undefined ? 1 : Number(q.page),
-      limit = q.limit === undefined ? 50 : Number(q.limit);
-    if (
-      !Number.isSafeInteger(page) ||
-      page < 1 ||
-      page > 1000000 ||
-      !Number.isSafeInteger(limit) ||
-      limit < 1 ||
-      limit > 100
-    )
-      invalid('Некорректная пагинация.');
-    const search =
-      q.search === undefined
-        ? null
-        : text(q.search, 100).replace(/[\\%_]/g, '\\$&');
-    const where: Prisma.WarehouseOrderWhereInput = search
-      ? {
-          OR: [
-            { number: { contains: search, mode: 'insensitive' } },
-            { name: { contains: search, mode: 'insensitive' } },
-          ],
-        }
-      : {};
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.warehouseOrder.findMany({
-        where,
-        orderBy: { id: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      this.prisma.warehouseOrder.count({ where }),
-    ]);
-    return {
-      items: items.map((o) => ({ ...o, id: String(o.id) })),
-      total,
-      page,
-      limit,
-    };
   }
   list(value: unknown) {
     const q = parseReceiptQuery(value);
@@ -97,8 +51,8 @@ export class WarehouseReceiptsQueryService {
           ? new Date(`${q.documentDateTo}T00:00:00Z`)
           : undefined,
       },
-      ...(q.itemId !== undefined || q.orderId !== undefined
-        ? { lines: { some: { itemId: q.itemId, orderId: q.orderId } } }
+      ...(q.itemId !== undefined
+        ? { lines: { some: { itemId: q.itemId } } }
         : {}),
       AND: [
         ...(q.hasProblems === 'true'

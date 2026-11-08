@@ -17,41 +17,6 @@ export async function verifyStockLocking(context, t) {
     newItem,
   } = context;
   await t.test(
-    "caller updates reservations and Stock atomically using the public lock protocol",
-    async () => {
-      const reservedItem = await newItem("STOCK-RESERVED");
-      const balance = await receive(a, "10", reservedItem);
-      const projectRow = await prisma.warehouseProject.create({
-        data: { projectNumber: `${namespace}-PROJECT` },
-      });
-      const reservation = await prisma.warehouseProjectReservation.create({
-        data: {
-          balanceId: BigInt(balance.id),
-          projectId: projectRow.id,
-          quantity: "8",
-        },
-      });
-      await transaction(async (ctx) => {
-        await stock.lockBalances(ctx.tx, reservedItem, [loc(a)]);
-        await ctx.tx.warehouseProjectReservation.update({
-          where: { id: reservation.id },
-          data: { quantity: "3" },
-        });
-        await stock.issueStock(ctx, reservedItem, loc(a), "5");
-      });
-      assert.equal((await read(a, reservedItem)).quantity, "5");
-      assert.equal(
-        (
-          await prisma.warehouseProjectReservation.findUniqueOrThrow({
-            where: { id: reservation.id },
-          })
-        ).quantity.toString(),
-        "3",
-      );
-    },
-  );
-
-  await t.test(
     "Catalog cannot change the unit while a first Stock receipt is in progress",
     async () => {
       const fresh = await newItem("STOCK-UNIT");

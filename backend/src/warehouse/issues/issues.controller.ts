@@ -32,9 +32,4 @@ export class WarehouseIssuesController {
   create(@Body() body: unknown, @Session() session: UserSession<Auth>) {
     return this.issues.createIssue(body, session.user.id);
   }
-  @Post('override-preview')
-  @RequirePermission(WAREHOUSE_PERMISSIONS.OVERRIDE_RESERVATION)
-  preview(@Body() body: unknown, @Session() session: UserSession<Auth>) {
-    return this.issues.previewOverride(body, session.user.id);
-  }
 }

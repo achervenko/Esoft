@@ -1,6 +1,6 @@
 ALTER TYPE "audit_module" ADD VALUE 'warehouse';
 
--- Warehouse package depends only on core. No equipment or PPE tables are required.
+-- Warehouse package requires Orders and Core.
 
 CREATE TABLE "warehouse_items" (
     "id" BIGSERIAL NOT NULL,
@@ -34,15 +34,7 @@ CREATE TABLE "warehouse_storage_locations" (
 
 CREATE UNIQUE INDEX "uq_warehouse_storage_locations_warehouse_name" ON "warehouse_storage_locations"("warehouse_id", "name");
 
-CREATE TABLE "warehouse_projects" (
-    "id" BIGSERIAL NOT NULL,
-    "project_number" VARCHAR(100) NOT NULL,
-    "name" VARCHAR(255),
-    "is_active" BOOLEAN NOT NULL DEFAULT true,
-    CONSTRAINT "warehouse_projects_pkey" PRIMARY KEY ("id")
-);
 
-CREATE UNIQUE INDEX "uq_warehouse_projects_project_number" ON "warehouse_projects"("project_number");
 
 CREATE TABLE "warehouse_balances" (
     "id" BIGSERIAL NOT NULL,
@@ -57,20 +49,8 @@ CREATE TABLE "warehouse_balances" (
 
 CREATE UNIQUE INDEX "uq_warehouse_balances_item_location" ON "warehouse_balances"("item_id", "storage_location_id");
 
-CREATE TABLE "warehouse_project_reservations" (
-    "id" BIGSERIAL NOT NULL,
-    "balance_id" BIGINT NOT NULL,
-    "project_id" BIGINT NOT NULL,
-    "quantity" NUMERIC(14,3) NOT NULL,
-    CONSTRAINT "fk_warehouse_project_reservations_balance" FOREIGN KEY ("balance_id") REFERENCES "warehouse_balances"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "fk_warehouse_project_reservations_project" FOREIGN KEY ("project_id") REFERENCES "warehouse_projects"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "chk_warehouse_project_reservations_quantity" CHECK ("quantity" > 0),
-    CONSTRAINT "warehouse_project_reservations_pkey" PRIMARY KEY ("id")
-);
 
-CREATE UNIQUE INDEX "uq_warehouse_project_reservations_balance_project" ON "warehouse_project_reservations"("balance_id", "project_id");
 
-CREATE INDEX "idx_warehouse_project_reservations_project" ON "warehouse_project_reservations"("project_id");
 
 CREATE TABLE "warehouse_issue_sheets" (
     "warehouse_id" BIGINT NOT NULL REFERENCES "warehouses"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -93,20 +73,17 @@ CREATE TABLE "warehouse_issue_sheet_lines" (
     "issue_sheet_id" BIGINT NOT NULL,
     "item_id" BIGINT,
     "storage_location_id" BIGINT,
-    "project_id" BIGINT,
     "quantity" NUMERIC(14,3) NOT NULL,
     "unit_snapshot" VARCHAR(50),
     "source_article" VARCHAR(100),
     "source_name" VARCHAR(255),
     "source_location" VARCHAR(255),
-    "source_project" VARCHAR(255),
     "matching_status" VARCHAR(50) NOT NULL,
     "error" TEXT,
     "row_number" INTEGER NOT NULL,
     CONSTRAINT "fk_warehouse_issue_sheet_lines_sheet" FOREIGN KEY ("issue_sheet_id") REFERENCES "warehouse_issue_sheets"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "fk_warehouse_issue_sheet_lines_item" FOREIGN KEY ("item_id") REFERENCES "warehouse_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "fk_warehouse_issue_sheet_lines_storage_location" FOREIGN KEY ("storage_location_id") REFERENCES "warehouse_storage_locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "fk_warehouse_issue_sheet_lines_project" FOREIGN KEY ("project_id") REFERENCES "warehouse_projects"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "chk_warehouse_issue_sheet_lines_quantity" CHECK ("quantity" > 0),
     CONSTRAINT "chk_warehouse_issue_sheet_lines_row_number" CHECK ("row_number" > 0),
     CONSTRAINT "warehouse_issue_sheet_lines_pkey" PRIMARY KEY ("id")
@@ -121,26 +98,19 @@ CREATE TABLE "warehouse_issues" (
     "warehouse_id" BIGINT NOT NULL REFERENCES "warehouses"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     "id" BIGSERIAL NOT NULL,
     "type" VARCHAR(50) NOT NULL,
-    "project_id" BIGINT,
     "issue_sheet_line_id" BIGINT,
     "issued_by_user_id" TEXT NOT NULL,
     "comment" TEXT,
-    "override_reservations" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "warehouse_issues_pkey" PRIMARY KEY ("id"),
     CONSTRAINT "chk_warehouse_issues_type_line" CHECK (
         ("type" = 'MANUAL' AND "issue_sheet_line_id" IS NULL)
         OR ("type" = 'ISSUE_SHEET' AND "issue_sheet_line_id" IS NOT NULL)
     ),
-    CONSTRAINT "chk_warehouse_issues_override_comment" CHECK (
-        "override_reservations" = false OR NULLIF(BTRIM("comment"), '') IS NOT NULL
-    ),
-    CONSTRAINT "fk_warehouse_issues_project" FOREIGN KEY ("project_id") REFERENCES "warehouse_projects"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "fk_warehouse_issues_sheet_line" FOREIGN KEY ("issue_sheet_line_id") REFERENCES "warehouse_issue_sheet_lines"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "fk_warehouse_issues_issued_by" FOREIGN KEY ("issued_by_user_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
-CREATE INDEX "idx_warehouse_issues_project" ON "warehouse_issues"("project_id");
 CREATE INDEX "idx_warehouse_issues_sheet_line" ON "warehouse_issues"("issue_sheet_line_id");
 CREATE INDEX "idx_warehouse_issues_issued_by" ON "warehouse_issues"("issued_by_user_id");
 CREATE INDEX "idx_warehouse_issues_created_at" ON "warehouse_issues"("created_at");
@@ -195,9 +165,6 @@ CREATE TABLE "warehouse_stock_adjustment_attachments" (
 );
 CREATE UNIQUE INDEX "uq_warehouse_stock_adjustment_attachments_file" ON "warehouse_stock_adjustment_attachments"("file_id");
 
-CREATE TABLE "warehouse_orders" (
- id BIGSERIAL PRIMARY KEY, source_system VARCHAR(100) NOT NULL, external_id VARCHAR(255) NOT NULL, number VARCHAR(100) NOT NULL, name VARCHAR(255) NOT NULL, is_active BOOLEAN NOT NULL DEFAULT true, created_at TIMESTAMPTZ(6) NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ(6) NOT NULL DEFAULT now(), CONSTRAINT uq_warehouse_orders_external UNIQUE(source_system,external_id)
-);
 CREATE TABLE "warehouse_item_external_links" (
  id BIGSERIAL PRIMARY KEY, item_id BIGINT NOT NULL REFERENCES warehouse_items(id) ON DELETE RESTRICT ON UPDATE CASCADE, source_system VARCHAR(100) NOT NULL, external_id VARCHAR(255) NOT NULL, source_article VARCHAR(100) NOT NULL, source_name VARCHAR(255) NOT NULL, confirmed_by TEXT NOT NULL REFERENCES "user"(id) ON DELETE RESTRICT ON UPDATE CASCADE, created_at TIMESTAMPTZ(6) NOT NULL DEFAULT now(), CONSTRAINT uq_warehouse_item_external_links_identity UNIQUE(source_system,external_id)
 );
@@ -219,11 +186,10 @@ CREATE INDEX idx_warehouse_receipts_status ON warehouse_receipts(status,created_
 CREATE INDEX idx_warehouse_receipts_created ON warehouse_receipts(created_at,id);
 CREATE TABLE warehouse_receipt_lines (
  id BIGSERIAL PRIMARY KEY, receipt_id BIGINT NOT NULL REFERENCES warehouse_receipts(id) ON DELETE CASCADE ON UPDATE CASCADE, row_number INTEGER NOT NULL CHECK(row_number>0), external_line_id VARCHAR(255) NOT NULL,
- item_id BIGINT REFERENCES warehouse_items(id) ON DELETE RESTRICT ON UPDATE CASCADE, external_item_id VARCHAR(255), quantity NUMERIC(14,3) NOT NULL CHECK(quantity>0), unit_snapshot VARCHAR(50) NOT NULL, item_article_snapshot VARCHAR(100) NOT NULL, item_name_snapshot VARCHAR(255) NOT NULL, source_type VARCHAR(30) NOT NULL DEFAULT 'GOODS', order_id BIGINT REFERENCES warehouse_orders(id) ON DELETE RESTRICT ON UPDATE CASCADE, order_snapshot JSONB, reconciled_to_line_id BIGINT REFERENCES warehouse_receipt_lines(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+ item_id BIGINT REFERENCES warehouse_items(id) ON DELETE RESTRICT ON UPDATE CASCADE, external_item_id VARCHAR(255), quantity NUMERIC(14,3) NOT NULL CHECK(quantity>0), unit_snapshot VARCHAR(50) NOT NULL, item_article_snapshot VARCHAR(100) NOT NULL, item_name_snapshot VARCHAR(255) NOT NULL, source_type VARCHAR(30) NOT NULL DEFAULT 'GOODS', order_snapshot JSONB, reconciled_to_line_id BIGINT REFERENCES warehouse_receipt_lines(id) ON DELETE RESTRICT ON UPDATE CASCADE,
  CONSTRAINT uq_warehouse_receipt_lines_external UNIQUE(receipt_id,external_line_id), CONSTRAINT chk_receipt_no_self_reconcile CHECK(reconciled_to_line_id IS NULL OR reconciled_to_line_id<>id)
 );
 CREATE INDEX idx_warehouse_receipt_lines_item ON warehouse_receipt_lines(item_id);
-CREATE INDEX idx_warehouse_receipt_lines_order ON warehouse_receipt_lines(order_id);
 CREATE INDEX idx_warehouse_receipt_lines_reconciliation ON warehouse_receipt_lines(reconciled_to_line_id);
 CREATE TABLE warehouse_receipt_placements (
  id BIGSERIAL PRIMARY KEY, receipt_line_id BIGINT NOT NULL REFERENCES warehouse_receipt_lines(id) ON DELETE CASCADE ON UPDATE CASCADE, storage_location_id BIGINT NOT NULL REFERENCES warehouse_storage_locations(id) ON DELETE RESTRICT ON UPDATE CASCADE, quantity NUMERIC(14,3) NOT NULL CHECK(quantity>0), item_snapshot JSONB NOT NULL, location_snapshot JSONB NOT NULL, created_by_user_id TEXT NOT NULL REFERENCES "user"(id) ON DELETE RESTRICT ON UPDATE CASCADE, request_key UUID NOT NULL, request_hash VARCHAR(64) NOT NULL CHECK(request_hash ~ '^[0-9a-f]{64}$'), created_at TIMESTAMPTZ(6) NOT NULL DEFAULT now(), CONSTRAINT uq_warehouse_receipt_placements_request UNIQUE(created_by_user_id,request_key)
@@ -281,11 +247,4 @@ CREATE TABLE warehouse_stock_adjustment_noops (
  request_hash VARCHAR(64) NOT NULL CHECK (request_hash ~ '^[0-9a-f]{64}$'),
  quantity NUMERIC(14,3) NOT NULL CHECK (quantity >= 0),
  PRIMARY KEY (actor_user_id, request_key)
-);
-
-ALTER TABLE warehouse_project_reservations ADD COLUMN borrowed_quantity NUMERIC(14,3) NOT NULL DEFAULT 0 CHECK(borrowed_quantity>=0 AND borrowed_quantity<=quantity);
-CREATE TABLE warehouse_reservation_operations (
- id UUID PRIMARY KEY, actor_user_id TEXT NOT NULL REFERENCES "user"(id) ON DELETE RESTRICT ON UPDATE CASCADE,
- request_key UUID NOT NULL, request_hash VARCHAR(64) NOT NULL CHECK(request_hash ~ '^[0-9a-f]{64}$'),
- result JSONB NOT NULL, created_at TIMESTAMPTZ(6) NOT NULL DEFAULT now(), UNIQUE(actor_user_id,request_key)
 );

@@ -48,7 +48,7 @@ export async function verifyIssueSheetsAtomicity(context) {
     "0",
   );
   await assert.rejects(
-    issue(atomicLine, "1", { projectId: null }),
+    issue(atomicLine, "1", { type: "MANUAL", issueSheetLineId: null }),
     code("WAREHOUSE_ISSUE_SHEET_ISSUE_MISMATCH"),
   );
   assert.equal(await stockQuantity(), beforeAtomic);

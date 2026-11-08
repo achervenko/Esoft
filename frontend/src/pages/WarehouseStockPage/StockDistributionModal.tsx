@@ -1,5 +1,3 @@
-import { StockReservationOperationForm } from "./StockReservationOperationForm";
-import { readReservationOperation } from "./pending-reservation-operation";
 import { readPendingStockMovement } from "./pending-stock-movement";
 import { useState } from "react";
 import { AdminModal } from "../../shared/ui/AdminModal";
@@ -38,16 +36,6 @@ export function StockDistributionModal({
   const [source, setSource] = useState<StockDistributionSource | null>(
     restored?.kind === "transfer" ? restored.source : null,
   );
-  const [reservationRestore, setReservationRestore] = useState(() => {
-    const saved = readReservationOperation();
-    return saved?.data.item.id === position.item.id &&
-      saved.data.warehouse.id === position.warehouse.id
-      ? saved
-      : null;
-  });
-  const [managing, setManaging] = useState<StockDistributionSource | null>(
-    reservationRestore?.source ?? null,
-  );
   const [adjusting, setAdjusting] = useState<
     StockDistribution["locations"][number] | null
   >(null);
@@ -56,24 +44,6 @@ export function StockDistributionModal({
     restored?.kind === "consolidation",
   );
   const content = () => {
-    if (managing && (reservationRestore?.data ?? data))
-      return (
-        <StockReservationOperationForm
-          data={(reservationRestore?.data ?? data)!}
-          source={managing}
-          onSavingChange={setTransferSaving}
-          onClose={() => {
-            setManaging(null);
-            setReservationRestore(null);
-          }}
-          onSaved={() => {
-            setManaging(null);
-            setReservationRestore(null);
-            refresh();
-            onChanged();
-          }}
-        />
-      );
     const operationData =
       restored && (source || consolidating) ? restored.data : data;
     if (adjusting && data)
@@ -115,7 +85,6 @@ export function StockDistributionModal({
                 onSavingChange={setTransferSaving}
                 data={operationData}
                 source={source.balance}
-                reservation={source.reservation}
                 onClose={() => {
                   setRestored(null);
                   setSource(null);
@@ -141,27 +110,24 @@ export function StockDistributionModal({
         canAdjust={canAdjust}
         onTransfer={setSource}
         onAdjust={setAdjusting}
-        onReservation={canAdjust ? setManaging : undefined}
         refresh={refresh}
         onConsolidate={() => setConsolidating(true)}
       />
     );
   };
-  const editing = !!(adjusting || source || consolidating || managing);
+  const editing = !!(adjusting || source || consolidating);
   return (
     <AdminModal
       animateResize={false}
       className="stock-transfer-modal"
       title={
-        managing
-          ? "Резерв проекта"
-          : adjusting
-            ? "Исправить количество"
-            : consolidating
-              ? "Переместить всё"
-              : source
-                ? "Переместить остаток"
-                : `Места хранения (${data?.warehouse.name ?? position.warehouse.name})`
+        adjusting
+          ? "Исправить количество"
+          : consolidating
+            ? "Переместить всё"
+            : source
+              ? "Переместить остаток"
+              : `Места хранения (${data?.warehouse.name ?? position.warehouse.name})`
       }
       isCloseDisabled={editing && transferSaving}
       onClose={() => {
@@ -169,8 +135,6 @@ export function StockDistributionModal({
           onClose();
           return;
         }
-        setManaging(null);
-        setReservationRestore(null);
         setRestored(null);
         setAdjusting(null);
         setSource(null);

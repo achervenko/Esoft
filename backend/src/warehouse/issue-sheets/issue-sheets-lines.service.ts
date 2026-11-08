@@ -54,16 +54,6 @@ export class WarehouseIssueSheetLinesService {
           'Место не принадлежит складу листа.',
         );
     }
-    if (data.projectId) {
-      const rows = await tx.$queryRaw<
-        { is_active: boolean }[]
-      >`SELECT is_active FROM warehouse_projects WHERE id = ${data.projectId} FOR SHARE`;
-      if (!rows[0]?.is_active)
-        sheetConflict(
-          'WAREHOUSE_ISSUE_SHEET_PROJECT_UNAVAILABLE',
-          'Проект недоступен.',
-        );
-    }
   }
   private async invalidateReady(
     tx: Prisma.TransactionClient,

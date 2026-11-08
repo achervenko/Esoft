@@ -37,15 +37,12 @@ export function issueDto(issue: IssueRow) {
     warehouseId: String(issue.warehouseId),
     warehouse: snapshot.warehouse,
     type: issue.type,
-    projectId: issue.projectId?.toString() ?? null,
     issueSheetLineId: issue.issueSheetLineId?.toString() ?? null,
-    project: snapshot.project,
     issuedByUserId: issue.issuedByUserId,
     issuedBy: snapshot.issuedBy,
     issueSheet: snapshot.issueSheet,
     createdAt: issue.createdAt,
     comment: issue.comment,
-    overrideReservations: issue.overrideReservations,
     totalQuantity: issue.positions
       .reduce((sum, p) => sum.plus(p.quantity), new Prisma.Decimal(0))
       .toString(),
@@ -60,7 +57,5 @@ export function issueDto(issue: IssueRow) {
         location: saved.location,
       };
     }),
-    reservationUsage: snapshot.reservationUsage,
-    foreignReservationsUsed: snapshot.foreignReservationsUsed,
   };
 }

@@ -189,71 +189,11 @@ export async function verifyStockOverview(
     },
   );
   await t.test(
-    "zero physical balances with fully borrowed reservations remain visible",
+    "distribution physical totals and references survive inactive entries; movement refreshes groups",
     async () => {
-      const project = await prisma.warehouseProject.create({
-        data: { projectNumber: namespace + "-zero" },
-      });
-      const balance = await prisma.warehouseBalance.findUniqueOrThrow({
-        where: {
-          itemId_storageLocationId: {
-            itemId: zero.id,
-            storageLocationId: places[0].location.id,
-          },
-        },
-      });
-      const reservation = await prisma.warehouseProjectReservation.create({
-        data: {
-          balanceId: balance.id,
-          projectId: project.id,
-          quantity: "3",
-          borrowedQuantity: "3",
-        },
-      });
-      try {
-        for (const search of [undefined, namespace]) {
-          const result = await overview.list({ warehouseId: wid, search });
-          const row = result.items.find((r) => r.item.id === String(zero.id));
-          assert.equal(row.quantity, "0");
-          assert.equal(row.locationsCount, 1);
-          assert.equal(row.locationsPreview[0].quantity, "0");
-        }
-        // POSITIVE location filtering still requires physical stock at the selected place.
-        const filtered = await overview.list({
-          warehouseId: wid,
-          locationId: String(places[0].location.id),
-        });
-        assert.ok(!filtered.items.some((r) => r.item.id === String(zero.id)));
-        const zeros = await overview.list({
-          warehouseId: wid,
-          quantityState: "ZERO",
-        });
-        assert.equal(zeros.items[0].item.id, String(zero.id));
-      } finally {
-        await prisma.warehouseProjectReservation.delete({
-          where: { id: reservation.id },
-        });
-      }
-    },
-  );
-  await t.test(
-    "distribution totals, free quantity and references survive inactive entries; movement refreshes groups",
-    async () => {
-      const project = await prisma.warehouseProject.create({
-        data: { projectNumber: namespace + "-overview" },
-      });
-      await prisma.warehouseProjectReservation.create({
-        data: {
-          balanceId: places[0].balance.id,
-          projectId: project.id,
-          quantity: "12",
-        },
-      });
       const detail = await overview.distribution(iid, wid);
       assert.equal(detail.totalQuantity, "18.01");
       assert.equal(detail.locations.length, 5);
-      assert.equal(detail.locations[0].reserved, "12");
-      assert.equal(detail.locations[0].available, "0");
       await prisma.warehouseStorageLocation.update({
         where: { id: places[0].location.id },
         data: { isActive: false },

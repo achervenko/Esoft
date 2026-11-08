@@ -27,14 +27,11 @@ const grants: Record<string, readonly string[]> = {
     "ppe.issue",
     "ppe.issue.backdate",
     "warehouse.catalog.manage",
-    "warehouse.projects.read",
-    "warehouse.reservations.manage",
     "warehouse.stock.read",
     "warehouse.storage-locations.read",
     "warehouse.storage-locations.manage",
     "warehouse.adjustments.manage",
     "warehouse.issues.manage",
-    "warehouse.reservations.override",
     "warehouse.issue-sheets.manage",
   ],
   chief_engineer: [
@@ -100,8 +97,6 @@ const grants: Record<string, readonly string[]> = {
   ],
   storekeeper: [
     "warehouse.catalog.manage",
-    "warehouse.projects.read",
-    "warehouse.reservations.manage",
     "warehouse.stock.read",
     "warehouse.storage-locations.read",
     "warehouse.storage-locations.manage",

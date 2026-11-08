@@ -9,7 +9,7 @@ import { warehouseStockApi } from "../../shared/api/warehouse-stock-api";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { ApiRequestError } from "../../shared/api/api-error";
-it("opens the bottom action and consolidates free stock and reserve while excluding the destination", async () => {
+it("opens the bottom action and consolidates physical stock while excluding the destination", async () => {
   const onChanged = vi.fn();
   render(
     <StockDistributionModal
@@ -25,18 +25,15 @@ it("opens the bottom action and consolidates free stock and reserve while exclud
   const sources = screen.getByRole("region", {
     name: "Откуда перемещается товар",
   });
-  expect(within(sources).getAllByRole("row")).toHaveLength(4);
-  expect(within(sources).getByText("8,001 шт")).toBeVisible();
-  expect(
-    within(sources).getByText("Резерв · PROJECT-7 · Проект 7"),
-  ).toBeVisible();
+  expect(within(sources).getAllByRole("row")).toHaveLength(3);
+  expect(within(sources).getByText("10,001 шт")).toBeVisible();
   const select = screen.getByRole("combobox", { name: "Место назначения" });
   await waitFor(() => expect(select).not.toBeDisabled());
   fireEvent.click(select);
   fireEvent.click(
     await screen.findByRole("option", { name: secondLocation.name }),
   );
-  expect(within(sources).getAllByRole("row")).toHaveLength(3);
+  expect(within(sources).getAllByRole("row")).toHaveLength(2);
   expect(
     within(sources).queryByText(secondLocation.name),
   ).not.toBeInTheDocument();
@@ -52,12 +49,7 @@ it("opens the bottom action and consolidates free stock and reserve while exclud
       moves: [
         {
           fromLocationId: distribution.locations[0].location.id,
-          quantity: "8.001",
-        },
-        {
-          fromLocationId: distribution.locations[0].location.id,
-          quantity: "2",
-          projectId: "7",
+          quantity: "10.001",
         },
       ],
     }),
@@ -66,7 +58,7 @@ it("opens the bottom action and consolidates free stock and reserve while exclud
 });
 
 it.each([
-  [409, "WAREHOUSE_TRANSFER_RESERVED_STOCK", true],
+  [409, "WAREHOUSE_STOCK_INSUFFICIENT", true],
   [401, "UNAUTHORIZED", false],
   [403, "FORBIDDEN", false],
   [409, "WAREHOUSE_TRANSFER_REQUEST_CONFLICT", false],
@@ -113,11 +105,7 @@ it.each([
         expect(screen.getByRole("button", { name: "Закрыть" })).toBeEnabled(),
       );
       vi.mocked(warehouseStockApi.consolidate).mockRejectedValueOnce(
-        new ApiRequestError(
-          "Нет остатка",
-          409,
-          "WAREHOUSE_TRANSFER_RESERVED_STOCK",
-        ),
+        new ApiRequestError("Нет остатка", 409, "WAREHOUSE_STOCK_INSUFFICIENT"),
       );
       fireEvent.click(screen.getByRole("button", { name: "Переместить всё" }));
       await waitFor(() =>

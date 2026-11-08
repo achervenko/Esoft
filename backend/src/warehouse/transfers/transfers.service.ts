@@ -1,9 +1,4 @@
 import {
-  planReservationTransfer,
-  applyReservationTransfer,
-  auditReservationTransfer,
-} from './transfers-reservations';
-import {
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -19,7 +14,6 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { hasPermission } from '../../auth/permission-policy';
 import { WarehouseStockService } from '../stock/stock.service';
-import { WarehouseReservationsService } from '../reservations/reservations.service';
 import { stockId } from '../stock/stock.validation';
 import { lockWarehouse } from '../storage-structure/storage-structure.policy';
 import {
@@ -43,12 +37,6 @@ function dto(row: WarehouseTransfer) {
     createdByUserId: row.createdByUserId,
     createdAt: row.createdAt,
     requestKey: row.requestKey,
-    moveReservation: !!(
-      row.snapshot &&
-      typeof row.snapshot === 'object' &&
-      !Array.isArray(row.snapshot) &&
-      row.snapshot.reservationTransfer
-    ),
     snapshot: row.snapshot,
   };
 }
@@ -57,7 +45,6 @@ export class WarehouseTransfersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stock: WarehouseStockService,
-    private readonly reservations: WarehouseReservationsService,
     private readonly audit: AuditLogService,
   ) {}
   create(value: unknown, actor: string) {
@@ -83,9 +70,7 @@ export class WarehouseTransfersService {
     if (
       !user ||
       user.banned ||
-      !hasPermission(user.role, 'warehouse.transfers.manage') ||
-      (input.moveReservation &&
-        !hasPermission(user.role, 'warehouse.reservations.manage'))
+      !hasPermission(user.role, 'warehouse.transfers.manage')
     )
       throw new ForbiddenException({
         code: 'FORBIDDEN',
@@ -107,16 +92,6 @@ export class WarehouseTransfersService {
           message: 'Ключ уже использован с другими данными.',
         });
       return dto(previous);
-    }
-    if (input.projectId !== null) {
-      const [project] = await tx.$queryRaw<
-        { is_active: boolean }[]
-      >`SELECT is_active FROM warehouse_projects WHERE id=${BigInt(input.projectId)} FOR SHARE`;
-      if (!project?.is_active)
-        throw new ConflictException({
-          code: 'WAREHOUSE_TRANSFER_PROJECT_UNAVAILABLE',
-          message: 'Проект не найден или неактивен.',
-        });
     }
     const locationIds = [
       BigInt(input.fromLocationId),
@@ -163,23 +138,6 @@ export class WarehouseTransfersService {
         code: 'WAREHOUSE_BALANCE_NOT_FOUND',
         message: 'Исходный остаток не найден.',
       });
-    const destination = await this.stock.getBalance(
-      input.itemId,
-      input.toLocationId,
-      tx,
-    );
-    const reservations = await this.reservations.getLocked(tx, [
-      BigInt(balance.id),
-      ...(destination ? [BigInt(destination.id)] : []),
-    ]);
-    const reservationPlan = planReservationTransfer(
-      reservations,
-      BigInt(balance.id),
-      destination ? BigInt(destination.id) : undefined,
-      balance.quantity,
-      input.quantity,
-      input.projectId,
-    );
     const moved = await this.stock.moveStock(
       { tx, actorUserId: actor },
       input.itemId,
@@ -187,11 +145,7 @@ export class WarehouseTransfersService {
       input.toLocationId,
       input.quantity,
     );
-    const reservationTransfer = reservationPlan
-      ? await applyReservationTransfer(tx, reservationPlan, BigInt(moved.to.id))
-      : null;
     const snapshot = {
-      reservationTransfer,
       item: warehouseItemIdentityDto(item),
       from: locationWithWarehouseDto(from),
       to: locationWithWarehouseDto(to),
@@ -215,14 +169,6 @@ export class WarehouseTransfersService {
         snapshot,
       },
     });
-    if (reservationTransfer)
-      await auditReservationTransfer(
-        tx,
-        this.audit,
-        actor,
-        operation.id,
-        reservationTransfer,
-      );
     const result = dto(operation);
     await this.audit.writeFieldChanges({
       tx,

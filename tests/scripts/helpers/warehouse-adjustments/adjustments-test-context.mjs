@@ -219,17 +219,6 @@ export async function withAdjustmentsContext(
         initialQuantity,
       ),
     );
-    const projectRow = await prisma.warehouseProject.create({
-      data: { projectNumber: "ADJUST-PROJECT" },
-    });
-    const reservation = await prisma.warehouseProjectReservation.create({
-      data: {
-        balanceId: BigInt(initial.id),
-        projectId: projectRow.id,
-        quantity: "18",
-      },
-    });
-
     await testCase({
       prisma,
       url,
@@ -250,7 +239,6 @@ export async function withAdjustmentsContext(
       upload,
       request,
       quantity,
-      reservation,
       storage,
       objects,
     });

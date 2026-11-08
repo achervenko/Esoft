@@ -28,36 +28,24 @@ function text(value: unknown, max: number) {
     issueInvalid('Некорректное текстовое поле.');
   return value.trim();
 }
-export function parseIssue(value: unknown, preview = false) {
+export function parseIssue(value: unknown) {
   const b = issueRecord(value, [
     'requestKey',
     'type',
-    'projectId',
     'issueSheetLineId',
     'positions',
     'comment',
-    'overrideReservations',
-    'overrideConfirmation',
   ]);
-  let requestKey: string | null = null;
-  if (!preview || b.requestKey !== undefined) {
-    if (
-      typeof b.requestKey !== 'string' ||
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-        b.requestKey,
-      )
+  if (
+    typeof b.requestKey !== 'string' ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      b.requestKey,
     )
-      issueInvalid('requestKey должен быть UUID.');
-    requestKey = b.requestKey.toLowerCase();
-  }
+  )
+    issueInvalid('requestKey должен быть UUID.');
+  const requestKey = b.requestKey.toLowerCase();
   if (b.type !== 'MANUAL' && b.type !== 'ISSUE_SHEET')
     issueInvalid('Укажите тип MANUAL или ISSUE_SHEET.');
-  const projectId =
-    b.projectId === undefined
-      ? undefined
-      : b.projectId === null
-        ? null
-        : parseWarehouseId(b.projectId);
   const issueSheetLineId =
     b.issueSheetLineId === undefined || b.issueSheetLineId === null
       ? null
@@ -85,32 +73,16 @@ export function parseIssue(value: unknown, preview = false) {
   )
     issueInvalid('Остаток не должен повторяться в выдаче.');
   positions.sort((a, b) => (a.balanceId < b.balanceId ? -1 : 1));
-  const overrideReservations =
-    b.overrideReservations === undefined ? false : bool(b.overrideReservations);
   const comment =
     b.comment === undefined || b.comment === null
       ? null
       : text(b.comment, 4000) || null;
-  if (overrideReservations && !comment)
-    issueInvalid('Для принудительной выдачи укажите основание в comment.');
-  const overrideConfirmation =
-    b.overrideConfirmation === undefined
-      ? undefined
-      : text(b.overrideConfirmation, 64);
-  if (
-    overrideConfirmation !== undefined &&
-    (!overrideReservations || !/^[a-f0-9]{64}$/.test(overrideConfirmation))
-  )
-    issueInvalid('Некорректное подтверждение принудительной выдачи.');
   return {
     requestKey,
     type: b.type,
-    projectId,
     issueSheetLineId,
     positions,
     comment,
-    overrideReservations,
-    overrideConfirmation,
   };
 }
 export type IssueInput = ReturnType<typeof parseIssue>;
@@ -118,14 +90,12 @@ export function parseAvailableQuery(value: unknown) {
   const b = issueRecord(value ?? {}, [
     'warehouseId',
     'itemId',
-    'projectId',
     'includeUnavailable',
   ]);
   return {
     warehouseId:
       b.warehouseId === undefined ? undefined : parseWarehouseId(b.warehouseId),
     itemId: parseWarehouseId(b.itemId),
-    projectId: b.projectId === undefined ? null : parseWarehouseId(b.projectId),
     includeUnavailable:
       b.includeUnavailable === undefined ? false : bool(b.includeUnavailable),
   };
@@ -179,14 +149,11 @@ export function parseIssueFilters(value: unknown) {
     'types',
     'itemId',
     'itemIds',
-    'projectId',
-    'projectIds',
     'balanceId',
     'locationId',
     'issueSheetId',
     'issueSheetLineId',
     'issuedByUserId',
-    'overrideReservations',
     'createdFrom',
     'createdTo',
     'minQuantity',
@@ -222,7 +189,6 @@ export function parseIssueFilters(value: unknown) {
       q.warehouseId === undefined ? undefined : parseWarehouseId(q.warehouseId),
     types: types as string[] | undefined,
     itemIds: ids(q.itemId, q.itemIds),
-    projectIds: ids(q.projectId, q.projectIds),
     balanceId:
       q.balanceId === undefined ? undefined : parseWarehouseId(q.balanceId),
     locationId:
@@ -237,10 +203,6 @@ export function parseIssueFilters(value: unknown) {
         : parseWarehouseId(q.issueSheetLineId),
     issuedByUserId:
       q.issuedByUserId === undefined ? undefined : text(q.issuedByUserId, 255),
-    overrideReservations:
-      q.overrideReservations === undefined
-        ? undefined
-        : bool(q.overrideReservations),
     createdFrom: date(q.createdFrom),
     createdTo: date(q.createdTo),
     minQuantity:
@@ -273,17 +235,12 @@ export function issueRequestHash(input: IssueInput) {
     .update(
       JSON.stringify({
         type: input.type,
-        projectId:
-          input.projectId === undefined && input.type === 'ISSUE_SHEET'
-            ? 'UNSPECIFIED'
-            : (input.projectId?.toString() ?? null),
         issueSheetLineId: input.issueSheetLineId?.toString() ?? null,
         positions: input.positions.map((p) => ({
           balanceId: String(p.balanceId),
           quantity: p.quantity.toString(),
         })),
         comment: input.comment,
-        overrideReservations: input.overrideReservations,
       }),
     )
     .digest('hex');

@@ -9,7 +9,6 @@ export async function verifyIssueSheetsQuery(context) {
     actor,
     item,
     location,
-    project,
     create,
     add,
     issue,
@@ -97,7 +96,6 @@ export async function verifyIssueSheetsQuery(context) {
         statuses: ["PROCESSED"],
         hasShortage: false,
         itemId: String(item.id),
-        projectId: String(project.id),
         processedByUserId: actor.id,
       })
     ).total,

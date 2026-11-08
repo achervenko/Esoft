@@ -4,7 +4,6 @@ export function stockTransferQuantity(
   quantity: string,
   availableQuantity: string,
   unit: string,
-  isReserved: boolean,
 ) {
   const normalized = quantity.trim().replace(",", ".");
   const amount = quantityMillis(normalized),
@@ -21,7 +20,7 @@ export function stockTransferQuantity(
     else if (available === null)
       quantityError = "Не удалось определить доступный остаток.";
     else if (amount > available)
-      quantityError = `Нельзя переместить больше ${isReserved ? "выбранного резерва" : "доступного остатка"}: ${formatStockQuantity(availableQuantity)} ${unit}.`;
+      quantityError = `Нельзя переместить больше доступного остатка: ${formatStockQuantity(availableQuantity)} ${unit}.`;
   }
   return { normalized, amount, available, quantityError };
 }

@@ -25,19 +25,6 @@ export type StockDistribution = {
     balanceId: string;
     location: StorageLocation;
     quantity: string;
-    reserved: string;
-    shortage?: string;
-    physicalShortage?: string;
-    available: string;
-    reservations: {
-      id?: string;
-      borrowedQuantity?: string;
-      movableQuantity?: string;
-      projectId: string;
-      projectNumber: string;
-      projectName: string | null;
-      quantity: string;
-    }[];
   }[];
 };
 export type StockPage = {
@@ -53,15 +40,13 @@ export type StockTransferInput = {
   toLocationId: string;
   quantity: string;
   comment: string;
-  moveReservation?: boolean;
-  projectId?: string;
 };
 export type StockConsolidationInput = {
   requestKey: string;
   itemId: string;
   fromWarehouseId: string;
   toLocationId: string;
-  moves: { fromLocationId: string; quantity: string; projectId?: string }[];
+  moves: { fromLocationId: string; quantity: string }[];
 };
 export type StockAdjustmentInput = {
   requestKey: string;
@@ -72,29 +57,7 @@ export type StockAdjustmentInput = {
   reason: string;
   attachments: string[];
 };
-export type ReservationOperationInput = {
-  action: "RELEASE" | "BORROW" | "RESTORE";
-  quantity: string;
-  expectedQuantity: string;
-  expectedBorrowedQuantity: string;
-  requestKey: string;
-  comment: string;
-  attachments: string[];
-};
 export const warehouseStockApi = {
-  reservationOperation: (id: string, input: ReservationOperationInput) =>
-    request(`/api/warehouse/reservations/${id}/operations`, {
-      method: "POST",
-      body: JSON.stringify(input),
-    }),
-  uploadReservationDocument: (file: File) => {
-    const body = new FormData();
-    body.append("file", file);
-    return request<{ uploadId: string; originalName: string }>(
-      "/api/warehouse/reservations/documents",
-      { method: "POST", body, signal: AbortSignal.timeout(120_000) },
-    );
-  },
   currentUserId: async () => {
     const session = await request<{ user: { id: string } } | null>(
       "/api/auth/get-session",

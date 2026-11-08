@@ -166,14 +166,7 @@ export class WarehouseReceiptImportService {
       actor,
       sourceData,
     );
-    await saveReceiptImportLines(
-      tx,
-      row.id,
-      sourceSystem,
-      input,
-      oldLines,
-      bindings,
-    );
+    await saveReceiptImportLines(tx, row.id, input, oldLines, bindings);
     if (input.status !== 'CANCELLED') await receiptProgress(tx, row.id);
     await receiptAudit(
       this.audit,

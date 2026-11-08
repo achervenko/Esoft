@@ -35,11 +35,6 @@ export async function verifyWarehouseSchemaBasic({ prisma }) {
     ).isActive,
     false,
   );
-  const projectRow = await prisma.warehouseProject.create({
-    data: { projectNumber: "PROJECT-1" },
-  });
-  assert.equal(projectRow.name, null);
-  assert.equal(projectRow.isActive, true);
   const balance = await prisma.warehouseBalance.create({
     data: { itemId: item.id, storageLocationId: location.id },
   });
@@ -48,24 +43,6 @@ export async function verifyWarehouseSchemaBasic({ prisma }) {
     where: { id: balance.id },
     data: { quantity: "12345678901.123" },
   });
-  const reservation = await prisma.warehouseProjectReservation.create({
-    data: {
-      balanceId: balance.id,
-      projectId: projectRow.id,
-      quantity: "0.125",
-    },
-  });
-  assert.equal(reservation.quantity.toString(), "0.125");
-  await prisma.warehouseProject.update({
-    where: { id: projectRow.id },
-    data: { isActive: false },
-  });
-  const closedProject = await prisma.warehouseProject.findUniqueOrThrow({
-    where: { id: projectRow.id },
-    include: { reservations: true },
-  });
-  assert.equal(closedProject.isActive, false);
-  assert.equal(closedProject.reservations[0].id, reservation.id);
   assert.equal(
     (
       await prisma.warehouseBalance.findUniqueOrThrow({
@@ -74,5 +51,5 @@ export async function verifyWarehouseSchemaBasic({ prisma }) {
     ).quantity.toString(),
     "12345678901.123",
   );
-  return { item, location, projectRow, balance, reservation };
+  return { item, location, balance };
 }

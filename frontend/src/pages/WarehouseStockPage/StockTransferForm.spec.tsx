@@ -69,11 +69,13 @@ it("blocks amounts above free stock and reuses the request key after a network f
     await screen.findByRole("option", { name: secondLocation.name }),
   );
   fireEvent.change(screen.getByLabelText("Количество"), {
-    target: { value: "9" },
+    target: { value: "11" },
   });
   expect(screen.getByRole("button", { name: "Переместить" })).toBeDisabled();
   expect(
-    screen.getByText("Нельзя переместить больше доступного остатка: 8,001 шт."),
+    screen.getByText(
+      "Нельзя переместить больше доступного остатка: 10,001 шт.",
+    ),
   ).toBeTruthy();
   for (const [value, message] of [
     ["-1", "Количество не может быть отрицательным."],
@@ -94,7 +96,7 @@ it("blocks amounts above free stock and reuses the request key after a network f
     new Error("Нет ответа"),
   );
   const summary = screen.getByRole("region", { name: "Итог перемещения" });
-  expect(within(summary).getByText("Останется свободно: 7 шт")).toBeTruthy();
+  expect(within(summary).getByText("Останется: 9 шт")).toBeTruthy();
   expect(within(summary).getByText("Добавится: 1,001 шт")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Переместить" }));
   await screen.findByText("Нет ответа");
@@ -171,11 +173,11 @@ it("prevents concurrent submits and refreshes distribution and parent after succ
   );
 });
 
-it("allows moving reserved sources but blocks inactive locations", async () => {
+it("hides empty sources and blocks inactive locations", async () => {
   vi.mocked(warehouseStockApi.distribution).mockResolvedValue({
     ...distribution,
     locations: [
-      { ...distribution.locations[0], available: "0" },
+      { ...distribution.locations[0], quantity: "0" },
       {
         ...distribution.locations[1],
         location: { ...distribution.locations[1].location, isActive: false },
@@ -195,7 +197,7 @@ it("allows moving reserved sources but blocks inactive locations", async () => {
   });
   await within(modal).findByText("Место неактивно");
   const buttons = within(modal).getAllByRole("button", { name: "Переместить" });
-  expect(buttons[0]).toBeEnabled();
-  expect(buttons[1]).toBeDisabled();
-  expect(within(modal).getByText("2 шт")).toBeTruthy();
+  expect(buttons).toHaveLength(1);
+  expect(buttons[0]).toBeDisabled();
+  expect(within(modal).queryByText("Угол ангара")).toBeNull();
 });

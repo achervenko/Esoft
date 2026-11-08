@@ -32,21 +32,6 @@ export class WarehouseIssueSheetsService {
   cancel(id: string, actor: string) {
     return this.lifecycle.cancel(id, actor);
   }
-  previewIssueForLine(
-    tx: Prisma.TransactionClient,
-    lineId: string,
-    itemId: string,
-    quantity: string,
-    actor: string,
-  ) {
-    return this.execution.previewIssueForLine(
-      tx,
-      lineId,
-      itemId,
-      quantity,
-      actor,
-    );
-  }
   executeIssueForLine<T>(
     tx: Prisma.TransactionClient,
     lineId: string,

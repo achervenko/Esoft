@@ -12,78 +12,31 @@ export async function verifyTransfersConcurrency(run) {
     ]);
     assert.equal(attempts.filter((r) => r.status === "fulfilled").length, 1);
     hasCode(
-      "WAREHOUSE_TRANSFER_RESERVED_STOCK",
+      "WAREHOUSE_STOCK_INSUFFICIENT",
       409,
     )(attempts.find((r) => r.status === "rejected").reason);
     assert.equal((await read(a)).quantity, "2");
   });
-  await run(
-    "opposite transfers and reservation race use the same Stock locks",
-    async (ctx) => {
-      const {
-        prisma,
-        reservationsApi,
-        actor,
-        a,
-        b,
-        receive,
-        read,
-        service,
-        payload,
-        namespace,
-      } = ctx;
+  await run("opposite transfers use the same Stock locks", async (ctx) => {
+    const { actor, a, b, receive, read, service, payload } = ctx;
 
-      await receive(a, "10");
-      await receive(b, "10");
-      await Promise.all(
-        Array.from({ length: 6 }, (_, i) =>
-          service.create(
-            i % 2
-              ? payload("1")
-              : {
-                  ...payload("1"),
-                  fromLocationId: String(b.id),
-                  toLocationId: String(a.id),
-                },
-            actor.id,
-          ),
-        ),
-      );
-      assert.equal((await read(a)).quantity, "10");
-      assert.equal((await read(b)).quantity, "10");
-      const api = reservationsApi;
-      const project = await prisma.warehouseProject.create({
-        data: { projectNumber: namespace + "-race" },
-      });
-      const balance = await read(a);
-      const race = await Promise.allSettled([
-        service.create(payload("6"), actor.id),
-        api.create(
-          {
-            balanceId: balance.id,
-            projectId: String(project.id),
-            quantity: "8",
-          },
+    await receive(a, "10");
+    await receive(b, "10");
+    await Promise.all(
+      Array.from({ length: 6 }, (_, i) =>
+        service.create(
+          i % 2
+            ? payload("1")
+            : {
+                ...payload("1"),
+                fromLocationId: String(b.id),
+                toLocationId: String(a.id),
+              },
           actor.id,
         ),
-      ]);
-      assert.equal(race.filter((r) => r.status === "fulfilled").length, 1);
-      const failure = race.find((r) => r.status === "rejected").reason;
-      assert.equal(failure.getStatus(), 409);
-      assert.ok(
-        [
-          "WAREHOUSE_TRANSFER_RESERVED_STOCK",
-          "WAREHOUSE_RESERVATION_INSUFFICIENT",
-        ].includes(failure.response.code),
-      );
-      const remaining = await read(a);
-      const totalReserved = (
-        await prisma.warehouseProjectReservation.aggregate({
-          where: { balanceId: BigInt(balance.id) },
-          _sum: { quantity: true },
-        })
-      )._sum.quantity;
-      assert.ok(!totalReserved || totalReserved.lte(remaining.quantity));
-    },
-  );
+      ),
+    );
+    assert.equal((await read(a)).quantity, "10");
+    assert.equal((await read(b)).quantity, "10");
+  });
 }

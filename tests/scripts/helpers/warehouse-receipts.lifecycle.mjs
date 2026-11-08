@@ -7,7 +7,7 @@ const load = (path) => require("../../../backend/dist/src/" + path);
 
 export async function receiptsLifecycle(c, t) {
   await t.test(
-    "one real warehouse lifecycle: import, placement, reservation, transfers, issues, reconciliation and historical replay",
+    "one real warehouse lifecycle: import, placement, transfers, issues, reconciliation and historical replay",
     async () => {
       const issues = await createWarehouseIssuesTestContext(c.prisma);
       c.audit.writeFieldChanges = issues.audit.writeFieldChanges.bind(
@@ -16,9 +16,6 @@ export async function receiptsLifecycle(c, t) {
       const { WarehouseTransfersService } = load(
         "warehouse/transfers/transfers.service.js",
       );
-      const { WarehouseReservationsApiService } = load(
-        "warehouse/reservations/reservations-api.service.js",
-      );
       const { WarehouseStockOverviewService } = load(
         "warehouse/stock/stock-overview.service.js",
       );
@@ -26,17 +23,9 @@ export async function receiptsLifecycle(c, t) {
       const transfers = new WarehouseTransfersService(
         c.prisma,
         issues.stock,
-        issues.reservations,
-        issues.audit,
-      );
-      const reservations = new WarehouseReservationsApiService(
-        c.prisma,
-        issues.stock,
-        issues.reservations,
         issues.audit,
       );
       const itemId = String(c.item.id);
-      const projectId = String(issues.projects[0].id);
       const sourceDocument = c.source();
       const receipt = await c.mapped(sourceDocument);
       assert.equal(await c.quantity(), "0");
@@ -53,12 +42,7 @@ export async function receiptsLifecycle(c, t) {
             },
           },
         });
-      const from = await balance(c.location),
-        to = await balance(c.target);
-      await reservations.create(
-        { balanceId: String(from.id), projectId, quantity: "4" },
-        c.keeper.id,
-      );
+      const to = await balance(c.target);
       const transfer = (quantity, extra = {}) => ({
         requestKey: randomUUID(),
         itemId,
@@ -70,35 +54,21 @@ export async function receiptsLifecycle(c, t) {
       await transfers.create(transfer("2"), c.keeper.id);
       assert.equal((await balance(c.location)).quantity.toString(), "4");
       assert.equal((await balance(c.target)).quantity.toString(), "6");
-      await assert.rejects(
-        transfers.create(transfer("1"), c.keeper.id),
-        (error) => error.response.code === "WAREHOUSE_TRANSFER_RESERVED_STOCK",
-      );
-      const reservedMove = transfer("2", { moveReservation: true, projectId });
-      const moved = await transfers.create(reservedMove, c.keeper.id);
+      const repeatedMove = transfer("2");
+      const moved = await transfers.create(repeatedMove, c.keeper.id);
       assert.equal(
-        (await transfers.create(reservedMove, c.keeper.id)).id,
+        (await transfers.create(repeatedMove, c.keeper.id)).id,
         moved.id,
       );
       assert.equal(await c.quantity(), "10");
       const issuePayload = {
         requestKey: randomUUID(),
         type: "MANUAL",
-        projectId,
         positions: [{ balanceId: String(to.id), quantity: "2" }],
       };
       const issued = await issues.service.createIssue(
         issuePayload,
         c.keeper.id,
-      );
-      assert.equal(issued.reservationUsage[0].quantity, "2");
-      assert.equal(
-        await issues.reserveQuantity(to.id, issues.projects[0].id),
-        "0",
-      );
-      assert.equal(
-        await issues.reserveQuantity(from.id, issues.projects[0].id),
-        "2",
       );
       assert.equal(await c.quantity(), "8");
       assert.equal(
@@ -159,12 +129,12 @@ export async function receiptsLifecycle(c, t) {
       );
       const available = await issues.queries.available({ itemId });
       assert.equal(
-        available.items.reduce((sum, row) => sum + Number(row.physical), 0),
+        available.items.reduce((sum, row) => sum + Number(row.quantity), 0),
         8,
       );
       assert.equal(
-        available.items.reduce((sum, row) => sum + Number(row.available), 0),
-        6,
+        available.items.reduce((sum, row) => sum + Number(row.quantity), 0),
+        8,
       );
       const distribution = await overview.distribution(
         itemId,
@@ -173,10 +143,10 @@ export async function receiptsLifecycle(c, t) {
       assert.equal(distribution.totalQuantity, "8");
       assert.equal(
         distribution.locations.reduce(
-          (sum, row) => sum + Number(row.available),
+          (sum, row) => sum + Number(row.quantity),
           0,
         ),
-        6,
+        8,
       );
       const page = await overview.list({
         warehouseId: String(c.warehouse.id),

@@ -20,13 +20,11 @@ import { stockTransferQuantity } from "./StockTransferQuantity";
 export function useStockTransferForm({
   data,
   source,
-  reservation,
   onSaved,
   onSavingChange,
 }: {
   data: StockDistribution;
   source: StockDistribution["locations"][number];
-  reservation?: StockDistribution["locations"][number]["reservations"][number];
   onSaved: () => void;
   onSavingChange?: (saving: boolean) => void;
 }) {
@@ -35,8 +33,7 @@ export function useStockTransferForm({
     return saved?.kind === "transfer" &&
       saved.input.itemId === data.item.id &&
       saved.data.warehouse.id === data.warehouse.id &&
-      saved.input.fromLocationId === source.location.id &&
-      saved.input.projectId === reservation?.projectId
+      saved.input.fromLocationId === source.location.id
       ? saved
       : null;
   });
@@ -64,12 +61,7 @@ export function useStockTransferForm({
       ? [data.warehouse]
       : choices.warehouses;
   const { normalized, amount, available, quantityError } =
-    stockTransferQuantity(
-      quantity,
-      reservation?.movableQuantity ?? reservation?.quantity ?? source.available,
-      data.item.unit,
-      !!reservation,
-    );
+    stockTransferQuantity(quantity, source.quantity, data.item.unit);
   const valid =
     amount !== null &&
     amount > 0n &&
@@ -96,9 +88,6 @@ export function useStockTransferForm({
       toLocationId: locationId,
       quantity: normalized,
       comment: comment.trim(),
-      ...(reservation
-        ? { moveReservation: true, projectId: reservation.projectId }
-        : {}),
     };
     try {
       await persistStockMovement({
@@ -106,7 +95,7 @@ export function useStockTransferForm({
         data,
         input: attempt,
         warehouseId,
-        source: { balance: source, reservation },
+        source: { balance: source },
       });
     } catch (e) {
       setError(getApiErrorMessage(e));

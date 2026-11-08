@@ -21,22 +21,17 @@ export async function verifyTransfersIdempotency(run) {
   await run(
     "audit failure rolls back both balances, transfer and key",
     async (ctx) => {
-      const { prisma, reservations, WarehouseTransfersService } = ctx;
+      const { prisma, WarehouseTransfersService } = ctx;
 
       const { actor, a, b, receive, read, stock, payload } = ctx;
       await receive(a, "10");
       const input = payload();
       const before = await prisma.auditLog.count();
-      const broken = new WarehouseTransfersService(
-        prisma,
-        stock,
-        reservations,
-        {
-          writeFieldChanges: async () => {
-            throw Error("Transfer audit unavailable");
-          },
+      const broken = new WarehouseTransfersService(prisma, stock, {
+        writeFieldChanges: async () => {
+          throw Error("Transfer audit unavailable");
         },
-      );
+      });
       await assert.rejects(
         broken.create(input, actor.id),
         /Transfer audit unavailable/,

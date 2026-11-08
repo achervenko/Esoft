@@ -6,7 +6,6 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { parseWarehouseId } from '../catalog/catalog.validation';
-import { reservationAvailability } from '../reservations/reservation-consumption';
 import { parseAvailableQuery, parseIssueFilters } from './issues.validation';
 import {
   issueConflict,
@@ -30,16 +29,6 @@ export class WarehouseIssuesQueryService {
             'WAREHOUSE_ISSUE_ITEM_UNAVAILABLE',
             'Номенклатура недоступна.',
           );
-        if (q.projectId !== null) {
-          const project = await tx.warehouseProject.findUnique({
-            where: { id: q.projectId },
-          });
-          if (!project?.isActive)
-            issueConflict(
-              'WAREHOUSE_ISSUE_PROJECT_UNAVAILABLE',
-              'Проект недоступен.',
-            );
-        }
         const balances = await tx.warehouseBalance.findMany({
           where: {
             itemId: q.itemId,
@@ -47,36 +36,22 @@ export class WarehouseIssuesQueryService {
           },
           include: {
             storageLocation: { select: locationWithWarehouseSelect },
-            reservations: {
-              include: {
-                project: { select: { projectNumber: true, name: true } },
-              },
-            },
           },
           orderBy: [{ storageLocation: { name: 'asc' } }, { id: 'asc' }],
         });
         return {
           items: balances
             .map((balance) => {
-              const r = reservationAvailability(
-                balance.quantity,
-                balance.reservations,
-                q.projectId,
-              );
               return {
                 balanceId: String(balance.id),
                 itemId: String(balance.itemId),
                 location: locationWithWarehouseDto(balance.storageLocation),
-                physical: balance.quantity.toString(),
-                reserved: r.reserved.toString(),
-                reservedForCurrentProject: r.own.toString(),
-                reservedForOtherProjects: r.others.toString(),
-                available: r.available.toString(),
+                quantity: balance.quantity.toString(),
               };
             })
             .filter(
               (b) =>
-                q.includeUnavailable || new Prisma.Decimal(b.available).gt(0),
+                q.includeUnavailable || new Prisma.Decimal(b.quantity).gt(0),
             ),
         };
       },
@@ -109,10 +84,6 @@ export class WarehouseIssuesQueryService {
       conditions.push(Prisma.sql`i.warehouse_id = ${q.warehouseId}`);
     if (q.types)
       conditions.push(Prisma.sql`i.type IN (${Prisma.join(q.types)})`);
-    if (q.projectIds)
-      conditions.push(
-        Prisma.sql`i.project_id IN (${Prisma.join(q.projectIds)})`,
-      );
     if (q.issueSheetLineId)
       conditions.push(
         Prisma.sql`i.issue_sheet_line_id = ${q.issueSheetLineId}`,
@@ -123,10 +94,6 @@ export class WarehouseIssuesQueryService {
       );
     if (q.issuedByUserId !== undefined)
       conditions.push(Prisma.sql`i.issued_by_user_id = ${q.issuedByUserId}`);
-    if (q.overrideReservations !== undefined)
-      conditions.push(
-        Prisma.sql`i.override_reservations = ${q.overrideReservations}`,
-      );
     if (q.createdFrom)
       conditions.push(Prisma.sql`i.created_at >= ${q.createdFrom}`);
     if (q.createdTo)

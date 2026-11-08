@@ -113,14 +113,6 @@ export class WarehouseStockAdjustmentCommandService {
               : 'SURPLUS'
             : input.type;
         const quantity = delta.abs();
-        const reserved = current
-          ? ((
-              await tx.warehouseProjectReservation.aggregate({
-                where: { balanceId: BigInt(current.id) },
-                _sum: { quantity: true },
-              })
-            )._sum.quantity ?? new Prisma.Decimal(0))
-          : new Prisma.Decimal(0);
         const context = { tx, actorUserId };
         const balance =
           type === 'WRITE_OFF'
@@ -176,15 +168,6 @@ export class WarehouseStockAdjustmentCommandService {
           quantity: quantity.toString(),
           quantityBefore: before.toString(),
           quantityAfter: balance.quantity,
-          reserved: reserved.toString(),
-          shortageBefore: Prisma.Decimal.max(
-            reserved.minus(before),
-            0,
-          ).toString(),
-          shortageAfter: Prisma.Decimal.max(
-            reserved.minus(balance.quantity),
-            0,
-          ).toString(),
           reason: input.reason,
           comment: input.comment,
           attachments: files.map((file) => ({

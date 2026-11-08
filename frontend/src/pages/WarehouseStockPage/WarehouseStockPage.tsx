@@ -1,4 +1,3 @@
-import { pendingReservationPosition } from "./pending-reservation-operation";
 import { pendingStockPosition } from "./pending-stock-movement";
 import { useState } from "react";
 import { SearchToolbar } from "../../shared/ui/SearchToolbar";
@@ -29,8 +28,8 @@ export function WarehouseStockPage({
   const page = useWarehouseStock(enabled),
     choices = useStorageChoices(enabled, page.warehouseId);
   const mobile = useMediaQuery("(max-width: 760px)");
-  const [selected, setSelected] = useState<StockPosition | null>(
-    () => pendingStockPosition() ?? pendingReservationPosition(),
+  const [selected, setSelected] = useState<StockPosition | null>(() =>
+    pendingStockPosition(),
   );
   const [filtersOpen, setFiltersOpen] = useState(false);
   const list = page.list,

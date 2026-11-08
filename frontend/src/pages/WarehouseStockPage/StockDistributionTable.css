@@ -40,26 +40,3 @@
   margin-top: 4px;
   white-space: nowrap;
 }
-
-.stock-reservation-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: #c62828;
-  cursor: pointer;
-}
-.stock-reservation-action:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-.stock-reservation-shortage {
-  display: block;
-  margin-top: 4px;
-  color: #b45309;
-  font-size: 12px;
-}

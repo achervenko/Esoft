@@ -41,7 +41,7 @@ export class WarehouseStockService {
     return this.queries.getItemTotal(itemId, warehouseId, tx);
   }
 
-  // Call once for the full set of locations BEFORE checking/updating reservations.
+  // Call once for the full set of locations BEFORE checking/updating quantities.
   // Locks remain held until the caller's transaction finishes.
   async lockBalances(
     tx: Prisma.TransactionClient,

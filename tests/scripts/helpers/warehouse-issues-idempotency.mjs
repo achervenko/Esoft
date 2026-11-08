@@ -12,9 +12,7 @@ export async function verifyWarehouseIssuesIdempotency(context) {
     sheets,
     keeper,
     admin,
-    projects,
     balanceQuantity,
-    reserveQuantity,
     createBrokenService,
   } = context;
   const broken = createBrokenService();
@@ -27,7 +25,6 @@ export async function verifyWarehouseIssuesIdempotency(context) {
     sheet.id,
     {
       itemId: String(forSheet.item.id),
-      projectId: String(projects[0].id),
       quantity: "10",
       rowNumber: 1,
       matchingStatus: "MATCHED",
@@ -41,29 +38,14 @@ export async function verifyWarehouseIssuesIdempotency(context) {
   });
   const sheetIssue = await service.createIssueFromSheet(sheetInput, keeper.id);
   await sheets.finalize(sheet.id, keeper.id);
-  const forced = await fixture(["100"], [["50", "20", "10"]]);
-  const forceInput = payload(forced, ["45"], {
-    overrideReservations: true,
-    comment: "Replay override",
-  });
-  const preview = await service.previewOverride(forceInput, admin.id);
-  const confirmed = await service.createIssue(
-    { ...forceInput, overrideConfirmation: preview.confirmationToken },
-    admin.id,
-  );
   // Successful retries return the exact saved JSON and never repeat effects.
-  const replayFixture = await fixture(["100", "100"], [["20"], []]);
+  const replayFixture = await fixture(["100", "100"]);
   const replayInput = payload(replayFixture, ["5", "2"], {
-    projectId: String(projects[0].id),
     comment: " Replay ",
   });
   const replayFirst = await service.createManualIssue(replayInput, keeper.id);
   const replayIssues = await prisma.warehouseIssue.count();
   const replayAudits = await prisma.auditLog.count();
-  const replayReserves = await reserveQuantity(
-    replayFixture.balances[0].id,
-    projects[0].id,
-  );
   const replaySecond = await service.createIssue(
     {
       ...replayInput,
@@ -77,10 +59,6 @@ export async function verifyWarehouseIssuesIdempotency(context) {
   );
   assert.deepEqual(replaySecond, replayFirst);
   assert.equal(await balanceQuantity(replayFixture.balances[0].id), "95");
-  assert.equal(
-    await reserveQuantity(replayFixture.balances[0].id, projects[0].id),
-    replayReserves,
-  );
   assert.equal(await prisma.warehouseIssue.count(), replayIssues);
   assert.equal(await prisma.auditLog.count(), replayAudits);
   await assert.rejects(
@@ -136,8 +114,6 @@ export async function verifyWarehouseIssuesIdempotency(context) {
     service.createIssue({ ...sheetInput, requestKey: randomUUID() }, keeper.id),
     code("WAREHOUSE_ISSUE_SHEET_STATE"),
   );
-  // Repeating the confirmed operation needs no new preview/token even after the stock changed.
-  assert.deepEqual(await service.createIssue(forceInput, admin.id), confirmed);
   await prisma.warehouseItem.update({
     where: { id: replayFixture.item.id },
     data: { name: "Renamed", isActive: false },
@@ -146,18 +122,10 @@ export async function verifyWarehouseIssuesIdempotency(context) {
     where: { id: replayFixture.balances[0].storageLocationId },
     data: { name: "Renamed location", isActive: false },
   });
-  await prisma.warehouseProject.update({
-    where: { id: projects[0].id },
-    data: { isActive: false },
-  });
   assert.deepEqual(
     await service.createIssue(replayInput, keeper.id),
     replayFirst,
   );
-  await prisma.warehouseProject.update({
-    where: { id: projects[0].id },
-    data: { isActive: true },
-  });
   const retryFailure = await fixture(["10"]);
   const retryFailureInput = payload(retryFailure, ["2"]);
   const requestsBeforeFailure = await prisma.warehouseIssueRequest.count();
@@ -190,18 +158,6 @@ export async function verifyWarehouseIssuesIdempotency(context) {
     }),
     { code: "P2002" },
   );
-  await prisma.user.update({
-    where: { id: admin.id },
-    data: { role: "storekeeper" },
-  });
-  await assert.rejects(
-    service.createIssue(forceInput, admin.id),
-    code("FORBIDDEN"),
-  );
-  await prisma.user.update({
-    where: { id: admin.id },
-    data: { role: "admin" },
-  });
   await prisma.user.update({
     where: { id: keeper.id },
     data: { banned: true },

@@ -4,7 +4,7 @@
 
 Backend-компонент заданий на выдачу. Использует существующие `WarehouseIssueSheet`,
 `WarehouseIssueSheetLine`, `WarehouseIssue`, `WarehouseIssuePosition` пакета warehouse.
-В схему добавлен обязательный warehouseId листа. Физический остаток, резервы и выбор мест фактической
+В схему добавлен обязательный warehouseId листа. Физический остаток и выбор мест фактической
 выдачи не изменяет. UI и импорт файлов не входят в этот компонент: исходные поля
 принимаются подготовленными данными.
 
@@ -47,8 +47,8 @@ storekeeper, в том числе совмещённые роли). На каж�
 символов, hash — SHA-256 из 64 hex-символов. Hash нормализуется в нижний регистр,
 но не является уникальным: повторный импорт сам по себе не запрещён.
 
-Добавление строки: `{ rowNumber, quantity, itemId?, storageLocationId?, projectId?,
-unitSnapshot?, sourceArticle?, sourceName?, sourceLocation?, sourceProject?,
+Добавление строки: `{ rowNumber, quantity, itemId?, storageLocationId?,
+unitSnapshot?, sourceArticle?, sourceName?, sourceLocation?,
 matchingStatus?, error? }`.
 Номера строк положительные и уникальны в листе, автоматической перенумерации нет.
 ID — десятичные строки PostgreSQL bigint. Количества — положительные десятичные
@@ -57,7 +57,7 @@ ID — десятичные строки PostgreSQL bigint. Количества
 
 `matchingStatus`: `UNMATCHED` (по умолчанию), `MATCHED`, `ERROR`.
 Исходные поля и rowNumber неизменяемы после создания. PATCH принимает только
-itemId, storageLocationId, projectId, quantity, unitSnapshot, matchingStatus, error.
+itemId, storageLocationId, quantity, unitSnapshot, matchingStatus, error.
 Обнуление необязательных полей — `null`.
 Ссылки должны существовать и быть активными. Место и проект необязательны;
 снимок единицы по умолчанию берётся из номенклатуры, явный отличный снимок запрещён.
@@ -67,12 +67,12 @@ itemId, storageLocationId, projectId, quantity, unitSnapshot, matchingStatus, er
 ## Списки и прогресс
 
 GET списка принимает: warehouseId, statuses, createdByUserId, processedByUserId,
-projectId, itemId, hasErrors, hasUnmatchedLines, hasShortage, sourceFileHash,
+itemId, hasErrors, hasUnmatchedLines, hasShortage, sourceFileHash,
 createdFrom/createdTo, processedFrom/processedTo, search, sortBy, sortOrder, page, limit.
 Статусы можно передать повторёнными query-параметрами или через запятую.
 Булевы фильтры принимают true/false и учитывают обе величины.
 Поиск без учёта регистра по name/sourceFileName, символы `%`, `_`, `\` буквальные.
-Фильтры projectId/itemId проверяют наличие подходящей строки в листе.
+Фильтр itemId проверяют наличие подходящей строки в листе.
 hasErrors: есть непустая error или matchingStatus=ERROR;
 hasUnmatchedLines: matchingStatus не MATCHED или отсутствует itemId;
 hasShortage: хотя бы в одной строке фактически выдано меньше требуемого,
@@ -80,7 +80,7 @@ hasShortage: хотя бы в одной строке фактически вы�
 Сортировки: createdAt (по умолчанию DESC), processedAt, name, status; ID разрешает
 ничьи, null processedAt идут последними.
 
-GET строк принимает matchingStatuses, itemId, projectId, storageLocationId,
+GET строк принимает matchingStatuses, itemId, storageLocationId,
 hasError, executionState, rowFrom/rowTo, sortBy, sortOrder, page, limit.
 По умолчанию rowNumber ASC. executionState: NOT_STARTED, PARTIAL, COMPLETED, ALL.
 Оба списка: `{ items, total, page, limit }`, page по умолчанию 1, limit 50,
@@ -132,8 +132,8 @@ await prisma.$transaction(
       quantity,
       actorUserId,
       async (line) => {
-        // Здесь Issues проверяет резервы/остатки, вызывает Stock и создаёт
-        // WarehouseIssue с issueSheetLineId=line.id, projectId=line.projectId
+        // Здесь Issues проверяет остатки, вызывает Stock и создаёт
+        // WarehouseIssue с issueSheetLineId=line.id
         // и WarehouseIssuePosition по выбранным фактическим местам.
         return issue;
       },
@@ -151,12 +151,10 @@ IN_PROGRESS; неизвестный статус также запрещает �
 Лист блокируется FOR UPDATE до
 чтения прогресса и остаётся заблокированным до commit. Сначала проверяется remaining,
 после callback проверяются точное приращение количества, тип ISSUE_SHEET,
-номенклатура всех позиций и проект. Ошибка должна выйти из транзакции: вызывающий
+номенклатура всех позиций и склад. Ошибка должна выйти из транзакции: вызывающий
 Issues не должен её проглатывать. Порядок блокировок: пользователь -> лист ->
 номенклатура/места -> остатки. Все writers выдач по листу обязаны пользоваться
 этим контрактом; прямые Prisma/SQL-записи не обходят его автоматически.
-Для предварительного расчёта Issues использует previewIssueForLine с теми же
-проверками и блокировкой; этот метод не создаёт выдач и не меняет статус.
 Отмена, изменение строк, финализация и параллельные выдачи сериализованы одним
 sheet lock; перевыдача и выдача после закрытия предотвращаются.
 

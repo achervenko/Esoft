@@ -34,7 +34,7 @@ export function parseConsolidation(value: unknown) {
       const row = value as Record<string, unknown>;
       if (
         Object.keys(row).some(
-          (k) => !['fromLocationId', 'quantity', 'projectId'].includes(k),
+          (k) => !['fromLocationId', 'quantity'].includes(k),
         )
       )
         invalid();
@@ -44,20 +44,10 @@ export function parseConsolidation(value: unknown) {
         toLocationId: b.toLocationId,
         fromLocationId: row.fromLocationId,
         quantity: row.quantity,
-        ...(row.projectId === undefined
-          ? {}
-          : { moveReservation: true, projectId: row.projectId }),
       });
     })
-    .sort(
-      (a, b) =>
-        a.fromLocationId.localeCompare(b.fromLocationId) ||
-        (a.projectId ?? '').localeCompare(b.projectId ?? ''),
-    );
-  if (
-    new Set(moves.map((m) => JSON.stringify([m.fromLocationId, m.projectId])))
-      .size !== moves.length
-  )
+    .sort((a, b) => a.fromLocationId.localeCompare(b.fromLocationId));
+  if (new Set(moves.map((m) => m.fromLocationId)).size !== moves.length)
     invalid();
   return {
     requestKey: moves[0].requestKey,

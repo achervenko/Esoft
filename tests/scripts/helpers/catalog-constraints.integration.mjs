@@ -45,12 +45,6 @@ export async function verifyCatalogConstraints({
       quantity: "2",
     },
   });
-  const project = await prisma.warehouseProject.create({
-    data: { projectNumber: "CAT-PROJECT" },
-  });
-  const reservation = await prisma.warehouseProjectReservation.create({
-    data: { balanceId: balance.id, projectId: project.id, quantity: "1" },
-  });
   await assert.rejects(
     service.update(
       first.id,
@@ -69,14 +63,6 @@ export async function verifyCatalogConstraints({
       })
     ).quantity.toString(),
     "2",
-  );
-  assert.equal(
-    (
-      await prisma.warehouseProjectReservation.findUniqueOrThrow({
-        where: { id: reservation.id },
-      })
-    ).balanceId,
-    balance.id,
   );
 
   const sheet = await prisma.warehouseIssueSheet.create({

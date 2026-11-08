@@ -17,7 +17,6 @@ describe('Issues HTTP permissions', () => {
   let http: Awaited<ReturnType<typeof createPermissionsHttpFixture>>;
   const issues = {
     createIssue: jest.fn().mockResolvedValue({}),
-    previewOverride: jest.fn().mockResolvedValue({}),
   };
   const queries = {
     list: jest.fn().mockResolvedValue({}),
@@ -53,22 +52,6 @@ describe('Issues HTTP permissions', () => {
         expect((await http.request(operation, role)).status).toBeLessThan(300);
     },
   );
-  it.each([
-    'storekeeper',
-    'engineer',
-    'accounting_specialist',
-    'ppe_specialist',
-  ])('does not grant override preview to %s', async (role) => {
-    expect(
-      (
-        await http.request(
-          { method: 'POST', path: '/api/warehouse/issues/override-preview' },
-          role,
-        )
-      ).status,
-    ).toBe(403);
-    expect(issues.previewOverride).not.toHaveBeenCalled();
-  });
   it('forwards historical search and period filters unchanged', async () => {
     await http.request(
       {
@@ -83,16 +66,6 @@ describe('Issues HTTP permissions', () => {
       createdFrom: '2025-01-01',
       createdTo: '2025-12-31T23:59:59.999Z',
     });
-  });
-  it('allows override preview to admin', async () => {
-    expect(
-      (
-        await http.request(
-          { method: 'POST', path: '/api/warehouse/issues/override-preview' },
-          'admin',
-        )
-      ).status,
-    ).toBeLessThan(300);
   });
   it('rejects unrelated roles and unauthenticated sessions', async () => {
     expect(

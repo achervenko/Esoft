@@ -46,9 +46,6 @@ export async function createWarehouseIssuesTestContext(prisma) {
   const { WarehouseIssuePlanService } = load(
     "warehouse/issues/issues-plan.service.js",
   );
-  const { WarehouseReservationsService } = load(
-    "warehouse/reservations/reservations.service.js",
-  );
   const audit = new AuditLogService(prisma);
   const stock = new WarehouseStockService(
     new WarehouseStockQueryService(prisma),
@@ -62,8 +59,7 @@ export async function createWarehouseIssuesTestContext(prisma) {
     new WarehouseIssueSheetExecutionService(txs),
   );
   const sheetQueries = new WarehouseIssueSheetsQueryService(prisma);
-  const reservations = new WarehouseReservationsService(audit);
-  const plans = new WarehouseIssuePlanService(stock, reservations);
+  const plans = new WarehouseIssuePlanService(stock);
   const access = new WarehouseIssuesAccessService();
   const service = new WarehouseIssuesService(
     prisma,
@@ -72,7 +68,6 @@ export async function createWarehouseIssuesTestContext(prisma) {
     plans,
     stock,
     sheets,
-    reservations,
   );
   const queries = new WarehouseIssuesQueryService(prisma);
   const admin = await prisma.user.create({
@@ -99,15 +94,8 @@ export async function createWarehouseIssuesTestContext(prisma) {
       role: "accounting_specialist",
     },
   });
-  const projects = await Promise.all(
-    ["A", "B", "C"].map((projectNumber) =>
-      prisma.warehouseProject.create({
-        data: { projectNumber: `${namespace}-${projectNumber}` },
-      }),
-    ),
-  );
   let next = 0;
-  async function fixture(physical = ["100"], reserves = []) {
+  async function fixture(physical = ["100"]) {
     const n = ++next;
     const item = await prisma.warehouseItem.create({
       data: { article: `${namespace}-${n}`, name: "Item " + n, unit: "шт" },
@@ -124,15 +112,6 @@ export async function createWarehouseIssuesTestContext(prisma) {
       const balance = await prisma.warehouseBalance.create({
         data: { itemId: item.id, storageLocationId: location.id, quantity },
       });
-      for (const [projectIndex, amount] of (reserves[i] ?? []).entries())
-        if (amount !== "0")
-          await prisma.warehouseProjectReservation.create({
-            data: {
-              balanceId: balance.id,
-              projectId: projects[projectIndex].id,
-              quantity: amount,
-            },
-          });
       balances.push(balance);
     }
     return { item, balances };
@@ -150,12 +129,6 @@ export async function createWarehouseIssuesTestContext(prisma) {
     (
       await prisma.warehouseBalance.findUniqueOrThrow({ where: { id } })
     ).quantity.toString();
-  const reserveQuantity = async (balanceId, projectId) =>
-    (
-      await prisma.warehouseProjectReservation.findUnique({
-        where: { balanceId_projectId: { balanceId, projectId } },
-      })
-    )?.quantity.toString() ?? "0";
   function createBrokenService() {
     return new WarehouseIssuesService(
       prisma,
@@ -168,13 +141,11 @@ export async function createWarehouseIssuesTestContext(prisma) {
       plans,
       stock,
       sheets,
-      reservations,
     );
   }
   return {
     prisma,
     audit,
-    reservations,
     warehouse,
     service,
     queries,
@@ -184,11 +155,9 @@ export async function createWarehouseIssuesTestContext(prisma) {
     admin,
     keeper,
     denied,
-    projects,
     fixture,
     payload,
     balanceQuantity,
-    reserveQuantity,
     createBrokenService,
   };
 }

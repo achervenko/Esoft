@@ -11,12 +11,10 @@ import type { useStockTransferForm } from "./useStockTransferForm";
 export function StockTransferFields({
   data,
   source,
-  reservation,
   form,
-}: Pick<
-  Parameters<typeof useStockTransferForm>[0],
-  "data" | "source" | "reservation"
-> & { form: ReturnType<typeof useStockTransferForm> }) {
+}: Pick<Parameters<typeof useStockTransferForm>[0], "data" | "source"> & {
+  form: ReturnType<typeof useStockTransferForm>;
+}) {
   const {
     warehouseId,
     setWarehouseId,
@@ -109,8 +107,7 @@ export function StockTransferFields({
         <p className="stock-transfer-hint">
           Доступно для перемещения:{" "}
           <strong>
-            {formatStockQuantity(reservation?.quantity ?? source.available)}{" "}
-            {data.item.unit}
+            {formatStockQuantity(source.quantity)} {data.item.unit}
           </strong>
         </p>
       </section>
