@@ -9,23 +9,31 @@ export type StockItem = Pick<
   WarehouseItem,
   "id" | "article" | "name" | "unit" | "isActive"
 > & { photo: string | null };
-export type StockPosition = {
+export type StockReservationQuantities = {
+  reservedQuantity: string;
+  freeQuantity: string;
+  reservationMismatch: boolean;
+};
+export type StockPosition = StockReservationQuantities & {
   id: string;
   item: StockItem;
   warehouse: Warehouse;
   quantity: string;
   locationsCount: number;
-  locationsPreview: { location: StorageLocation; quantity: string }[];
+  locationsPreview: (StockReservationQuantities & {
+    location: StorageLocation;
+    quantity: string;
+  })[];
 };
-export type StockDistribution = {
+export type StockDistribution = StockReservationQuantities & {
   item: StockItem;
   warehouse: Warehouse;
   totalQuantity: string;
-  locations: {
+  locations: (StockReservationQuantities & {
     balanceId: string;
     location: StorageLocation;
     quantity: string;
-  }[];
+  })[];
 };
 export type StockPage = {
   items: StockPosition[];

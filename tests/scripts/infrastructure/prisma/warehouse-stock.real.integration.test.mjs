@@ -8,8 +8,11 @@ import { verifyStockAtomicity } from "../../helpers/warehouse-stock-atomicity.mj
 import { verifyStockConcurrency } from "../../helpers/warehouse-stock-concurrency.mjs";
 import { verifyStockLocking } from "../../helpers/warehouse-stock-locking.mjs";
 import { verifyStockReservations } from "../../helpers/warehouse-stock-reservations.mjs";
+import { verifyStockQuantities } from "../../helpers/warehouse-stock-quantities.mjs";
+import { verifyReceiptOrders } from "../../helpers/warehouse-receipt-orders.mjs";
 import { verifyReservations } from "../../helpers/warehouse-reservation-manager.mjs";
 import { verifyReservationApi } from "../../helpers/warehouse-reservation-api.mjs";
+import { verifyReservationMoveApi } from "../../helpers/warehouse-reservation-move-api.mjs";
 import assert from "node:assert/strict";
 import { cp, mkdir, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -66,6 +69,8 @@ test(
           ["basic", verifyStockBasic],
           ["query", verifyStockQuery],
           ["overview", verifyStockOverview],
+          ["stock reservation quantities", verifyStockQuantities],
+          ["receipt orders", verifyReceiptOrders],
           ["errors", verifyStockErrors],
           ["activity", verifyStockActivity],
           ["atomicity", verifyStockAtomicity],
@@ -74,6 +79,7 @@ test(
           ["reservation protection", verifyStockReservations],
           ["reservation manager", verifyReservations],
           ["reservation HTTP API", verifyReservationApi],
+          ["reservation move HTTP API", verifyReservationMoveApi],
         ]) {
           await t.test(name, async (suite) => {
             await verify(await createStockTestContext(prisma, database), suite);

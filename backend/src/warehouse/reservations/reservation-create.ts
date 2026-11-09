@@ -26,7 +26,7 @@ export async function reserveStock(
   context: ReservationContext,
   input: ReserveInput,
 ) {
-  const { tx, actorUserId, comment } = context;
+  const { tx, actorUserId, comment, receipt } = context;
   assertStockTransaction(tx);
   const quantity = stockQuantity(input.quantity);
   if (typeof input.orderId !== 'string' || !reservationUuid.test(input.orderId))
@@ -122,6 +122,7 @@ export async function reserveStock(
           allocationBefore: allocation.quantity.minus(quantity).toString(),
           allocationAfter: allocation.quantity.toString(),
           ...(comment ? { comment } : {}),
+          ...(receipt ? { receipt } : {}),
         },
       },
     ],

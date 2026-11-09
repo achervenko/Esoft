@@ -51,26 +51,50 @@ export const position: StockPosition = {
   },
   warehouse,
   quantity: "17.001",
+  reservedQuantity: "0",
+  freeQuantity: "17.001",
+  reservationMismatch: false,
   locationsCount: 2,
   locationsPreview: [
-    { location, quantity: "10.001" },
-    { location: secondLocation, quantity: "7" },
+    {
+      location,
+      quantity: "10.001",
+      reservedQuantity: "0",
+      freeQuantity: "10.001",
+      reservationMismatch: false,
+    },
+    {
+      location: secondLocation,
+      quantity: "7",
+      reservedQuantity: "0",
+      freeQuantity: "7",
+      reservationMismatch: false,
+    },
   ],
 };
 export const distribution: StockDistribution = {
   item: position.item,
   warehouse,
   totalQuantity: position.quantity,
+  reservedQuantity: "0",
+  freeQuantity: position.quantity,
+  reservationMismatch: false,
   locations: [
     {
       balanceId: "10",
       location,
       quantity: "10.001",
+      reservedQuantity: "0",
+      freeQuantity: "10.001",
+      reservationMismatch: false,
     },
     {
       balanceId: "11",
       location: secondLocation,
       quantity: "7",
+      reservedQuantity: "0",
+      freeQuantity: "7",
+      reservationMismatch: false,
     },
   ],
 };

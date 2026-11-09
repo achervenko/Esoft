@@ -82,7 +82,7 @@ export function parseManualReceipt(value: unknown) {
       documentDate: documentDate(b.documentDate),
       comment: optionalText(b.comment, 4000),
       lines: b.lines.map((value, index) => {
-        const l = record(value, ['itemId', 'draftId', 'quantity']);
+        const l = record(value, ['itemId', 'draftId', 'quantity', 'orderId']);
         if ((l.itemId === undefined) === (l.draftId === undefined))
           invalid('Укажите товар или черновик.');
         const draftId = l.draftId === undefined ? undefined : uuid(l.draftId);
@@ -93,6 +93,7 @@ export function parseManualReceipt(value: unknown) {
           itemId: draftId ? undefined : String(stockId(l.itemId, 'itemId')),
           ...(draftId ? { draftId } : {}),
           quantity: stockQuantity(l.quantity).toString(),
+          ...(l.orderId === undefined ? {} : { orderId: uuid(l.orderId) }),
         };
       }),
     },
@@ -102,13 +103,38 @@ export function receiptHash(value: unknown) {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
 export function parsePlacement(value: unknown) {
-  const b = record(value, ['requestKey', 'storageLocationId', 'quantity']);
+  const b = record(value, [
+    'requestKey',
+    'storageLocationId',
+    'quantity',
+    'reservationAllocation',
+  ]);
+  const allocation =
+    b.reservationAllocation === undefined
+      ? undefined
+      : record(b.reservationAllocation, [
+          'restoreQuantity',
+          'increaseQuantity',
+        ]);
+  const amount = (value: unknown) => {
+    if (typeof value !== 'string')
+      invalid('Количество распределения должно быть строкой.');
+    return stockQuantity(value, true).toString();
+  };
   return {
     requestKey: uuid(b.requestKey),
     storageLocationId: String(
       stockId(b.storageLocationId, 'storageLocationId'),
     ),
     quantity: stockQuantity(b.quantity).toString(),
+    ...(allocation
+      ? {
+          reservationAllocation: {
+            restoreQuantity: amount(allocation.restoreQuantity),
+            increaseQuantity: amount(allocation.increaseQuantity),
+          },
+        }
+      : {}),
   };
 }
 export function parseReceiptQuery(value: unknown) {

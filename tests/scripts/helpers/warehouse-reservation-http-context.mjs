@@ -17,6 +17,9 @@ export async function startReservationHttp(c) {
   const { WarehouseReservationsModule } = reservations(
     "reservations.module.js",
   );
+  const { WarehouseReceiptsModule } = load(
+    "warehouse/receipts/receipts.module.js",
+  );
   const { PrismaService } = load("prisma/prisma.service.js");
   const { STORAGE_CONFIG } = load("storage/storage.tokens.js");
   const { PermissionsGuard, AUTHENTICATE_REQUEST } = load(
@@ -67,7 +70,7 @@ export async function startReservationHttp(c) {
     );
   }
   const fixture = await Test.createTestingModule({
-    imports: [WarehouseReservationsModule],
+    imports: [WarehouseReservationsModule, WarehouseReceiptsModule],
     providers: [
       { provide: ACTIVE_MODULES, useValue: ["warehouse", "orders"] },
       {
@@ -101,7 +104,10 @@ export async function startReservationHttp(c) {
       ...users,
       close: () => app.close(),
       async request(method, path, expected, body, role = "admin") {
-        const response = await fetch(base + path, {
+        const url = path.startsWith("/api/")
+          ? (await app.getUrl()) + path
+          : base + path;
+        const response = await fetch(url, {
           method,
           headers: {
             "content-type": "application/json",

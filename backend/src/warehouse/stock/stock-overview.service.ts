@@ -3,6 +3,13 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { parseStockOverview } from './stock-overview.validation';
 import { stockId } from './stock.validation';
+import {
+  readReservedQuantities,
+  readStockGroupQuantities,
+  stockGroupKey,
+  stockPairKey,
+  stockQuantityDto,
+} from './stock-quantities';
 import { warehouseItemSummaryDto } from '../catalog/catalog.dto';
 import {
   warehouseDto,
@@ -97,6 +104,14 @@ export class WarehouseStockOverviewService {
           orderBy: [{ storageLocation: { name: 'asc' } }, { id: 'asc' }],
           include: { storageLocation: { select: locationWithWarehouseSelect } },
         });
+        const reserved = await readReservedQuantities(tx, previews);
+        const totals = await readStockGroupQuantities(
+          tx,
+          groups.map((g) => ({
+            itemId: g.item_id,
+            warehouseId: g.warehouse_id,
+          })),
+        );
         const items = groups.map((g) => {
           const item = itemMap.get(String(g.item_id))!;
           const warehouse = warehouseMap.get(String(g.warehouse_id))!;
@@ -104,7 +119,9 @@ export class WarehouseStockOverviewService {
             id: `${g.item_id}:${g.warehouse_id}`,
             item: { ...warehouseItemSummaryDto(item), photo: null },
             warehouse: warehouseDto(warehouse),
-            quantity: g.quantity.toString(),
+            ...totals.get(
+              stockGroupKey({ itemId: g.item_id, warehouseId: g.warehouse_id }),
+            )!,
             locationsCount: Number(g.locations_count),
             locationsPreview: previews
               .filter(
@@ -115,6 +132,7 @@ export class WarehouseStockOverviewService {
               .map((b) => ({
                 location: locationWithWarehouseDto(b.storageLocation),
                 quantity: b.quantity.toString(),
+                ...stockQuantityDto(b.quantity, reserved.get(stockPairKey(b))),
               })),
           };
         });
@@ -153,15 +171,32 @@ export class WarehouseStockOverviewService {
           (sum, b) => sum.plus(b.quantity),
           new Prisma.Decimal(0),
         );
+        const reserved = await readReservedQuantities(tx, balances);
+        const quantities = balances.map((b) => {
+          const reservedQuantity = reserved.get(stockPairKey(b));
+          return {
+            balanceId: String(b.id),
+            location: locationWithWarehouseDto(b.storageLocation),
+            quantity: b.quantity.toString(),
+            ...stockQuantityDto(b.quantity, reservedQuantity),
+          };
+        });
+        const reservedTotal = quantities.reduce(
+          (sum, b) => sum.plus(b.reservedQuantity),
+          new Prisma.Decimal(0),
+        );
+        const freeTotal = quantities.reduce(
+          (sum, b) => sum.plus(b.freeQuantity),
+          new Prisma.Decimal(0),
+        );
         return {
           item: { ...warehouseItemSummaryDto(item), photo: null },
           warehouse: warehouseDto(warehouse),
           totalQuantity: total.toString(),
-          locations: balances.map((b) => ({
-            balanceId: String(b.id),
-            location: locationWithWarehouseDto(b.storageLocation),
-            quantity: b.quantity.toString(),
-          })),
+          reservedQuantity: reservedTotal.toString(),
+          freeQuantity: freeTotal.toString(),
+          reservationMismatch: quantities.some((b) => b.reservationMismatch),
+          locations: quantities,
         };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },

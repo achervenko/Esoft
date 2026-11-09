@@ -61,10 +61,16 @@ export function pendingStockPosition(): StockPosition | null {
     item: data.item,
     warehouse: data.warehouse,
     quantity: data.totalQuantity,
+    reservedQuantity: data.reservedQuantity,
+    freeQuantity: data.freeQuantity,
+    reservationMismatch: data.reservationMismatch,
     locationsCount: data.locations.length,
     locationsPreview: data.locations.map((b) => ({
       location: b.location,
       quantity: b.quantity,
+      reservedQuantity: b.reservedQuantity,
+      freeQuantity: b.freeQuantity,
+      reservationMismatch: b.reservationMismatch,
     })),
   };
 }

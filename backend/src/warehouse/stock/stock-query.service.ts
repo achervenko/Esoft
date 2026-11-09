@@ -5,6 +5,13 @@ import { stockError } from './stock.errors';
 import { assertStockTransaction } from './stock-locks';
 import { balanceDto, balanceSelect, type BalanceFilters } from './stock.types';
 import { parseBalanceFilters, stockId } from './stock.validation';
+import {
+  readReservedQuantities,
+  stockPairKey,
+  stockQuantityDto,
+  readStockGroupQuantities,
+  stockGroupKey,
+} from './stock-quantities';
 
 @Injectable()
 export class WarehouseStockQueryService {
@@ -49,8 +56,12 @@ export class WarehouseStockQueryService {
         take: query.limit,
       });
       const total = await client.warehouseBalance.count({ where });
+      const reserved = await readReservedQuantities(client, items);
       return {
-        items: items.map(balanceDto),
+        items: items.map((row) => ({
+          ...balanceDto(row),
+          ...stockQuantityDto(row.quantity, reserved.get(stockPairKey(row))),
+        })),
         total,
         page: query.page,
         limit: query.limit,
@@ -69,19 +80,39 @@ export class WarehouseStockQueryService {
     tx?: Prisma.TransactionClient,
   ) {
     if (tx) assertStockTransaction(tx);
-    const row = await (tx ?? this.prisma).warehouseBalance.findUnique({
-      where: {
-        itemId_storageLocationId: {
-          itemId: stockId(itemId, 'itemId'),
-          storageLocationId: stockId(locationId, 'locationId'),
+    const read = async (client: Prisma.TransactionClient) => {
+      const row = await client.warehouseBalance.findUnique({
+        where: {
+          itemId_storageLocationId: {
+            itemId: stockId(itemId, 'itemId'),
+            storageLocationId: stockId(locationId, 'locationId'),
+          },
         },
-      },
-      select: balanceSelect,
-    });
-    return row ? balanceDto(row) : null;
+        select: balanceSelect,
+      });
+      if (!row) return null;
+      const reserved = await readReservedQuantities(client, [row]);
+      return {
+        ...balanceDto(row),
+        ...stockQuantityDto(row.quantity, reserved.get(stockPairKey(row))),
+      };
+    };
+    return tx
+      ? read(tx)
+      : this.prisma.$transaction(read, {
+          isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+        });
   }
 
   async getItemTotal(
+    itemId: string,
+    warehouseValue?: string,
+    tx?: Prisma.TransactionClient,
+  ) {
+    return (await this.getItemSummary(itemId, warehouseValue, tx)).quantity;
+  }
+
+  async getItemSummary(
     itemId: string,
     warehouseValue?: string,
     tx?: Prisma.TransactionClient,
@@ -105,11 +136,9 @@ export class WarehouseStockQueryService {
           'Номенклатура не найдена.',
           { itemId },
         );
-      const result = await client.warehouseBalance.aggregate({
-        where: { itemId: id, storageLocation: { warehouseId } },
-        _sum: { quantity: true },
-      });
-      return result._sum.quantity?.toString() ?? '0';
+      const group = { itemId: id, warehouseId: warehouseId ?? null };
+      const result = await readStockGroupQuantities(client, [group]);
+      return result.get(stockGroupKey(group))!;
     };
     return tx
       ? read(tx)

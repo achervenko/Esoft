@@ -1,5 +1,7 @@
 import { WarehouseCatalogService } from '../catalog/catalog.service';
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { WarehouseReceiptOrderPlacementService } from './receipt-order-placement.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { WarehouseStockService } from '../stock/stock.service';
@@ -22,6 +24,7 @@ export class WarehouseReceiptPlacementsService {
     private readonly stock: WarehouseStockService,
     private readonly audit: AuditLogService,
     private readonly catalog: WarehouseCatalogService,
+    private readonly orderPlacements: WarehouseReceiptOrderPlacementService,
   ) {}
   place(
     receiptValue: string,
@@ -37,6 +40,9 @@ export class WarehouseReceiptPlacementsService {
       lineId: String(lineId),
       storageLocationId: input.storageLocationId,
       quantity: input.quantity,
+      ...(input.reservationAllocation
+        ? { reservationAllocation: input.reservationAllocation }
+        : {}),
     });
     return this.prisma.$transaction(
       async (tx) => {
@@ -123,6 +129,18 @@ export class WarehouseReceiptPlacementsService {
             'WAREHOUSE_RECEIPT_UNIT_MISMATCH',
             'Единица товара отличается от документа.',
           );
+        const reservation = await this.orderPlacements.apply(
+          { tx, actorUserId: actor },
+          {
+            receiptId: String(receiptId),
+            receiptLineId: String(lineId),
+            orderId: receipt.source === 'MANUAL' ? line.orderId : null,
+            itemId: String(item.id),
+            locationId: String(location.id),
+            quantity: input.quantity,
+            reservationAllocation: input.reservationAllocation,
+          },
+        );
         const row = await tx.warehouseReceiptPlacement.create({
           data: {
             receiptLineId: lineId,
@@ -131,6 +149,7 @@ export class WarehouseReceiptPlacementsService {
             createdByUserId: actor,
             requestKey: input.requestKey,
             requestHash: hash,
+            ...(reservation ? { reservationSnapshot: reservation } : {}),
             itemSnapshot: {
               id: String(item.id),
               article: item.article,
@@ -145,12 +164,6 @@ export class WarehouseReceiptPlacementsService {
             },
           },
         });
-        await this.stock.receiveStock(
-          { tx, actorUserId: actor },
-          String(item.id),
-          String(location.id),
-          input.quantity,
-        );
         await receiptProgress(tx, receiptId);
         const dto = placementDto(row);
         await receiptAudit(
@@ -163,7 +176,10 @@ export class WarehouseReceiptPlacementsService {
         );
         return dto;
       },
-      { timeout: 15000 },
+      {
+        timeout: 15000,
+        isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+      },
     );
   }
 }

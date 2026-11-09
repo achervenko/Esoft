@@ -19,7 +19,12 @@ describe('Stock HTTP API', () => {
       .fn()
       .mockResolvedValue({ items: [], total: 0, page: 1, limit: 50 }),
     getBalance: jest.fn().mockResolvedValue(null),
-    getItemTotal: jest.fn().mockResolvedValue('123456789012.123'),
+    getItemSummary: jest.fn().mockResolvedValue({
+      quantity: '123456789012.123',
+      reservedQuantity: '12.123',
+      freeQuantity: '123456789000',
+      reservationMismatch: false,
+    }),
   };
   beforeAll(async () => {
     http = await createPermissionsHttpFixture({
@@ -123,6 +128,9 @@ describe('Stock HTTP API', () => {
     expect(await r.json()).toEqual({
       itemId: '9007199254740993',
       quantity: '123456789012.123',
+      reservedQuantity: '12.123',
+      freeQuantity: '123456789000',
+      reservationMismatch: false,
     });
   });
   it('passes the warehouse filter as the second total argument', async () => {
@@ -134,7 +142,7 @@ describe('Stock HTTP API', () => {
       'admin',
     );
     expect(response.status).toBe(200);
-    expect(stock.getItemTotal).toHaveBeenCalledWith('1', '2');
+    expect(stock.getItemSummary).toHaveBeenCalledWith('1', '2');
   });
   it('returns explicit null for an absent balance', async () => {
     const response = await http.request(

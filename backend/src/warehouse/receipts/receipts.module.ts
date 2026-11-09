@@ -13,12 +13,15 @@ import { WarehouseReceiptItemMappingService } from './receipt-item-mapping.servi
 import { WarehouseReceiptReconciliationService } from './receipt-reconciliation.service';
 import { WarehouseReceiptConflictResolutionService } from './receipt-conflict-resolution.service';
 import { WarehouseReceiptImportService } from './receipt-import.service';
+import { WarehouseReservationsModule } from '../reservations/reservations.module';
+import { WarehouseReceiptOrderPlacementService } from './receipt-order-placement.service';
 @Module({
   imports: [
     PrismaModule,
     AuditModule,
     WarehouseStockModule,
     WarehouseCatalogModule,
+    WarehouseReservationsModule,
   ],
   controllers: [WarehouseReceiptsController],
   providers: [
@@ -27,6 +30,7 @@ import { WarehouseReceiptImportService } from './receipt-import.service';
     WarehouseReceiptsService,
     WarehouseReceiptsQueryService,
     WarehouseReceiptPlacementsService,
+    WarehouseReceiptOrderPlacementService,
     WarehouseReceiptItemMappingService,
 
     WarehouseReceiptReconciliationService,

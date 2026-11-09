@@ -17,3 +17,8 @@ CREATE TABLE warehouse_reservation_allocations (
 );
 CREATE UNIQUE INDEX uq_warehouse_reservation_allocations_location ON warehouse_reservation_allocations(reservation_id, location_id);
 CREATE INDEX idx_warehouse_reservation_allocations_location ON warehouse_reservation_allocations(location_id);
+
+ALTER TABLE warehouse_receipt_lines
+    ADD COLUMN order_id UUID REFERENCES customer_orders(id) ON DELETE RESTRICT ON UPDATE CASCADE;
+CREATE INDEX idx_warehouse_receipt_lines_order ON warehouse_receipt_lines(order_id);
+ALTER TABLE warehouse_receipt_placements ADD COLUMN reservation_snapshot JSONB;

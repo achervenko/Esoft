@@ -22,7 +22,7 @@ export type ReservationCoverageInput = {
 
 export async function changeReservationCoverage(
   audit: AuditLogService,
-  { tx, actorUserId, comment }: ReservationContext,
+  { tx, actorUserId, comment, receipt }: ReservationContext,
   input: ReservationCoverageInput,
   operation: 'REDUCE_COVERAGE' | 'RESTORE_COVERAGE',
 ) {
@@ -143,6 +143,7 @@ export async function changeReservationCoverage(
           deficitBefore: deficitBefore.toString(),
           deficitAfter: deficitQuantity.toString(),
           ...(comment ? { comment } : {}),
+          ...(receipt ? { receipt } : {}),
         },
       },
     ],

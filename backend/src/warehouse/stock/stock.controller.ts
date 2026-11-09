@@ -22,7 +22,7 @@ export class WarehouseStockController {
   ) {
     return {
       itemId,
-      quantity: await this.stock.getItemTotal(itemId, warehouseId),
+      ...(await this.stock.getItemSummary(itemId, warehouseId)),
     };
   }
 

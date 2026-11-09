@@ -78,13 +78,18 @@ it('keeps Receipts independent of the 1C transport and delegates canonical write
           entity = node.expression.expression;
         if (
           method === 'receiveStock' &&
-          file !== 'receipt-placements.service.ts'
+          file !== 'receipt-order-placement.service.ts'
         )
           violations.push(file + ': changes stock outside placement');
         if (
           ts.isPropertyAccessExpression(entity) &&
           writes.has(method) &&
-          ['warehouseItem', 'warehouseBalance'].includes(entity.name.text)
+          [
+            'warehouseItem',
+            'warehouseBalance',
+            'warehouseReservation',
+            'warehouseReservationAllocation',
+          ].includes(entity.name.text)
         )
           violations.push(file + ': writes ' + entity.name.text);
       }

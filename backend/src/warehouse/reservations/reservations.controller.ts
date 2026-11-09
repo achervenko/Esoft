@@ -5,6 +5,7 @@ import { RequirePermission } from '../../auth/require-permission';
 import { WAREHOUSE_PERMISSIONS } from '../warehouse.permissions';
 import { WarehouseReservationQueryService } from './reservations-query.service';
 import { WarehouseReservationsService } from './reservations.service';
+import { WarehouseReservationMoveService } from './reservation-move.service';
 
 const { RESERVATIONS_READ, RESERVATIONS_MANAGE, RESERVATIONS_COVERAGE_MANAGE } =
   WAREHOUSE_PERMISSIONS;
@@ -14,6 +15,7 @@ export class WarehouseReservationsController {
   constructor(
     private readonly queries: WarehouseReservationQueryService,
     private readonly commands: WarehouseReservationsService,
+    private readonly moves: WarehouseReservationMoveService,
   ) {}
 
   @Get()
@@ -48,6 +50,19 @@ export class WarehouseReservationsController {
   @RequirePermission(RESERVATIONS_MANAGE)
   reserve(@Body() body: unknown, @Session() session: UserSession<Auth>) {
     return this.commands.reserve(body, session.user.id);
+  }
+
+  @Post(':id/move')
+  @RequirePermission(
+    RESERVATIONS_MANAGE,
+    WAREHOUSE_PERMISSIONS.TRANSFERS_MANAGE,
+  )
+  move(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Session() session: UserSession<Auth>,
+  ) {
+    return this.moves.move(id, body, session.user.id);
   }
 
   @Post(':id/decrease')

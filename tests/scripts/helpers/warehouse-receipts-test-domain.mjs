@@ -31,6 +31,12 @@ export async function createReceiptTestDomain(prisma, audit) {
   const { WarehouseCatalogService } = load(
     "warehouse/catalog/catalog.service.js",
   );
+  const { WarehouseReservationManager } = load(
+    "warehouse/reservations/reservation-manager.service.js",
+  );
+  const { WarehouseReceiptOrderPlacementService } = load(
+    "warehouse/receipts/receipt-order-placement.service.js",
+  );
   const { WarehouseCatalogUsagePolicy } = load(
     "warehouse/catalog/catalog-usage.policy.js",
   );
@@ -90,6 +96,10 @@ export async function createReceiptTestDomain(prisma, audit) {
       stock,
       audit,
       catalog,
+      new WarehouseReceiptOrderPlacementService(
+        stock,
+        new WarehouseReservationManager(audit, stock),
+      ),
     ),
     itemMapping = new WarehouseReceiptItemMappingService(
       prisma,

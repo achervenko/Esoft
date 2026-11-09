@@ -5,6 +5,10 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { stockId } from '../stock/stock.validation';
 import { lockWarehouse } from '../storage-structure/storage-structure.policy';
+import {
+  reservationOrderDto,
+  reservationOrderSelect,
+} from '../reservations/reservations.dto';
 import { parseManualReceipt, receiptHash } from './receipts.validation';
 import { receiptView, receiptInclude } from './receipts.mapper';
 import {
@@ -26,10 +30,11 @@ export class WarehouseReceiptsService {
       hash = receiptHash({
         ...input,
         lines: input.lines
-          .map(({ itemId, draftId, quantity }) => ({
+          .map(({ itemId, draftId, quantity, orderId }) => ({
             itemId,
             ...(draftId ? { draftId } : {}),
             quantity,
+            ...(orderId ? { orderId } : {}),
           }))
           .sort((a, b) => {
             if (a.itemId !== undefined && b.itemId === undefined) return -1;
@@ -39,6 +44,8 @@ export class WarehouseReceiptsService {
               b.itemId !== undefined ? BigInt(b.itemId) : b.draftId!;
             if (left < right) return -1;
             if (left > right) return 1;
+            const byOrder = (a.orderId ?? '').localeCompare(b.orderId ?? '');
+            if (byOrder) return byOrder;
             return new Prisma.Decimal(a.quantity).comparedTo(b.quantity);
           }),
       });
@@ -68,6 +75,29 @@ export class WarehouseReceiptsService {
         const warehouse = await tx.warehouse.findUniqueOrThrow({
           where: { id: warehouseId },
         });
+        const orders = await tx.customerOrder.findMany({
+          where: {
+            id: {
+              in: [
+                ...new Set(
+                  input.lines.flatMap((line) =>
+                    line.orderId ? [line.orderId] : [],
+                  ),
+                ),
+              ],
+            },
+          },
+          select: reservationOrderSelect,
+        });
+        for (const line of input.lines)
+          if (
+            line.orderId &&
+            !orders.some((order) => order.id === line.orderId)
+          )
+            throw new NotFoundException({
+              code: 'WAREHOUSE_RESERVATION_ORDER_NOT_FOUND',
+              message: 'Заказ не найден.',
+            });
         const draftItems = new Map<string, string>();
         for (const draft of input.newItems ?? []) {
           if (!input.lines.some((line) => line.draftId === draft.draftId))
@@ -103,6 +133,14 @@ export class WarehouseReceiptsService {
             unitSnapshot: item.unit,
             itemArticleSnapshot: item.article,
             itemNameSnapshot: item.name,
+            ...(l.orderId
+              ? {
+                  orderId: l.orderId,
+                  orderSnapshot: reservationOrderDto(
+                    orders.find((order) => order.id === l.orderId)!,
+                  ),
+                }
+              : {}),
           };
         });
         const row = await tx.warehouseReceipt.create({

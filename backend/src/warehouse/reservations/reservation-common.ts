@@ -5,6 +5,12 @@ export type ReservationContext = {
   tx: Prisma.TransactionClient;
   actorUserId?: string;
   comment?: string;
+  receipt?: {
+    receiptId: string;
+    receiptLineId: string;
+    restoredQuantity: string;
+    increasedQuantity: string;
+  };
 };
 export const reservationUuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 

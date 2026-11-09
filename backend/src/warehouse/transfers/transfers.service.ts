@@ -21,6 +21,15 @@ import {
   locationWithWarehouseDto,
 } from '../storage-structure/storage-structure.dto';
 import { warehouseItemIdentityDto } from '../catalog/catalog.dto';
+import { createHash } from 'node:crypto';
+import {
+  readReservation,
+  reservationOrderDto,
+  reservationOrderSelect,
+} from '../reservations/reservations.dto';
+import { stockError } from '../stock/stock.errors';
+import type { MoveReservationInput } from '../reservations/reservation-move';
+import type { WarehouseReservationManager } from '../reservations/reservation-manager.service';
 import {
   parseTransfer,
   parseTransferQuery,
@@ -61,8 +70,19 @@ export class WarehouseTransfersService {
     tx: Prisma.TransactionClient,
     input: ReturnType<typeof parseTransfer>,
     actor: string,
+    reserved?: { reservationId: string; manager: WarehouseReservationManager },
   ) {
-    const hash = transferHash(input);
+    const hash = reserved
+      ? createHash('sha256')
+          .update(
+            JSON.stringify([
+              'reservation-move',
+              reserved.reservationId,
+              transferHash(input),
+            ]),
+          )
+          .digest('hex')
+      : transferHash(input);
     if (typeof actor !== 'string' || !actor) throw new ForbiddenException();
     const [user] = await tx.$queryRaw<
       { role: string | null; banned: boolean | null }[]
@@ -70,7 +90,8 @@ export class WarehouseTransfersService {
     if (
       !user ||
       user.banned ||
-      !hasPermission(user.role, 'warehouse.transfers.manage')
+      !hasPermission(user.role, 'warehouse.transfers.manage') ||
+      (reserved && !hasPermission(user.role, 'warehouse.reservations.manage'))
     )
       throw new ForbiddenException({
         code: 'FORBIDDEN',
@@ -93,6 +114,17 @@ export class WarehouseTransfersService {
         });
       return dto(previous);
     }
+    const reservation = reserved
+      ? await tx.warehouseReservation.findUnique({
+          where: { id: reserved.reservationId },
+          include: { order: { select: reservationOrderSelect } },
+        })
+      : null;
+    if (
+      reserved &&
+      (!reservation || String(reservation.itemId) !== input.itemId)
+    )
+      stockError(404, 'WAREHOUSE_RESERVATION_NOT_FOUND', 'Резерв не найден.');
     const locationIds = [
       BigInt(input.fromLocationId),
       BigInt(input.toLocationId),
@@ -138,23 +170,55 @@ export class WarehouseTransfersService {
         code: 'WAREHOUSE_BALANCE_NOT_FOUND',
         message: 'Исходный остаток не найден.',
       });
-    const moved = await this.stock.moveStock(
-      { tx, actorUserId: actor },
+    const destinationBefore = await this.stock.getBalance(
       input.itemId,
-      input.fromLocationId,
       input.toLocationId,
-      input.quantity,
+      tx,
     );
+    if (reserved) {
+      const command: MoveReservationInput = {
+        reservationId: reserved.reservationId,
+        ...input,
+      };
+      await reserved.manager.move(
+        { tx, actorUserId: actor, comment: input.comment ?? undefined },
+        command,
+      );
+    }
+    const moved = reserved
+      ? {
+          from: await this.stock.getBalance(
+            input.itemId,
+            input.fromLocationId,
+            tx,
+          ),
+          to: await this.stock.getBalance(input.itemId, input.toLocationId, tx),
+        }
+      : await this.stock.moveStock(
+          { tx, actorUserId: actor },
+          input.itemId,
+          input.fromLocationId,
+          input.toLocationId,
+          input.quantity,
+        );
     const snapshot = {
       item: warehouseItemIdentityDto(item),
       from: locationWithWarehouseDto(from),
       to: locationWithWarehouseDto(to),
       fromQuantityBefore: balance.quantity,
-      fromQuantityAfter: moved.from.quantity,
-      toQuantityBefore: new Prisma.Decimal(moved.to.quantity)
-        .minus(input.quantity)
-        .toString(),
-      toQuantityAfter: moved.to.quantity,
+      fromQuantityAfter: moved.from!.quantity,
+      toQuantityBefore: destinationBefore?.quantity ?? '0',
+      toQuantityAfter: moved.to!.quantity,
+      ...(reserved && reservation
+        ? {
+            reservationId: reserved.reservationId,
+            order: reservationOrderDto(reservation.order),
+            reservationResult: await readReservation(
+              tx,
+              reserved.reservationId,
+            ),
+          }
+        : {}),
     };
     const operation = await tx.warehouseTransfer.create({
       data: {

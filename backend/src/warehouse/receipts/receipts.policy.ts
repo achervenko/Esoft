@@ -4,8 +4,16 @@ import { AuditLogService } from '../../audit/audit-log.service';
 import { stockId } from '../stock/stock.validation';
 export type Tx = Prisma.TransactionClient;
 export { assertTransactionPermission as receiptActor } from '../../auth/transaction-permission';
-export function receiptConflict(code: string, message: string): never {
-  throw new ConflictException({ code, message });
+export function receiptConflict(
+  code: string,
+  message: string,
+  details?: Record<string, unknown>,
+): never {
+  throw new ConflictException({
+    code,
+    message,
+    ...(details ? { details } : {}),
+  });
 }
 export async function lockReceipt(tx: Tx, value: string) {
   const id = stockId(value, 'receiptId');

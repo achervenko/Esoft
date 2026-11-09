@@ -241,6 +241,8 @@ model WarehouseReceiptLine {
  itemNameSnapshot String @map("item_name_snapshot") @db.VarChar(255)
  sourceType String @default("GOODS") @map("source_type") @db.VarChar(30)
  orderSnapshot Json? @map("order_snapshot") @db.JsonB
+ orderId String? @map("order_id") @db.Uuid
+ customerOrder CustomerOrder? @relation(fields: [orderId], references: [id], onDelete: Restrict)
  reconciledToLineId BigInt? @map("reconciled_to_line_id")
  reconciledToLine WarehouseReceiptLine? @relation("ReceiptReconciliation", fields: [reconciledToLineId], references: [id], onDelete: Restrict)
  reconciledLines WarehouseReceiptLine[] @relation("ReceiptReconciliation")
@@ -248,6 +250,7 @@ model WarehouseReceiptLine {
  @@unique([receiptId, externalLineId], map: "uq_warehouse_receipt_lines_external")
  @@index([itemId], map: "idx_warehouse_receipt_lines_item")
  @@index([reconciledToLineId], map: "idx_warehouse_receipt_lines_reconciliation")
+ @@index([orderId], map: "idx_warehouse_receipt_lines_order")
  @@map("warehouse_receipt_lines")
 }
 model WarehouseReceiptPlacement {
@@ -259,6 +262,7 @@ model WarehouseReceiptPlacement {
  quantity Decimal @db.Decimal(14,3)
  itemSnapshot Json @map("item_snapshot") @db.JsonB
  locationSnapshot Json @map("location_snapshot") @db.JsonB
+ reservationSnapshot Json? @map("reservation_snapshot") @db.JsonB
  createdByUserId String @map("created_by_user_id")
  actor User @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
  requestKey String @map("request_key") @db.Uuid

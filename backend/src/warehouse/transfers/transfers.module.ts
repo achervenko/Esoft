@@ -9,5 +9,6 @@ import { WarehouseTransferConsolidationService } from './transfers-consolidation
   imports: [PrismaModule, AuditModule, WarehouseStockModule],
   controllers: [WarehouseTransfersController],
   providers: [WarehouseTransfersService, WarehouseTransferConsolidationService],
+  exports: [WarehouseTransfersService],
 })
 export class WarehouseTransfersModule {}

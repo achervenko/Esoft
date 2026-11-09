@@ -25,7 +25,7 @@ export type MoveReservationInput = {
 export async function moveReservation(
   audit: AuditLogService,
   stock: WarehouseStockService,
-  { tx, actorUserId }: ReservationContext & { actorUserId: string },
+  { tx, actorUserId, comment }: ReservationContext & { actorUserId: string },
   input: MoveReservationInput,
 ) {
   assertStockTransaction(tx);
@@ -147,6 +147,7 @@ export async function moveReservation(
         fieldName: 'allocations',
         newValue: {
           operation: 'MOVE',
+          ...(comment ? { comment } : {}),
           orderId,
           itemId: itemId.toString(),
           quantity: quantity.toString(),

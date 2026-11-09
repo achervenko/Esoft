@@ -16,10 +16,11 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
      AND target_column.attnum = fk.confkey[1]
     WHERE fk.contype = 'f'
       AND cardinality(fk.conkey) = 1
-      AND fk.conrelid IN (
+      AND (fk.conrelid IN (
         'public.warehouse_reservations'::regclass,
         'public.warehouse_reservation_allocations'::regclass
-      )
+      ) OR (fk.conrelid = 'public.warehouse_receipt_lines'::regclass
+            AND source_column.attname = 'order_id'))
       AND fk.confrelid IN (
         'public.customer_orders'::regclass,
         'public.warehouse_items'::regclass,
@@ -31,6 +32,7 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
   assert.deepEqual(
     reservationForeignKeys.rows,
     [
+      ["warehouse_receipt_lines", "order_id", "customer_orders"],
       [
         "warehouse_reservation_allocations",
         "location_id",
@@ -116,7 +118,9 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
           column.column_name,
         ) ||
         (column.column_name === "order_id" &&
-          column.table_name !== "warehouse_reservations"),
+          !["warehouse_reservations", "warehouse_receipt_lines"].includes(
+            column.table_name,
+          )),
     ),
     false,
   );

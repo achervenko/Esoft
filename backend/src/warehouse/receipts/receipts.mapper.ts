@@ -23,6 +23,7 @@ export function placementDto(
     location: p.locationSnapshot,
     createdByUserId: p.createdByUserId,
     createdAt: p.createdAt.toISOString(),
+    ...(p.reservationSnapshot ? { reservation: p.reservationSnapshot } : {}),
   };
 }
 export type ReceiptRow = Prisma.WarehouseReceiptGetPayload<{
@@ -89,6 +90,7 @@ export function receiptDto(
       placed: placed.toString(),
       remaining: l.quantity.minus(placed).toString(),
       order: l.orderSnapshot,
+      ...(l.orderId ? { orderId: l.orderId } : {}),
       mappingStatus: l.itemId === null ? 'UNMAPPED' : 'MAPPED',
       reconciledToLineId:
         l.reconciledToLineId === null ? null : String(l.reconciledToLineId),
