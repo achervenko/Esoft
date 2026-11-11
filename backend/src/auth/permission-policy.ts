@@ -36,6 +36,7 @@ export const ROLE_PERMISSIONS = {
     'checklists.manage',
     'users.manage',
     'dictionaries.manage',
+    'dictionaries.equipment.manage',
     'search.manage',
     'ppe.read',
     'ppe.catalog.manage',
@@ -64,6 +65,7 @@ export const ROLE_PERMISSIONS = {
   ],
   chief_engineer: [
     ...equipmentEditor,
+    'dictionaries.equipment.manage',
     'equipment.events.manage',
     'events.manage',
     'checklists.manage',

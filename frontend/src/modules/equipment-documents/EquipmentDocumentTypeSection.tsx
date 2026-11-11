@@ -1,24 +1,21 @@
-import { useEffect, useId, useRef } from "react";
+import { Plus } from "lucide-react";
 import type {
   EquipmentFile,
   StorageDocumentType,
 } from "../../shared/api/equipment-files/equipment-files.types";
 import { EquipmentDocumentListItem } from "./EquipmentDocumentListItem";
-import { EquipmentDocumentUploadForm } from "./EquipmentDocumentUploadForm";
 
 type EquipmentDocumentTypeSectionProps = {
   deletingFileId: number | null;
   documentType: StorageDocumentType;
   downloadingFileId: number | null;
   files: EquipmentFile[];
-  isUploading: boolean;
   mode: "edit" | "view";
   onDelete: (file: EquipmentFile) => void;
   onDownload: (file: EquipmentFile) => void;
-  onFileChange: (documentType: StorageDocumentType, file: File | null) => void;
+  onAddFiles: (documentType: StorageDocumentType) => void;
   onOpenPreview: (file: EquipmentFile) => void;
   onSetPrimary?: (file: EquipmentFile) => void;
-  selectedFile: File | null;
   settingPrimaryFileId?: number | null;
   title: string;
   visibleId: number;
@@ -29,27 +26,16 @@ export function EquipmentDocumentTypeSection({
   documentType,
   downloadingFileId,
   files,
-  isUploading,
   mode,
   onDelete,
   onDownload,
-  onFileChange,
+  onAddFiles,
   onOpenPreview,
   onSetPrimary,
-  selectedFile,
   settingPrimaryFileId,
   title,
   visibleId,
 }: EquipmentDocumentTypeSectionProps) {
-  const fileInputId = useId();
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    if (!selectedFile && fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  }, [selectedFile]);
-
   if (mode === "view" && files.length === 0) {
     return null;
   }
@@ -81,14 +67,14 @@ export function EquipmentDocumentTypeSection({
       ) : null}
 
       {mode === "edit" ? (
-        <EquipmentDocumentUploadForm
-          documentType={documentType}
-          fileInputId={fileInputId}
-          fileInputRef={fileInputRef}
-          isUploading={isUploading}
-          onFileChange={(file) => onFileChange(documentType, file)}
-          selectedFile={selectedFile}
-        />
+        <button
+          type="button"
+          className="admin-secondary-button equipment-document-add-button"
+          onClick={() => onAddFiles(documentType)}
+        >
+          <Plus size={16} aria-hidden="true" />
+          {documentType === "passport" ? "Добавить файл" : "Добавить файлы"}
+        </button>
       ) : null}
     </section>
   );

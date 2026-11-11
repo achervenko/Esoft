@@ -143,6 +143,13 @@ export const sidebarSections: SidebarSection[] = [
             permission: "dictionaries.manage",
           },
           {
+            href: "#/dictionaries?tab=manufacturers",
+            icon: BookOpen,
+            label: "Справочники",
+            permission: "dictionaries.equipment.manage",
+            excludePermission: "dictionaries.manage",
+          },
+          {
             href: "#/dictionaries?tab=employees",
             icon: Users,
             label: "Сотрудники",

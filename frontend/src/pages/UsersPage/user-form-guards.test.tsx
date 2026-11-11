@@ -1,15 +1,19 @@
 import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
 import type { ReactElement } from "react";
-import { cleanup, fireEvent, render as renderComponent, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render as renderComponent,
+  screen,
+} from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { AdminUserAccount } from "../../shared/api/users-admin-api";
 import { UserAccountFormModal } from "./UserAccountFormModal";
 import { PasswordFormModal } from "./PasswordFormModal";
 import { UserPhotoFormModal } from "./UserPhotoFormModal";
 
-const render = (ui: ReactElement) => renderComponent(
-  <ChakraProvider value={defaultSystem}>{ui}</ChakraProvider>,
-);
+const render = (ui: ReactElement) =>
+  renderComponent(<ChakraProvider value={defaultSystem}>{ui}</ChakraProvider>);
 
 afterEach(() => {
   cleanup();
@@ -24,18 +28,25 @@ const user = {
 type FormKind = "account" | "password" | "photo";
 it.each([
   [new File([], "empty.jpg", { type: "image/jpeg" }), "Файл пустой."],
-  [new File(["text"], "photo.txt", { type: "text/plain" }), "Для фото доступны только JPG, PNG и WebP."],
-])("associates file validation error with the photo input (case %#)", (file, message) => {
-  render(form("photo", false, vi.fn()));
-  const input = screen.getByLabelText("Фото");
-  fireEvent.change(input, { target: { files: [file] } });
-  const error = screen.getByText(message);
-  expect(input).toHaveAttribute("aria-invalid", "true");
-  expect(input).toHaveAttribute("aria-describedby", error.id);
-  fireEvent.change(input, { target: { files: [] } });
-  expect(input).not.toHaveAttribute("aria-invalid");
-  expect(input).not.toHaveAttribute("aria-describedby");
-});
+  [
+    new File(["text"], "photo.txt", { type: "text/plain" }),
+    "Для фото доступны только JPG, PNG и WebP.",
+  ],
+])(
+  "associates file validation error with the photo picker (case %#)",
+  (file, message) => {
+    render(form("photo", false, vi.fn()));
+    const picker = screen.getByRole("group", { name: "Фото" });
+    dropPhoto(file);
+    const error = screen.getByText(message);
+    expect(error).toHaveAttribute("data-visible", "true");
+    expect(picker).toHaveAttribute("aria-invalid", "true");
+    expect(picker).toHaveAttribute("aria-describedby", error.id);
+    change("photo");
+    expect(picker).not.toHaveAttribute("aria-invalid");
+    expect(picker).not.toHaveAttribute("aria-describedby");
+  },
+);
 it("guards photo deletion when a replacement file is selected", () => {
   const onDelete = vi.fn();
   const onSubmit = vi.fn();
@@ -123,12 +134,17 @@ function change(kind: FormKind) {
         static revokeObjectURL() {}
       },
     );
-    fireEvent.change(screen.getByLabelText("Фото"), {
-      target: {
-        files: [new File(["photo"], "photo.jpg", { type: "image/jpeg" })],
-      },
-    });
+    dropPhoto(new File(["photo"], "photo.jpg", { type: "image/jpeg" }));
   }
+}
+
+function dropPhoto(file: File) {
+  fireEvent.drop(
+    screen.getByRole("group", { name: "Область загрузки файлов" }),
+    {
+      dataTransfer: { files: [file] },
+    },
+  );
 }
 
 it.each<FormKind>(["account", "password", "photo"])(

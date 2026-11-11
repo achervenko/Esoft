@@ -54,7 +54,8 @@ export class StorageFileService {
     documentType: StorageDocumentType;
     file: UploadedFileInput | undefined;
     owner: StorageOwnerContext;
-    userId?: string | null;
+    requestKey?: string;
+    userId: string;
   }): Promise<StorageFileDto> {
     return this.uploadStorage.uploadFile(params);
   }

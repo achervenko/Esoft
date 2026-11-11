@@ -1,161 +1,39 @@
 import { useConfirmation } from "../../shared/ui/useConfirmation";
-import type { FormEvent } from "react";
 import { getApiErrorMessage } from "../../shared/api/api-error";
 import {
   deleteEquipmentFile,
   downloadEquipmentFile,
   setEquipmentFilePrimary,
-  uploadEquipmentFile,
 } from "../../shared/api/equipment-files/equipment-files.api";
-import type {
-  EquipmentFile,
-  StorageDocumentType,
-} from "../../shared/api/equipment-files/equipment-files.types";
-import {
-  getSelectedDocumentEntries,
-  hasSelectedDocumentFiles,
-  type SelectedEquipmentDocumentFiles,
-} from "./equipment-document-selection";
-import {
-  getEquipmentDocumentUploadErrorMessage,
-  validateEquipmentDocumentUpload,
-} from "./equipment-document-upload-validation";
-import { notifyUploadValidationWarning } from "./equipment-document-notifications";
+import type { EquipmentFile } from "../../shared/api/equipment-files/equipment-files.types";
 import { getDisplayName } from "./equipment-document-utils";
 import { equipmentDocumentsText as text } from "./equipment-documents.text";
 
 type UseEquipmentDocumentActionsParams = {
-  files: EquipmentFile[];
-  loadFiles: () => void;
   notifyError: (title: string, message?: string) => string;
   notifySuccess: (title: string, message?: string) => string;
-  notifyWarning: (title: string, message?: string) => string;
   onFilesChange: (
     update:
       EquipmentFile[] | ((currentFiles: EquipmentFile[]) => EquipmentFile[]),
   ) => void;
-  onSaved?: () => void;
-  onSelectedFilesChange: (
-    update:
-      | SelectedEquipmentDocumentFiles
-      | ((
-          currentFiles: SelectedEquipmentDocumentFiles,
-        ) => SelectedEquipmentDocumentFiles),
-  ) => void;
   onErrorChange: (error: string | null) => void;
-  onUploadingDocumentTypeChange: (
-    documentType: StorageDocumentType | null,
-  ) => void;
   onDownloadingFileIdChange: (fileId: number | null) => void;
   onDeletingFileIdChange: (fileId: number | null) => void;
   onSettingPrimaryFileIdChange: (fileId: number | null) => void;
-  selectedDocumentEntries: ReturnType<typeof getSelectedDocumentEntries>;
-  selectedFiles: SelectedEquipmentDocumentFiles;
-  uploadingDocumentType: StorageDocumentType | null;
   visibleId: number;
 };
 
 export function useEquipmentDocumentActions({
-  files,
-  loadFiles,
   notifyError,
   notifySuccess,
-  notifyWarning,
   onFilesChange,
-  onSaved,
-  onSelectedFilesChange,
   onErrorChange,
-  onUploadingDocumentTypeChange,
   onDownloadingFileIdChange,
   onDeletingFileIdChange,
   onSettingPrimaryFileIdChange,
-  selectedDocumentEntries,
-  selectedFiles,
-  uploadingDocumentType,
   visibleId,
 }: UseEquipmentDocumentActionsParams) {
   const confirm = useConfirmation();
-  const handleFileChange = (
-    nextDocumentType: StorageDocumentType,
-    file: File | null,
-  ) => {
-    onSelectedFilesChange((currentFiles) => ({
-      ...currentFiles,
-      [nextDocumentType]: file,
-    }));
-  };
-
-  const handleSaveChanges = async (event?: FormEvent<HTMLFormElement>) => {
-    event?.preventDefault();
-    onErrorChange(null);
-
-    if (uploadingDocumentType) {
-      return;
-    }
-
-    if (!hasSelectedDocumentFiles(selectedFiles)) {
-      return;
-    }
-
-    for (const [documentType, selectedFile] of selectedDocumentEntries) {
-      const validationError = validateEquipmentDocumentUpload({
-        documentType,
-        files,
-        isUploading: Boolean(uploadingDocumentType),
-        selectedFile,
-      });
-
-      if (validationError) {
-        onErrorChange(validationError);
-        notifyUploadValidationWarning(validationError, notifyWarning);
-        return;
-      }
-    }
-
-    const uploadedDocumentTypes: StorageDocumentType[] = [];
-
-    try {
-      for (const [documentType, selectedFile] of selectedDocumentEntries) {
-        onUploadingDocumentTypeChange(documentType);
-
-        await uploadEquipmentFile({
-          documentType,
-          file: selectedFile,
-          visibleId,
-        });
-
-        uploadedDocumentTypes.push(documentType);
-      }
-
-      onSelectedFilesChange({});
-      notifySuccess(
-        selectedDocumentEntries.length > 1
-          ? "Файлы загружены"
-          : "Файл загружен",
-      );
-      loadFiles();
-      onSaved?.();
-    } catch (requestError) {
-      const errorMessage = getEquipmentDocumentUploadErrorMessage(requestError);
-      onErrorChange(errorMessage);
-      notifyError("Не удалось загрузить файл", errorMessage);
-      onSelectedFilesChange((currentFiles) => {
-        const nextFiles = { ...currentFiles };
-        uploadedDocumentTypes.forEach((documentType) => {
-          nextFiles[documentType] = null;
-        });
-        return nextFiles;
-      });
-
-      if (uploadedDocumentTypes.length > 0) {
-        loadFiles();
-        onSaved?.();
-      }
-    } finally {
-      onUploadingDocumentTypeChange(null);
-    }
-  };
-
   const handleDelete = async (file: EquipmentFile) => {
     const isConfirmed = await confirm({
       title: "Удалить документ?",
@@ -243,8 +121,6 @@ export function useEquipmentDocumentActions({
   return {
     handleDelete,
     handleDownload,
-    handleFileChange,
-    handleSaveChanges,
     handleSetPrimary,
   };
 }

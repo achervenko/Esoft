@@ -114,7 +114,11 @@ export function useDictionariesAdminPage({
   const [message, setMessage] = useState<string | null>(null);
   const { notifyError, notifySuccess } = useNotifications();
 
-  const data = useDictionariesAdminData(activeTab, dictionariesManageable);
+  const data = useDictionariesAdminData(
+    activeTab,
+    dictionariesManageable ||
+      (activeTab === "manufacturers" && hasAvailableTabs),
+  );
   const { loadData } = data;
   const { isSaving, runSavingAction } = useDictionariesSaving({
     notifyError,

@@ -27,7 +27,7 @@ describe("resolveAppRoute", () => {
         ),
       )
       .filter((item) => item.href.startsWith("#/dictionaries"));
-    expect(links).toHaveLength(3);
+    expect(links).toHaveLength(4);
     for (const link of links) {
       expect(resolveAppRoute(link.href)).toEqual({ kind: "dictionaries" });
     }

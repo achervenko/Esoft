@@ -3,6 +3,8 @@ import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { NotificationProvider } from "../../shared/ui/notifications";
 import * as users from "../../shared/api/users-admin-api";
+import * as dictionaries from "../../shared/api/dictionaries-admin-api";
+import { permissionsForTest } from "../../test/permission-fixtures";
 import { getAvailableDictionaryTabs } from "./dictionary-tabs";
 import { useDictionariesAdminPage } from "./useDictionariesAdminPage";
 
@@ -58,6 +60,30 @@ it("does not grant access through an addressed tab", () => {
     { wrapper },
   );
   expect(result.current.activeTab).toBe("storageLocations");
+  expect(users.getAdminEmployees).not.toHaveBeenCalled();
+});
+
+it("loads only manufacturers and models for a chief engineer", async () => {
+  const manufacturers = vi
+    .spyOn(dictionaries, "getDictionaryManufacturers")
+    .mockResolvedValue([]);
+  const models = vi
+    .spyOn(dictionaries, "getDictionaryEquipmentModels")
+    .mockResolvedValue([]);
+  const { result } = renderHook(
+    () =>
+      useDictionariesAdminPage({
+        userPermissions: permissionsForTest("chief_engineer"),
+      }),
+    { wrapper },
+  );
+  await waitFor(() => expect(result.current.isLoading).toBe(false));
+  expect(result.current.activeTab).toBe("manufacturers");
+  expect(result.current.availableTabs.map((tab) => tab.id)).toEqual([
+    "manufacturers",
+  ]);
+  expect(manufacturers).toHaveBeenCalledOnce();
+  expect(models).toHaveBeenCalledOnce();
   expect(users.getAdminEmployees).not.toHaveBeenCalled();
 });
 

@@ -4,14 +4,15 @@ import {
   Suspense,
   useEffect,
   useRef,
+  useState,
   type ComponentType,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import { useModalResizeAnimation } from "../../shared/ui/useModalResizeAnimation";
-import { Save } from "lucide-react";
 import { Notice } from "../../shared/ui/Notice";
-import { UnsavedChangesGuard } from "../../shared/ui/UnsavedChangesGuard";
+import type { StorageDocumentType } from "../../shared/api/equipment-files/equipment-files.types";
+import { EquipmentDocumentUploadForm } from "./EquipmentDocumentUploadForm";
 import { EquipmentDocumentTypeSection } from "./EquipmentDocumentTypeSection";
 import { getDisplayName } from "./equipment-document-utils";
 import {
@@ -114,11 +115,7 @@ function PdfPreviewModalFallback({
   }, [onClose]);
 
   return createPortal(
-    <div
-      className="pdf-preview-backdrop"
-      onClick={onClose}
-      role="presentation"
-    >
+    <div className="pdf-preview-backdrop" onClick={onClose} role="presentation">
       <section
         aria-label={fileName || "PDF"}
         aria-modal="true"
@@ -163,17 +160,20 @@ export function EquipmentDocumentsPanel({
   onSaved,
   visibleId,
 }: EquipmentDocumentsPanelProps) {
-  const panel = useEquipmentDocumentsPanel({ onSaved, visibleId });
+  const panel = useEquipmentDocumentsPanel({ visibleId });
+  const [upload, setUpload] = useState<{
+    visibleId: number;
+    type: StorageDocumentType;
+  } | null>(null);
+  const uploadOption =
+    upload?.visibleId === visibleId &&
+    documentTypeOptions.find((option) => option.value === upload.type);
   const previewFileName = panel.previewFile
     ? getDisplayName(panel.previewFile)
     : "";
 
   return (
     <section className="equipment-documents-panel">
-      {mode === "edit" ? (
-        <UnsavedChangesGuard hasChanges={panel.hasUnsavedDocumentChanges} />
-      ) : null}
-
       {panel.error ? <Notice tone="error">{panel.error}</Notice> : null}
 
       {panel.isLoading ? (
@@ -197,15 +197,13 @@ export function EquipmentDocumentsPanel({
               documentType={option.value}
               downloadingFileId={panel.downloadingFileId}
               files={panel.filesByDocumentType[option.value]}
-              isUploading={Boolean(panel.uploadingDocumentType)}
               key={option.value}
               mode={mode}
               onDelete={panel.handleDelete}
               onDownload={(file) => void panel.handleDownload(file)}
-              onFileChange={panel.handleFileChange}
+              onAddFiles={(type) => setUpload({ visibleId, type })}
               onOpenPreview={panel.setPreviewFile}
               onSetPrimary={(file) => void panel.handleSetPrimary(file)}
-              selectedFile={panel.selectedFiles[option.value] ?? null}
               settingPrimaryFileId={panel.settingPrimaryFileId}
               title={option.label}
               visibleId={visibleId}
@@ -213,25 +211,20 @@ export function EquipmentDocumentsPanel({
           ))
         : null}
 
-      {mode === "edit" &&
-      !panel.isLoading &&
-      panel.hasUnsavedDocumentChanges ? (
-        <form
-          className="equipment-form-actions"
-          onSubmit={(event) => void panel.handleSaveChanges(event)}
-        >
-          <button
-            className="equipment-submit-button"
-            disabled={Boolean(panel.uploadingDocumentType)}
-            type="submit"
-          >
-            <Save aria-hidden="true" size={18} />
-            <span>
-              {panel.uploadingDocumentType ? text.saving : text.saveChanges}
-            </span>
-          </button>
-        </form>
-      ) : null}
+      {mode === "edit" && uploadOption && (
+        <EquipmentDocumentUploadForm
+          key={visibleId}
+          documentType={uploadOption.value}
+          existingFiles={panel.files}
+          onClose={() => setUpload(null)}
+          onUploaded={(files, complete) => {
+            panel.addUploadedFiles(visibleId, files);
+            if (complete) onSaved?.();
+          }}
+          title={uploadOption.label}
+          visibleId={visibleId}
+        />
+      )}
 
       {panel.previewFile ? (
         <PdfPreviewLazyBoundary

@@ -5,11 +5,14 @@ import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 afterEach(() => sessionStorage.clear());
 const attach = async () => {
-  fireEvent.change(screen.getByLabelText(/Документ/), {
-    target: {
-      files: [new File(["pdf"], "act.pdf", { type: "application/pdf" })],
+  fireEvent.drop(
+    screen.getByRole("group", { name: "Область загрузки файлов" }),
+    {
+      dataTransfer: {
+        files: [new File(["pdf"], "act.pdf", { type: "application/pdf" })],
+      },
     },
-  });
+  );
   await screen.findByText("act.pdf");
 };
 const open = async () => {
@@ -132,9 +135,12 @@ it("does not allow saving when document upload fails", async () => {
   fireEvent.change(screen.getByLabelText("Причина"), {
     target: { value: "Потеря" },
   });
-  fireEvent.change(screen.getByLabelText(/Документ/), {
-    target: { files: [new File(["bad"], "act.pdf")] },
-  });
+  fireEvent.drop(
+    screen.getByRole("group", { name: "Область загрузки файлов" }),
+    {
+      dataTransfer: { files: [new File(["bad"], "act.pdf")] },
+    },
+  );
   await screen.findByText("Не удалось загрузить файл");
   expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
   expect(warehouseStockApi.adjust).not.toHaveBeenCalled();

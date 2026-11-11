@@ -89,7 +89,7 @@ export function DictionariesPage({ userPermissions }: DictionariesPageProps) {
 
       {page.activeTab === "storageLocations" ? (
         <StorageLocationsPanel canManage={storageManageable} />
-      ) : !page.dictionariesManageable ? (
+      ) : page.activeTab === "employees" && !page.dictionariesManageable ? (
         <PpeEmployeesPanel embedded />
       ) : (
         <>

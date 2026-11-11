@@ -1,11 +1,12 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
-  InternalServerErrorException,
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { Prisma, StorageDocumentType } from '@prisma/client';
+import { createHash } from 'node:crypto';
+import { StorageDocumentType } from '@prisma/client';
 import {
   createStorageObjectKey,
   getSafeExtension,
@@ -41,25 +42,58 @@ export class StorageFileUploadService {
     documentType: StorageDocumentType;
     file: UploadedFileInput | undefined;
     owner: StorageOwnerContext;
-    userId?: string | null;
+    requestKey?: string;
+    userId: string;
   }): Promise<StorageFileDto> {
     const file = normalizeUploadedFileInput(params.file);
 
     assertValidStorageFile(file);
     assertValidStorageDocumentType(params.documentType);
+    const sha256 = createHash('sha256').update(file.buffer).digest('hex');
+    const request = params.requestKey
+      ? {
+          key: params.requestKey,
+          hash: createHash('sha256')
+            .update(
+              JSON.stringify([
+                params.documentType,
+                file.originalname,
+                file.mimetype,
+                params.userId ?? null,
+              ]),
+            )
+            .update(file.buffer)
+            .digest('hex'),
+        }
+      : undefined;
+    if (request) {
+      const replay = await this.transactionStorage.findUploadReplay(
+        params.owner,
+        request,
+      );
+      if (replay)
+        return toStorageFileDto(replay.storageFile, replay.displayName);
+    }
     await this.policy.assertFileMatchesDocumentType({
       documentType: params.documentType,
       file,
     });
 
+    const key = createStorageObjectKey({
+      documentType: params.documentType,
+      extension: getSafeExtension(file),
+      owner: params.owner,
+    });
+    const pendingUploadId = await this.transactionStorage.trackUpload({
+      ...params,
+      file,
+      sha256,
+      storedObject: { bucket: this.objectStorage.bucket, key },
+    });
     const storedObject = await this.putObjectSafely({
       body: file.buffer,
       contentType: file.mimetype,
-      key: createStorageObjectKey({
-        documentType: params.documentType,
-        extension: getSafeExtension(file),
-        owner: params.owner,
-      }),
+      key,
     });
 
     try {
@@ -68,34 +102,39 @@ export class StorageFileUploadService {
         documentType: params.documentType,
         file,
         owner: params.owner,
+        ...(request ? { request } : {}),
         storedObject,
+        pendingUploadId,
         userId: params.userId,
       });
 
       return toStorageFileDto(result.storageFile, result.displayName);
     } catch (error) {
-      await this.deleteUploadedObjectAfterFailure(storedObject.key);
-
-      if (error instanceof BadRequestException) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
         throw error;
       }
 
+      if (request) {
+        const replay = await this.transactionStorage
+          .findUploadReplay(params.owner, request)
+          .catch((lookupError: unknown) => {
+            if (lookupError instanceof ConflictException) throw lookupError;
+            return null;
+          });
+        if (replay)
+          return toStorageFileDto(replay.storageFile, replay.displayName);
+      }
       this.logger.error(
         `Failed to save uploaded file metadata: ${storedObject.key}`,
         error instanceof Error ? error.stack : String(error),
       );
 
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        throw new InternalServerErrorException({
-          code: 'DATABASE_ERROR',
-          message:
-            'Не удалось сохранить сведения о документе. Загрузка отменена.',
-        });
-      }
-
-      throw new InternalServerErrorException({
-        code: 'UPLOAD_FAILED',
-        message: 'Не удалось завершить загрузку. Изменения отменены.',
+      throw new ServiceUnavailableException({
+        code: 'STORAGE_UPLOAD_RESULT_UNKNOWN',
+        message: 'Не удалось подтвердить результат загрузки. Повторите запрос.',
       });
     }
   }
@@ -117,19 +156,6 @@ export class StorageFileUploadService {
         code: 'STORAGE_UNAVAILABLE',
         message: 'Хранилище файлов временно недоступно.',
       });
-    }
-  }
-
-  private async deleteUploadedObjectAfterFailure(key: string) {
-    try {
-      await this.objectStorage.deleteObject(key);
-    } catch (cleanupError) {
-      this.logger.error(
-        `Failed to remove orphaned storage object: ${key}`,
-        cleanupError instanceof Error
-          ? cleanupError.stack
-          : String(cleanupError),
-      );
     }
   }
 }

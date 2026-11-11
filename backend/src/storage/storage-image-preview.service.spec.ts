@@ -160,6 +160,8 @@ describe('StorageImagePreviewService', () => {
 
 function createImageFile(overrides: Partial<StorageFile> = {}): StorageFile {
   return {
+    uploadRequestKey: null,
+    uploadRequestHash: null,
     bucket: 'bucket',
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     deletedAt: null,

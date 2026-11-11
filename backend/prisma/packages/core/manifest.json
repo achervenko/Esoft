@@ -18,6 +18,10 @@
     {
       "id": "20261030000000_integrations",
       "sha256": "5fb18b9831198249e931c058ae13c14f666ddaab51c8760157fa84ca48382b28"
+    },
+    {
+      "id": "20261111000000_storage_upload_request",
+      "sha256": "85f46c2d6c31b7d46eeb6638fde55e299ab1398bb6e5c3eaf2af899391f07a42"
     }
   ]
 }

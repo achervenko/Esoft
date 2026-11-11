@@ -1,5 +1,5 @@
-import { Paperclip, FileText, X } from "lucide-react";
-import { useRef } from "react";
+import { FileText, X } from "lucide-react";
+import { FileDropzone } from "../../shared/ui/FileDropzone";
 import {
   AdminTextField,
   AdminTextareaField,
@@ -18,7 +18,6 @@ export function StockAdjustmentFields({
   balanceId: string;
   quantityLabel?: string;
 }) {
-  const fileInput = useRef<HTMLInputElement>(null);
   const {
     locked,
     quantity,
@@ -53,39 +52,27 @@ export function StockAdjustmentFields({
           maxLength={1000}
           required
         />
-        <div className="form-field admin-control-field">
-          <label
-            className="form-field-label"
-            htmlFor={`adjustment-file-${balanceId}`}
-          >
-            <span>Документ</span>
+        <div
+          className="form-field admin-control-field"
+          role="group"
+          aria-labelledby={`adjustment-file-${balanceId}`}
+        >
+          <span className="form-field-label">
+            <span id={`adjustment-file-${balanceId}`}>Документ</span>
             <RequiredMark />
-          </label>
-          <input
-            ref={fileInput}
-            hidden
-            id={`adjustment-file-${balanceId}`}
-            type="file"
-            aria-required="true"
-            accept=".pdf,.jpg,.jpeg,.png,.webp"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              e.target.value = "";
-              if (!file) return;
-              await form.uploadDocument(file);
+          </span>
+          <FileDropzone
+            files={[]}
+            onFilesChange={([file]) => {
+              if (file) void form.uploadDocument(file);
             }}
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            imageAccept="image/jpeg,image/png,image/webp"
+            disabled={locked}
           />
-          <div className="stock-adjust-upload">
-            <button
-              type="button"
-              className="admin-secondary-button stock-adjust-upload-button"
-              onClick={() => fileInput.current?.click()}
-            >
-              <Paperclip size={17} aria-hidden="true" />
-              {attachment ? "Заменить документ" : "Прикрепить документ"}
-            </button>
-            <small>PDF, JPEG, PNG или WebP</small>
-          </div>
+          <small className="stock-adjust-file-hint">
+            PDF, JPEG, PNG или WebP
+          </small>
           {attachment && (
             <div className="stock-adjust-attachment">
               <FileText size={20} aria-hidden="true" />

@@ -19,6 +19,7 @@ const grants: Record<string, readonly string[]> = {
     "checklists.manage",
     "users.manage",
     "dictionaries.manage",
+    "dictionaries.equipment.manage",
     "search.manage",
     "ppe.read",
     "ppe.catalog.manage",
@@ -35,6 +36,7 @@ const grants: Record<string, readonly string[]> = {
     "warehouse.issue-sheets.manage",
   ],
   chief_engineer: [
+    "dictionaries.equipment.manage",
     "users.profile.read",
     "equipment.read",
     "files.read",

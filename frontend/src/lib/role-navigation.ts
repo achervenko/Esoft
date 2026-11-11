@@ -59,6 +59,7 @@ export function canAccessWorkspaceRoute(permissions: unknown, route: string) {
   if (path === "#/dictionaries")
     return (
       hasPermission(permissions, "dictionaries.manage") ||
+      hasPermission(permissions, "dictionaries.equipment.manage") ||
       canManageEmployeeSizes(permissions) ||
       hasPermission(permissions, "warehouse.storage-locations.read")
     );

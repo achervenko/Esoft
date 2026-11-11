@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { AdminUserAccount } from "../../shared/api/users-admin-api";
 import { GuardedAdminModal } from "../../shared/ui/GuardedAdminModal";
-import { FormField } from "../../shared/ui/FormField";
+import { FileDropzone } from "../../shared/ui/FileDropzone";
+import "../../shared/ui/FormField.css";
 
 type UserPhotoFormModalProps = {
   isSaving: boolean;
@@ -11,6 +12,7 @@ type UserPhotoFormModalProps = {
   user: AdminUserAccount;
 };
 
+const PHOTO_ACCEPT = "image/jpeg,image/png,image/webp";
 const MAX_PHOTO_SIZE_BYTES = 10 * 1024 * 1024;
 const SUPPORTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -24,6 +26,8 @@ export function UserPhotoFormModal({
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const errorId = useId();
 
   useEffect(() => {
     if (!file) {
@@ -37,8 +41,7 @@ export function UserPhotoFormModal({
     return () => URL.revokeObjectURL(objectUrl);
   }, [file]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0] ?? null;
+  const handleFilesChange = ([selectedFile]: File[]) => {
     setError(null);
 
     if (!selectedFile) {
@@ -50,7 +53,6 @@ export function UserPhotoFormModal({
     if (validationError) {
       setFile(null);
       setError(validationError);
-      event.target.value = "";
       return;
     }
 
@@ -60,7 +62,7 @@ export function UserPhotoFormModal({
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (isSaving) {
+    if (isSaving || checking) {
       return;
     }
 
@@ -93,14 +95,33 @@ export function UserPhotoFormModal({
             )}
           </div>
 
-          <FormField label="Фото" error={error ?? undefined}>
-            <input
-              accept="image/jpeg,image/png,image/webp"
+          <div
+            role="group"
+            aria-label="Фото"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? errorId : undefined}
+            className="form-field"
+          >
+            <FileDropzone
+              files={file ? [file] : []}
+              onFilesChange={handleFilesChange}
+              onCheckingChange={setChecking}
+              accept={PHOTO_ACCEPT}
+              imageAccept={PHOTO_ACCEPT}
+              mobileGalleryOnly
               disabled={isSaving}
-              onChange={handleFileChange}
-              type="file"
             />
-          </FormField>
+            {error && (
+              <small
+                id={errorId}
+                className="form-field-message field-error"
+                data-visible="true"
+                role="alert"
+              >
+                {error}
+              </small>
+            )}
+          </div>
 
           <p className="admin-form-hint">
             Лучше загружать квадратное фото 1024×1024 или больше. Backend сам
@@ -128,7 +149,7 @@ export function UserPhotoFormModal({
             </button>
             <button
               className="admin-primary-button"
-              disabled={isSaving}
+              disabled={isSaving || checking}
               type="submit"
             >
               {isSaving ? "Сохранение..." : "Сохранить"}

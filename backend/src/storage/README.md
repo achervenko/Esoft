@@ -80,7 +80,7 @@ visibleId из route
 - `StorageModule` — обычный модуль с явными импортами у потребителей. Nest использует один экземпляр модуля и S3-клиента. Правила файлов централизованы в `storage-file-policy.config.ts`; настройки подключения загружаются из корневой конфигурации.
 - `StorageFileService` - facade для `list/upload/download/preview/softDelete/setPrimary`.
 - `StorageOwnerService` - active lookup по owner и owner + file id.
-- `StorageFileUploadService` - normalization, validation, policy check, object upload, compensation.
+- `StorageFileUploadService` - normalization, validation, policy check, object upload and request reconciliation.
 - `StorageFileUploadTransactionService` - owner lock, active files, policy, DB create, audit.
 - `StorageFilePolicyService` - document rules, extension/MIME/content, single и primary rules.
 - `StorageFilePrimaryService` - primary в рамках `owner + documentType`.
@@ -96,23 +96,26 @@ visibleId из route
 1. normalizeUploadedFileInput
 2. assertValidStorageFile
 3. assertValidStorageDocumentType
-4. StorageFilePolicyService.assertFileMatchesDocumentType
-5. createStorageObjectKey
-6. StorageObjectService.putObject
-7. DB transaction:
+4. сверка по requestKey, если ключ передан
+5. StorageFilePolicyService.assertFileMatchesDocumentType
+6. createStorageObjectKey и регистрация временной загрузки
+7. StorageObjectService.putObject
+8. DB transaction:
    - StorageOwnerLockService.lock
+   - повторная сверка по requestKey под блокировкой
+   - удалить временную запись для нового файла
    - load active owner files
    - assertDocumentCanBeAdded
    - shouldMakePrimary
    - create StorageFile
    - audit FILE_UPLOAD
-8. commit
-9. если DB transaction упала после putObject - удалить orphan object
+9. commit
+10. при неизвестном результате commit сохранить объект и сверить результат по requestKey
 ```
 
 `UploadedFileInput.size` не является trusted source. В `StorageFileUploadService` размер всегда нормализуется из `file.buffer.length`, и дальше используется только нормализованный file.
 
-Object storage и Postgres не имеют общей транзакции. Поэтому объект загружается до DB-записи, а при ошибке DB выполняется компенсация через `deleteObject`. Если cleanup orphan-объекта падает, это логируется, но не заменяет основной upload error contract.
+Перед записью объекта создаётся временная запись в `storage_uploads`. При успешной загрузке транзакция PostgreSQL одновременно удаляет временную запись, сохраняет метаданные файла и пишет аудит. При потере подтверждения транзакции сервис проверяет результат по `requestKey`. Если подтвердить результат сразу не удаётся, повтор с тем же ключом возвращает ранее сохранённый файл или завершает загрузку. Фоновая очистка удаляет объекты по истёкшим временным записям. Она блокирует запись перед удалением, поэтому объект с сохранёнными метаданными остаётся доступным.
 
 ## File validation
 
@@ -297,7 +300,11 @@ Storage не должен делать business lookup и не должен пр
 
 ## Ошибки и контракты
 
-Фактические storage/image error codes: `FILE_REQUIRED`, `EMPTY_FILE`, `FILE_TOO_LARGE`, `UNSUPPORTED_FILE_FORMAT`, `DOCUMENT_TYPE_REQUIRED`, `UNSUPPORTED_DOCUMENT_TYPE`, `DOCUMENT_ALREADY_EXISTS`, `UNSUPPORTED_PRIMARY_FILE`, `INVALID_PDF`, `INVALID_IMAGE`, `IMAGE_TOO_SMALL`, `IMAGE_PIXEL_LIMIT_EXCEEDED`, `STORAGE_OBJECT_EMPTY`, `STORAGE_UNAVAILABLE`, `DATABASE_ERROR`, `UPLOAD_FAILED`.
+Фактические storage/image error codes: `FILE_REQUIRED`, `EMPTY_FILE`, `FILE_TOO_LARGE`, `UNSUPPORTED_FILE_FORMAT`, `DOCUMENT_TYPE_REQUIRED`, `UNSUPPORTED_DOCUMENT_TYPE`, `DOCUMENT_ALREADY_EXISTS`, `UNSUPPORTED_PRIMARY_FILE`, `INVALID_PDF`, `INVALID_IMAGE`, `IMAGE_TOO_SMALL`, `IMAGE_PIXEL_LIMIT_EXCEEDED`, `STORAGE_OBJECT_EMPTY`, `STORAGE_UNAVAILABLE`.
+
+- `STORAGE_UPLOAD_REQUEST_CONFLICT` (HTTP 409) — `requestKey` уже использован для загрузки с другим содержимым запроса или сохранённый по этому ключу файл был удалён.
+- `STORAGE_UPLOAD_UNAVAILABLE` (HTTP 409) — временная запись загрузки недоступна или срок её действия истёк. Необходимо начать новую загрузку.
+- `STORAGE_UPLOAD_RESULT_UNKNOWN` (HTTP 503) — результат записи в PostgreSQL не удалось подтвердить. Повтор выполняется с исходным `requestKey`.
 
 Consumer-level codes в `EquipmentFilesController`: `INVALID_DOCUMENT_TYPE`, `INVALID_PREVIEW_SIZE`, `EQUIPMENT_NOT_FOUND`.
 
@@ -307,7 +314,7 @@ Consumer-level codes в `EquipmentFilesController`: `INVALID_DOCUMENT_TYPE`, `IN
 
 Regression tests лежат рядом с production files в `backend/src/storage/*.spec.ts`.
 
-Покрываются owner isolation, policy rules, upload normalization, compensation cleanup, transaction owner lock/audit context, primary, validation, object keys и image preview limits/cache.
+Покрываются owner isolation, policy rules, upload normalization, request reconciliation and deferred cleanup, transaction owner lock/audit context, primary, validation, object keys и image preview limits/cache.
 
 Команды:
 
@@ -328,7 +335,7 @@ npm run build --workspace backend
 - Active file означает `deletedAt: null`; soft-deleted files не должны попадать в list/download/preview/set-primary.
 - Primary всегда scoped by `owner + documentType`.
 - Single document rule проверяется внутри transaction после owner lock.
-- Upload object должен компенсироваться через delete при DB failure.
+- Немедленное удаление объекта допустимо только после подтверждённого отката транзакции. При неизвестном результате объект сохраняется до сверки с PostgreSQL. В действующем потоке очистку объектов по истёкшим временным записям выполняет `cleanupExpired()`.
 - Audit entity всегда берется из owner; caller передает только `actionModule`.
 - Object key не должен строиться из пользовательского filename.
 - Preview generation сначала проверяет cache, затем применяет size guards.
@@ -360,5 +367,5 @@ SHA-256 исходных байтов доступен из временной �
 Права на чтение и существование владельца проверяет бизнес-компонент;
 универсальных ownerless HTTP-маршрутов Storage не предоставляет.
 Существующий одиночный `uploadFile` остаётся удобным самостоятельным сценарием
-с собственной транзакцией метаданных и компенсацией при ошибке. Для общей
+с собственной транзакцией метаданных и отложенной очисткой. Для общей
 транзакции нескольких компонентов используется staged API.

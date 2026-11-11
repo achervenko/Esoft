@@ -28,10 +28,13 @@ model StorageFile {
   uploadedByUser   User?               @relation("UploadedStorageFiles", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
   createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
   deletedAt        DateTime?           @map("deleted_at") @db.Timestamptz(6)
+  uploadRequestKey String?             @map("upload_request_key") @db.Uuid
+  uploadRequestHash String?            @map("upload_request_hash") @db.VarChar(64)
 
   adjustmentAttachments WarehouseStockAdjustmentAttachment[]
 
   @@unique([bucket, objectKey], map: "uq_storage_files_bucket_object_key")
+  @@unique([ownerModule, ownerEntityType, ownerEntityId, uploadRequestKey], map: "uq_storage_files_owner_upload_request")
   @@index([bucket], map: "idx_storage_files_bucket")
   @@index([createdAt(sort: Desc)], map: "idx_storage_files_created_at")
   @@index([uploadedByUserId], map: "idx_storage_files_uploaded_by_user_id")

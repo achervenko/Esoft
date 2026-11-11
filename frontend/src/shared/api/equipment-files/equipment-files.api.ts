@@ -14,11 +14,13 @@ export function getEquipmentFiles(visibleId: number) {
 export async function uploadEquipmentFile(params: {
   documentType: StorageDocumentType;
   file: File;
+  requestKey: string;
   visibleId: number;
 }) {
   const formData = new FormData();
   formData.append("documentType", params.documentType);
   formData.append("file", params.file);
+  formData.append("requestKey", params.requestKey);
 
   const abortController = new AbortController();
   const timeoutId = window.setTimeout(

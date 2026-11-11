@@ -45,6 +45,47 @@ describe('StorageFileUploadTransactionService', () => {
     );
   });
 
+  it('checks a concurrent replay under the owner lock before writing metadata or audit', async () => {
+    const request = {
+      key: 'ff89b755-38eb-4874-81b7-84cc8c455052',
+      hash: 'a'.repeat(64),
+    };
+    const stored = createStorageFile({
+      uploadRequestKey: request.key,
+      uploadRequestHash: request.hash,
+    });
+    tx.storageFile.findUnique.mockResolvedValue(stored);
+    const params = {
+      audit: { actionModule: AuditModule.EQUIPMENT },
+      documentType: StorageDocumentType.passport,
+      file: {
+        buffer: Buffer.from('pdf'),
+        mimetype: 'application/pdf',
+        originalname: 'passport.pdf',
+        size: 3,
+      },
+      owner: owner(),
+      request,
+      pendingUploadId: 'pending-id',
+      storedObject: { bucket: 'bucket', key: 'unused' },
+    };
+    expect((await service.createStorageFile(params)).storageFile).toEqual(
+      stored,
+    );
+    expect(ownerLock.lock).toHaveBeenCalledWith(tx, owner());
+    expect(tx.storageUpload.deleteMany).not.toHaveBeenCalled();
+    expect(tx.storageFile.create).not.toHaveBeenCalled();
+    expect(auditLog.writeFieldChanges).not.toHaveBeenCalled();
+    await expect(
+      service.createStorageFile({
+        ...params,
+        request: { ...request, hash: 'b'.repeat(64) },
+      }),
+    ).rejects.toMatchObject({
+      response: { code: 'STORAGE_UPLOAD_REQUEST_CONFLICT' },
+    });
+  });
+
   it('locks owner, checks policy and creates file with owner/audit context in one transaction', async () => {
     await service.createStorageFile({
       audit: { actionModule: AuditModule.EQUIPMENT },
@@ -56,6 +97,7 @@ describe('StorageFileUploadTransactionService', () => {
         size: 123,
       },
       owner: owner(),
+      pendingUploadId: 'pending-id',
       storedObject: {
         bucket: 'bucket',
         key: 'equipment/equipment/10/passport/object.pdf',
@@ -64,6 +106,12 @@ describe('StorageFileUploadTransactionService', () => {
     });
 
     expect(ownerLock.lock).toHaveBeenCalledWith(tx, owner());
+    expect(tx.storageUpload.deleteMany).toHaveBeenCalledWith({
+      where: {
+        id: 'pending-id',
+        objectKey: 'equipment/equipment/10/passport/object.pdf',
+      },
+    });
     expect(tx.storageFile.findMany).toHaveBeenCalledWith({
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       where: {
@@ -111,8 +159,10 @@ function createTx() {
   const newFile = createStorageFile({ id: 2, originalName: 'passport.pdf' });
 
   return {
+    storageUpload: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
     storageFile: {
       create: jest.fn().mockResolvedValue(newFile),
+      findUnique: jest.fn(),
       findMany: jest.fn().mockResolvedValue([activeFile]),
     },
   };
@@ -129,6 +179,8 @@ function owner() {
 
 function createStorageFile(overrides: Partial<StorageFile> = {}): StorageFile {
   return {
+    uploadRequestKey: null,
+    uploadRequestHash: null,
     bucket: 'bucket',
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     deletedAt: null,

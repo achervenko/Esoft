@@ -8,7 +8,11 @@ export const dictionaryTabs = [
     permissions: [...manage, "ppe.employee-sizes.manage"],
   },
   { id: "positions", label: "Должности", permissions: manage },
-  { id: "manufacturers", label: "Производители", permissions: manage },
+  {
+    id: "manufacturers",
+    label: "Производители",
+    permissions: [...manage, "dictionaries.equipment.manage"],
+  },
   { id: "countries", label: "Страны", permissions: manage },
   { id: "locations", label: "Местонахождения", permissions: manage },
   {

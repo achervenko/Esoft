@@ -25,19 +25,19 @@ export class DictionariesAdminController {
   }
 
   @Get('manufacturers')
-  @RequirePermission(DICTIONARIES_PERMISSIONS.MANAGE)
+  @RequirePermission(DICTIONARIES_PERMISSIONS.MANAGE_EQUIPMENT)
   listManufacturers() {
     return this.dictionariesAdminService.listManufacturers();
   }
 
   @Post('manufacturers')
-  @RequirePermission(DICTIONARIES_PERMISSIONS.MANAGE)
+  @RequirePermission(DICTIONARIES_PERMISSIONS.MANAGE_EQUIPMENT)
   createManufacturer(@Body() payload: Record<string, unknown>) {
     return this.dictionariesAdminService.createManufacturer(payload);
   }
 
   @Put('manufacturers/:id')
-  @RequirePermission(DICTIONARIES_PERMISSIONS.MANAGE)
+  @RequirePermission(DICTIONARIES_PERMISSIONS.MANAGE_EQUIPMENT)
   updateManufacturer(
     @Param('id', ParsePositiveIntPipe) id: number,
     @Body() payload: Record<string, unknown>,
@@ -46,25 +46,25 @@ export class DictionariesAdminController {
   }
 
   @Delete('manufacturers/:id')
-  @RequirePermission(DICTIONARIES_PERMISSIONS.MANAGE)
+  @RequirePermission(DICTIONARIES_PERMISSIONS.MANAGE_EQUIPMENT)
   deleteManufacturer(@Param('id', ParsePositiveIntPipe) id: number) {
     return this.dictionariesAdminService.deleteManufacturer(id);
   }
 
   @Get('models')
-  @RequirePermission(DICTIONARIES_PERMISSIONS.MANAGE)
+  @RequirePermission(DICTIONARIES_PERMISSIONS.MANAGE_EQUIPMENT)
   listEquipmentModels() {
     return this.dictionariesAdminService.listEquipmentModels();
   }
 
   @Post('models')
-  @RequirePermission(DICTIONARIES_PERMISSIONS.MANAGE)
+  @RequirePermission(DICTIONARIES_PERMISSIONS.MANAGE_EQUIPMENT)
   createEquipmentModel(@Body() payload: Record<string, unknown>) {
     return this.dictionariesAdminService.createEquipmentModel(payload);
   }
 
   @Put('models/:id')
-  @RequirePermission(DICTIONARIES_PERMISSIONS.MANAGE)
+  @RequirePermission(DICTIONARIES_PERMISSIONS.MANAGE_EQUIPMENT)
   updateEquipmentModel(
     @Param('id', ParsePositiveIntPipe) id: number,
     @Body() payload: Record<string, unknown>,
@@ -73,7 +73,7 @@ export class DictionariesAdminController {
   }
 
   @Delete('models/:id')
-  @RequirePermission(DICTIONARIES_PERMISSIONS.MANAGE)
+  @RequirePermission(DICTIONARIES_PERMISSIONS.MANAGE_EQUIPMENT)
   deleteEquipmentModel(@Param('id', ParsePositiveIntPipe) id: number) {
     return this.dictionariesAdminService.deleteEquipmentModel(id);
   }

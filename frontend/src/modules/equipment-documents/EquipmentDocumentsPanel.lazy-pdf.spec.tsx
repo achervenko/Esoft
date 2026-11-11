@@ -28,16 +28,11 @@ vi.mock("./useEquipmentDocumentsPanel", () => ({
     },
     handleDelete: () => undefined,
     handleDownload: () => undefined,
-    handleFileChange: () => undefined,
-    handleSaveChanges: () => undefined,
     handleSetPrimary: () => undefined,
-    hasUnsavedDocumentChanges: false,
     isLoading: false,
     previewFile: testState.previewFile,
-    selectedFiles: {},
     setPreviewFile: () => undefined,
     settingPrimaryFileId: null,
-    uploadingDocumentType: null,
   }),
 }));
 

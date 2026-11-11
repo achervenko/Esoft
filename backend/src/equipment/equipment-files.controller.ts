@@ -13,6 +13,7 @@ import {
   NotFoundException,
   Param,
   ParseEnumPipe,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -73,6 +74,8 @@ export class EquipmentFilesController {
     documentType: StorageDocumentType,
     @UploadedFile() file: UploadedFileInput | undefined,
     @Session() session: UserSession<Auth>,
+    @Body('requestKey', new ParseUUIDPipe({ version: '4', optional: true }))
+    requestKey?: string,
   ) {
     const owner = await this.findStorageOwnerByVisibleId(visibleId);
 
@@ -83,6 +86,7 @@ export class EquipmentFilesController {
       documentType,
       file,
       owner,
+      ...(requestKey ? { requestKey } : {}),
       userId: session.user.id,
     });
   }

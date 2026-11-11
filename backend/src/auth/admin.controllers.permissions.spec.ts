@@ -52,6 +52,9 @@ function routesRequiring(permission: Permission) {
 }
 const userRoute = routesRequiring('users.manage');
 const dictionaryRoute = routesRequiring('dictionaries.manage');
+const equipmentDictionaryRoute = routesRequiring(
+  'dictionaries.equipment.manage',
+);
 const searchRoute = routesRequiring('search.manage');
 const users = '/api/users/admin';
 const dictionaries = '/api/dictionaries/admin';
@@ -109,32 +112,34 @@ const operations: Operation[] = [
     'dictionaries',
     'getOverview',
   ),
-  ...[
-    ['manufacturers', 'Manufacturers', 'Manufacturer'],
-    ['models', 'EquipmentModels', 'EquipmentModel'],
-    ['countries', 'Countries', 'Country'],
-    ['objects', 'Objects', 'Object'],
-    ['locations', 'Locations', 'Location'],
-  ].flatMap(([path, plural, singular]) => [
-    dictionaryRoute(
-      'GET',
-      `${dictionaries}/${path}`,
-      'dictionaries',
-      `list${plural}`,
-    ),
-    dictionaryRoute(
+  ...(
+    [
+      [
+        'manufacturers',
+        'Manufacturers',
+        'Manufacturer',
+        equipmentDictionaryRoute,
+      ],
+      ['models', 'EquipmentModels', 'EquipmentModel', equipmentDictionaryRoute],
+      ['countries', 'Countries', 'Country', dictionaryRoute],
+      ['objects', 'Objects', 'Object', dictionaryRoute],
+      ['locations', 'Locations', 'Location', dictionaryRoute],
+    ] as const
+  ).flatMap(([path, plural, singular, route]) => [
+    route('GET', `${dictionaries}/${path}`, 'dictionaries', `list${plural}`),
+    route(
       'POST',
       `${dictionaries}/${path}`,
       'dictionaries',
       `create${singular}`,
     ),
-    dictionaryRoute(
+    route(
       'PUT',
       `${dictionaries}/${path}/:id`,
       'dictionaries',
       `update${singular}`,
     ),
-    dictionaryRoute(
+    route(
       'DELETE',
       `${dictionaries}/${path}/:id`,
       'dictionaries',

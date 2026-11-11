@@ -56,18 +56,7 @@
   text-align: right;
 }
 
-.stock-adjust-upload {
-  display: grid;
-  gap: 8px;
-}
-.stock-adjust-upload-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  justify-self: start;
-}
-.stock-adjust-upload small {
+.stock-adjust-file-hint {
   padding-inline-start: var(--optical-inset-modal);
   color: var(--color-text-muted);
 }

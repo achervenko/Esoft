@@ -5,6 +5,12 @@
   gap: 18px;
 }
 
+.equipment-document-type-section .equipment-document-add-button {
+  justify-self: start;
+  width: auto;
+  min-height: 34px;
+}
+
 .pdf-preview-close.pdf-preview-close-text {
   font: inherit;
   font-size: 24px;
