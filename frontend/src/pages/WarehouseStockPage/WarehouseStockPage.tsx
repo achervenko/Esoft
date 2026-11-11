@@ -8,8 +8,8 @@ import { ListLoadMore } from "../../shared/ui/ListLoadMore";
 import { hasPermission } from "../../shared/lib/permissions";
 import { useMediaQuery } from "../../shared/lib/useMediaQuery";
 import type { StockPosition } from "../../shared/api/warehouse-stock-api";
-import { useWarehouseStock, type StockSort } from "./useWarehouseStock";
-import { useStorageChoices } from "./useStorageChoices";
+import { useWarehouseStock } from "./useWarehouseStock";
+import { useStorageChoices } from "../../shared/warehouse/useStorageChoices";
 import { WarehouseStockTable } from "./WarehouseStockTable";
 import { StockDistributionModal } from "./StockDistributionModal";
 import { WarehouseStockCards } from "./WarehouseStockCards";
@@ -142,27 +142,6 @@ export function WarehouseStockPage({
           </div>
         </AdminModal>
       )}
-      {mobile && (
-        <SelectField
-          label="Сортировка"
-          value={`${page.sort.key}:${page.sort.direction}`}
-          onChange={(value) => {
-            const [key, direction] = value.split(":");
-            page.setSort({
-              key: key as StockSort["key"],
-              direction: direction as StockSort["direction"],
-            });
-          }}
-          options={[
-            { value: "article:asc", label: "Артикул: А–Я" },
-            { value: "article:desc", label: "Артикул: Я–А" },
-            { value: "name:asc", label: "Наименование: А–Я" },
-            { value: "name:desc", label: "Наименование: Я–А" },
-            { value: "quantity:asc", label: "Количество: по возрастанию" },
-            { value: "quantity:desc", label: "Количество: по убыванию" },
-          ]}
-        />
-      )}
       <section
         className="stock-results"
         aria-label="Складские остатки"
@@ -214,6 +193,10 @@ export function WarehouseStockPage({
           key={selected.id}
           position={selected}
           canTransfer={canTransfer}
+          canMoveReservations={hasPermission(
+            userPermissions,
+            "warehouse.reservations.manage",
+          )}
           canAdjust={hasPermission(
             userPermissions,
             "warehouse.adjustments.manage",

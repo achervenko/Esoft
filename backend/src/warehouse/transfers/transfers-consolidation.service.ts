@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { assertTransactionPermission } from '../../auth/transaction-permission';
+import { lockReservation } from '../reservations/reservation-common';
 import { WarehouseStockService } from '../stock/stock.service';
 import { stockId } from '../stock/stock.validation';
 import { lockWarehouse } from '../storage-structure/storage-structure.policy';
@@ -32,6 +33,21 @@ export class WarehouseTransferConsolidationService {
           actor,
           'warehouse.transfers.manage',
         );
+        const reservationIds = [
+          ...new Set(
+            input.moves.flatMap(
+              (move) =>
+                move.distribution?.reservations.map((r) => r.reservationId) ??
+                [],
+            ),
+          ),
+        ];
+        if (reservationIds.length)
+          await assertTransactionPermission(
+            tx,
+            actor,
+            'warehouse.reservations.manage',
+          );
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:transfer', actor, input.requestKey])},0))`;
         const previous = await tx.warehouseTransfer.findUnique({
           where: {
@@ -85,6 +101,19 @@ export class WarehouseTransferConsolidationService {
             input.moves.map((m) => m.fromLocationId).concat(input.toLocationId),
           ),
         ]);
+        if (reservationIds.length) {
+          const reservations = await tx.warehouseReservation.findMany({
+            where: {
+              id: { in: reservationIds },
+              itemId: BigInt(input.itemId),
+            },
+            select: { id: true, orderId: true, itemId: true },
+          });
+          // Match the single-transfer reservation lock order across all sources.
+          reservations.sort((a, b) => a.id.localeCompare(b.id));
+          for (const { orderId, itemId } of reservations)
+            await lockReservation(tx, orderId, itemId);
+        }
         const ids: string[] = [];
         for (const [index, move] of input.moves.entries()) {
           const digest = createHash('sha256')

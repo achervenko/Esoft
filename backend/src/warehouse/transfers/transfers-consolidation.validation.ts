@@ -34,7 +34,7 @@ export function parseConsolidation(value: unknown) {
       const row = value as Record<string, unknown>;
       if (
         Object.keys(row).some(
-          (k) => !['fromLocationId', 'quantity'].includes(k),
+          (k) => !['fromLocationId', 'quantity', 'distribution'].includes(k),
         )
       )
         invalid();
@@ -44,6 +44,7 @@ export function parseConsolidation(value: unknown) {
         toLocationId: b.toLocationId,
         fromLocationId: row.fromLocationId,
         quantity: row.quantity,
+        distribution: row.distribution,
       });
     })
     .sort((a, b) => a.fromLocationId.localeCompare(b.fromLocationId));

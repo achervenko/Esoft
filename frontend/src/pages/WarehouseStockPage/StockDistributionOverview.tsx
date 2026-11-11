@@ -1,3 +1,4 @@
+import { WarehouseProductSummary } from "../../shared/warehouse/WarehouseProductSummary";
 import "./StockConsolidationForm.css";
 import { Forklift } from "lucide-react";
 import { Notice } from "../../shared/ui/Notice";
@@ -5,7 +6,6 @@ import type {
   StockPosition,
   StockDistribution,
 } from "../../shared/api/warehouse-stock-api";
-import { StockTransferProduct } from "./StockTransferPreview";
 import { quantityMillis } from "./stock-page.utils";
 import {
   StockDistributionTable,
@@ -18,6 +18,7 @@ export function StockDistributionOverview({
   error,
   canTransfer,
   canAdjust,
+  canMoveReservations,
   onTransfer,
   onAdjust,
   refresh,
@@ -40,7 +41,11 @@ export function StockDistributionOverview({
   };
   return (
     <div className="admin-form">
-      <StockTransferProduct data={current} />
+      <WarehouseProductSummary
+        item={current.item}
+        quantity={current.totalQuantity}
+        quantityLabel="Общий остаток"
+      />
       {loading && <p role="status">Обновление распределения…</p>}
       {error && (
         <Notice tone="error">
@@ -61,6 +66,7 @@ export function StockDistributionOverview({
           error={error}
           canTransfer={canTransfer}
           canAdjust={canAdjust}
+          canMoveReservations={canMoveReservations}
           onTransfer={onTransfer}
           onAdjust={onAdjust}
         />

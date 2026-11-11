@@ -8,6 +8,7 @@ import {
   verifyApiHistory,
 } from "./warehouse-reservation-api-queries.mjs";
 import { verifyApiConcurrency } from "./warehouse-reservation-api-concurrency.mjs";
+import { verifyReservationOrdersApi } from "./warehouse-reservation-orders-api.mjs";
 
 const require = createRequire(import.meta.url);
 const load = (path) => require("../../../backend/dist/src/" + path);
@@ -53,6 +54,7 @@ export async function verifyReservationApi(c, t) {
     await verifyApiList(c, t, context, id);
     await verifyApiConcurrency(c, t, context);
     await verifyApiHistory(c, t, context, id);
+    await verifyReservationOrdersApi(c, t, context);
   } finally {
     await api.close();
   }

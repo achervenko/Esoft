@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { WarehouseItemIdentity } from "../../shared/warehouse/WarehouseItemIdentity";
 import { MapPin } from "lucide-react";
 import type {
   Receipt,
@@ -141,10 +142,7 @@ export function ReceiptPlacementStepper({
             </strong>
           </div>
           <section className="admin-card receipt-placement-card">
-            <small className="receipt-hint">
-              Артикул: {line.article ?? "Не указан"}
-            </small>
-            <h2 title={line.name}>{line.name}</h2>
+            <WarehouseItemIdentity name={line.name} article={line.article} />
             {line.order && (
               <p>
                 Заказ 1С: <strong>{line.order.number ?? "Без номера"}</strong>

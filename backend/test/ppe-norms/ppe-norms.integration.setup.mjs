@@ -255,6 +255,7 @@ if (
       './ppe-norms-transactions.integration.test.mjs',
       './ppe-norms-concurrency.integration.test.mjs',
       './ppe-norms-lifecycle.integration.test.mjs',
+      './ppe-position-search.integration.test.mjs',
     ].map((path) => import(path)),
   );
   const env = await createPpeNormTestEnvironment();

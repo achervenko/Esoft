@@ -1,10 +1,7 @@
 import { readPendingStockMovement } from "./pending-stock-movement";
 import { useState } from "react";
 import { AdminModal } from "../../shared/ui/AdminModal";
-import {
-  type StockPosition,
-  type StockDistribution,
-} from "../../shared/api/warehouse-stock-api";
+import { type StockPosition } from "../../shared/api/warehouse-stock-api";
 import "./StockTransferForm.css";
 import { StockAdjustmentForm } from "./StockAdjustmentForm";
 import { StockTransferForm } from "./StockTransferForm";
@@ -16,12 +13,14 @@ export function StockDistributionModal({
   position,
   canTransfer,
   canAdjust = false,
+  canMoveReservations = false,
   onClose,
   onChanged,
 }: {
   position: StockPosition;
   canTransfer: boolean;
   canAdjust?: boolean;
+  canMoveReservations?: boolean;
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -36,9 +35,9 @@ export function StockDistributionModal({
   const [source, setSource] = useState<StockDistributionSource | null>(
     restored?.kind === "transfer" ? restored.source : null,
   );
-  const [adjusting, setAdjusting] = useState<
-    StockDistribution["locations"][number] | null
-  >(null);
+  const [adjusting, setAdjusting] = useState<StockDistributionSource | null>(
+    null,
+  );
   const [transferSaving, setTransferSaving] = useState(false);
   const [consolidating, setConsolidating] = useState(
     restored?.kind === "consolidation",
@@ -50,7 +49,17 @@ export function StockDistributionModal({
       return (
         <StockAdjustmentForm
           data={data}
-          balance={adjusting}
+          balance={adjusting.balance}
+          portion={{
+            ...(adjusting.reservationId
+              ? { reservationId: adjusting.reservationId }
+              : {}),
+            quantity: adjusting.reservationId
+              ? (adjusting.balance.reservations?.find(
+                  (r) => r.reservationId === adjusting.reservationId,
+                )?.quantity ?? "0")
+              : adjusting.balance.freeQuantity,
+          }}
           onSavingChange={setTransferSaving}
           onClose={() => setAdjusting(null)}
           onSaved={() => {
@@ -65,6 +74,7 @@ export function StockDistributionModal({
         <>
           {consolidating ? (
             <StockConsolidationForm
+              canMoveReservations={canMoveReservations}
               data={operationData}
               onSavingChange={setTransferSaving}
               onClose={() => {
@@ -81,10 +91,18 @@ export function StockDistributionModal({
           ) : (
             source && (
               <StockTransferForm
+                canMoveReservations={canMoveReservations}
+                reservationId={source.reservationId}
                 embedded
                 onSavingChange={setTransferSaving}
                 data={operationData}
-                source={source.balance}
+                source={
+                  restored
+                    ? source.balance
+                    : (operationData.locations.find(
+                        (b) => b.location.id === source.balance.location.id,
+                      ) ?? source.balance)
+                }
                 onClose={() => {
                   setRestored(null);
                   setSource(null);
@@ -108,8 +126,14 @@ export function StockDistributionModal({
         error={error}
         canTransfer={canTransfer}
         canAdjust={canAdjust}
-        onTransfer={setSource}
-        onAdjust={setAdjusting}
+        canMoveReservations={canMoveReservations}
+        onTransfer={(next) => {
+          setSource(next);
+          refresh();
+        }}
+        onAdjust={(balance, reservationId) =>
+          setAdjusting({ balance, reservationId })
+        }
         refresh={refresh}
         onConsolidate={() => setConsolidating(true)}
       />
@@ -118,7 +142,6 @@ export function StockDistributionModal({
   const editing = !!(adjusting || source || consolidating);
   return (
     <AdminModal
-      animateResize={false}
       className="stock-transfer-modal"
       title={
         adjusting

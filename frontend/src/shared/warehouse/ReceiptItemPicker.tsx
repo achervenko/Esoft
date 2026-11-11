@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import {
   warehouseCatalogApi,
   type WarehouseItem,
-} from "../../shared/api/warehouse-catalog-api";
-import { SearchSelect } from "../../shared/ui/SearchSelect";
-import { Notice } from "../../shared/ui/Notice";
-import { getApiErrorMessage } from "../../shared/api/api-error";
+} from "../api/warehouse-catalog-api";
+import { SearchSelect } from "../ui/SearchSelect";
+import { Notice } from "../ui/Notice";
+import { getApiErrorMessage } from "../api/api-error";
 import "./ReceiptItemPicker.css";
 
 export function ReceiptItemPicker({

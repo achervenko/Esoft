@@ -9,7 +9,7 @@ import {
 import { formatBusinessDateTime } from "../../shared/lib/business-date";
 import { Notice } from "../../shared/ui/Notice";
 import { useOrdersQuery } from "./useOrders";
-import { OrderStatus } from "./OrderStatus";
+import { OrderStatus } from "../../shared/orders/OrderStatus";
 const labels = {
   number: "Номер",
   name: "Название",

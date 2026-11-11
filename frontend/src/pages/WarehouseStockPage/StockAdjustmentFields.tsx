@@ -11,10 +11,12 @@ export function StockAdjustmentFields({
   form,
   unit,
   balanceId,
+  quantityLabel = "Фактически на месте",
 }: {
   form: ReturnType<typeof useStockAdjustmentForm>;
   unit: string;
   balanceId: string;
+  quantityLabel?: string;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const {
@@ -33,7 +35,7 @@ export function StockAdjustmentFields({
       {" "}
       <fieldset className="stock-adjust-fields" disabled={locked}>
         <AdminTextField
-          label={`Фактически на месте, ${unit}`}
+          label={`${quantityLabel}, ${unit}`}
           value={quantity}
           onChange={setQuantity}
           inputMode="decimal"

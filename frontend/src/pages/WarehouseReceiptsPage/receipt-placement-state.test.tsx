@@ -65,7 +65,7 @@ it("keeps services unresolved when all goods are placed and explains them in the
       }}
     />,
   );
-  expect(screen.getByRole("heading", { name: "Доставка" })).toBeVisible();
+  expect(screen.getByText("Доставка", { exact: true })).toBeVisible();
   expect(
     screen.getByRole("button", { name: "Позиция 1: Подшипник" }),
   ).toHaveAttribute("data-complete", "true");
@@ -82,7 +82,7 @@ it("keeps services unresolved when all goods are placed and explains them in the
   expect(screen.queryByText("Размещение завершено")).not.toBeInTheDocument();
   expect(screen.getByText(/Приход остаётся незавершённым/)).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: /Доставка · Тип/ }));
-  expect(screen.getByRole("heading", { name: "Доставка" })).toBeVisible();
+  expect(screen.getByText("Доставка", { exact: true })).toBeVisible();
 });
 
 it("offers exit directly when opening an already completed receipt", () => {

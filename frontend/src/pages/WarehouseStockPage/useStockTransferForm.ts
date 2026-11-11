@@ -13,7 +13,7 @@ import {
   ApiRequestError,
   getApiErrorMessage,
 } from "../../shared/api/api-error";
-import { useStorageChoices } from "./useStorageChoices";
+import { useStorageChoices } from "../../shared/warehouse/useStorageChoices";
 import { transferRequestKey } from "./stock-page.utils";
 import { stockTransferQuantity } from "./StockTransferQuantity";
 
@@ -22,11 +22,15 @@ export function useStockTransferForm({
   source,
   onSaved,
   onSavingChange,
+  canMoveReservations = false,
+  reservationId,
 }: {
   data: StockDistribution;
   source: StockDistribution["locations"][number];
   onSaved: () => void;
   onSavingChange?: (saving: boolean) => void;
+  canMoveReservations?: boolean;
+  reservationId?: string;
 }) {
   const [restored] = useState(() => {
     const saved = readPendingStockMovement();
@@ -43,6 +47,13 @@ export function useStockTransferForm({
     [locationId, setLocationId] = useState(restored?.input.toLocationId ?? "");
   const [quantity, setQuantity] = useState(restored?.input.quantity ?? ""),
     [comment, setComment] = useState(restored?.input.comment ?? "");
+  const selectedReservationId = restored?.source.reservationId ?? reservationId;
+  const selectedReservation = source.reservations?.find(
+    (r) => r.reservationId === selectedReservationId,
+  );
+  const availableQuantity = selectedReservationId
+    ? (selectedReservation?.quantity ?? "0")
+    : source.freeQuantity;
   const [commentOpen, setCommentOpen] = useState(!!restored?.input.comment);
   const [saving, setSaving] = useState(false),
     [error, setError] = useState<string | null>(null);
@@ -61,12 +72,13 @@ export function useStockTransferForm({
       ? [data.warehouse]
       : choices.warehouses;
   const { normalized, amount, available, quantityError } =
-    stockTransferQuantity(quantity, source.quantity, data.item.unit);
+    stockTransferQuantity(quantity, availableQuantity, data.item.unit);
   const valid =
     amount !== null &&
     amount > 0n &&
     available !== null &&
     amount <= available &&
+    (!selectedReservationId || canMoveReservations) &&
     !!locationId &&
     locationId !== source.location.id;
   async function submit(e: React.FormEvent) {
@@ -82,6 +94,16 @@ export function useStockTransferForm({
     setError(null);
     const retry = pendingRef.current !== null;
     const attempt = pendingRef.current ?? {
+      ...(selectedReservationId
+        ? {
+            distribution: {
+              freeQuantity: "0",
+              reservations: [
+                { reservationId: selectedReservationId, quantity: normalized },
+              ],
+            },
+          }
+        : {}),
       requestKey: transferRequestKey(),
       itemId: data.item.id,
       fromLocationId: source.location.id,
@@ -95,7 +117,12 @@ export function useStockTransferForm({
         data,
         input: attempt,
         warehouseId,
-        source: { balance: source },
+        source: {
+          balance: source,
+          ...(selectedReservationId
+            ? { reservationId: selectedReservationId }
+            : {}),
+        },
       });
     } catch (e) {
       setError(getApiErrorMessage(e));
@@ -135,6 +162,8 @@ export function useStockTransferForm({
     }
   }
   return {
+    selectedReservation,
+    availableQuantity,
     warehouseId,
     setWarehouseId,
     locationId,

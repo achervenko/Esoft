@@ -6,7 +6,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { ReceiptItemPicker } from "./ReceiptItemPicker";
+import { ReceiptItemPicker } from "../../shared/warehouse/ReceiptItemPicker";
 import {
   warehouseCatalogApi,
   type WarehouseItem,

@@ -1,10 +1,8 @@
+import { WarehouseProductSummary } from "../../shared/warehouse/WarehouseProductSummary";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import { Notice } from "../../shared/ui/Notice";
 import type { StockDistribution } from "../../shared/api/warehouse-stock-api";
-import {
-  StockTransferProduct,
-  StockTransferPreview,
-} from "./StockTransferPreview";
+import { StockTransferPreview } from "./StockTransferPreview";
 import { StockTransferFields } from "./StockTransferFields";
 import { useStockTransferForm } from "./useStockTransferForm";
 import "./StockTransferForm.css";
@@ -15,6 +13,8 @@ export function StockTransferForm({
   onClose,
   onSaved,
   embedded = false,
+  canMoveReservations = false,
+  reservationId,
   onSavingChange,
 }: {
   data: StockDistribution;
@@ -22,11 +22,15 @@ export function StockTransferForm({
   onClose: () => void;
   onSaved: () => void;
   embedded?: boolean;
+  canMoveReservations?: boolean;
+  reservationId?: string;
   onSavingChange?: (saving: boolean) => void;
 }) {
   const state = useStockTransferForm({
     data,
     source,
+    canMoveReservations,
+    reservationId,
     onSaved,
     onSavingChange,
   });
@@ -44,7 +48,11 @@ export function StockTransferForm({
   } = state;
   const form = (
     <form className="admin-form" onSubmit={(e) => void submit(e)}>
-      <StockTransferProduct data={data} />
+      <WarehouseProductSummary
+        item={data.item}
+        quantity={data.totalQuantity}
+        quantityLabel="Общий остаток"
+      />
       <StockTransferFields data={data} source={source} form={state} />
       <StockTransferPreview
         data={data}

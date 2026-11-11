@@ -24,6 +24,9 @@ export async function receiptsLifecycle(c, t) {
         c.prisma,
         issues.stock,
         issues.audit,
+        new (load(
+          "warehouse/transfers/transfers-query.service.js",
+        ).WarehouseTransfersQueryService)(c.prisma),
       );
       const itemId = String(c.item.id);
       const sourceDocument = c.source();

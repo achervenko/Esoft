@@ -4,13 +4,18 @@ import { AppTable } from "../../shared/ui/AppTable";
 import type { StockDistribution } from "../../shared/api/warehouse-stock-api";
 import { formatStockQuantity, quantityMillis } from "./stock-page.utils";
 export type StockDistributionSource = {
+  reservationId?: string;
   balance: StockDistribution["locations"][number];
 };
 export type StockDistributionActions = {
   canTransfer: boolean;
   canAdjust: boolean;
+  canMoveReservations?: boolean;
   onTransfer: (source: StockDistributionSource) => void;
-  onAdjust: (balance: StockDistribution["locations"][number]) => void;
+  onAdjust: (
+    balance: StockDistribution["locations"][number],
+    reservationId?: string,
+  ) => void;
 };
 export function StockDistributionTable({
   data,
@@ -18,6 +23,7 @@ export function StockDistributionTable({
   error,
   canTransfer,
   canAdjust,
+  canMoveReservations = false,
   onTransfer,
   onAdjust,
 }: StockDistributionActions & {
@@ -40,14 +46,30 @@ export function StockDistributionTable({
         </tr>
       </thead>
       <tbody>
-        {data.locations
-          .filter((b) => (quantityMillis(b.quantity) ?? 0n) > 0n)
-          .map((b) => (
-            <tr key={b.balanceId}>
+        {data.locations.flatMap((b) => {
+          const rows = [
+            ...((quantityMillis(b.freeQuantity) ?? 0n) > 0n &&
+            (quantityMillis(b.quantity) ?? 0n) > 0n
+              ? [{ quantity: b.freeQuantity, reservation: null }]
+              : []),
+            ...(b.reservations ?? [])
+              .filter((r) => (quantityMillis(r.quantity) ?? 0n) > 0n)
+              .map((reservation) => ({
+                quantity: reservation.quantity,
+                reservation,
+              })),
+          ];
+          return rows.map(({ quantity, reservation }) => (
+            <tr key={`${b.balanceId}:${reservation?.reservationId ?? "free"}`}>
               <td>
                 {b.location.name}
                 {!b.location.isActive && (
                   <small className="stock-inactive">Место неактивно</small>
+                )}
+                {reservation && (
+                  <small className="stock-inactive">
+                    Резерв: {reservation.order.number}
+                  </small>
                 )}
               </td>
               <td className="stock-distribution-quantity">
@@ -55,7 +77,7 @@ export function StockDistributionTable({
                   className={canAdjust ? "stock-quantity-editable" : undefined}
                 >
                   <span className="stock-quantity-value">
-                    {formatStockQuantity(b.quantity)} {data.item.unit}
+                    {formatStockQuantity(quantity)} {data.item.unit}
                   </span>
                   {canAdjust && (
                     <button
@@ -64,7 +86,7 @@ export function StockDistributionTable({
                       aria-label={`Исправить количество: ${b.location.name}`}
                       title="Исправить количество"
                       disabled={loading || !!error}
-                      onClick={() => onAdjust(b)}
+                      onClick={() => onAdjust(b, reservation?.reservationId)}
                     >
                       <Pencil size={16} aria-hidden="true" />
                     </button>
@@ -84,16 +106,24 @@ export function StockDistributionTable({
                       !data.item.isActive ||
                       !data.warehouse.isActive ||
                       !b.location.isActive ||
-                      (quantityMillis(b.quantity) ?? 0n) <= 0n
+                      (!!reservation && !canMoveReservations)
                     }
-                    onClick={() => onTransfer({ balance: b })}
+                    onClick={() =>
+                      onTransfer({
+                        balance: b,
+                        ...(reservation
+                          ? { reservationId: reservation.reservationId }
+                          : {}),
+                      })
+                    }
                   >
                     <Forklift size={20} aria-hidden="true" />
                   </button>
                 </td>
               )}
             </tr>
-          ))}
+          ));
+        })}
       </tbody>
     </AppTable>
   );

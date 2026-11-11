@@ -1,6 +1,7 @@
 import type { StockPosition } from "../../shared/api/warehouse-stock-api";
 import { useWindowedGrid } from "../../shared/lib/useWindowedGrid";
-import { StockPhoto } from "./WarehouseStockTable";
+import { WarehouseItemPhoto } from "../../shared/warehouse/WarehouseItemPhoto";
+import { WarehouseItemIdentity } from "../../shared/warehouse/WarehouseItemIdentity";
 import { formatStockQuantity, storagePlacesLabel } from "./stock-page.utils";
 export function WarehouseStockCards({
   rows,
@@ -30,18 +31,19 @@ export function WarehouseStockCards({
           className="stock-card"
         >
           <div className="stock-detail-heading">
-            <StockPhoto item={row.item} />
-            <div>
-              <span>{row.item.article}</span>
-              <h2>{row.item.name}</h2>
-            </div>
+            <WarehouseItemPhoto item={row.item} />
+            <WarehouseItemIdentity
+              name={row.item.name}
+              article={row.item.article}
+            />
           </div>
           <strong>
             {formatStockQuantity(row.quantity)} {row.item.unit}
           </strong>
           <p>Склад: {row.warehouse.name}</p>
           <button
-            className="stock-distribution-link"
+            type="button"
+            className="admin-secondary-button"
             disabled={disabled}
             onClick={() => onOpen(row)}
           >

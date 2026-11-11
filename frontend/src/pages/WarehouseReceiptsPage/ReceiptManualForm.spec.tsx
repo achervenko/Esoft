@@ -14,7 +14,7 @@ vi.mock("./useReceiptStorage", () => ({
     error: null,
   }),
 }));
-vi.mock("./ReceiptItemPicker", () => ({
+vi.mock("../../shared/warehouse/ReceiptItemPicker", () => ({
   ReceiptItemPicker: ({ onChange }: { onChange: (item: unknown) => void }) => (
     <button
       type="button"

@@ -24,6 +24,18 @@ export class WarehouseReservationsController {
     return this.queries.list(query, session.user.id);
   }
 
+  @Get('orders')
+  @RequirePermission(RESERVATIONS_READ)
+  orders(@Query() query: unknown, @Session() session: UserSession<Auth>) {
+    return this.queries.orders(query, session.user.id);
+  }
+
+  @Get('orders/:orderId/summary')
+  @RequirePermission(RESERVATIONS_READ)
+  summary(@Param('orderId') id: string, @Session() session: UserSession<Auth>) {
+    return this.queries.summary(id, session.user.id);
+  }
+
   @Get('orders/:orderId')
   @RequirePermission(RESERVATIONS_MANAGE)
   order(@Param('orderId') id: string, @Session() session: UserSession<Auth>) {

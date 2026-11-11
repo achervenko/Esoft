@@ -27,11 +27,16 @@ export async function verifyTransfersIdempotency(run) {
       await receive(a, "10");
       const input = payload();
       const before = await prisma.auditLog.count();
-      const broken = new WarehouseTransfersService(prisma, stock, {
-        writeFieldChanges: async () => {
-          throw Error("Transfer audit unavailable");
+      const broken = new WarehouseTransfersService(
+        prisma,
+        stock,
+        {
+          writeFieldChanges: async () => {
+            throw Error("Transfer audit unavailable");
+          },
         },
-      });
+        ctx.queries,
+      );
       await assert.rejects(
         broken.create(input, actor.id),
         /Transfer audit unavailable/,

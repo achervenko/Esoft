@@ -1,6 +1,5 @@
 import type { StockDistribution } from "../../shared/api/warehouse-stock-api";
 import { ArrowRight } from "lucide-react";
-import { StockPhoto } from "./WarehouseStockTable";
 import { formatStockQuantity, quantityMillis } from "./stock-page.utils";
 
 function StockShelf() {
@@ -70,28 +69,6 @@ function formatAmount(amount: bigint) {
   );
 }
 
-export function StockTransferProduct({
-  data,
-}: {
-  data: Pick<StockDistribution, "item" | "warehouse" | "totalQuantity">;
-}) {
-  return (
-    <div className="stock-transfer-product">
-      <StockPhoto item={data.item} />
-      <div className="stock-transfer-product-name">
-        <h3>{data.item.name}</h3>
-        <p>{data.item.article}</p>
-      </div>
-      <div className="stock-transfer-total">
-        <span>Общий остаток</span>
-        <strong>
-          {formatStockQuantity(data.totalQuantity)} {data.item.unit}
-        </strong>
-      </div>
-    </div>
-  );
-}
-
 export function StockTransferPreview({
   data,
   source,
@@ -116,12 +93,11 @@ export function StockTransferPreview({
             <span>Откуда</span>
             <strong>{source.location.name}</strong>
             <p>{data.warehouse.name}</p>
-            {valid && amount !== null && sourceQuantity !== null && (
-              <span>
-                Останется: {formatAmount(sourceQuantity - amount)}{" "}
-                {data.item.unit}
-              </span>
-            )}
+            <span className="stock-transfer-place-result">
+              {valid && amount !== null && sourceQuantity !== null
+                ? `Останется: ${formatAmount(sourceQuantity - amount)} ${data.item.unit}`
+                : null}
+            </span>
           </div>
         </div>
         <div className="stock-transfer-connector">
@@ -141,11 +117,9 @@ export function StockTransferPreview({
               {destination?.location ?? "Выберите место хранения"}
             </strong>
             <p>{destination?.warehouse ?? "Выберите склад"}</p>
-            {valid && (
-              <span>
-                Добавится: {quantity} {data.item.unit}
-              </span>
-            )}
+            <span className="stock-transfer-place-result">
+              {valid ? `Добавится: ${quantity} ${data.item.unit}` : null}
+            </span>
           </div>
         </div>
       </div>

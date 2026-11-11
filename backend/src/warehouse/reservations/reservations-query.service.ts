@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { stockError } from '../stock/stock.errors';
 import { WAREHOUSE_PERMISSIONS } from '../warehouse.permissions';
 import { assertReservationAccess } from './reservations-access';
+import { listReservationOrders } from './reservation-orders-query';
 import {
   readReservation,
   reservationAuditWhere,
@@ -27,9 +28,47 @@ const snapshot = {
 export class WarehouseReservationQueryService {
   constructor(private readonly prisma: PrismaService) {}
 
+  orders(value: unknown, actor: string) {
+    return listReservationOrders(this.prisma, value, actor);
+  }
+
+  summary(value: string, actor: string) {
+    const id = parseReservationUuid(value, 'orderId');
+    return this.prisma.$transaction(async (tx) => {
+      await assertReservationAccess(tx, actor);
+      const order = await tx.customerOrder.findUnique({
+        where: { id },
+        select: reservationOrderSelect,
+      });
+      if (!order)
+        stockError(
+          404,
+          'WAREHOUSE_RESERVATION_ORDER_NOT_FOUND',
+          'Заказ не найден.',
+        );
+      const [counts] = await tx.$queryRaw<
+        { positions: bigint; deficit: bigint }[]
+      >`
+        SELECT COUNT(*) AS positions, COUNT(*) FILTER (
+          WHERE r.quantity > COALESCE((SELECT SUM(a.quantity) FROM warehouse_reservation_allocations a WHERE a.reservation_id = r.id), 0)
+        ) AS deficit FROM warehouse_reservations r WHERE r.order_id = ${id}::uuid AND r.quantity > 0
+      `;
+      return {
+        order: reservationOrderDto(order),
+        positionsCount: Number(counts.positions),
+        deficitPositionsCount: Number(counts.deficit),
+      };
+    }, snapshot);
+  }
+
   list(value: unknown, actor: string) {
     const q = parseReservationList(value);
     const filters = [Prisma.sql`TRUE`];
+    if (q.search)
+      filters.push(Prisma.sql`EXISTS (
+      SELECT 1 FROM warehouse_items i WHERE i.id = r.item_id
+      AND (strpos(lower(i.article), lower(${q.search})) > 0 OR strpos(lower(i.name), lower(${q.search})) > 0)
+    )`);
     if (q.orderId !== undefined)
       filters.push(Prisma.sql`r.order_id = ${q.orderId}::uuid`);
     if (q.itemId !== undefined)

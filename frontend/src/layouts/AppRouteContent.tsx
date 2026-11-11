@@ -9,6 +9,7 @@ import {
   ChecklistTemplateViewPage,
   DictionariesPage,
   WarehouseStockPage,
+  WarehouseReservationsPage,
   WarehouseReceiptsPage,
   WarehouseCatalogPage,
   PpePage,
@@ -68,6 +69,11 @@ export function AppRouteContent({
       ) : null}
       {appRoute.kind === "dictionaries" ? (
         <DictionariesPage userPermissions={user?.permissions ?? null} />
+      ) : null}
+      {appRoute.kind === "warehouse-reservations" ? (
+        <WarehouseReservationsPage
+          userPermissions={user?.permissions ?? null}
+        />
       ) : null}
       {appRoute.kind === "warehouse-stock" ? (
         <WarehouseStockPage userPermissions={user?.permissions ?? null} />

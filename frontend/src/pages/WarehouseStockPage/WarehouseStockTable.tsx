@@ -1,20 +1,8 @@
-import { Image } from "lucide-react";
 import { DataTable, type DataTableColumn } from "../../shared/ui/DataTable";
-import { AsyncImage } from "../../shared/ui/AsyncImage";
+import { WarehouseItemPhoto } from "../../shared/warehouse/WarehouseItemPhoto";
 import type { StockPosition } from "../../shared/api/warehouse-stock-api";
 import type { StockSort } from "./useWarehouseStock";
 import { formatStockQuantity, storagePlacesLabel } from "./stock-page.utils";
-export function StockPhoto({ item }: { item: StockPosition["item"] }) {
-  return (
-    <span className="stock-photo">
-      {item.photo ? (
-        <AsyncImage src={item.photo} alt={item.name} />
-      ) : (
-        <Image size={24} aria-label="Нет фотографии" />
-      )}
-    </span>
-  );
-}
 export function WarehouseStockTable({
   rows,
   sort,
@@ -53,7 +41,7 @@ export function WarehouseStockTable({
       className: "stock-column-photo",
       label: "",
       isSortable: false,
-      render: (r) => <StockPhoto item={r.item} />,
+      render: (r) => <WarehouseItemPhoto item={r.item} />,
     },
     {
       key: "article",

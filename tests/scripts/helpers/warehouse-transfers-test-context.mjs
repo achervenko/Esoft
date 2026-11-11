@@ -15,7 +15,16 @@ export function createTransfersTestRunner(prisma, database, t) {
       } = require("../../../backend/dist/src/warehouse/stock/stock-overview.service.js");
       const overview = new WarehouseStockOverviewService(prisma);
       const audit = ctx.audit;
-      const service = new WarehouseTransfersService(prisma, ctx.stock, audit);
+      const {
+        WarehouseTransfersQueryService,
+      } = require("../../../backend/dist/src/warehouse/transfers/transfers-query.service.js");
+      const queries = new WarehouseTransfersQueryService(prisma);
+      const service = new WarehouseTransfersService(
+        prisma,
+        ctx.stock,
+        audit,
+        queries,
+      );
       const {
         WarehouseTransferConsolidationService,
       } = require("../../../backend/dist/src/warehouse/transfers/transfers-consolidation.service.js");
@@ -34,6 +43,7 @@ export function createTransfersTestRunner(prisma, database, t) {
       return verify({
         ...ctx,
         service,
+        queries,
         consolidation,
         overview,
         payload,

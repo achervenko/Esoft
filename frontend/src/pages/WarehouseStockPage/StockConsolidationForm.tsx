@@ -1,3 +1,4 @@
+import { WarehouseProductSummary } from "../../shared/warehouse/WarehouseProductSummary";
 import {
   readPendingStockMovement,
   persistStockMovement,
@@ -17,8 +18,7 @@ import {
   ApiRequestError,
   getApiErrorMessage,
 } from "../../shared/api/api-error";
-import { useStorageChoices } from "./useStorageChoices";
-import { StockTransferProduct } from "./StockTransferPreview";
+import { useStorageChoices } from "../../shared/warehouse/useStorageChoices";
 import {
   formatStockQuantity,
   quantityMillis,
@@ -27,11 +27,13 @@ import {
 
 export function StockConsolidationForm({
   data,
+  canMoveReservations,
   onClose,
   onSaved,
   onSavingChange,
 }: {
   data: StockDistribution;
+  canMoveReservations: boolean;
   onClose: () => void;
   onSaved: () => void;
   onSavingChange: (saving: boolean) => void;
@@ -65,7 +67,26 @@ export function StockConsolidationForm({
     data.locations
       .filter((b) => b.location.id !== locationId)
       .filter((b) => (quantityMillis(b.quantity) ?? 0n) > 0n)
-      .map((b) => ({ fromLocationId: b.location.id, quantity: b.quantity }));
+      .map((b) => ({
+        fromLocationId: b.location.id,
+        quantity: b.quantity,
+        ...(b.reservations?.length
+          ? {
+              distribution: {
+                freeQuantity: b.freeQuantity ?? "0",
+                reservations: b.reservations.map(
+                  ({ reservationId, quantity }) => ({
+                    reservationId,
+                    quantity,
+                  }),
+                ),
+              },
+            }
+          : {}),
+      }));
+  const requiresReservationPermission =
+    !canMoveReservations &&
+    moves.some((m) => m.distribution?.reservations.length);
   const total = moves.reduce(
     (sum, m) => sum + (quantityMillis(m.quantity) ?? 0n),
     0n,
@@ -83,7 +104,11 @@ export function StockConsolidationForm({
         if (
           busy.current ||
           (!pending &&
-            (!locationId || !moves.length || choices.loading || choices.error))
+            (!locationId ||
+              !moves.length ||
+              choices.loading ||
+              choices.error ||
+              requiresReservationPermission))
         )
           return;
         busy.current = true;
@@ -141,7 +166,11 @@ export function StockConsolidationForm({
         }
       }}
     >
-      <StockTransferProduct data={data} />
+      <WarehouseProductSummary
+        item={data.item}
+        quantity={data.totalQuantity}
+        quantityLabel="Общий остаток"
+      />
       <p>Выберите склад и место назначения.</p>
       <section
         className="stock-transfer-section"
@@ -221,6 +250,11 @@ export function StockConsolidationForm({
         </Notice>
       )}
       {error && <Notice tone="error">{error}</Notice>}
+      {!pending && locationId && requiresReservationPermission && (
+        <Notice tone="error">
+          Для перемещения резервов нужны дополнительные права.
+        </Notice>
+      )}
       {pending && !saving && (
         <Notice>
           Результат пока не подтверждён. Повторите запрос: уже проведённое
@@ -245,7 +279,8 @@ export function StockConsolidationForm({
               (!locationId ||
                 !moves.length ||
                 choices.loading ||
-                !!choices.error))
+                !!choices.error ||
+                requiresReservationPermission))
           }
         >
           {saving

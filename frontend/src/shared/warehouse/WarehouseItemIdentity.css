@@ -1,0 +1,18 @@
+.warehouse-item-identity {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.warehouse-item-identity-name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 750;
+}
+.warehouse-item-identity-article {
+  margin: 0;
+  color: var(--color-text-muted, #667085);
+  font-size: 14px;
+  font-weight: 400;
+}

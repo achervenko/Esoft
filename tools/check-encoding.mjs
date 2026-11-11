@@ -40,7 +40,9 @@ const scannedExtensions = new Set([
 
 const suspiciousPatterns = [
   /[\u00d0\u00d1\u00c2][\u0080-\u00ff\u0400-\u04ff]/u,
-  /[\u0420\u0421][\u0080-\u00ff]/u,
+  // A single Р/С before a guillemet is ordinary text, e.g. «1С».
+  /[\u0420\u0421][\u0080-\u00aa\u00ac-\u00ba\u00bc-\u00ff]/u,
+  /(?:[\u0420\u0421][\u0080-\u00ff]){2}/u,
   /\u0432[\u0402-\u040c]/u,
   /\u00ef\u00bf\u00bd/u,
 ];
@@ -69,7 +71,9 @@ for (const file of checkedFiles) {
 }
 
 if (findings.length === 0) {
-  console.log(`Проверка кодировки пройдена: файлов проверено ${checkedFiles.length}.`);
+  console.log(
+    `Проверка кодировки пройдена: файлов проверено ${checkedFiles.length}.`,
+  );
   process.exit(0);
 }
 

@@ -1,7 +1,7 @@
 import { warehouseStockApi } from "../../shared/api/warehouse-stock-api";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { useStorageChoices } from "./useStorageChoices";
+import { useStorageChoices } from "../../shared/warehouse/useStorageChoices";
 
 vi.mock("../../shared/api/warehouse-stock-api", () => ({
   warehouseStockApi: { warehouses: vi.fn(), storageLocations: vi.fn() },

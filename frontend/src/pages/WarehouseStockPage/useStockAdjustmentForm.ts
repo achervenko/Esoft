@@ -12,6 +12,7 @@ import { quantityMillis, transferRequestKey } from "./stock-page.utils";
 export type StockAdjustmentFormProps = {
   data: StockDistribution;
   balance: StockDistribution["locations"][number];
+  portion?: { reservationId?: string; quantity: string };
   onClose: () => void;
   onSaved: () => void;
   onSavingChange: (saving: boolean) => void;
@@ -19,10 +20,11 @@ export type StockAdjustmentFormProps = {
 export function useStockAdjustmentForm({
   data,
   balance,
+  portion,
   onSaved,
   onSavingChange,
 }: StockAdjustmentFormProps) {
-  const storageKey = `stock-adjustment:${balance.balanceId}`;
+  const storageKey = `stock-adjustment:${balance.balanceId}${portion ? `:${portion.reservationId ?? "free"}` : ""}`;
   const [pending, setPending] = useState<StockAdjustmentInput | null>(() => {
     try {
       const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? "null");
@@ -35,7 +37,10 @@ export function useStockAdjustmentForm({
     }
   });
   const [quantity, setQuantity] = useState(
-    pending?.actualQuantity ?? balance.quantity,
+    pending?.portion?.actualQuantity ??
+      pending?.actualQuantity ??
+      portion?.quantity ??
+      balance.quantity,
   );
   const [reason, setReason] = useState(pending?.reason ?? "");
   const [attachment, setAttachment] = useState<{
@@ -55,7 +60,7 @@ export function useStockAdjustmentForm({
   const busy = useRef(false);
   const normalized = quantity.trim().replace(",", ".");
   const amount = quantityMillis(normalized);
-  const before = quantityMillis(balance.quantity)!;
+  const before = quantityMillis(portion?.quantity ?? balance.quantity)!;
   const delta = amount === null ? 0n : amount - before;
   const locked = saving || uploading || !!pending;
   useEffect(() => {
@@ -79,7 +84,27 @@ export function useStockAdjustmentForm({
       itemId: data.item.id,
       locationId: balance.location.id,
       expectedQuantity: balance.quantity,
-      actualQuantity: normalized,
+      actualQuantity:
+        portion && amount !== null
+          ? (() => {
+              const physical = quantityMillis(balance.quantity)! + delta;
+              return `${physical / 1000n}.${(physical % 1000n).toString().padStart(3, "0")}`.replace(
+                /\.?0+$/,
+                "",
+              );
+            })()
+          : normalized,
+      ...(portion
+        ? {
+            portion: {
+              ...(portion.reservationId
+                ? { reservationId: portion.reservationId }
+                : {}),
+              expectedQuantity: portion.quantity,
+              actualQuantity: normalized,
+            },
+          }
+        : {}),
       reason: reason.trim(),
       attachments: attachment ? [attachment.uploadId] : [],
     };

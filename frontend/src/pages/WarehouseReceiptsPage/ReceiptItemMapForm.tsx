@@ -13,7 +13,7 @@ import {
   type ReceiptActionFormProps,
 } from "./useReceiptActionForm";
 import type { WarehouseItem } from "../../shared/api/warehouse-catalog-api";
-import { ReceiptItemPicker } from "./ReceiptItemPicker";
+import { ReceiptItemPicker } from "../../shared/warehouse/ReceiptItemPicker";
 export function ReceiptItemMapForm(
   props: ReceiptActionFormProps & { line: ReceiptLine },
 ) {

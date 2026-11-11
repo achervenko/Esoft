@@ -91,8 +91,28 @@ function pagination(input: Record<string, unknown>) {
   return { page, limit, skip };
 }
 
+function searchTerm(value: unknown) {
+  const search = value ?? '';
+  if (
+    typeof search !== 'string' ||
+    search.length > 255 ||
+    search.includes('\0')
+  )
+    invalid('Некорректный поисковый запрос.');
+  return search.trim();
+}
+
 export function parseReservationHistory(value: unknown) {
   return pagination(fields(value, ['page', 'limit']));
+}
+
+export function parseReservationOrders(value: unknown) {
+  const input = fields(value, ['search', 'coverage', 'page', 'limit']);
+  const search = searchTerm(input.search);
+  const coverage = input.coverage ?? 'ALL';
+  if (!['ALL', 'DEFICIT', 'COVERED'].includes(coverage as string))
+    invalid('Некорректный фильтр обеспеченности.');
+  return { ...pagination(input), search: search.trim(), coverage };
 }
 
 export function parseReservationList(value: unknown) {
@@ -104,6 +124,7 @@ export function parseReservationList(value: unknown) {
     'quantityState',
     'page',
     'limit',
+    'search',
   ]);
   const flag = (key: string) => {
     const value = input[key];
@@ -130,5 +151,6 @@ export function parseReservationList(value: unknown) {
     deficit: flag('deficit'),
     covered: flag('covered'),
     quantityState,
+    search: searchTerm(input.search),
   };
 }

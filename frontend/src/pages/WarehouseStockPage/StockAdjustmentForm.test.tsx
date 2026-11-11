@@ -46,7 +46,7 @@ it("corrects physical quantity accepts zero and requires a reason", async () => 
   vi.mocked(warehouseStockApi.adjust).mockResolvedValue({});
   await open();
   expect(screen.getByText("10,001", { exact: false })).toBeVisible();
-  fireEvent.change(screen.getByLabelText(/Фактически на месте/), {
+  fireEvent.change(screen.getByLabelText(/Фактически/), {
     target: { value: "0" },
   });
   const save = screen.getByRole("button", { name: "Сохранить" });
@@ -70,7 +70,7 @@ it("preserves the original correction across a lost response and remount", async
     .mockRejectedValueOnce(new Error("Ответ потерян"))
     .mockResolvedValueOnce({});
   await open();
-  fireEvent.change(screen.getByLabelText(/Фактически на месте/), {
+  fireEvent.change(screen.getByLabelText(/Фактически/), {
     target: { value: "9" },
   });
   fireEvent.change(screen.getByLabelText("Причина"), {
@@ -80,19 +80,19 @@ it("preserves the original correction across a lost response and remount", async
   fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
   await screen.findByRole("button", { name: "Повторить сохранение" });
   const first = vi.mocked(warehouseStockApi.adjust).mock.calls[0][0];
-  expect(JSON.parse(sessionStorage.getItem("stock-adjustment:10")!)).toEqual(
-    first,
-  );
+  expect(
+    JSON.parse(sessionStorage.getItem("stock-adjustment:10:free")!),
+  ).toEqual(first);
   cleanup();
   await open();
-  expect(screen.getByLabelText(/Фактически на месте/)).toBeDisabled();
+  expect(screen.getByLabelText(/Фактически/)).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "Повторить сохранение" }));
   await waitFor(() =>
     expect(warehouseStockApi.adjust).toHaveBeenCalledTimes(2),
   );
   expect(vi.mocked(warehouseStockApi.adjust).mock.calls[1][0]).toEqual(first);
   await waitFor(() =>
-    expect(sessionStorage.getItem("stock-adjustment:10")).toBeNull(),
+    expect(sessionStorage.getItem("stock-adjustment:10:free")).toBeNull(),
   );
 });
 
@@ -126,7 +126,7 @@ it("does not allow saving when document upload fails", async () => {
     new Error("Не удалось загрузить файл"),
   );
   await open();
-  fireEvent.change(screen.getByLabelText(/Фактически на месте/), {
+  fireEvent.change(screen.getByLabelText(/Фактически/), {
     target: { value: "9" },
   });
   fireEvent.change(screen.getByLabelText("Причина"), {
@@ -138,4 +138,55 @@ it("does not allow saving when document upload fails", async () => {
   await screen.findByText("Не удалось загрузить файл");
   expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
   expect(warehouseStockApi.adjust).not.toHaveBeenCalled();
+});
+
+it("corrects the selected reserved row rather than the complete physical balance", async () => {
+  const reservationId = "22222222-2222-4222-8222-222222222222";
+  const source = {
+    ...distribution.locations[0],
+    quantity: "5",
+    freeQuantity: "4",
+    reservedQuantity: "1",
+    reservations: [
+      {
+        reservationId,
+        quantity: "1",
+        order: { id: "order", number: "202", name: "Монтаж" },
+      },
+    ],
+  };
+  vi.mocked(warehouseStockApi.distribution).mockResolvedValue({
+    ...distribution,
+    locations: [source],
+  });
+  vi.mocked(warehouseStockApi.adjust).mockResolvedValue({});
+  render(
+    <StockDistributionModal
+      position={position}
+      canTransfer
+      canAdjust
+      onClose={vi.fn()}
+      onChanged={vi.fn()}
+    />,
+  );
+  const edit = await screen.findAllByRole("button", {
+    name: "Исправить количество: Угол ангара",
+  });
+  expect(edit).toHaveLength(2);
+  fireEvent.click(edit[1]);
+  expect(screen.getByLabelText(/Фактически/)).toHaveValue("1");
+  fireEvent.change(screen.getByLabelText(/Фактически/), {
+    target: { value: "0" },
+  });
+  fireEvent.change(screen.getByLabelText("Причина"), {
+    target: { value: "Недостача резерва" },
+  });
+  await attach();
+  fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+  await waitFor(() => expect(warehouseStockApi.adjust).toHaveBeenCalledOnce());
+  expect(vi.mocked(warehouseStockApi.adjust).mock.calls[0][0]).toMatchObject({
+    expectedQuantity: "5",
+    actualQuantity: "4",
+    portion: { reservationId, expectedQuantity: "1", actualQuantity: "0" },
+  });
 });

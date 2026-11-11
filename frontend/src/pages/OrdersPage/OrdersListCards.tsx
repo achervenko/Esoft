@@ -1,6 +1,6 @@
 import type { OrderData } from "../../shared/api/orders-api";
 import { useWindowedGrid } from "../../shared/lib/useWindowedGrid";
-import { OrderStatus } from "./OrderStatus";
+import { OrderStatus } from "../../shared/orders/OrderStatus";
 
 export function OrdersListCards({
   items,

@@ -72,4 +72,100 @@ export async function verify(run) {
       assert.equal(String(current.quantity), adjusted ? "12" : "15");
     },
   );
+  await run(
+    "row corrections preserve order demand and atomically reconcile selected coverage",
+    async (c) => {
+      const { prisma, admin, item, location, adjustments, request, quantity } =
+        c;
+      const { manager, first } = await createReservationFixture({
+        ...c,
+        actor: admin,
+      });
+      const { reservation } = await prisma.$transaction((tx) =>
+        manager.reserve(
+          { tx, actorUserId: admin.id },
+          {
+            itemId: String(item.id),
+            locationId: String(location.id),
+            orderId: first.id,
+            quantity: "6",
+          },
+        ),
+      );
+      const before = await quantity();
+      const payload = await request({
+        type: undefined,
+        quantity: undefined,
+        expectedQuantity: before,
+        actualQuantity: String(Number(before) - 1),
+        portion: {
+          reservationId: reservation.id,
+          expectedQuantity: "6",
+          actualQuantity: "5",
+        },
+      });
+      await adjustments.adjustStock(payload, admin.id);
+      assert.equal(await quantity(), String(Number(before) - 1));
+      let r = await prisma.warehouseReservation.findUniqueOrThrow({
+        where: { id: reservation.id },
+        include: { allocations: true },
+      });
+      assert.equal(r.quantity.toString(), "6");
+      assert.equal(r.allocations[0].quantity.toString(), "5");
+      await adjustments.adjustStock(payload, admin.id);
+      assert.equal(await quantity(), String(Number(before) - 1));
+      const restore = await request({
+        type: undefined,
+        quantity: undefined,
+        expectedQuantity: await quantity(),
+        actualQuantity: before,
+        portion: {
+          reservationId: reservation.id,
+          expectedQuantity: "5",
+          actualQuantity: "6",
+        },
+      });
+      await adjustments.adjustStock(restore, admin.id);
+      r = await prisma.warehouseReservation.findUniqueOrThrow({
+        where: { id: reservation.id },
+        include: { allocations: true },
+      });
+      assert.equal(r.quantity.toString(), "6");
+      assert.equal(r.allocations[0].quantity.toString(), "6");
+      const tooMuch = await request({
+        type: undefined,
+        quantity: undefined,
+        expectedQuantity: before,
+        actualQuantity: String(Number(before) + 1),
+        portion: {
+          reservationId: reservation.id,
+          expectedQuantity: "6",
+          actualQuantity: "7",
+        },
+      });
+      await assert.rejects(
+        adjustments.adjustStock(tooMuch, admin.id),
+        code("WAREHOUSE_RESERVATION_DEFICIT_INSUFFICIENT"),
+      );
+      assert.equal(await quantity(), before);
+      const free = String(Number(before) - 6);
+      const freePayload = await request({
+        type: undefined,
+        quantity: undefined,
+        expectedQuantity: before,
+        actualQuantity: String(Number(before) - 1),
+        portion: {
+          expectedQuantity: free,
+          actualQuantity: String(Number(free) - 1),
+        },
+      });
+      await adjustments.adjustStock(freePayload, admin.id);
+      r = await prisma.warehouseReservation.findUniqueOrThrow({
+        where: { id: reservation.id },
+        include: { allocations: true },
+      });
+      assert.equal(r.quantity.toString(), "6");
+      assert.equal(r.allocations[0].quantity.toString(), "6");
+    },
+  );
 }

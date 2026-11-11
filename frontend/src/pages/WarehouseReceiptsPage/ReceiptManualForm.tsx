@@ -7,7 +7,7 @@ import { SelectField } from "../../shared/ui/SelectField";
 import { Notice } from "../../shared/ui/Notice";
 import { getApiErrorMessage } from "../../shared/api/api-error";
 import { getBusinessTodayDateString } from "../../shared/lib/business-date";
-import { ReceiptItemPicker } from "./ReceiptItemPicker";
+import { ReceiptItemPicker } from "../../shared/warehouse/ReceiptItemPicker";
 import { useReceiptStorage } from "./useReceiptStorage";
 import { quantityError } from "./receipt-utils";
 import { useReceiptSubmission } from "./useReceiptSubmission";

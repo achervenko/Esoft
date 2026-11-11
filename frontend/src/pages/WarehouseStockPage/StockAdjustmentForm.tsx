@@ -12,6 +12,9 @@ import {
 export function StockAdjustmentForm(props: StockAdjustmentFormProps) {
   const { data, balance, onClose, onSaved } = props;
   const form = useStockAdjustmentForm(props);
+  const displayedBalance = props.portion
+    ? { ...balance, quantity: props.portion.quantity }
+    : balance;
   const {
     error,
     locked,
@@ -25,15 +28,29 @@ export function StockAdjustmentForm(props: StockAdjustmentFormProps) {
   } = form;
   return (
     <form className="admin-form" onSubmit={form.submit}>
-      <StockAdjustmentSummary data={data} balance={balance} />
+      <StockAdjustmentSummary data={data} balance={displayedBalance} />
+      {props.portion?.reservationId && (
+        <Notice>
+          Исправляется фактическое количество в резерве. Потребность заказа
+          сохраняется; недостача станет дефицитом. Добавление возможно в
+          пределах дефицита заказа.
+        </Notice>
+      )}
       <StockAdjustmentFields
         form={form}
         unit={data.item.unit}
         balanceId={balance.balanceId}
+        quantityLabel={
+          props.portion
+            ? props.portion.reservationId
+              ? "Фактически в резерве"
+              : "Фактически свободно"
+            : undefined
+        }
       />
       <StockAdjustmentPreview
         data={data}
-        balance={balance}
+        balance={displayedBalance}
         amount={amount}
         delta={delta}
       />

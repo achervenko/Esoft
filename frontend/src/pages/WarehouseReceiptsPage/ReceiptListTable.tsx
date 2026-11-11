@@ -1,4 +1,5 @@
 import { ChevronRight, TriangleAlert } from "lucide-react";
+import { useMediaQuery } from "../../shared/lib/useMediaQuery";
 import { memo, useLayoutEffect, useRef, useState } from "react";
 import type { ReceiptSummary } from "../../shared/api/warehouse-receipts-api";
 import { ReceiptListCards } from "./ReceiptListCards";
@@ -34,7 +35,9 @@ export function ReceiptListTable({
 }) {
   const today = getBusinessTodayDateString();
   const container = useRef<HTMLDivElement>(null);
-  const [mobile, setMobile] = useState(false);
+  const [narrowContainer, setMobile] = useState(false);
+  const mobileViewport = useMediaQuery("(max-width: 760px)");
+  const mobile = mobileViewport || narrowContainer;
   useLayoutEffect(() => {
     const element = container.current;
     if (!element) return;

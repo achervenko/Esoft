@@ -1,3 +1,4 @@
+import { verifyMixedTransfers } from "./warehouse-transfers-mixed.mjs";
 import { createReservationFixture } from "./warehouse-reservation-fixture.mjs";
 import { startReservationHttp } from "./warehouse-reservation-http-context.mjs";
 import { createMoveApiFixture } from "./warehouse-reservation-move-api-fixture.mjs";
@@ -18,7 +19,15 @@ export async function verifyReservationMoveApi(c, t) {
   const { manager, createOrder } = await createReservationFixture(c);
   const api = await startReservationHttp(c);
   const { request, admin, keeper } = api;
-  const transfers = new WarehouseTransfersService(c.prisma, c.stock, c.audit);
+  const {
+    WarehouseTransfersQueryService,
+  } = require("../../../backend/dist/src/warehouse/transfers/transfers-query.service.js");
+  const transfers = new WarehouseTransfersService(
+    c.prisma,
+    c.stock,
+    c.audit,
+    new WarehouseTransfersQueryService(c.prisma),
+  );
   const fixture = createMoveApiFixture(c, manager, createOrder, request);
   try {
     const context = {
@@ -30,6 +39,7 @@ export async function verifyReservationMoveApi(c, t) {
       createOrder,
       fixture,
     };
+    await verifyMixedTransfers(c, t, context);
     await verifyMoveApiBasic(c, t, context);
     await verifyMoveApiAccess(c, t, context);
     await verifyMoveApiReplays(t, fixture);

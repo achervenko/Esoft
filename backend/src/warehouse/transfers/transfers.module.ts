@@ -1,3 +1,4 @@
+import { WarehouseTransfersQueryService } from './transfers-query.service';
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { AuditModule } from '../../audit/audit.module';
@@ -8,7 +9,11 @@ import { WarehouseTransferConsolidationService } from './transfers-consolidation
 @Module({
   imports: [PrismaModule, AuditModule, WarehouseStockModule],
   controllers: [WarehouseTransfersController],
-  providers: [WarehouseTransfersService, WarehouseTransferConsolidationService],
+  providers: [
+    WarehouseTransfersQueryService,
+    WarehouseTransfersService,
+    WarehouseTransferConsolidationService,
+  ],
   exports: [WarehouseTransfersService],
 })
 export class WarehouseTransfersModule {}

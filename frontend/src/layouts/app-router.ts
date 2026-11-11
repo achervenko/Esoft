@@ -17,6 +17,7 @@ type AppRouteBase =
   | { kind: "dictionaries" }
   | { kind: "warehouse-catalog" }
   | { kind: "warehouse-stock" }
+  | { kind: "warehouse-reservations" }
   | { kind: "warehouse-receipts"; receiptId?: string; creating?: boolean }
   | {
       kind: "ppe";
@@ -72,6 +73,8 @@ function parsePositiveParamId(value: string | null) {
 
 export function resolveAppRoute(route: string): AppRoute {
   const receiptPath = route.split("?")[0];
+  if (receiptPath === "#/warehouse/reservations")
+    return { kind: "warehouse-reservations" };
   if (receiptPath === "#/orders") return { kind: "orders" };
   const orderMatch = receiptPath.match(
     /^#\/orders\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,

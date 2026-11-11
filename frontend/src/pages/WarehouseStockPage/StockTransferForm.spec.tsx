@@ -169,7 +169,7 @@ it("prevents concurrent submits and refreshes distribution and parent after succ
   expect(detail.parentElement).toBe(backdrop);
   expect(changed).toHaveBeenCalledOnce();
   await waitFor(() =>
-    expect(warehouseStockApi.distribution).toHaveBeenCalledTimes(2),
+    expect(warehouseStockApi.distribution).toHaveBeenCalledTimes(3),
   );
 });
 

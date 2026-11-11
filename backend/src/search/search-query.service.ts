@@ -131,6 +131,7 @@ export class SearchQueryService {
     if (ppeAllowed && (!entityType || entityType === 'employee')) {
       const name = Prisma.sql`emp.last_name || ' ' || emp.first_name || CASE WHEN emp.middle_name IS NULL THEN '' ELSE ' ' || emp.middle_name END`;
       const title = normalize(name);
+      const positionTitle = normalize(Prisma.sql`candidate.name`);
       const words = query
         .split(/\s+/)
         .map(
@@ -139,10 +140,28 @@ export class SearchQueryService {
         );
       branches.push(Prisma.sql`
         SELECT 'employee:' || emp.id::text AS id, 'employee'::text AS entity_type, emp.id AS entity_id,
-          ${name} AS title, pos.name AS subtitle, ${title} AS search_text, '#/ppe/employees/' || emp.id::text AS target_url,
+          ${name} AS title, COALESCE(position_matches.names, pos.name) AS subtitle,
+          ${normalize(Prisma.sql`concat_ws(' ', ${name}, position_matches.names)`)} AS search_text,
+          '#/ppe/employees/' || emp.id::text AS target_url,
           ${emptyDetails}, ${score(title, title, Prisma.sql`NULL::text`, Prisma.sql`(${Prisma.join(words, ' AND ')})`)}
         FROM employees emp JOIN positions pos ON pos.id = emp.position_id
-        WHERE emp.is_active = true AND (${Prisma.join(words, ' AND ')} ${fuzzy(title, true)})
+        LEFT JOIN (
+          SELECT assignment.employee_id,
+            string_agg(candidate.name, ' · ' ORDER BY candidate.name, candidate.id) AS names
+          FROM positions candidate
+          CROSS JOIN LATERAL (
+            SELECT main.id AS employee_id FROM employees main WHERE main.position_id = candidate.id
+            UNION
+            SELECT additional.employee_id FROM employee_positions additional WHERE additional.position_id = candidate.id
+          ) assignment
+          WHERE candidate.is_active = true
+            AND (${positionTitle} LIKE ${contains} ESCAPE '\\' ${fuzzy(positionTitle, true)})
+          GROUP BY assignment.employee_id
+        ) position_matches ON position_matches.employee_id = emp.id
+        WHERE emp.is_active = true AND (
+          (${Prisma.join(words, ' AND ')} ${fuzzy(title, true)})
+          OR position_matches.employee_id IS NOT NULL
+        )
       `);
     }
     if (ppeAllowed && (!entityType || entityType === 'ppe_norm')) {
@@ -173,7 +192,7 @@ export class SearchQueryService {
           (${matchedValue} LIKE ${contains} ESCAPE '\\' ${fuzzy(matchedValue)})
       ), '[]'::jsonb) AS matched_fields
       FROM (${Prisma.join(branches, ' UNION ALL ')}) AS matches
-      ORDER BY score DESC, title COLLATE "C" ASC, entity_type ASC, entity_id ASC
+      ORDER BY (entity_type = 'ppe_norm') DESC, score DESC, title COLLATE "C" ASC, entity_type ASC, entity_id ASC
       LIMIT ${limit} OFFSET ${offset}
     `;
     const rows = await this.prisma.$transaction(async (tx) => {

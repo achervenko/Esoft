@@ -126,7 +126,16 @@ test(
               timeout: 30_000,
               windowsHide: true,
             },
-          ).catch((error) => assert.fail(error.stderr || error.message));
+          ).catch((error) => {
+            assert.fail(
+              [
+                `Module probe ${name} failed (code=${error.code ?? "none"}, signal=${error.signal ?? "none"}, killed=${error.killed ?? false}).`,
+                error.message,
+                `stdout:\n${error.stdout || "(empty)"}`,
+                `stderr:\n${error.stderr || "(empty)"}`,
+              ].join("\n"),
+            );
+          });
         });
       }
     } finally {
@@ -147,9 +156,11 @@ const { AppModule } = require('./backend/dist/src/app.module');
 const get = (app, file, name) => app.get(require('./backend/dist/src/' + file)[name]);
 
 (async () => {
+  console.log('probe: creating application');
   const app = await NestFactory.create(AppModule, { logger: false, abortOnError: false });
   try {
     await app.listen(0, '127.0.0.1');
+    console.log('probe: checking module availability');
     const appConfig = app.get(require('@nestjs/core').ApplicationConfig);
     const PermissionsGuard = require('./backend/dist/src/auth/permissions.guard').PermissionsGuard;
     const guards = appConfig.getGlobalGuards();
@@ -195,6 +206,7 @@ const get = (app, file, name) => app.get(require('./backend/dist/src/' + file)[n
     const prisma = get(app, 'prisma/prisma.service', 'PrismaService');
     const auth = app.get(require('@thallesp/nestjs-better-auth').AuthService);
     const setupAuth = get(app, 'setup/setup-auth.service', 'SetupAuthService');
+    console.log('probe: creating and signing in administrator');
     const administrator = await setupAuth.createInitialAdminUser(
       {email:'probe-admin@test.invalid', username:'probeadmin', password:'Probe-password-12345', employeeId:1},
       {id:1, first_name:'Проверка', last_name:'Администратор', middle_name:null, position:'Администратор'},
@@ -205,7 +217,9 @@ const get = (app, file, name) => app.get(require('./backend/dist/src/' + file)[n
     assert.ok(await prisma.session.findFirst({where:{userId:administrator.id}}));
 
   } finally {
+    console.log('probe: closing application');
     await app.close();
   }
+  console.log('probe: complete');
 })().catch(error => { console.error(error); process.exitCode = 1; });
 `;

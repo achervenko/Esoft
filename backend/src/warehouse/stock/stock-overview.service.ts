@@ -172,9 +172,32 @@ export class WarehouseStockOverviewService {
           new Prisma.Decimal(0),
         );
         const reserved = await readReservedQuantities(tx, balances);
+        const allocations = await tx.warehouseReservationAllocation.findMany({
+          where: {
+            locationId: { in: balances.map((b) => b.storageLocationId) },
+            quantity: { gt: 0 },
+            reservation: { itemId },
+          },
+          include: {
+            reservation: {
+              select: {
+                id: true,
+                order: { select: { id: true, number: true, name: true } },
+              },
+            },
+          },
+          orderBy: [{ reservationId: 'asc' }],
+        });
         const quantities = balances.map((b) => {
           const reservedQuantity = reserved.get(stockPairKey(b));
           return {
+            reservations: allocations
+              .filter((a) => a.locationId === b.storageLocationId)
+              .map((a) => ({
+                reservationId: a.reservation.id,
+                order: a.reservation.order,
+                quantity: a.quantity.toString(),
+              })),
             balanceId: String(b.id),
             location: locationWithWarehouseDto(b.storageLocation),
             quantity: b.quantity.toString(),

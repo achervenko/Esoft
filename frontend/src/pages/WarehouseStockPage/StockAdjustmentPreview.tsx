@@ -1,4 +1,5 @@
-import { StockLocationSummary } from "./StockLocationSummary";
+import { WarehouseLocationSummary } from "../../shared/warehouse/WarehouseLocationSummary";
+import { WarehouseItemIdentity } from "../../shared/warehouse/WarehouseItemIdentity";
 import { formatStockQuantity } from "./stock-page.utils";
 import type { StockAdjustmentFormProps } from "./useStockAdjustmentForm";
 type PreviewProps = Pick<StockAdjustmentFormProps, "data" | "balance">;
@@ -6,10 +7,12 @@ export function StockAdjustmentSummary({ data, balance }: PreviewProps) {
   return (
     <div>
       <div className="stock-adjust-item">
-        <strong>{data.item.name}</strong>
-        <small>Артикул: {data.item.article ?? "Не указан"}</small>
+        <WarehouseItemIdentity
+          name={data.item.name}
+          article={data.item.article}
+        />
       </div>
-      <StockLocationSummary
+      <WarehouseLocationSummary
         name={balance.location.name}
         quantity={balance.quantity}
         unit={data.item.unit}

@@ -1,3 +1,4 @@
+import "./OrderStatus.css";
 import { Badge } from "@chakra-ui/react";
 import { Trash2 } from "lucide-react";
 

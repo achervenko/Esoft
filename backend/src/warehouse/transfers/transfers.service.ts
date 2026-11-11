@@ -2,59 +2,28 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
-  NotFoundException,
 } from '@nestjs/common';
-import {
-  AuditAction,
-  AuditModule,
-  Prisma,
-  type WarehouseTransfer,
-} from '@prisma/client';
+import { AuditAction, AuditModule, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { hasPermission } from '../../auth/permission-policy';
 import { WarehouseStockService } from '../stock/stock.service';
-import { stockId } from '../stock/stock.validation';
-import { lockWarehouse } from '../storage-structure/storage-structure.policy';
-import {
-  locationWithWarehouseSelect,
-  locationWithWarehouseDto,
-} from '../storage-structure/storage-structure.dto';
-import { warehouseItemIdentityDto } from '../catalog/catalog.dto';
-import { createHash } from 'node:crypto';
-import {
-  readReservation,
-  reservationOrderDto,
-  reservationOrderSelect,
-} from '../reservations/reservations.dto';
-import { stockError } from '../stock/stock.errors';
-import type { MoveReservationInput } from '../reservations/reservation-move';
 import type { WarehouseReservationManager } from '../reservations/reservation-manager.service';
+import { createHash } from 'node:crypto';
+import { parseTransfer, transferHash } from './transfers.validation';
+import { transferDto } from './transfers.dto';
 import {
-  parseTransfer,
-  parseTransferQuery,
-  transferHash,
-} from './transfers.validation';
-function dto(row: WarehouseTransfer) {
-  return {
-    id: String(row.id),
-    itemId: String(row.itemId),
-    fromLocationId: String(row.fromLocationId),
-    toLocationId: String(row.toLocationId),
-    quantity: row.quantity.toString(),
-    comment: row.comment,
-    createdByUserId: row.createdByUserId,
-    createdAt: row.createdAt,
-    requestKey: row.requestKey,
-    snapshot: row.snapshot,
-  };
-}
+  prepareTransferExecution,
+  executeTransfer,
+} from './transfers-execution';
+import { WarehouseTransfersQueryService } from './transfers-query.service';
 @Injectable()
 export class WarehouseTransfersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stock: WarehouseStockService,
     private readonly audit: AuditLogService,
+    private readonly queries: WarehouseTransfersQueryService,
   ) {}
   create(value: unknown, actor: string) {
     const input = parseTransfer(value);
@@ -91,7 +60,8 @@ export class WarehouseTransfersService {
       !user ||
       user.banned ||
       !hasPermission(user.role, 'warehouse.transfers.manage') ||
-      (reserved && !hasPermission(user.role, 'warehouse.reservations.manage'))
+      ((reserved || input.distribution?.reservations.length) &&
+        !hasPermission(user.role, 'warehouse.reservations.manage'))
     )
       throw new ForbiddenException({
         code: 'FORBIDDEN',
@@ -112,114 +82,24 @@ export class WarehouseTransfersService {
           code: 'WAREHOUSE_TRANSFER_REQUEST_CONFLICT',
           message: 'Ключ уже использован с другими данными.',
         });
-      return dto(previous);
+      return transferDto(previous);
     }
-    const reservation = reserved
-      ? await tx.warehouseReservation.findUnique({
-          where: { id: reserved.reservationId },
-          include: { order: { select: reservationOrderSelect } },
-        })
-      : null;
-    if (
-      reserved &&
-      (!reservation || String(reservation.itemId) !== input.itemId)
-    )
-      stockError(404, 'WAREHOUSE_RESERVATION_NOT_FOUND', 'Резерв не найден.');
-    const locationIds = [
-      BigInt(input.fromLocationId),
-      BigInt(input.toLocationId),
-    ];
-    const references = await tx.warehouseStorageLocation.findMany({
-      where: { id: { in: locationIds } },
-      select: { warehouseId: true },
-    });
-    for (const id of [...new Set(references.map((r) => r.warehouseId))].sort(
-      (a, b) => (a < b ? -1 : a > b ? 1 : 0),
-    ))
-      await lockWarehouse(tx, id, true);
-    await this.stock.lockBalances(tx, input.itemId, [
-      input.fromLocationId,
-      input.toLocationId,
-    ]);
-    const locations = await tx.warehouseStorageLocation.findMany({
-      where: { id: { in: locationIds } },
-      select: locationWithWarehouseSelect,
-    });
-    const item = await tx.warehouseItem.findUniqueOrThrow({
-      where: { id: BigInt(input.itemId) },
-    });
-    if (!item.isActive || locations.some((l) => !l.isActive))
-      throw new ConflictException({
-        code: 'WAREHOUSE_TRANSFER_INACTIVE_REFERENCE',
-        message: 'Номенклатура или место неактивны.',
-      });
-    const from = locations.find((l) => String(l.id) === input.fromLocationId);
-    const to = locations.find((l) => String(l.id) === input.toLocationId);
-    if (!from || !to)
-      throw new NotFoundException({
-        code: 'WAREHOUSE_LOCATION_NOT_FOUND',
-        message: 'Место хранения не найдено.',
-      });
-    const balance = await this.stock.getBalance(
-      input.itemId,
-      input.fromLocationId,
+    const prepared = await prepareTransferExecution(
       tx,
+      this.stock,
+      input,
+      reserved,
     );
-    if (!balance)
-      throw new NotFoundException({
-        code: 'WAREHOUSE_BALANCE_NOT_FOUND',
-        message: 'Исходный остаток не найден.',
-      });
-    const destinationBefore = await this.stock.getBalance(
-      input.itemId,
-      input.toLocationId,
+    const { item, from, to } = prepared;
+    const snapshot = await executeTransfer(
       tx,
+      this.stock,
+      this.audit,
+      input,
+      actor,
+      prepared,
+      reserved,
     );
-    if (reserved) {
-      const command: MoveReservationInput = {
-        reservationId: reserved.reservationId,
-        ...input,
-      };
-      await reserved.manager.move(
-        { tx, actorUserId: actor, comment: input.comment ?? undefined },
-        command,
-      );
-    }
-    const moved = reserved
-      ? {
-          from: await this.stock.getBalance(
-            input.itemId,
-            input.fromLocationId,
-            tx,
-          ),
-          to: await this.stock.getBalance(input.itemId, input.toLocationId, tx),
-        }
-      : await this.stock.moveStock(
-          { tx, actorUserId: actor },
-          input.itemId,
-          input.fromLocationId,
-          input.toLocationId,
-          input.quantity,
-        );
-    const snapshot = {
-      item: warehouseItemIdentityDto(item),
-      from: locationWithWarehouseDto(from),
-      to: locationWithWarehouseDto(to),
-      fromQuantityBefore: balance.quantity,
-      fromQuantityAfter: moved.from!.quantity,
-      toQuantityBefore: destinationBefore?.quantity ?? '0',
-      toQuantityAfter: moved.to!.quantity,
-      ...(reserved && reservation
-        ? {
-            reservationId: reserved.reservationId,
-            order: reservationOrderDto(reservation.order),
-            reservationResult: await readReservation(
-              tx,
-              reserved.reservationId,
-            ),
-          }
-        : {}),
-    };
     const operation = await tx.warehouseTransfer.create({
       data: {
         itemId: item.id,
@@ -233,7 +113,7 @@ export class WarehouseTransfersService {
         snapshot,
       },
     });
-    const result = dto(operation);
+    const result = transferDto(operation);
     await this.audit.writeFieldChanges({
       tx,
       userId: actor,
@@ -245,47 +125,10 @@ export class WarehouseTransfersService {
     });
     return result;
   }
-  async findOne(value: string) {
-    const row = await this.prisma.warehouseTransfer.findUnique({
-      where: { id: stockId(value, 'id') },
-    });
-    if (!row)
-      throw new NotFoundException({
-        code: 'WAREHOUSE_TRANSFER_NOT_FOUND',
-        message: 'Перемещение не найдено.',
-      });
-    return dto(row);
+  findOne(value: string) {
+    return this.queries.findOne(value);
   }
   list(value: unknown) {
-    const q = parseTransferQuery(value);
-    const where: Prisma.WarehouseTransferWhereInput = {
-      itemId: q.itemId,
-      fromLocationId: q.fromLocationId,
-      toLocationId: q.toLocationId,
-      ...(q.warehouseId === undefined
-        ? {}
-        : {
-            OR: [
-              { fromLocation: { warehouseId: q.warehouseId } },
-              { toLocation: { warehouseId: q.warehouseId } },
-            ],
-          }),
-    };
-    return this.prisma.$transaction(
-      async (tx) => ({
-        items: (
-          await tx.warehouseTransfer.findMany({
-            where,
-            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-            skip: (q.page - 1) * q.limit,
-            take: q.limit,
-          })
-        ).map(dto),
-        total: await tx.warehouseTransfer.count({ where }),
-        page: q.page,
-        limit: q.limit,
-      }),
-      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
-    );
+    return this.queries.list(value);
   }
 }

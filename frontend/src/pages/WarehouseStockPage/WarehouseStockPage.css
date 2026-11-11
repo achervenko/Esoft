@@ -12,17 +12,7 @@
 .stock-results .data-table {
   min-width: 940px;
 }
-.stock-photo {
-  width: 48px;
-  height: 48px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #f2f4f7;
-  border-radius: 6px;
-  flex-shrink: 0;
-  color: #667085;
-}
+
 .stock-transfer-icon-button {
   width: 38px;
   min-width: 38px;
@@ -59,11 +49,7 @@
 .stock-results .stock-column-locations {
   width: 160px;
 }
-.stock-photo img {
-  width: 48px;
-  height: 48px;
-  object-fit: cover;
-}
+
 .stock-distribution-link {
   background: none;
   border: 0;

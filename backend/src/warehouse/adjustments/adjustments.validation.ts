@@ -24,6 +24,7 @@ export function parseAdjustment(value: unknown) {
     'comment',
     'attachments',
     'requestKey',
+    'portion',
   ];
   if (Object.keys(input).some((field) => !fields.includes(field)))
     adjustmentBadRequest('Неизвестное поле корректировки.');
@@ -64,7 +65,36 @@ export function parseAdjustment(value: unknown) {
     adjustmentBadRequest('Комментарий должен быть строкой до 4000 символов.');
   const comment =
     typeof input.comment === 'string' ? input.comment.trim() || null : null;
+  let portion:
+    | {
+        reservationId?: string;
+        expectedQuantity: string;
+        actualQuantity: string;
+      }
+    | undefined;
+  if (input.portion !== undefined) {
+    const row = input.portion as Record<string, unknown>;
+    if (
+      !row ||
+      typeof row !== 'object' ||
+      Array.isArray(row) ||
+      Object.keys(row).some(
+        (k) =>
+          !['reservationId', 'expectedQuantity', 'actualQuantity'].includes(k),
+      ) ||
+      input.actualQuantity === undefined
+    )
+      adjustmentBadRequest('Некорректная часть остатка.');
+    portion = {
+      ...(row.reservationId === undefined
+        ? {}
+        : { reservationId: uuid(row.reservationId) }),
+      expectedQuantity: stockQuantity(row.expectedQuantity, true).toString(),
+      actualQuantity: stockQuantity(row.actualQuantity, true).toString(),
+    };
+  }
   const common = {
+    ...(portion ? { portion } : {}),
     itemId,
     locationId,
     requestKey,

@@ -1,0 +1,97 @@
+.warehouse-reservations-page > .admin-page-header h1 {
+  padding-inline-start: var(--optical-inset-page);
+}
+
+.reservation-order-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  color: inherit;
+  text-decoration: none;
+}
+.reservation-order-link:hover {
+  text-decoration: underline;
+}
+.reservation-orders-surface {
+  min-width: 0;
+  padding: 18px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-control);
+}
+.reservation-orders-surface .data-table {
+  width: 100%;
+  table-layout: fixed;
+}
+.reservation-orders-surface td {
+  overflow-wrap: anywhere;
+}
+.reservation-orders-surface td .orders-statuses {
+  margin-top: 6px;
+}
+
+.reservation-order-cards {
+  display: grid;
+  gap: 12px;
+}
+.reservation-order-card {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  padding: 18px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--color-surface, #fff);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.reservation-order-card-heading,
+.reservation-order-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.reservation-order-card-name {
+  overflow-wrap: anywhere;
+}
+.reservation-order-card-footer {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+.reservation-order-card:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+@media (max-width: 1100px) {
+  .reservation-orders-surface {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+}
+
+.reservation-order-closed,
+.reservation-order-card[data-closed="true"] {
+  opacity: 0.55;
+}
+
+.reservation-orders-surface .data-table th:first-child,
+.reservation-orders-surface .data-table td:first-child {
+  width: 160px;
+}
+.reservation-orders-surface .data-table th:nth-child(3),
+.reservation-orders-surface .data-table td:nth-child(3) {
+  width: 100px;
+  text-align: center;
+}
+.reservation-orders-surface .data-table th:nth-child(4),
+.reservation-orders-surface .data-table td:nth-child(4) {
+  width: 150px;
+}

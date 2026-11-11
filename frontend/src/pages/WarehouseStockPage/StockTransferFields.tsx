@@ -30,6 +30,8 @@ export function StockTransferFields({
     choices,
     warehouseOptions,
     quantityError,
+    selectedReservation,
+    availableQuantity,
   } = form;
   return (
     <>
@@ -107,10 +109,18 @@ export function StockTransferFields({
         <p className="stock-transfer-hint">
           Доступно для перемещения:{" "}
           <strong>
-            {formatStockQuantity(source.quantity)} {data.item.unit}
+            {formatStockQuantity(availableQuantity)} {data.item.unit}
           </strong>
         </p>
       </section>
+      {selectedReservation && (
+        <p className="stock-transfer-hint">
+          Резерв заказа №{selectedReservation.order.number}
+          {selectedReservation.order.name
+            ? ` — ${selectedReservation.order.name}`
+            : ""}
+        </p>
+      )}
       <button
         type="button"
         className="stock-transfer-comment-toggle"

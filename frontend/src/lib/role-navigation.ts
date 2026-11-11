@@ -41,6 +41,8 @@ export function canAccessWorkspaceRoute(permissions: unknown, route: string) {
     (receiptMatch && BigInt(receiptMatch[1]) <= 9223372036854775807n)
   )
     return hasPermission(permissions, "warehouse.receipts.read");
+  if (path === "#/warehouse/reservations")
+    return hasPermission(permissions, "warehouse.reservations.read");
   if (path === "#/warehouse/stock")
     return hasPermission(permissions, "warehouse.stock.read");
   if (path === "#/warehouse/catalog")

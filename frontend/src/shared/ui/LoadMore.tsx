@@ -12,6 +12,7 @@ export function LoadMore({
   disabled = false,
   onLoadMore,
   onRetry,
+  showCount = true,
 }: {
   shown: number;
   total: number;
@@ -21,6 +22,7 @@ export function LoadMore({
   disabled?: boolean;
   onLoadMore: () => void;
   onRetry: () => void;
+  showCount?: boolean;
 }) {
   const sentinel = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -52,9 +54,11 @@ export function LoadMore({
   }, [shown, hasMore, loading, error, disabled, onLoadMore]);
   return (
     <div className="load-more">
-      <p className="load-more-count">
-        Показано {shown} из {total}
-      </p>
+      {showCount && (
+        <p className="load-more-count">
+          Показано {shown} из {total}
+        </p>
+      )}
       {loading ? (
         <p role="status">Загрузка…</p>
       ) : error ? (

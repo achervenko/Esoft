@@ -4,22 +4,18 @@ import { Controlled, receipt, twoLines } from "./receipt-placement-test-utils";
 
 it("allows skipping unfinished lines, shows them in the summary and returns to one", () => {
   render(<Controlled />);
-  expect(
-    screen.getByRole("heading", { name: "Подшипник" }),
-  ).toBeInTheDocument();
+  expect(screen.getByText("Подшипник", { exact: true })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Далее" }));
-  expect(screen.getByRole("heading", { name: "Кабель" })).toBeInTheDocument();
+  expect(screen.getByText("Кабель", { exact: true })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Итоги →" }));
   expect(
     screen.getByRole("heading", { name: "Осталось разместить" }),
   ).toBeInTheDocument();
   expect(screen.queryByText(/Незавершённых позиций:/)).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /Кабель ·/ }));
-  expect(screen.getByRole("heading", { name: "Кабель" })).toBeInTheDocument();
+  expect(screen.getByText("Кабель", { exact: true })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Назад" }));
-  expect(
-    screen.getByRole("heading", { name: "Подшипник" }),
-  ).toBeInTheDocument();
+  expect(screen.getByText("Подшипник", { exact: true })).toBeInTheDocument();
 });
 
 it("exits from the final completed line without showing a completion screen", () => {
@@ -62,7 +58,7 @@ it("keeps the selected line when refreshed quantities arrive", () => {
       }}
     />,
   );
-  expect(screen.getByRole("heading", { name: "Кабель" })).toBeInTheDocument();
+  expect(screen.getByText("Кабель", { exact: true })).toBeInTheDocument();
 });
 
 it("exits from an empty receipt without a broken back action", () => {
@@ -99,8 +95,8 @@ it("starts at the first unfinished line without a saved position", () => {
       }}
     />,
   );
-  expect(screen.getByRole("heading", { name: "Кабель" })).toBeInTheDocument();
+  expect(screen.getByText("Кабель", { exact: true })).toBeInTheDocument();
   expect(
-    screen.queryByRole("heading", { name: "Подшипник" }),
+    screen.queryByText("Подшипник", { exact: true }),
   ).not.toBeInTheDocument();
 });

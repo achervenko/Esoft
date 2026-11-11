@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { type Warehouse } from "../../shared/api/warehouses-api";
-import { type StorageLocation } from "../../shared/api/storage-locations-api";
-import { getApiErrorMessage } from "../../shared/api/api-error";
-import { warehouseStockApi } from "../../shared/api/warehouse-stock-api";
+import { type Warehouse } from "../api/warehouses-api";
+import { type StorageLocation } from "../api/storage-locations-api";
+import { getApiErrorMessage } from "../api/api-error";
+import { warehouseStockApi } from "../api/warehouse-stock-api";
 export function useStorageChoices(
   enabled: boolean,
   warehouseId: string,

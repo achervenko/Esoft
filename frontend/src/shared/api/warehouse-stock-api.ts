@@ -30,6 +30,11 @@ export type StockDistribution = StockReservationQuantities & {
   warehouse: Warehouse;
   totalQuantity: string;
   locations: (StockReservationQuantities & {
+    reservations?: {
+      reservationId: string;
+      order: { id: string; number: string; name: string };
+      quantity: string;
+    }[];
     balanceId: string;
     location: StorageLocation;
     quantity: string;
@@ -42,6 +47,10 @@ export type StockPage = {
   limit: number;
 };
 export type StockTransferInput = {
+  distribution?: {
+    freeQuantity: string;
+    reservations: { reservationId: string; quantity: string }[];
+  };
   requestKey: string;
   itemId: string;
   fromLocationId: string;
@@ -54,9 +63,17 @@ export type StockConsolidationInput = {
   itemId: string;
   fromWarehouseId: string;
   toLocationId: string;
-  moves: { fromLocationId: string; quantity: string }[];
+  moves: Pick<
+    StockTransferInput,
+    "fromLocationId" | "quantity" | "distribution"
+  >[];
 };
 export type StockAdjustmentInput = {
+  portion?: {
+    reservationId?: string;
+    expectedQuantity: string;
+    actualQuantity: string;
+  };
   requestKey: string;
   itemId: string;
   locationId: string;
@@ -66,6 +83,17 @@ export type StockAdjustmentInput = {
   attachments: string[];
 };
 export const warehouseStockApi = {
+  balances: (query: URLSearchParams, signal?: AbortSignal) =>
+    request<{
+      items: {
+        location: StorageLocation;
+        quantity: string;
+        freeQuantity: string;
+      }[];
+      total: number;
+      page: number;
+      limit: number;
+    }>(`/api/warehouse/stock?${query}`, { signal }),
   currentUserId: async () => {
     const session = await request<{ user: { id: string } } | null>(
       "/api/auth/get-session",

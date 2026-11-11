@@ -3,6 +3,7 @@ import {
   useReceiptLocationHints,
 } from "./useReceiptLocationHints";
 import { useState } from "react";
+import { WarehouseItemIdentity } from "../../shared/warehouse/WarehouseItemIdentity";
 import {
   receiptsApi,
   type ReceiptLine,
@@ -106,10 +107,7 @@ export function ReceiptPlaceForm(
       >
         <>
           {!inline && (
-            <>
-              <strong>{line.name}</strong>
-              <small className="receipt-hint">{line.article}</small>
-            </>
+            <WarehouseItemIdentity name={line.name} article={line.article} />
           )}
           <SelectField
             label="Место хранения"

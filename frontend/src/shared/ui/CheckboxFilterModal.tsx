@@ -9,6 +9,7 @@ export function CheckboxFilterModal<Value extends string>({
   values,
   onApply,
   onClose,
+  allowEmpty = false,
 }: {
   title: string;
   legend?: string;
@@ -16,10 +17,11 @@ export function CheckboxFilterModal<Value extends string>({
   values: readonly Value[];
   onApply: (values: Value[]) => void;
   onClose: () => void;
+  allowEmpty?: boolean;
 }) {
   const allValues = options.map(({ value }) => value);
   const [selected, setSelected] = useState<Value[]>(
-    values.length ? [...values] : allValues,
+    allowEmpty || values.length ? [...values] : allValues,
   );
   return (
     <AdminModal
@@ -31,8 +33,12 @@ export function CheckboxFilterModal<Value extends string>({
         className="checkbox-filter-form"
         onSubmit={(event) => {
           event.preventDefault();
-          if (selected.length)
-            onApply(selected.length === allValues.length ? [] : selected);
+          if (allowEmpty || selected.length)
+            onApply(
+              !allowEmpty && selected.length === allValues.length
+                ? []
+                : selected,
+            );
         }}
       >
         <fieldset className="checkbox-filter-options">
@@ -59,14 +65,14 @@ export function CheckboxFilterModal<Value extends string>({
           <button
             type="button"
             className="admin-secondary-button"
-            onClick={() => setSelected(allValues)}
+            onClick={() => setSelected(allowEmpty ? [] : allValues)}
           >
             Сбросить
           </button>
           <button
             type="submit"
             className="admin-primary-button"
-            disabled={!selected.length}
+            disabled={!allowEmpty && !selected.length}
           >
             Применить
           </button>

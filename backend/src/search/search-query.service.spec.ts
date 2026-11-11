@@ -217,9 +217,9 @@ describe('global search SQL and access', () => {
     expect(sql).toContain('EXISTS (SELECT 1 FROM ppe_norms norm');
     expect(sql.match(/UNION ALL/g)).toHaveLength(3);
     expect(sql.match(/LIMIT/g)).toHaveLength(1);
-    expect(sql.indexOf('ORDER BY score DESC')).toBeGreaterThan(
-      sql.lastIndexOf('UNION ALL'),
-    );
+    expect(
+      sql.indexOf("ORDER BY (entity_type = 'ppe_norm') DESC, score DESC"),
+    ).toBeGreaterThan(sql.lastIndexOf('UNION ALL'));
     expect(statement.values.slice(-2)).toEqual([20, 10]);
     expect(sql).toContain('THEN 400');
     expect(sql).toContain('THEN 300');
@@ -243,7 +243,7 @@ describe('global search SQL and access', () => {
     const { service, queryRaw } = create();
     await service.search({ query: 'инженр', offset: 1200 }, allDomainsReader);
     const statement = queryRaw.mock.calls[0][0];
-    expect(statement.sql.match(/word_similarity/g)).toHaveLength(5);
+    expect(statement.sql.match(/word_similarity/g)).toHaveLength(6);
     expect(statement.values.slice(-2)).toEqual([20, 1000]);
     expect(statement.sql).toContain('THEN 100 ELSE 0 END');
   });

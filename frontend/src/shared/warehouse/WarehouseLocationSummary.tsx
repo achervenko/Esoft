@@ -1,6 +1,7 @@
+import "./WarehouseLocationSummary.css";
 import { MapPin } from "lucide-react";
-import { formatStockQuantity } from "./stock-page.utils";
-export function StockLocationSummary({
+import { formatStockQuantity } from "../lib/warehouse-quantity";
+export function WarehouseLocationSummary({
   name,
   quantity,
   unit,

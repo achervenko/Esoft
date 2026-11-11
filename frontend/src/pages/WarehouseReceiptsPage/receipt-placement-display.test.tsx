@@ -54,9 +54,8 @@ it.each([null, "ESOFT-123"])(
         }}
       />,
     );
-    expect(
-      screen.getByText(`Артикул: ${article ?? "Не указан"}`),
-    ).toBeInTheDocument();
+    if (article) expect(screen.getByText(article)).toBeInTheDocument();
+    expect(screen.queryByText(/Артикул:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/ONE-C-456/)).not.toBeInTheDocument();
   },
 );

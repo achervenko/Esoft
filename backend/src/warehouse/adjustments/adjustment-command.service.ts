@@ -1,3 +1,5 @@
+import { assertAdjustmentPortion } from './adjustment-portion';
+import { changeReservationCoverage } from '../reservations/reservation-coverage';
 import { ConflictException, Injectable } from '@nestjs/common';
 import { AuditAction, AuditModule, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -87,6 +89,7 @@ export class WarehouseStockAdjustmentCommandService {
               actual: before.toString(),
             },
           });
+        await assertAdjustmentPortion(tx, input, before);
         const delta =
           input.mode === 'ACTUAL'
             ? new Prisma.Decimal(input.actualQuantity).minus(before)
@@ -114,6 +117,18 @@ export class WarehouseStockAdjustmentCommandService {
             : input.type;
         const quantity = delta.abs();
         const context = { tx, actorUserId };
+        const coverage = {
+          reservationId: input.portion?.reservationId ?? '',
+          locationId: input.locationId,
+          quantity,
+        };
+        if (input.portion?.reservationId && type === 'WRITE_OFF')
+          await changeReservationCoverage(
+            this.audit,
+            { ...context, comment: input.reason },
+            coverage,
+            'REDUCE_COVERAGE',
+          );
         const balance =
           type === 'WRITE_OFF'
             ? await this.stock.issueStock(
@@ -128,6 +143,13 @@ export class WarehouseStockAdjustmentCommandService {
                 input.locationId,
                 quantity,
               );
+        if (input.portion?.reservationId && type === 'SURPLUS')
+          await changeReservationCoverage(
+            this.audit,
+            { ...context, comment: input.reason },
+            coverage,
+            'RESTORE_COVERAGE',
+          );
         const operation = await tx.warehouseStockAdjustment.create({
           data: {
             balanceId: BigInt(balance.id),
@@ -158,6 +180,7 @@ export class WarehouseStockAdjustmentCommandService {
           })),
         });
         const snapshot = {
+          ...(input.portion ? { portion: input.portion } : {}),
           type,
           itemId: input.itemId,
           article: balance.item.article,

@@ -12,9 +12,11 @@ export type IncrementalListControls = {
 export function ListLoadMore({
   list,
   disabled = false,
+  showCount = true,
 }: {
   list: IncrementalListControls;
   disabled?: boolean;
+  showCount?: boolean;
 }) {
   if (
     !list.data ||
@@ -23,6 +25,7 @@ export function ListLoadMore({
     return null;
   return (
     <LoadMore
+      showCount={showCount}
       shown={list.data.items.length}
       total={list.data.total}
       loading={list.loading}

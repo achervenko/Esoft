@@ -3,6 +3,7 @@ import { readdir } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 
 const TEST_ROOT = 'tests/scripts';
+const INTEGRATION_CONCURRENCY = 4;
 
 const mode = parseMode(process.argv.slice(2));
 const files = await findTestFiles(TEST_ROOT);
@@ -40,7 +41,7 @@ async function findTestFiles(root) {
     const entryPath = join(root, entry.name);
 
     if (entry.isDirectory()) {
-      files.push(...await findTestFiles(entryPath));
+      files.push(...(await findTestFiles(entryPath)));
       continue;
     }
 
@@ -65,8 +66,11 @@ function selectFiles(files, mode) {
 }
 
 function runNodeTest(files) {
+  // Integration files start independent PostgreSQL clusters and apply migrations.
+  const options =
+    mode === 'unit' ? [] : [`--test-concurrency=${INTEGRATION_CONCURRENCY}`];
   return new Promise((resolveRun) => {
-    const child = spawn(process.execPath, ['--test', ...files], {
+    const child = spawn(process.execPath, ['--test', ...options, ...files], {
       shell: false,
       stdio: 'inherit',
       windowsHide: true,
