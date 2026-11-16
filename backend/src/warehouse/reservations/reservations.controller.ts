@@ -87,6 +87,16 @@ export class WarehouseReservationsController {
     return this.commands.decrease(id, body, session.user.id);
   }
 
+  @Post(':id/demand/increase')
+  @RequirePermission(RESERVATIONS_MANAGE)
+  increaseDemand(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Session() session: UserSession<Auth>,
+  ) {
+    return this.commands.increaseDemand(id, body, session.user.id);
+  }
+
   @Post(':id/coverage/reduce')
   @RequirePermission(RESERVATIONS_COVERAGE_MANAGE)
   reduceCoverage(

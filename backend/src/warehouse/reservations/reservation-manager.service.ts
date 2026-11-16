@@ -16,6 +16,10 @@ import {
   decreaseReservation,
   type DecreaseReservationInput,
 } from './reservation-decrease';
+import {
+  increaseReservationDemand,
+  type DemandIncreaseInput,
+} from './reservation-demand';
 
 @Injectable()
 export class WarehouseReservationManager {
@@ -32,6 +36,10 @@ export class WarehouseReservationManager {
 
   decrease(context: ReservationContext, input: DecreaseReservationInput) {
     return decreaseReservation(this.audit, context, input);
+  }
+
+  increaseDemand(context: ReservationContext, input: DemandIncreaseInput) {
+    return increaseReservationDemand(this.audit, context, input);
   }
 
   reduceCoverage(context: ReservationContext, input: ReservationCoverageInput) {

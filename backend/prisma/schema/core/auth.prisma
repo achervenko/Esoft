@@ -4,6 +4,7 @@ model User {
   apiKeys ApiKey[]
   warehouseTransfers WarehouseTransfer[]
   warehouseIssueRequests WarehouseIssueRequest[]
+  warehouseReservationRequests WarehouseReservationRequest[]
   warehouseStockAdjustmentNoops WarehouseStockAdjustmentNoop[]
   warehouseReceipts WarehouseReceipt[]
   warehouseReceiptPlacements WarehouseReceiptPlacement[]

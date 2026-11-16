@@ -4,6 +4,38 @@ import { warehouseStockApi } from "../../shared/api/warehouse-stock-api";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 afterEach(() => sessionStorage.clear());
+it("explains a physical shortage and blocks moving from the affected place", async () => {
+  const affected = {
+    ...distribution.locations[0],
+    reservationMismatch: true,
+  };
+  vi.mocked(warehouseStockApi.distribution).mockResolvedValue({
+    ...distribution,
+    reservationMismatch: true,
+    locations: [affected, distribution.locations[1]],
+  });
+  render(
+    <StockDistributionModal
+      actorId="test-actor"
+      position={position}
+      canTransfer
+      onClose={vi.fn()}
+      onChanged={vi.fn()}
+    />,
+  );
+  expect(
+    await screen.findByText(/Фактический остаток меньше резерва/),
+  ).toBeVisible();
+  expect(
+    screen.getAllByRole("button", { name: "Переместить" })[0],
+  ).toBeDisabled();
+  expect(
+    screen.getAllByRole("button", { name: "Переместить" })[1],
+  ).toBeEnabled();
+  expect(
+    screen.getByRole("button", { name: "Переместить всё" }),
+  ).toBeDisabled();
+});
 const attach = async () => {
   fireEvent.drop(
     screen.getByRole("group", { name: "Область загрузки файлов" }),
@@ -18,6 +50,7 @@ const attach = async () => {
 const open = async () => {
   render(
     <StockDistributionModal
+      actorId="test-actor"
       position={position}
       canTransfer
       canAdjust
@@ -34,6 +67,7 @@ const open = async () => {
 it("hides correction actions without administrator permission", async () => {
   render(
     <StockDistributionModal
+      actorId="test-actor"
       position={position}
       canTransfer
       onClose={vi.fn()}
@@ -84,7 +118,7 @@ it("preserves the original correction across a lost response and remount", async
   await screen.findByRole("button", { name: "Повторить сохранение" });
   const first = vi.mocked(warehouseStockApi.adjust).mock.calls[0][0];
   expect(
-    JSON.parse(sessionStorage.getItem("stock-adjustment:10:free")!),
+    JSON.parse(sessionStorage.getItem("stock-adjustment:test-actor:10:free")!),
   ).toEqual(first);
   cleanup();
   await open();
@@ -95,13 +129,16 @@ it("preserves the original correction across a lost response and remount", async
   );
   expect(vi.mocked(warehouseStockApi.adjust).mock.calls[1][0]).toEqual(first);
   await waitFor(() =>
-    expect(sessionStorage.getItem("stock-adjustment:10:free")).toBeNull(),
+    expect(
+      sessionStorage.getItem("stock-adjustment:test-actor:10:free"),
+    ).toBeNull(),
   );
 });
 
 it("keeps the same dialog and backdrop when switching to correction and back", async () => {
   render(
     <StockDistributionModal
+      actorId="test-actor"
       position={position}
       canTransfer
       canAdjust
@@ -168,6 +205,7 @@ it("corrects the selected reserved row rather than the complete physical balance
   vi.mocked(warehouseStockApi.adjust).mockResolvedValue({});
   render(
     <StockDistributionModal
+      actorId="test-actor"
       position={position}
       canTransfer
       canAdjust

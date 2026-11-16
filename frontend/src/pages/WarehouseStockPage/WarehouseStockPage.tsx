@@ -13,14 +13,22 @@ import { useStorageChoices } from "../../shared/warehouse/useStorageChoices";
 import { WarehouseStockTable } from "./WarehouseStockTable";
 import { StockDistributionModal } from "./StockDistributionModal";
 import { WarehouseStockCards } from "./WarehouseStockCards";
+import { StockSurplusModal } from "./StockSurplusModal";
 import "../../shared/ui/AdminPage.css";
 import "./WarehouseStockPage.css";
 export function WarehouseStockPage({
   userPermissions,
+  actorId,
 }: {
   userPermissions: readonly string[] | null;
+  actorId?: string | null;
 }) {
   const enabled = hasPermission(userPermissions, "warehouse.stock.read");
+  const canAdjust = hasPermission(
+    userPermissions,
+    "warehouse.adjustments.manage",
+  );
+  const [surplusOpen, setSurplusOpen] = useState(false);
   const canTransfer = hasPermission(
     userPermissions,
     "warehouse.transfers.manage",
@@ -57,6 +65,8 @@ export function WarehouseStockPage({
         onChange={page.setSearch}
         label="Поиск остатков по артикулу и наименованию"
         inputProps={{ maxLength: 255 }}
+        onCreate={canAdjust ? () => setSurplusOpen(true) : undefined}
+        createAriaLabel="Добавить остаток"
         filters={{
           label: "Настройки поиска остатков",
           count:
@@ -190,19 +200,28 @@ export function WarehouseStockPage({
       </section>
       {selected && (
         <StockDistributionModal
-          key={selected.id}
+          key={JSON.stringify([actorId, selected.id])}
+          actorId={actorId}
           position={selected}
           canTransfer={canTransfer}
           canMoveReservations={hasPermission(
             userPermissions,
             "warehouse.reservations.manage",
           )}
-          canAdjust={hasPermission(
-            userPermissions,
-            "warehouse.adjustments.manage",
-          )}
+          canAdjust={canAdjust}
           onClose={() => setSelected(null)}
           onChanged={page.refresh}
+        />
+      )}
+      {canAdjust && surplusOpen && (
+        <StockSurplusModal
+          key={actorId}
+          actorId={actorId}
+          onClose={() => setSurplusOpen(false)}
+          onSaved={() => {
+            setSurplusOpen(false);
+            page.refresh();
+          }}
         />
       )}
     </section>

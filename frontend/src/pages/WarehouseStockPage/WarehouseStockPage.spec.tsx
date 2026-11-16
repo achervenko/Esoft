@@ -20,6 +20,7 @@ it("does not fetch data without stock read permission", () => {
 });
 it("shows one item/warehouse row, exact quantity and distribution without requiring write permission", async () => {
   render(<WarehouseStockPage userPermissions={reader} />);
+  expect(screen.queryByRole("button", { name: "Добавить остаток" })).toBeNull();
   await screen.findByText("Подшипник");
   const table = screen.getByRole("table");
   expect(within(table).getAllByRole("row")).toHaveLength(2);

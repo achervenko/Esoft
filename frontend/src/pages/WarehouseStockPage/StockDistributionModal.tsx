@@ -11,6 +11,7 @@ import { StockDistributionOverview } from "./StockDistributionOverview";
 import type { StockDistributionSource } from "./StockDistributionTable";
 export function StockDistributionModal({
   position,
+  actorId,
   canTransfer,
   canAdjust = false,
   canMoveReservations = false,
@@ -18,6 +19,7 @@ export function StockDistributionModal({
   onChanged,
 }: {
   position: StockPosition;
+  actorId?: string | null;
   canTransfer: boolean;
   canAdjust?: boolean;
   canMoveReservations?: boolean;
@@ -48,6 +50,7 @@ export function StockDistributionModal({
     if (adjusting && data)
       return (
         <StockAdjustmentForm
+          actorId={actorId}
           data={data}
           balance={adjusting.balance}
           portion={{

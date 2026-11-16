@@ -32,6 +32,15 @@ export type ReservationPlacementInput = {
   locationId: string;
   quantity: string;
 };
+export type ReserveInput = {
+  requestKey?: string;
+  orderId: string;
+  itemId: string;
+  quantity: string;
+  locationId?: string;
+  coveredQuantity?: string;
+  comment?: string;
+};
 export type ReservationMoveInput = {
   requestKey: string;
   fromLocationId: string;
@@ -45,28 +54,38 @@ const command = (path: string, input: unknown) =>
     body: JSON.stringify(input),
   });
 export const warehouseReservationsApi = {
-  reserve: (
-    input: ReservationPlacementInput & {
-      orderId: string;
-      itemId: string;
-      comment?: string;
-    },
-  ) => command("", input),
+  reserve: (input: ReserveInput) => command("", input),
   decrease: (
     id: string,
     input: {
       allocations: ReservationPlacementInput[];
       deficitQuantity: string;
+      expectedQuantity?: string;
       comment: string;
     },
   ) => command(`/${encodeURIComponent(id)}/decrease`, input),
+  increaseDemand: (
+    id: string,
+    input: {
+      expectedQuantity: string;
+      quantity: string;
+      allocation?: ReservationPlacementInput;
+      comment: string;
+    },
+  ) => command(`/${encodeURIComponent(id)}/demand/increase`, input),
   reduceCoverage: (
     id: string,
-    input: ReservationPlacementInput & { comment: string },
+    input: ReservationPlacementInput & {
+      comment: string;
+      expectedQuantity?: string;
+    },
   ) => command(`/${encodeURIComponent(id)}/coverage/reduce`, input),
   restoreCoverage: (
     id: string,
-    input: ReservationPlacementInput & { comment: string },
+    input: ReservationPlacementInput & {
+      comment: string;
+      expectedQuantity?: string;
+    },
   ) => command(`/${encodeURIComponent(id)}/coverage/restore`, input),
   move: (id: string, input: ReservationMoveInput) =>
     request<{

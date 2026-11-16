@@ -71,6 +71,11 @@ export function StockDistributionTable({
                     Резерв: {reservation.order.number}
                   </small>
                 )}
+                {b.reservationMismatch && (
+                  <small className="stock-inactive">
+                    Фактический остаток меньше резерва
+                  </small>
+                )}
               </td>
               <td className="stock-distribution-quantity">
                 <span
@@ -106,6 +111,7 @@ export function StockDistributionTable({
                       !data.item.isActive ||
                       !data.warehouse.isActive ||
                       !b.location.isActive ||
+                      b.reservationMismatch ||
                       (!!reservation && !canMoveReservations)
                     }
                     onClick={() =>

@@ -35,16 +35,21 @@
 
 Корень: `/api/warehouse/reservations`. Требуется сессия ESoft; сервисы повторно проверяют актуальные права внутри транзакции.
 
-| Метод и путь                                         | Permission                                                     |
-| ---------------------------------------------------- | -------------------------------------------------------------- |
-| GET `/`, `/:id`, `/:id/history`                      | `warehouse.reservations.read`                                  |
-| GET `/orders/:orderId/summary`                       | `warehouse.reservations.read`                                  |
-| GET `/orders/:orderId`                               | `warehouse.reservations.manage`                                |
-| POST `/`, `/:id/decrease`                            | `warehouse.reservations.manage`                                |
-| POST `/:id/coverage/reduce`, `/:id/coverage/restore` | `warehouse.reservations.coverage.manage`                       |
-| POST `/:id/move`                                     | `warehouse.reservations.manage` и `warehouse.transfers.manage` |
+| Метод и путь                                         | Permission                                                                                              |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| GET `/`, `/:id`, `/:id/history`                      | `warehouse.reservations.read`                                                                           |
+| GET `/orders/:orderId/summary`                       | `warehouse.reservations.read`                                                                           |
+| GET `/orders/:orderId`                               | `warehouse.reservations.manage`                                                                         |
+| POST `/`, `/:id/decrease`                            | `warehouse.reservations.manage`                                                                         |
+| POST `/:id/demand/increase`                          | `warehouse.reservations.manage` и, при передаче распределения, `warehouse.reservations.coverage.manage` |
+| POST `/:id/coverage/reduce`, `/:id/coverage/restore` | `warehouse.reservations.coverage.manage`                                                                |
+| POST `/:id/move`                                     | `warehouse.reservations.manage` и `warehouse.transfers.manage`                                          |
 
 DTO, фильтры и строгая валидация находятся в `reservations.dto.ts` и `reservations.validation.ts`. Чтение списка и истории использует один RepeatableRead-снимок с пагинацией. История читается из общего AuditLog по `entityType=warehouse_reservation` и UUID резерва. Закрытый заказ допускается; DTO возвращает предупреждение `ORDER_CLOSED`.
+
+В `POST /` поле `quantity` увеличивает потребность. Без `locationId` всё количество остаётся в дефиците. При указанном месте `coveredQuantity` задаёт положительную обеспеченную часть, по умолчанию равную `quantity`. Обеспеченная часть проверяется по свободному остатку. При переданном `requestKey` результат сохраняется в одной транзакции с резервом и аудитом. Повтор от того же пользователя возвращает сохранённый результат, а другой запрос с тем же ключом получает `409 WAREHOUSE_RESERVATION_REQUEST_CONFLICT`.
+
+В `POST /:id/demand/increase` передаются текущая `expectedQuantity`, новая итоговая `quantity`, обязательный `comment` и необязательный объект `allocation: { locationId, quantity }`. Сервер проверяет ожидаемую потребность, доступный остаток и итоговый дефицит. Потребность, обеспечение и аудит сохраняются одной транзакцией.
 
 `GET /` принимает `search` (до 255 символов) для поиска по артикулу и названию номенклатуры без учёта регистра. Поиск буквальный: `%` и `_` не являются шаблонами. Условие сочетается с `orderId`, `quantityState`, `deficit`, `covered` и `itemId`, применяется до подсчёта `total` и пагинации. Пустая страница сохраняет полный `total` совпадений; распределения входят в DTO списка и не требуют отдельных запросов.
 

@@ -18,14 +18,16 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
       AND cardinality(fk.conkey) = 1
       AND (fk.conrelid IN (
         'public.warehouse_reservations'::regclass,
-        'public.warehouse_reservation_allocations'::regclass
+        'public.warehouse_reservation_allocations'::regclass,
+        'public.warehouse_reservation_requests'::regclass
       ) OR (fk.conrelid = 'public.warehouse_receipt_lines'::regclass
             AND source_column.attname = 'order_id'))
       AND fk.confrelid IN (
         'public.customer_orders'::regclass,
         'public.warehouse_items'::regclass,
         'public.warehouse_reservations'::regclass,
-        'public.warehouse_storage_locations'::regclass
+        'public.warehouse_storage_locations'::regclass,
+        'public."user"'::regclass
       )
     ORDER BY source_table, source_column
   `);
@@ -43,6 +45,7 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
         "reservation_id",
         "warehouse_reservations",
       ],
+      ["warehouse_reservation_requests", "actor_user_id", '"user"'],
       ["warehouse_reservations", "item_id", "warehouse_items"],
       ["warehouse_reservations", "order_id", "customer_orders"],
     ].map(([source_table, source_column, target_table]) => ({
@@ -109,6 +112,7 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
       "warehouse_stock_adjustment_noops",
       "warehouse_reservations",
       "warehouse_reservation_allocations",
+      "warehouse_reservation_requests",
     ].sort(),
   );
   assert.equal(

@@ -67,11 +67,19 @@
 .reservation-item {
   border-bottom: 1px solid var(--color-border-subtle);
 }
+.reservation-item-locations .stock-adjust-location > span {
+  flex: 1;
+}
+.reservation-edit-button.admin-icon-button {
+  flex: 0 0 38px;
+  padding: 0;
+}
 .reservation-item-button {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
+  min-width: 0;
   padding: 14px 20px;
   border: 0;
   background: var(--color-surface);
@@ -135,8 +143,11 @@
 .reservation-uncovered {
   display: flex;
   justify-content: space-between;
-  align-items: start;
+  align-items: center;
   gap: 12px;
+}
+.reservation-uncovered > span {
+  flex: 1;
 }
 .reservation-item-locations .stock-adjust-location {
   min-width: 0;
@@ -202,16 +213,7 @@
   text-overflow: ellipsis;
 }
 
-.reservation-operation-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-}
-.reservation-operation-actions button {
-  min-height: 36px;
-}
-.reservation-operation-form fieldset {
+.reservation-operation-form fieldset:not([hidden]) {
   border: 0;
   padding: 0;
   margin: 0;
@@ -222,4 +224,25 @@
 .reservation-operation-form {
   max-height: 70dvh;
   overflow: auto;
+}
+.reservation-location-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.reservation-location-option > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reservation-location-option > small {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  font-size: inherit;
+  white-space: nowrap;
 }

@@ -17,7 +17,7 @@ it("hides commands from read-only users", () => {
     screen.queryByRole("button", { name: "Уменьшить резерв" }),
   ).not.toBeInTheDocument();
   expect(
-    screen.queryByRole("button", { name: "Снять обеспеченность" }),
+    screen.queryByRole("button", { name: /Операции с резервом/ }),
   ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "Обеспечить" }),
@@ -38,14 +38,22 @@ it("checks each permission independently and keeps operation buttons outside the
       onOperation={onOperation}
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "Снять обеспеченность" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: /^Операции с резервом: А-02$/ }),
+  );
   expect(onOperation).toHaveBeenCalledWith({
     kind: "reduce",
     reservation: row,
     locationId: "1",
   });
   expect(onToggle).not.toHaveBeenCalled();
-  expect(screen.getByRole("button", { name: "Обеспечить" })).toBeVisible();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Операции с резервом: не обеспечено" }),
+  );
+  expect(onOperation).toHaveBeenLastCalledWith({
+    kind: "restore",
+    reservation: row,
+  });
   expect(
     screen.queryByRole("button", { name: "Переместить" }),
   ).not.toBeInTheDocument();
@@ -62,8 +70,8 @@ it("checks each permission independently and keeps operation buttons outside the
     />,
   );
   expect(
-    screen.getByRole("button", { name: "Уменьшить резерв" }),
-  ).toBeVisible();
+    screen.queryByRole("button", { name: "Уменьшить резерв" }),
+  ).not.toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "Переместить" }),
   ).not.toBeInTheDocument();

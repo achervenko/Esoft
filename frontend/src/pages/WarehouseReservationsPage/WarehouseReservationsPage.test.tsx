@@ -14,6 +14,7 @@ import {
 } from "../../shared/api/warehouse-reservations-api";
 import { resolveAppRoute } from "../../layouts/app-router";
 import { canAccessWorkspaceRoute } from "../../lib/role-navigation";
+import { ordersApi, type OrderData } from "../../shared/api/orders-api";
 
 vi.mock("../../shared/api/warehouse-reservations-api", () => ({
   warehouseReservationsApi: { orders: vi.fn() },
@@ -46,10 +47,51 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(warehouseReservationsApi.orders).mockResolvedValue(page);
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
+
+it("opens manual creation and finds an order without existing reservations", async () => {
+  const list = vi
+    .spyOn(ordersApi, "list")
+    .mockImplementation(async (params) => ({
+      items:
+        params.get("search") === "999"
+          ? [
+              {
+                id: "new-order",
+                number: "999",
+                name: "Новый заказ",
+              } as OrderData,
+            ]
+          : [],
+      total: 1,
+      page: 1,
+      limit: 50,
+      statuses: [],
+    }));
+  render([
+    "warehouse.reservations.read",
+    "warehouse.reservations.manage",
+    "orders.read",
+  ]);
+  fireEvent.click(screen.getByRole("button", { name: "Добавить резерв" }));
+  const order = screen.getByRole("combobox", { name: "Заказ" });
+  fireEvent.change(order, { target: { value: "999" } });
+  fireEvent.click(
+    await screen.findByRole("option", { name: "999 — Новый заказ" }),
+  );
+  expect(order).toHaveValue("999 — Новый заказ");
+  expect(list.mock.lastCall?.[0].get("closed")).toBe("false");
+  expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
+});
 
 it("shows orders, position counts and independent order/coverage states", async () => {
   render();
+  expect(
+    screen.queryByRole("button", { name: "Добавить резерв" }),
+  ).not.toBeInTheDocument();
   expect(await screen.findByText("202")).toBeInTheDocument();
   expect(screen.getByText("Монтаж")).toBeInTheDocument();
   expect(screen.queryByText("Закрыт")).not.toBeInTheDocument();

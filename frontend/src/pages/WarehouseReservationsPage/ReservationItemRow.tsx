@@ -1,7 +1,7 @@
 import { hasPermission } from "../../shared/lib/permissions";
 import type { ReservationOperation } from "./reservation-operation";
 import { useId } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Pencil } from "lucide-react";
 import type { Reservation } from "../../shared/api/warehouse-reservations-api";
 import {
   formatStockQuantity,
@@ -71,32 +71,6 @@ export function ReservationItemRow({
       </button>
       {expanded && (
         <div className="reservation-item-locations" id={detailsId}>
-          {onOperation && (manage || (coverage && deficit)) && (
-            <div className="reservation-operation-actions">
-              {manage && (
-                <button
-                  type="button"
-                  className="admin-secondary-button"
-                  onClick={() =>
-                    onOperation({ kind: "decrease", reservation: r })
-                  }
-                >
-                  Уменьшить резерв
-                </button>
-              )}
-              {coverage && deficit && (
-                <button
-                  type="button"
-                  className="admin-secondary-button"
-                  onClick={() =>
-                    onOperation({ kind: "restore", reservation: r })
-                  }
-                >
-                  Обеспечить
-                </button>
-              )}
-            </div>
-          )}
           {places.map((a) => (
             <div
               key={a.id}
@@ -106,26 +80,32 @@ export function ReservationItemRow({
                 name={a.location.name}
                 quantity={a.quantity}
                 unit={r.item.unit}
-              />
-              {onOperation && coverage && (
-                <div className="reservation-operation-actions">
-                  {coverage && (
+                action={
+                  onOperation &&
+                  (coverage || manage) && (
                     <button
                       type="button"
-                      className="admin-secondary-button"
+                      className="admin-secondary-button admin-icon-button reservation-edit-button"
+                      aria-label={`Операции с резервом: ${a.location.name}`}
+                      title="Операции с резервом"
                       onClick={() =>
-                        onOperation({
-                          kind: "reduce",
-                          reservation: r,
-                          locationId: a.location.id,
-                        })
+                        onOperation(
+                          coverage
+                            ? {
+                                kind: "reduce",
+                                reservation: r,
+                                locationId: a.location.id,
+                                ...(manage ? { canDecrease: true } : {}),
+                              }
+                            : { kind: "demand", reservation: r },
+                        )
                       }
                     >
-                      Снять обеспеченность
+                      <Pencil size={16} aria-hidden="true" />
                     </button>
-                  )}
-                </div>
-              )}
+                  )
+                }
+              />
             </div>
           ))}
           {deficit && (
@@ -134,6 +114,26 @@ export function ReservationItemRow({
               <strong>
                 {formatStockQuantity(r.deficitQuantity)} {r.item.unit}
               </strong>
+              {onOperation && (coverage || manage) && (
+                <button
+                  type="button"
+                  className="admin-secondary-button admin-icon-button reservation-edit-button"
+                  aria-label="Операции с резервом: не обеспечено"
+                  onClick={() =>
+                    onOperation(
+                      coverage
+                        ? {
+                            kind: "restore",
+                            reservation: r,
+                            ...(manage ? { canDecrease: true } : {}),
+                          }
+                        : { kind: "demand", reservation: r },
+                    )
+                  }
+                >
+                  <Pencil size={16} aria-hidden="true" />
+                </button>
+              )}
             </div>
           )}
         </div>

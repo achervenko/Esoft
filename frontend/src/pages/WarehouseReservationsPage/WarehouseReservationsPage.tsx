@@ -8,20 +8,30 @@ import { ListLoadMore } from "../../shared/ui/ListLoadMore";
 import { ReservationOrdersTable } from "./ReservationOrdersTable";
 import { useReservationOrders } from "./useReservationOrders";
 import { ReservationOrderModal } from "./ReservationOrderModal";
+import { ReservationOperationForm } from "./ReservationOperationForm";
+import { readPendingReserve } from "./pending-reserve";
 import type { ReservationOrderSummary } from "../../shared/api/warehouse-reservations-api";
 import "../../shared/ui/AdminPage.css";
 import "./WarehouseReservationsPage.css";
 
 export function WarehouseReservationsPage({
   userPermissions,
+  actorId,
 }: {
   userPermissions: readonly string[] | null;
+  actorId?: string | null;
 }) {
   const enabled = hasPermission(userPermissions, "warehouse.reservations.read");
   const page = useReservationOrders(enabled);
   const [selectedOrder, setSelectedOrder] =
     useState<ReservationOrderSummary | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(
+    () => !!readPendingReserve(actorId),
+  );
+  const canCreate =
+    hasPermission(userPermissions, "warehouse.reservations.manage") &&
+    hasPermission(userPermissions, "orders.read");
   const { list } = page;
   if (!enabled)
     return (
@@ -39,6 +49,8 @@ export function WarehouseReservationsPage({
         onChange={page.setSearch}
         label="Поиск по заказу, артикулу и наименованию товара"
         inputProps={{ maxLength: 255 }}
+        onCreate={canCreate ? () => setCreateOpen(true) : undefined}
+        createAriaLabel="Добавить резерв"
         filters={{
           label: "Настройки поиска резервов",
           count: Number(page.coverage !== "ALL"),
@@ -122,6 +134,18 @@ export function WarehouseReservationsPage({
           onChanged={page.refresh}
           order={selectedOrder.order}
           onClose={() => setSelectedOrder(null)}
+        />
+      )}
+      {canCreate && createOpen && (
+        <ReservationOperationForm
+          operation={{ kind: "reserve" }}
+          actorId={actorId}
+          onClose={() => setCreateOpen(false)}
+          onRefresh={page.refresh}
+          onSaved={() => {
+            setCreateOpen(false);
+            page.refresh();
+          }}
         />
       )}
     </section>

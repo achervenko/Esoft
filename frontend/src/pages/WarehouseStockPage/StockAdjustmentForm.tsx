@@ -15,31 +15,13 @@ export function StockAdjustmentForm(props: StockAdjustmentFormProps) {
   const displayedBalance = props.portion
     ? { ...balance, quantity: props.portion.quantity }
     : balance;
-  const {
-    error,
-    locked,
-    pending,
-    saving,
-    uploading,
-    amount,
-    delta,
-    reason,
-    attachment,
-  } = form;
+  const { error, locked, pending, saving, uploading, amount, delta } = form;
   return (
     <form className="admin-form" onSubmit={form.submit}>
       <StockAdjustmentSummary data={data} balance={displayedBalance} />
-      {props.portion?.reservationId && (
-        <Notice>
-          Исправляется фактическое количество в резерве. Потребность заказа
-          сохраняется; недостача станет дефицитом. Добавление возможно в
-          пределах дефицита заказа.
-        </Notice>
-      )}
       <StockAdjustmentFields
         form={form}
         unit={data.item.unit}
-        balanceId={balance.balanceId}
         quantityLabel={
           props.portion
             ? props.portion.reservationId
@@ -86,15 +68,7 @@ export function StockAdjustmentForm(props: StockAdjustmentFormProps) {
         <button
           type="submit"
           className="admin-primary-button"
-          disabled={
-            saving ||
-            uploading ||
-            (!pending &&
-              (amount === null ||
-                delta === 0n ||
-                !reason.trim() ||
-                !attachment))
-          }
+          disabled={saving || uploading || !form.canSubmit}
         >
           {saving
             ? "Сохранение…"

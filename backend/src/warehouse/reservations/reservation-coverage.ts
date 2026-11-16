@@ -18,6 +18,7 @@ export type ReservationCoverageInput = {
   reservationId: string;
   locationId: string;
   quantity: string | Prisma.Decimal;
+  expectedQuantity?: string | Prisma.Decimal;
 };
 
 export async function changeReservationCoverage(
@@ -65,6 +66,15 @@ export async function changeReservationCoverage(
     (allocation) => allocation.locationId === locationId,
   );
   const before = current?.quantity ?? new Prisma.Decimal(0);
+  if (
+    input.expectedQuantity !== undefined &&
+    !before.eq(input.expectedQuantity)
+  )
+    stockError(
+      409,
+      'WAREHOUSE_RESERVATION_STALE_COVERAGE',
+      'Обеспеченность изменилась. Обновите резерв.',
+    );
   const restoring = operation === 'RESTORE_COVERAGE';
 
   if (restoring) {

@@ -17,6 +17,7 @@ export type DecreaseReservationInput = {
   reservationId: string;
   allocations: { locationId: string; quantity: string | Prisma.Decimal }[];
   deficitQuantity: string | Prisma.Decimal;
+  expectedQuantity?: string | Prisma.Decimal;
 };
 
 export async function decreaseReservation(
@@ -72,6 +73,15 @@ export async function decreaseReservation(
     where: { id },
     include: { allocations: { orderBy: { locationId: 'asc' } } },
   });
+  if (
+    input.expectedQuantity !== undefined &&
+    !current.quantity.eq(input.expectedQuantity)
+  )
+    stockError(
+      409,
+      'WAREHOUSE_RESERVATION_STALE_DEMAND',
+      'Потребность изменилась. Обновите резерв.',
+    );
   const allocated = current.allocations.reduce(
     (sum, row) => sum.plus(row.quantity),
     new Prisma.Decimal(0),

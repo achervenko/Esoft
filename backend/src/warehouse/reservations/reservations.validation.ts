@@ -49,17 +49,48 @@ export function parseReserve(value: unknown) {
     'locationId',
     'quantity',
     'comment',
+    'coveredQuantity',
+    'requestKey',
   ]);
+  const demand = quantity(input.quantity);
+  const covered =
+    input.coveredQuantity === undefined
+      ? input.locationId === undefined
+        ? quantity('0', true)
+        : demand
+      : quantity(input.coveredQuantity, true);
+  if (
+    covered.gt(demand) ||
+    covered.isZero() !== (input.locationId === undefined)
+  )
+    invalid(
+      'Укажите место только для обеспеченной части, в пределах потребности.',
+    );
   return {
     orderId: parseReservationUuid(input.orderId, 'orderId'),
     itemId: stockId(input.itemId, 'itemId').toString(),
-    ...placement(input),
+    quantity: demand,
+    ...(covered.isZero()
+      ? {}
+      : {
+          locationId: stockId(input.locationId, 'locationId').toString(),
+          coveredQuantity: covered,
+        }),
+    requestKey:
+      input.requestKey === undefined
+        ? undefined
+        : parseReservationUuid(input.requestKey, 'requestKey'),
     comment: comment(input.comment, false),
   };
 }
 
 export function parseDecrease(value: unknown) {
-  const input = fields(value, ['allocations', 'deficitQuantity', 'comment']);
+  const input = fields(value, [
+    'allocations',
+    'deficitQuantity',
+    'comment',
+    'expectedQuantity',
+  ]);
   if (!Array.isArray(input.allocations) || input.allocations.length > 1000)
     invalid('Ожидается список из 0–1000 размещений.');
   return {
@@ -67,13 +98,49 @@ export function parseDecrease(value: unknown) {
       placement(fields(row, ['locationId', 'quantity'])),
     ),
     deficitQuantity: quantity(input.deficitQuantity, true),
+    ...(input.expectedQuantity === undefined
+      ? {}
+      : { expectedQuantity: quantity(input.expectedQuantity, true) }),
     comment: comment(input.comment, true),
   };
 }
 
 export function parseCoverage(value: unknown) {
-  const input = fields(value, ['locationId', 'quantity', 'comment']);
-  return { ...placement(input), comment: comment(input.comment, true) };
+  const input = fields(value, [
+    'locationId',
+    'quantity',
+    'comment',
+    'expectedQuantity',
+  ]);
+  return {
+    ...placement(input),
+    ...(input.expectedQuantity === undefined
+      ? {}
+      : { expectedQuantity: quantity(input.expectedQuantity, true) }),
+    comment: comment(input.comment, true),
+  };
+}
+
+export function parseDemandIncrease(value: unknown) {
+  const input = fields(value, [
+    'expectedQuantity',
+    'quantity',
+    'allocation',
+    'comment',
+  ]);
+  const expectedQuantity = quantity(input.expectedQuantity, true);
+  const target = quantity(input.quantity);
+  if (!target.gt(expectedQuantity))
+    invalid('Новая потребность должна быть больше текущей.');
+  return {
+    expectedQuantity,
+    target,
+    allocation:
+      input.allocation === undefined
+        ? undefined
+        : placement(fields(input.allocation, ['locationId', 'quantity'])),
+    comment: comment(input.comment, true),
+  };
 }
 
 function pagination(input: Record<string, unknown>) {

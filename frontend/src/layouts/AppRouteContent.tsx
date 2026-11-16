@@ -72,11 +72,17 @@ export function AppRouteContent({
       ) : null}
       {appRoute.kind === "warehouse-reservations" ? (
         <WarehouseReservationsPage
+          key={user?.id}
           userPermissions={user?.permissions ?? null}
+          actorId={user?.id ?? null}
         />
       ) : null}
       {appRoute.kind === "warehouse-stock" ? (
-        <WarehouseStockPage userPermissions={user?.permissions ?? null} />
+        <WarehouseStockPage
+          key={user?.id}
+          userPermissions={user?.permissions ?? null}
+          actorId={user?.id ?? null}
+        />
       ) : null}
       {appRoute.kind === "warehouse-receipts" ? (
         <WarehouseReceiptsPage

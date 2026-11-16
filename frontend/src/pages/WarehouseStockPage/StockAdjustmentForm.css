@@ -56,10 +56,6 @@
   text-align: right;
 }
 
-.stock-adjust-file-hint {
-  padding-inline-start: var(--optical-inset-modal);
-  color: var(--color-text-muted);
-}
 .stock-adjust-attachment {
   display: grid;
   align-items: center;

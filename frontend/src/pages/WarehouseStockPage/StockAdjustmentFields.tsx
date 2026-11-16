@@ -1,4 +1,5 @@
 import { FileText, X } from "lucide-react";
+import { useId } from "react";
 import { FileDropzone } from "../../shared/ui/FileDropzone";
 import {
   AdminTextField,
@@ -10,14 +11,13 @@ import type { useStockAdjustmentForm } from "./useStockAdjustmentForm";
 export function StockAdjustmentFields({
   form,
   unit,
-  balanceId,
   quantityLabel = "Фактически на месте",
 }: {
   form: ReturnType<typeof useStockAdjustmentForm>;
   unit: string;
-  balanceId: string;
   quantityLabel?: string;
 }) {
+  const documentLabelId = useId();
   const {
     locked,
     quantity,
@@ -34,7 +34,7 @@ export function StockAdjustmentFields({
       {" "}
       <fieldset className="stock-adjust-fields" disabled={locked}>
         <AdminTextField
-          label={`${quantityLabel}, ${unit}`}
+          label={unit ? `${quantityLabel}, ${unit}` : quantityLabel}
           value={quantity}
           onChange={setQuantity}
           inputMode="decimal"
@@ -55,10 +55,10 @@ export function StockAdjustmentFields({
         <div
           className="form-field admin-control-field"
           role="group"
-          aria-labelledby={`adjustment-file-${balanceId}`}
+          aria-labelledby={documentLabelId}
         >
           <span className="form-field-label">
-            <span id={`adjustment-file-${balanceId}`}>Документ</span>
+            <span id={documentLabelId}>Документ</span>
             <RequiredMark />
           </span>
           <FileDropzone
@@ -70,9 +70,6 @@ export function StockAdjustmentFields({
             imageAccept="image/jpeg,image/png,image/webp"
             disabled={locked}
           />
-          <small className="stock-adjust-file-hint">
-            PDF, JPEG, PNG или WebP
-          </small>
           {attachment && (
             <div className="stock-adjust-attachment">
               <FileText size={20} aria-hidden="true" />

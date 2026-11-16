@@ -10,6 +10,7 @@ import {
 } from "../../shared/api/api-error";
 import { quantityMillis, transferRequestKey } from "./stock-page.utils";
 export type StockAdjustmentFormProps = {
+  actorId?: string | null;
   data: StockDistribution;
   balance: StockDistribution["locations"][number];
   portion?: { reservationId?: string; quantity: string };
@@ -17,19 +18,40 @@ export type StockAdjustmentFormProps = {
   onSaved: () => void;
   onSavingChange: (saving: boolean) => void;
 };
-export function useStockAdjustmentForm({
-  data,
-  balance,
-  portion,
-  onSaved,
-  onSavingChange,
-}: StockAdjustmentFormProps) {
-  const storageKey = `stock-adjustment:${balance.balanceId}${portion ? `:${portion.reservationId ?? "free"}` : ""}`;
+type SurplusFormProps = Pick<
+  StockAdjustmentFormProps,
+  "actorId" | "onSaved"
+> & {
+  itemId: string;
+  locationId: string;
+};
+export function useStockAdjustmentForm(
+  props: StockAdjustmentFormProps | SurplusFormProps,
+) {
+  const actual = "balance" in props ? props : null;
+  const portion = actual?.portion;
+  const itemId = "itemId" in props ? props.itemId : props.data.item.id;
+  const locationId =
+    "locationId" in props ? props.locationId : props.balance.location.id;
+  const balanceQuantity = actual?.balance.quantity ?? "0";
+  const target = actual
+    ? `${actual.balance.balanceId}${portion ? `:${portion.reservationId ?? "free"}` : ""}`
+    : "surplus";
+  const storageKey = props.actorId
+    ? `stock-adjustment:${encodeURIComponent(props.actorId)}:${target}`
+    : null;
   const [pending, setPending] = useState<StockAdjustmentInput | null>(() => {
     try {
-      const saved = JSON.parse(sessionStorage.getItem(storageKey) ?? "null");
-      return saved?.itemId === data.item.id &&
-        saved?.locationId === balance.location.id
+      if (!storageKey) return null;
+      const saved = JSON.parse(
+        sessionStorage.getItem(storageKey) ?? "null",
+      ) as StockAdjustmentInput | null;
+      if (!saved) return null;
+      if (!actual)
+        return "type" in saved && saved.type === "SURPLUS" ? saved : null;
+      return "actualQuantity" in saved &&
+        saved.itemId === itemId &&
+        saved.locationId === locationId
         ? saved
         : null;
     } catch {
@@ -37,10 +59,11 @@ export function useStockAdjustmentForm({
     }
   });
   const [quantity, setQuantity] = useState(
-    pending?.portion?.actualQuantity ??
-      pending?.actualQuantity ??
-      portion?.quantity ??
-      balance.quantity,
+    pending
+      ? "type" in pending
+        ? pending.quantity
+        : (pending.portion?.actualQuantity ?? pending.actualQuantity)
+      : (portion?.quantity ?? (actual ? balanceQuantity : "")),
   );
   const [reason, setReason] = useState(pending?.reason ?? "");
   const [attachment, setAttachment] = useState<{
@@ -60,56 +83,55 @@ export function useStockAdjustmentForm({
   const busy = useRef(false);
   const normalized = quantity.trim().replace(",", ".");
   const amount = quantityMillis(normalized);
-  const before = quantityMillis(portion?.quantity ?? balance.quantity)!;
+  const before = quantityMillis(portion?.quantity ?? balanceQuantity)!;
   const delta = amount === null ? 0n : amount - before;
   const locked = saving || uploading || !!pending;
+  const onSavingChange = actual?.onSavingChange;
   useEffect(() => {
-    onSavingChange(locked);
+    onSavingChange?.(locked);
   }, [locked, onSavingChange]);
   const clearPending = () => {
-    sessionStorage.removeItem(storageKey);
+    if (storageKey) sessionStorage.removeItem(storageKey);
     setPending(null);
   };
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (
-      busy.current ||
-      uploading ||
-      (!pending &&
-        (amount === null || delta === 0n || !reason.trim() || !attachment))
-    )
-      return;
-    const input = pending ?? {
+    if (busy.current || uploading || !canSubmit) return;
+    const input: StockAdjustmentInput = pending ?? {
       requestKey: transferRequestKey(),
-      itemId: data.item.id,
-      locationId: balance.location.id,
-      expectedQuantity: balance.quantity,
-      actualQuantity:
-        portion && amount !== null
-          ? (() => {
-              const physical = quantityMillis(balance.quantity)! + delta;
-              return `${physical / 1000n}.${(physical % 1000n).toString().padStart(3, "0")}`.replace(
-                /\.?0+$/,
-                "",
-              );
-            })()
-          : normalized,
-      ...(portion
+      itemId,
+      locationId,
+      ...(actual
         ? {
-            portion: {
-              ...(portion.reservationId
-                ? { reservationId: portion.reservationId }
-                : {}),
-              expectedQuantity: portion.quantity,
-              actualQuantity: normalized,
-            },
+            expectedQuantity: balanceQuantity,
+            actualQuantity:
+              portion && amount !== null
+                ? (() => {
+                    const physical = quantityMillis(balanceQuantity)! + delta;
+                    return `${physical / 1000n}.${(physical % 1000n).toString().padStart(3, "0")}`.replace(
+                      /\.?0+$/,
+                      "",
+                    );
+                  })()
+                : normalized,
+            ...(portion
+              ? {
+                  portion: {
+                    ...(portion.reservationId
+                      ? { reservationId: portion.reservationId }
+                      : {}),
+                    expectedQuantity: portion.quantity,
+                    actualQuantity: normalized,
+                  },
+                }
+              : {}),
           }
-        : {}),
+        : { type: "SURPLUS", quantity: normalized }),
       reason: reason.trim(),
       attachments: attachment ? [attachment.uploadId] : [],
     };
     try {
-      sessionStorage.setItem(storageKey, JSON.stringify(input));
+      if (storageKey) sessionStorage.setItem(storageKey, JSON.stringify(input));
     } catch {
       setError(
         "Не удалось сохранить запрос для безопасного повтора. Проверьте доступность хранилища браузера.",
@@ -123,9 +145,18 @@ export function useStockAdjustmentForm({
     try {
       await warehouseStockApi.adjust(input);
       clearPending();
-      onSavingChange(false);
-      onSaved();
+      onSavingChange?.(false);
+      props.onSaved();
     } catch (e) {
+      if (
+        e instanceof ApiRequestError &&
+        e.code === "STORAGE_UPLOAD_UNAVAILABLE"
+      ) {
+        clearPending();
+        setAttachment(null);
+        setError("Документ больше недоступен. Прикрепите его заново.");
+        return;
+      }
       if (
         e instanceof ApiRequestError &&
         e.status >= 400 &&
@@ -143,6 +174,8 @@ export function useStockAdjustmentForm({
     }
   };
   const uploadDocument = async (file: File) => {
+    if (busy.current || locked) return;
+    busy.current = true;
     setUploading(true);
     setError(null);
     try {
@@ -150,9 +183,18 @@ export function useStockAdjustmentForm({
     } catch (e) {
       setError(getApiErrorMessage(e));
     } finally {
+      busy.current = false;
       setUploading(false);
     }
   };
+  const canSubmit =
+    !!pending ||
+    (!!itemId &&
+      !!locationId &&
+      amount !== null &&
+      delta !== 0n &&
+      !!reason.trim() &&
+      !!attachment);
   return {
     quantity,
     setQuantity,
@@ -167,6 +209,7 @@ export function useStockAdjustmentForm({
     amount,
     delta,
     locked,
+    canSubmit,
     submit,
     uploadDocument,
   };

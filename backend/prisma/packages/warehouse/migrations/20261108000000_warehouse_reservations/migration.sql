@@ -22,3 +22,12 @@ ALTER TABLE warehouse_receipt_lines
     ADD COLUMN order_id UUID REFERENCES customer_orders(id) ON DELETE RESTRICT ON UPDATE CASCADE;
 CREATE INDEX idx_warehouse_receipt_lines_order ON warehouse_receipt_lines(order_id);
 ALTER TABLE warehouse_receipt_placements ADD COLUMN reservation_snapshot JSONB;
+
+CREATE TABLE "warehouse_reservation_requests" (
+  "actor_user_id" TEXT NOT NULL,
+  "request_key" UUID NOT NULL,
+  "request_hash" VARCHAR(64) NOT NULL,
+  "response" JSONB NOT NULL,
+  CONSTRAINT "warehouse_reservation_requests_pkey" PRIMARY KEY ("actor_user_id", "request_key"),
+  CONSTRAINT "fk_warehouse_reservation_requests_actor" FOREIGN KEY ("actor_user_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);

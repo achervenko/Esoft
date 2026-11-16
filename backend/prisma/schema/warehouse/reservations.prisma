@@ -1,3 +1,14 @@
+model WarehouseReservationRequest {
+  actorUserId String @map("actor_user_id")
+  requestKey String @map("request_key") @db.Uuid
+  requestHash String @map("request_hash") @db.VarChar(64)
+  response Json @db.JsonB
+  actor User @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "fk_warehouse_reservation_requests_actor")
+
+  @@id([actorUserId, requestKey])
+  @@map("warehouse_reservation_requests")
+}
+
 model WarehouseReservation {
   id          String                           @id @db.Uuid
   orderId     String                           @map("order_id") @db.Uuid

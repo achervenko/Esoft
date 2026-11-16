@@ -6,16 +6,24 @@ export function useReservationPlaces(itemId: string, enabled: boolean) {
   const [state, setState] = useState<{
     key: string;
     locations: StorageLocation[];
+    free: Record<string, string>;
     error: string | null;
     loading: boolean;
-  }>({ key: "", locations: [], error: null, loading: false });
+  }>({ key: "", locations: [], free: {}, error: null, loading: false });
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!enabled || !itemId) return;
     const controller = new AbortController();
-    setState({ key: itemId, locations: [], error: null, loading: true });
+    setState({
+      key: itemId,
+      locations: [],
+      free: {},
+      error: null,
+      loading: true,
+    });
     void (async () => {
       const locations: StorageLocation[] = [];
+      const free: Record<string, string> = {};
       for (let page = 1; ; page++) {
         const result = await warehouseStockApi.balances(
           new URLSearchParams({
@@ -31,6 +39,8 @@ export function useReservationPlaces(itemId: string, enabled: boolean) {
           controller.signal,
         );
         if (controller.signal.aborted) return;
+        for (const row of result.items)
+          free[row.location.id] = row.freeQuantity;
         locations.push(
           ...result.items
             .map((row) => row.location)
@@ -39,12 +49,13 @@ export function useReservationPlaces(itemId: string, enabled: boolean) {
         if (page * result.limit >= result.total || !result.items.length) break;
       }
       if (!controller.signal.aborted)
-        setState({ key: itemId, locations, error: null, loading: false });
+        setState({ key: itemId, locations, free, error: null, loading: false });
     })().catch((error) => {
       if (!controller.signal.aborted)
         setState({
           key: itemId,
           locations: [],
+          free: {},
           error: getApiErrorMessage(error),
           loading: false,
         });
@@ -54,6 +65,7 @@ export function useReservationPlaces(itemId: string, enabled: boolean) {
   const current = enabled && itemId && state.key === itemId;
   return {
     locations: current ? state.locations : [],
+    free: current ? state.free : {},
     loading: !!(enabled && itemId && (!current || state.loading)),
     error: current ? state.error : null,
     retry: () => setAttempt((v) => v + 1),

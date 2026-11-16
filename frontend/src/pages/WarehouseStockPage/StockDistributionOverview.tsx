@@ -32,7 +32,7 @@ export function StockDistributionOverview({
   onConsolidate: () => void;
 }) {
   const hasLocations = !!data?.locations.some(
-    (b) => (quantityMillis(b.quantity) ?? 0n) > 0n,
+    (b) => b.reservationMismatch || (quantityMillis(b.quantity) ?? 0n) > 0n,
   );
   const current = data ?? {
     item: position.item,
@@ -47,6 +47,13 @@ export function StockDistributionOverview({
         quantityLabel="Общий остаток"
       />
       {loading && <p role="status">Обновление распределения…</p>}
+      {data?.reservationMismatch && (
+        <Notice tone="error">
+          В некоторых местах физический остаток меньше обеспеченного резерва.
+          Перемещение из этих мест и «Переместить всё» недоступны до исправления
+          расхождения.
+        </Notice>
+      )}
       {error && (
         <Notice tone="error">
           {error}
@@ -81,6 +88,7 @@ export function StockDistributionOverview({
           disabled={
             loading ||
             !!error ||
+            data.reservationMismatch ||
             !data.item.isActive ||
             !data.warehouse.isActive ||
             (quantityMillis(data.totalQuantity) ?? 0n) <= 0n

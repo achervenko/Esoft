@@ -1,4 +1,3 @@
-import { hasPermission } from "../../shared/lib/permissions";
 import { ReservationOperationForm } from "./ReservationOperationForm";
 import type { ReservationOperation } from "./reservation-operation";
 import { useState } from "react";
@@ -25,7 +24,6 @@ export function ReservationOrderModal({
 }) {
   const query = useReservationOrder(order.id);
   const [operation, setOperation] = useState<ReservationOperation | null>(null);
-  const canManage = hasPermission(permissions, "warehouse.reservations.manage");
   const refresh = () => {
     query.refresh();
     onChanged?.();
@@ -57,16 +55,6 @@ export function ReservationOrderModal({
             </div>
             <OrderStatus status={summary?.order.status ?? order.status} />
           </div>
-          {canManage && (
-            <button
-              type="button"
-              className="admin-secondary-button"
-
-              onClick={() => setOperation({ kind: "reserve" })}
-            >
-              Добавить резерв
-            </button>
-          )}
           <SearchToolbar
             value={query.search}
             onChange={query.setSearch}

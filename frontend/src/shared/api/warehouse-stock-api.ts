@@ -69,19 +69,23 @@ export type StockConsolidationInput = {
   >[];
 };
 export type StockAdjustmentInput = {
-  portion?: {
-    reservationId?: string;
-    expectedQuantity: string;
-    actualQuantity: string;
-  };
   requestKey: string;
   itemId: string;
   locationId: string;
-  actualQuantity: string;
-  expectedQuantity: string;
   reason: string;
   attachments: string[];
-};
+} & (
+  | {
+      portion?: {
+        reservationId?: string;
+        expectedQuantity: string;
+        actualQuantity: string;
+      };
+      actualQuantity: string;
+      expectedQuantity: string;
+    }
+  | { type: "SURPLUS"; quantity: string }
+);
 export const warehouseStockApi = {
   balances: (query: URLSearchParams, signal?: AbortSignal) =>
     request<{

@@ -12,12 +12,17 @@ import {
   type ReservationContext,
 } from './reservation-common';
 import { randomUUID } from 'node:crypto';
-import { MAX_STOCK_QUANTITY, stockQuantity } from '../stock/stock.validation';
+import {
+  MAX_STOCK_QUANTITY,
+  stockId,
+  stockQuantity,
+} from '../stock/stock.validation';
 
 export type ReserveInput = {
   orderId: string;
   itemId: string;
-  locationId: string;
+  locationId?: string;
+  coveredQuantity?: string | Prisma.Decimal;
   quantity: string | Prisma.Decimal;
 };
 
@@ -29,6 +34,21 @@ export async function reserveStock(
   const { tx, actorUserId, comment, receipt } = context;
   assertStockTransaction(tx);
   const quantity = stockQuantity(input.quantity);
+  const covered =
+    input.coveredQuantity === undefined
+      ? input.locationId
+        ? quantity
+        : new Prisma.Decimal(0)
+      : stockQuantity(input.coveredQuantity, true);
+  if (
+    covered.gt(quantity) ||
+    covered.isZero() !== (input.locationId === undefined)
+  )
+    stockError(
+      400,
+      'WAREHOUSE_RESERVATION_INVALID',
+      'Некорректная обеспеченная часть резерва.',
+    );
   if (typeof input.orderId !== 'string' || !reservationUuid.test(input.orderId))
     stockError(
       400,
@@ -48,30 +68,48 @@ export async function reserveStock(
       'Заказ не найден.',
     );
 
-  const {
-    itemId,
-    locationIds: [locationId],
-    balances,
-  } = await lockStockBalances(tx, input.itemId, [input.locationId]);
-  const physical = balances.get(locationId)?.quantity ?? new Prisma.Decimal(0);
-  const allocated = await tx.warehouseReservationAllocation.aggregate({
-    where: { locationId, reservation: { itemId } },
-    _sum: { quantity: true },
-  });
-  const free = Prisma.Decimal.max(
-    0,
-    physical.minus(allocated._sum.quantity ?? 0),
-  );
-  if (quantity.gt(free))
-    stockError(
-      409,
-      'WAREHOUSE_RESERVATION_INSUFFICIENT',
-      'Недостаточно свободного остатка.',
-      {
-        available: free.toString(),
-        requested: quantity.toString(),
-      },
+  const itemId = stockId(input.itemId, 'itemId');
+  let locationId: bigint | undefined;
+  if (input.locationId !== undefined) {
+    const { locationIds, balances } = await lockStockBalances(
+      tx,
+      input.itemId,
+      [input.locationId],
     );
+    locationId = locationIds[0];
+    const physical =
+      balances.get(locationId)?.quantity ?? new Prisma.Decimal(0);
+    const allocated = await tx.warehouseReservationAllocation.aggregate({
+      where: { locationId, reservation: { itemId } },
+      _sum: { quantity: true },
+    });
+    const free = Prisma.Decimal.max(
+      0,
+      physical.minus(allocated._sum.quantity ?? 0),
+    );
+    if (covered.gt(free))
+      stockError(
+        409,
+        'WAREHOUSE_RESERVATION_INSUFFICIENT',
+        'Недостаточно свободного остатка.',
+        {
+          available: free.toString(),
+          requested: covered.toString(),
+        },
+      );
+  } else {
+    const [item] = await tx.$queryRaw<
+      { id: bigint; is_active: boolean }[]
+    >`SELECT id, is_active FROM warehouse_items WHERE id = ${itemId} FOR SHARE`;
+    if (!item)
+      stockError(404, 'WAREHOUSE_ITEM_NOT_FOUND', 'Номенклатура не найдена.');
+    if (!item.is_active)
+      stockError(
+        409,
+        'WAREHOUSE_RESERVATION_INACTIVE_REFERENCE',
+        'Номенклатура неактивна.',
+      );
+  }
 
   // The same order/item can be reserved concurrently at different locations.
   await lockReservation(tx, orderId, itemId);
@@ -95,12 +133,17 @@ export async function reserveStock(
     : await tx.warehouseReservation.create({
         data: { id: randomUUID(), ...orderItem, quantity: after },
       });
-  const placement = { reservationId: reservation.id, locationId };
-  const allocation = await tx.warehouseReservationAllocation.upsert({
-    where: { reservationId_locationId: placement },
-    create: { id: randomUUID(), ...placement, quantity },
-    update: { quantity: { increment: quantity } },
-  });
+  const placement =
+    locationId === undefined
+      ? null
+      : { reservationId: reservation.id, locationId };
+  const allocation =
+    placement &&
+    (await tx.warehouseReservationAllocation.upsert({
+      where: { reservationId_locationId: placement },
+      create: { id: randomUUID(), ...placement, quantity: covered },
+      update: { quantity: { increment: covered } },
+    }));
   await audit.writeFieldChanges({
     tx,
     userId: actorUserId,
@@ -115,12 +158,16 @@ export async function reserveStock(
         newValue: {
           orderId,
           itemId: itemId.toString(),
-          locationId: locationId.toString(),
+          ...(allocation
+            ? {
+                locationId: allocation.locationId.toString(),
+                allocationBefore: allocation.quantity.minus(covered).toString(),
+                allocationAfter: allocation.quantity.toString(),
+              }
+            : {}),
           before: before.toString(),
           after: after.toString(),
           delta: quantity.toString(),
-          allocationBefore: allocation.quantity.minus(quantity).toString(),
-          allocationAfter: allocation.quantity.toString(),
           ...(comment ? { comment } : {}),
           ...(receipt ? { receipt } : {}),
         },
