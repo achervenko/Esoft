@@ -175,7 +175,7 @@ model WarehouseStockAdjustment {
   createdBy       User                                 @relation(fields: [createdByUserId], references: [id], onDelete: Restrict, map: "fk_warehouse_stock_adjustments_user")
   createdAt       DateTime                             @default(now()) @map("created_at") @db.Timestamptz(6)
   resolvedReceiptId BigInt? @map("resolved_receipt_id")
-  resolvedReceipt WarehouseReceipt? @relation(fields:[resolvedReceiptId],references:[id],onDelete:Restrict)
+  resolvedReceipt WarehouseReceipt? @relation(fields:[resolvedReceiptId],references:[id],onDelete:Restrict,onUpdate:NoAction)
   attachments     WarehouseStockAdjustmentAttachment[]
 
   @@unique([createdByUserId, requestKey], map: "uq_warehouse_stock_adjustments_request")
@@ -192,6 +192,32 @@ model WarehouseStockAdjustmentAttachment {
 
   @@id([adjustmentId, fileId], map: "pk_warehouse_stock_adjustment_attachments")
   @@map("warehouse_stock_adjustment_attachments")
+}
+
+model WarehouseInvoiceSnapshot {
+ sourceId String @map("source_id") @db.Uuid
+ source IntegrationSource @relation(fields: [sourceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+ invoiceId String @map("invoice_id") @db.Uuid
+ observedAt DateTime @map("observed_at") @db.Timestamptz(6)
+ receivedAt DateTime @map("received_at") @db.Timestamptz(6)
+ payloadHash String @map("payload_hash") @db.VarChar(64)
+ payload Json @db.JsonB
+ version BigInt
+ result Json? @db.JsonB
+ versions WarehouseInvoiceSnapshotVersion[]
+ @@id([invoiceId])
+ @@map("warehouse_invoice_snapshots")
+}
+
+model WarehouseInvoiceSnapshotVersion {
+ invoiceId String @map("invoice_id") @db.Uuid
+ version BigInt
+ detectedAt DateTime @map("detected_at") @db.Timestamptz(6)
+ payloadHash String @map("payload_hash") @db.VarChar(64)
+ payload Json @db.JsonB
+ snapshot WarehouseInvoiceSnapshot @relation(fields: [invoiceId], references: [invoiceId], onDelete: Restrict, onUpdate: Restrict, map: "fk_invoice_snapshot_versions_snapshot")
+ @@id([invoiceId, version])
+ @@map("warehouse_invoice_snapshot_versions")
 }
 
 model WarehouseReceipt {
@@ -215,7 +241,7 @@ model WarehouseReceipt {
  createdByUserId String @map("created_by_user_id")
  createdBy User @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
- updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+ updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
  receivedAt DateTime @default(now()) @map("received_at") @db.Timestamptz(6)
  placedAt DateTime? @map("placed_at") @db.Timestamptz(6)
  lines WarehouseReceiptLine[]
@@ -344,4 +370,48 @@ model WarehouseStockAdjustmentNoop {
  actor User @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
  @@id([actorUserId, requestKey])
  @@map("warehouse_stock_adjustment_noops")
+}
+model WarehouseInvoiceSyncState {
+  sourceId String @map("source_id") @db.Uuid
+  flowCode String @map("flow_code") @db.VarChar(100)
+  flow IntegrationFlow @relation(fields: [sourceId, flowCode], references: [sourceId, flowCode], onDelete: Restrict, map: "warehouse_invoice_sync_state_flow_fkey")
+  syncedThrough DateTime? @map("synced_through") @db.Timestamptz(6)
+  periodFrom DateTime @map("period_from") @db.Timestamptz(6)
+  periodTo DateTime @map("period_to") @db.Timestamptz(6)
+  nextAttemptAt DateTime? @map("next_attempt_at") @db.Timestamptz(6)
+  consecutiveFailures Int @default(0) @map("consecutive_failures")
+  attempt Int
+  lastOutcome String @map("last_outcome") @db.VarChar(30)
+  lastErrorCode String? @map("last_error_code") @db.VarChar(100)
+  lastStartedAt DateTime @map("last_started_at") @db.Timestamptz(6)
+  lastFinishedAt DateTime? @map("last_finished_at") @db.Timestamptz(6)
+  lastSuccessAt DateTime? @map("last_success_at") @db.Timestamptz(6)
+  configurationHash String @map("configuration_hash") @db.VarChar(64)
+  ownerToken String? @map("owner_token") @db.Uuid
+
+  @@id([sourceId, flowCode])
+  @@map("warehouse_invoice_sync_state")
+}
+
+model WarehouseInvoiceSyncRun {
+  id                BigInt          @id @default(autoincrement())
+  sourceId          String          @map("source_id") @db.Uuid
+  flowCode          String          @map("flow_code") @db.VarChar(100)
+  flow              IntegrationFlow @relation(fields: [sourceId, flowCode], references: [sourceId, flowCode], onDelete: Restrict, map: "warehouse_invoice_sync_runs_flow_fkey")
+  periodFrom        DateTime        @map("period_from") @db.Timestamptz(6)
+  periodTo          DateTime        @map("period_to") @db.Timestamptz(6)
+  startedAt         DateTime        @map("started_at") @db.Timestamptz(6)
+  finishedAt        DateTime?       @map("finished_at") @db.Timestamptz(6)
+  outcome           String          @db.VarChar(30)
+  attempt           Int
+  errorCode         String?         @map("error_code") @db.VarChar(100)
+  configurationHash String         @map("configuration_hash") @db.VarChar(64)
+  received          Int?
+  processed         Int?
+  skipped           Int?
+  errors            Int?
+
+  @@index([sourceId, flowCode, id], map: "idx_warehouse_invoice_sync_runs_flow")
+  @@index([finishedAt], map: "idx_warehouse_invoice_sync_runs_finished")
+  @@map("warehouse_invoice_sync_runs")
 }

@@ -10,6 +10,11 @@ import { lockWarehouse } from '../storage-structure/storage-structure.policy';
 import { parsePlacement, receiptHash } from './receipts.validation';
 import { placementDto } from './receipts.mapper';
 import {
+  assertInvoiceReceiptAvailable,
+  invoicePlacementOrder,
+  lockInvoiceBeforeReceipt,
+} from './receipt-invoice-policy';
+import {
   lockReceipt,
   placedQuantity,
   receiptActor,
@@ -64,6 +69,7 @@ export class WarehouseReceiptPlacementsService {
             );
           return placementDto(previous);
         }
+        const operationId = await lockInvoiceBeforeReceipt(tx, receiptId);
         await lockReceipt(tx, receiptValue);
         const receipt = await tx.warehouseReceipt.findUniqueOrThrow({
           where: { id: receiptId },
@@ -73,6 +79,7 @@ export class WarehouseReceiptPlacementsService {
             'WAREHOUSE_RECEIPT_BLOCKED',
             'Документ отменён или имеет конфликт.',
           );
+        await assertInvoiceReceiptAvailable(tx, receipt, operationId);
         const line = await tx.warehouseReceiptLine.findFirst({
           where: { id: lineId, receiptId },
         });
@@ -134,7 +141,7 @@ export class WarehouseReceiptPlacementsService {
           {
             receiptId: String(receiptId),
             receiptLineId: String(lineId),
-            orderId: receipt.source === 'MANUAL' ? line.orderId : null,
+            orderId: await invoicePlacementOrder(tx, receipt, line),
             itemId: String(item.id),
             locationId: String(location.id),
             quantity: input.quantity,

@@ -5,6 +5,11 @@ import { assertTransactionPermission } from '../../auth/transaction-permission';
 import { stockId } from '../stock/stock.validation';
 import { record, text } from './receipts.validation';
 import { receiptConflict } from './receipts.policy';
+import {
+  findReceiptWarehouseLinks,
+  lockReceiptWarehouseLink,
+  receiptWarehouseExternalId,
+} from './receipt-warehouse-links';
 
 @Injectable()
 export class ReceiptIntegrationWarehousesService {
@@ -24,7 +29,12 @@ export class ReceiptIntegrationWarehousesService {
       )
         throw new NotFoundException();
       const links = await tx.warehouseExternalWarehouse.findMany({
-        where: { sourceSystem: code },
+        where: {
+          OR: [
+            { sourceSystem: code },
+            { externalId: { in: await this.uuidLinks(tx) } },
+          ],
+        },
         include: { warehouse: true },
         orderBy: { externalId: 'asc' },
       });
@@ -48,9 +58,16 @@ export class ReceiptIntegrationWarehousesService {
     });
   }
 
+  private async uuidLinks(tx: import('./receipts.policy').Tx) {
+    const rows = await tx.$queryRaw<{ externalId: string }[]>`
+      SELECT external_id AS "externalId" FROM warehouse_external_warehouses
+      WHERE external_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'`;
+    return rows.map(({ externalId }) => externalId);
+  }
+
   save(code: string, value: unknown, actor: string) {
     const b = record(value, ['externalId', 'warehouseId']);
-    const externalId = text(b.externalId),
+    const externalId = receiptWarehouseExternalId(text(b.externalId)),
       warehouseId = stockId(b.warehouseId, 'warehouseId');
     return this.prisma.$transaction(async (tx) => {
       await assertTransactionPermission(tx, actor, 'integrations.manage');
@@ -62,12 +79,10 @@ export class ReceiptIntegrationWarehousesService {
         }))
       )
         throw new NotFoundException();
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:warehouse-link', code, externalId])},0))`;
+      await lockReceiptWarehouseLink(tx, code, externalId);
       const identity = { sourceSystem: code, externalId };
-      const previous = await tx.warehouseExternalWarehouse.findUnique({
-        where: { sourceSystem_externalId: identity },
-      });
-      if (previous && previous.warehouseId !== warehouseId)
+      const previous = await findReceiptWarehouseLinks(tx, code, externalId);
+      if (previous.some((link) => link.warehouseId !== warehouseId))
         receiptConflict(
           'WAREHOUSE_RECEIPT_MAPPING_CONFLICT',
           'Склад 1С уже связан с другим складом ESoft.',
@@ -78,7 +93,8 @@ export class ReceiptIntegrationWarehousesService {
       if (!warehouse) throw new NotFoundException();
       if (!warehouse.isActive)
         receiptConflict('WAREHOUSE_INACTIVE', 'Склад ESoft выключен.');
-      if (previous) return { externalId, warehouseId: String(warehouseId) };
+      if (previous.length)
+        return { externalId, warehouseId: String(warehouseId) };
       await tx.warehouseExternalWarehouse.create({
         data: { ...identity, warehouseId, confirmedBy: actor },
       });

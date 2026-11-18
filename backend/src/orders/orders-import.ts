@@ -3,16 +3,6 @@ import { isDeepStrictEqual } from 'node:util';
 import type { Prisma, CustomerOrder } from '@prisma/client';
 import { IntegrationFailure } from '../integrations/integration-errors';
 import type { OrderSnapshot } from './orders-snapshot';
-function numberAndDate(row: OrderSnapshot) {
-  return JSON.stringify([row.number, row.documentDate]);
-}
-function ambiguous(row: OrderSnapshot) {
-  return new IntegrationFailure(
-    'ORDERS_IDENTITY_AMBIGUOUS',
-    false,
-    `Не удалось однозначно сопоставить заказ №${row.number} от ${row.documentDate.replace('T', ' ')}.`,
-  );
-}
 export function storedSnapshot(row: CustomerOrder) {
   return {
     externalId: row.externalId,
@@ -33,67 +23,28 @@ export async function applyOrders(
 ) {
   let changed = 0;
   const receivedIds = new Set<string>();
-  const pairCounts = new Map<string, number>();
-  for (const row of rows) {
-    if (!row.posted) continue;
-    const pair = numberAndDate(row);
-    pairCounts.set(pair, (pairCounts.get(pair) ?? 0) + 1);
-  }
-  // Resolve explicit keys first, so matching a mixed response is order independent.
-  const orderedRows = [
-    ...rows.filter((row) => row.externalId !== null),
-    ...rows.filter((row) => row.externalId === null),
-  ];
   const batchSize = 1000;
   const byExternalId = new Map<string, CustomerOrder>();
   const externalIds = [
-    ...new Set(
-      orderedRows.flatMap((row) =>
-        row.externalId === null ? [] : [row.externalId],
-      ),
-    ),
+    ...new Set(rows.map(({ externalId }) => externalId.toLowerCase())),
   ];
   for (let start = 0; start < externalIds.length; start += batchSize) {
     const stored = await tx.customerOrder.findMany({
       where: {
-        sourceId,
         externalId: { in: externalIds.slice(start, start + batchSize) },
       },
     });
-    for (const order of stored) byExternalId.set(order.externalId!, order);
+    for (const order of stored) byExternalId.set(order.externalId, order);
   }
   const unchangedIds: string[] = [];
-  for (const row of orderedRows) {
-    let previous =
-      row.externalId === null
-        ? null
-        : (byExternalId.get(row.externalId.toLowerCase()) ?? null);
-    if (!previous && row.posted) {
-      const matches = await tx.customerOrder.findMany({
-        where: {
-          sourceId,
-          number: row.number,
-          documentDate: row.documentDate,
-          posted: true,
-          ...(row.externalId !== null ? { externalId: null } : {}),
-        },
-        take: 2,
-      });
-      if (
-        matches.length > 1 ||
-        ((row.externalId === null || matches.length === 1) &&
-          (pairCounts.get(numberAndDate(row)) ?? 0) > 1)
-      )
-        throw ambiguous(row);
-      previous = matches[0] ?? null;
-    }
+  for (const row of rows) {
+    const externalId = row.externalId.toLowerCase();
+    const previous = byExternalId.get(externalId);
     const id = previous?.id ?? randomUUID();
-    if (receivedIds.has(id)) throw ambiguous(row);
+    if (receivedIds.has(id))
+      throw new IntegrationFailure('ORDERS_RESPONSE_INVALID', false);
     receivedIds.add(id);
-    const data = {
-      ...row,
-      externalId: row.externalId ?? previous?.externalId ?? null,
-    };
+    const data = { ...row, externalId };
     const after = { ...data, missing: false };
     const before = previous ? storedSnapshot(previous) : null;
     if (previous && isDeepStrictEqual(before, after)) {
@@ -121,7 +72,7 @@ export async function applyOrders(
           changedAt: observedAt,
         },
       });
-    if (saved.externalId !== null) byExternalId.set(saved.externalId, saved);
+    byExternalId.set(saved.externalId, saved);
     await tx.customerOrderChange.create({
       data: { orderId: id, ...(before ? { before } : {}), after, observedAt },
     });
@@ -130,14 +81,15 @@ export async function applyOrders(
   for (let start = 0; start < unchangedIds.length; start += batchSize) {
     await tx.customerOrder.updateMany({
       where: {
-        sourceId,
         id: { in: unchangedIds.slice(start, start + batchSize) },
       },
       data: { checkedAt: observedAt, missingChecks: 0 },
     });
   }
   const candidates = await tx.customerOrder.findMany({
-    where: { sourceId, missingChecks: { lt: 2 } },
+    where: {
+      missingChecks: { lt: 2 },
+    },
   });
   for (const order of candidates) {
     if (receivedIds.has(order.id)) continue;

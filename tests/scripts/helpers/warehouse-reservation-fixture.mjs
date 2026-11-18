@@ -25,6 +25,7 @@ export async function createReservationFixture(c) {
       data: {
         id: randomUUID(),
         sourceId: source.id,
+        externalId: randomUUID(),
         number,
         name: "",
         documentDate: "2026-11-08T00:00:00",

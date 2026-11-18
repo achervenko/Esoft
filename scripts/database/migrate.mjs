@@ -116,7 +116,7 @@ export async function runPackageMigrations({
       config,
       `export default { schema: ${JSON.stringify(resolve(projectRoot, "backend/prisma/schema"))}, migrations: { path: './migrations' }, datasource: { url: process.env.ESOFT_MIGRATION_DATABASE_URL } };\n`,
     );
-    output.log(
+    await output.log(
       `Database packages: ${set.packages.map((entry) => entry.id).join(", ")}`,
     );
     let result;
@@ -145,11 +145,11 @@ export async function runPackageMigrations({
       );
       if (result.stdout) {
         stdout.push(result.stdout);
-        output.log(redactSensitiveText(result.stdout));
+        await output.log(redactSensitiveText(result.stdout));
       }
       if (result.stderr) {
         stderr.push(result.stderr);
-        output.log(redactSensitiveText(result.stderr));
+        await output.log(redactSensitiveText(result.stderr));
       }
       if (!result.ok) break;
     }

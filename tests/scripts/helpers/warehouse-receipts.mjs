@@ -10,6 +10,7 @@ import { receiptsImport } from "./warehouse-receipts/receipts-import.mjs";
 import { receiptsEvents } from "./warehouse-receipts.events.mjs";
 import { receiptsKeys } from "./warehouse-receipts.keys.mjs";
 import { receiptsKeyAtomicity } from "./warehouse-receipts.keys-atomicity.mjs";
+import { verifyOneCInvoicePeriod } from "./warehouse-receipts-period.mjs";
 export async function verifyReceipts(prisma, database, t) {
   const context = await createReceiptTestContext(prisma);
   await receiptsManual(context, t);
@@ -23,4 +24,5 @@ export async function verifyReceipts(prisma, database, t) {
   await receiptsDisplay(context, t);
   await receiptsCandidates(prisma, t);
   await receiptsLifecycle(await createReceiptTestContext(prisma), t);
+  await verifyOneCInvoicePeriod(await createReceiptTestContext(prisma), t);
 }

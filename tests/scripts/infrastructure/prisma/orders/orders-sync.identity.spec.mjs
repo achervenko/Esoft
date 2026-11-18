@@ -4,7 +4,7 @@ import { rawOrder } from "./orders-sync.test-context.mjs";
 export async function verifySourceIsolation(context, t) {
   const { c, first, source, server, sync } = context;
   await t.test(
-    "same external identity from another source creates a different order",
+    "same external UUID from another connection preserves the order",
     async () => {
       const other = await c.sources.create(
         {
@@ -23,12 +23,16 @@ export async function verifySourceIsolation(context, t) {
         },
         c.admin.id,
       );
-      await sync.sync(other.id, c.admin.id);
+      const results = await Promise.all([
+        sync.sync(other.id, c.admin.id),
+        sync.sync(source.id, c.admin.id),
+      ]);
+      assert.ok(results.some(({ outcome }) => outcome === "BUSY"));
       assert.equal(
         await c.prisma.customerOrder.count({
           where: { externalId: first.Ref_Key },
         }),
-        2,
+        1,
       );
     },
   );
@@ -56,7 +60,7 @@ export async function verifySourceSwitch(context, t) {
         {
           isActive: true,
           configVersion: 1,
-          config: { previousSourceId: source.id },
+          config: {},
         },
         c.admin.id,
       );
@@ -113,7 +117,7 @@ export async function verifySourceSwitch(context, t) {
       const moved = await c.prisma.customerOrder.findUniqueOrThrow({
         where: { id: order.id },
       });
-      assert.equal(moved.sourceId, replacement.id);
+      assert.equal(moved.sourceId, source.id);
       assert.equal(moved.externalId, stable.Ref_Key);
       assert.equal((await refreshReplacement()).changed, 0);
     },

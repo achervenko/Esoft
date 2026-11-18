@@ -17,6 +17,7 @@ export async function saveReceiptImportLines(
   input: SourceReceipt,
   oldLines: WarehouseReceiptLine[],
   bindings: Bindings,
+  orders?: { matches: ReadonlyMap<string, string> },
 ) {
   // Unplaced removed lines can be replaced; rows referenced by placements retain their IDs.
   for (const old of oldLines)
@@ -29,6 +30,7 @@ export async function saveReceiptImportLines(
       line,
       bindings.find((binding) => binding.externalId === line.item.id)?.itemId ??
         null,
+      orders,
     );
 }
 
@@ -37,6 +39,7 @@ async function saveLine(
   receiptId: bigint,
   line: SourceReceipt['lines'][number],
   resolvedItemId: string | null,
+  orders?: { matches: ReadonlyMap<string, string> },
 ) {
   const data = {
     rowNumber: line.rowNumber,
@@ -47,7 +50,14 @@ async function saveLine(
     itemArticleSnapshot: line.item.article,
     itemNameSnapshot: line.item.name,
     sourceType: line.item.type,
-    orderSnapshot: line.order ?? Prisma.DbNull,
+    orderSnapshot: line.order ? line.order : Prisma.DbNull,
+    ...(orders
+      ? {
+          orderId: line.order
+            ? (orders.matches.get(line.order.id) ?? null)
+            : null,
+        }
+      : {}),
   };
   await tx.warehouseReceiptLine.upsert({
     where: {
@@ -66,10 +76,6 @@ export async function prepareReceiptImportLines(
   links: WarehouseCatalogExternalLinksService,
   catalog: WarehouseCatalogService,
 ) {
-  await links.lockIdentities(
-    tx,
-    input.lines.map((l) => ({ sourceSystem, externalId: l.item.id })),
-  );
   if (previousId !== null)
     await tx.$queryRaw`SELECT id FROM warehouse_receipts WHERE id=${previousId} FOR UPDATE`;
   const bindings = await links.resolveMany(

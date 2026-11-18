@@ -248,3 +248,57 @@ CREATE TABLE warehouse_stock_adjustment_noops (
  quantity NUMERIC(14,3) NOT NULL CHECK (quantity >= 0),
  PRIMARY KEY (actor_user_id, request_key)
 );
+
+CREATE UNIQUE INDEX warehouse_external_warehouses_one_c_uuid ON warehouse_external_warehouses (lower(external_id))
+    WHERE external_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$';
+
+CREATE UNIQUE INDEX warehouse_item_external_links_one_c_uuid ON warehouse_item_external_links (lower(external_id))
+    WHERE external_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$';
+
+CREATE UNIQUE INDEX uq_warehouse_receipts_invoice_group ON warehouse_receipts (lower(source_operation_id))
+    WHERE source = 'ONE_C' AND (source_operation_id LIKE 'invoice:%' OR source_operation_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$');
+
+CREATE TABLE warehouse_invoice_sync_state (
+  source_id UUID NOT NULL,
+  flow_code VARCHAR(100) NOT NULL,
+  synced_through TIMESTAMPTZ(6),
+  period_from TIMESTAMPTZ(6) NOT NULL,
+  period_to TIMESTAMPTZ(6) NOT NULL,
+  next_attempt_at TIMESTAMPTZ(6),
+  consecutive_failures INTEGER NOT NULL DEFAULT 0,
+  attempt INTEGER NOT NULL,
+  last_outcome VARCHAR(30) NOT NULL,
+  last_error_code VARCHAR(100),
+  last_started_at TIMESTAMPTZ(6) NOT NULL,
+  last_finished_at TIMESTAMPTZ(6),
+  last_success_at TIMESTAMPTZ(6),
+  configuration_hash VARCHAR(64) NOT NULL,
+  owner_token UUID,
+  PRIMARY KEY (source_id, flow_code),
+  CONSTRAINT warehouse_invoice_sync_state_flow_fkey
+    FOREIGN KEY (source_id, flow_code) REFERENCES integration_flows(source_id, flow_code)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE TABLE warehouse_invoice_sync_runs (
+  id BIGSERIAL PRIMARY KEY,
+  source_id UUID NOT NULL,
+  flow_code VARCHAR(100) NOT NULL,
+  period_from TIMESTAMPTZ(6) NOT NULL,
+  period_to TIMESTAMPTZ(6) NOT NULL,
+  started_at TIMESTAMPTZ(6) NOT NULL,
+  finished_at TIMESTAMPTZ(6),
+  outcome VARCHAR(30) NOT NULL,
+  attempt INTEGER NOT NULL,
+  error_code VARCHAR(100),
+  configuration_hash VARCHAR(64) NOT NULL,
+  received INTEGER,
+  processed INTEGER,
+  skipped INTEGER,
+  errors INTEGER,
+  CONSTRAINT warehouse_invoice_sync_runs_flow_fkey
+    FOREIGN KEY (source_id, flow_code) REFERENCES integration_flows(source_id, flow_code)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+);
+CREATE INDEX idx_warehouse_invoice_sync_runs_flow ON warehouse_invoice_sync_runs(source_id, flow_code, id);
+CREATE INDEX idx_warehouse_invoice_sync_runs_finished ON warehouse_invoice_sync_runs(finished_at);

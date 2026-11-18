@@ -76,7 +76,9 @@ it("keeps journal rows visible when a filter reference fails", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Фильтры" }));
   await screen.findByRole("alert");
   expect(screen.getByRole("table")).toBeInTheDocument();
-  expect(screen.queryByText("Загрузка...")).not.toBeInTheDocument();
+  await waitFor(() =>
+    expect(screen.queryByText("Загрузка...")).not.toBeInTheDocument(),
+  );
 });
 
 it.each([

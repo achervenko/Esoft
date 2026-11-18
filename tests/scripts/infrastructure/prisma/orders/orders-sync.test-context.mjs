@@ -74,12 +74,7 @@ export async function createOrdersSyncContext() {
     const refresh = () => sync.sync(source.id, c.admin.id);
     const find = () =>
       c.prisma.customerOrder.findUniqueOrThrow({
-        where: {
-          sourceId_externalId: {
-            sourceId: source.id,
-            externalId: first.Ref_Key,
-          },
-        },
+        where: { externalId: first.Ref_Key },
       });
     return {
       c,

@@ -12,6 +12,7 @@ model IntegrationSource {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   orderSyncRuns OrderSyncRun[]
   orders CustomerOrder[]
+  invoiceSnapshots WarehouseInvoiceSnapshot[]
   actorLink IntegrationSourceActor?
   flows IntegrationFlow[]
   @@unique([id,actorUserId],map:"uq_integration_sources_id_actor")
@@ -28,6 +29,8 @@ model IntegrationFlow {
   lastErrorAt DateTime? @map("last_error_at") @db.Timestamptz(6)
   lastErrorCode String? @map("last_error_code") @db.VarChar(100)
   events IntegrationEvent[]
+  invoiceSyncRuns WarehouseInvoiceSyncRun[]
+  invoiceSyncState WarehouseInvoiceSyncState?
   @@id([sourceId,flowCode])
   @@map("integration_flows")
 }

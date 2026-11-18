@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { code } from "../warehouse-receipts-test-context.mjs";
 import { createRequire } from "node:module";
 const { AuditLogService } = createRequire(import.meta.url)(
@@ -6,6 +7,41 @@ const { AuditLogService } = createRequire(import.meta.url)(
 );
 
 export async function receiptsImportVersions(c, t) {
+  await t.test(
+    "common import preserves the placed line's order identity",
+    async () => {
+      const doc = c.source();
+      const line = doc.lines[0];
+      const order = { id: randomUUID(), number: "A", name: "Order A" };
+      const revision = (version, nextOrder) => ({
+        ...doc,
+        version,
+        lines: [{ ...line, order: nextOrder }],
+      });
+      const receipt = await c.mapped(revision("1", order));
+      await c.place(receipt, "1");
+      const stock = await c.quantity();
+      const renamed = {
+        ...order,
+        id: order.id.toUpperCase(),
+        number: "renamed",
+      };
+      assert.equal((await c.ingest(revision("2", renamed))).conflict, null);
+      for (const [version, nextOrder] of [
+        ["3", { ...order, id: randomUUID(), number: "B" }],
+        ["4", null],
+      ]) {
+        const result = await c.ingest(revision(version, nextOrder));
+        assert.equal(result.conflict, "SOURCE_LINES_CHANGED_AFTER_PLACEMENT");
+        assert.deepEqual(result.sourceDocument.lines[0].order, renamed);
+        assert.deepEqual(
+          result.pendingSourceDocument.lines[0].order,
+          nextOrder,
+        );
+        assert.equal(await c.quantity(), stock);
+      }
+    },
+  );
   await t.test(
     "versions replay; safe increase; shrink after placement is a conflict",
     async (t) => {

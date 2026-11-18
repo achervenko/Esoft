@@ -77,3 +77,17 @@ export function parseSourceReceipt(value: unknown, versionOverride?: string) {
   };
 }
 export type SourceReceipt = ReturnType<typeof parseSourceReceipt>;
+
+export { optionalText, receiptHash, text, uuid } from './receipts.validation';
+export { stockQuantity as receiptImportQuantity } from '../stock/stock.validation';
+export type { Tx as ReceiptImportTransaction } from './receipts.policy';
+export type ReceiptImportGroup = Pick<
+  import('@prisma/client').WarehouseReceipt,
+  | 'id'
+  | 'sourceOperationId'
+  | 'externalWarehouseId'
+  | 'sourcePayload'
+  | 'sourceVersion'
+  | 'status'
+  | 'conflict'
+>;

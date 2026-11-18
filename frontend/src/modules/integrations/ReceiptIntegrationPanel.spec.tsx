@@ -17,6 +17,7 @@ vi.mock("../../shared/api/receipt-integration-api", () => ({
     keys: vi.fn(),
     flows: vi.fn(),
     configure: vi.fn(),
+    invoiceSchedule: vi.fn(),
   },
 }));
 afterEach(cleanup);
@@ -77,6 +78,9 @@ it.each(["header", "basic"])(
     await screen.findByText("Источники обмена не добавлены.");
     fireEvent.click(screen.getByRole("button", { name: "Добавить базу 1С" }));
     expect(
+      screen.queryByRole("switch", { name: "Автоматический импорт накладных" }),
+    ).not.toBeInTheDocument();
+    expect(
       screen.queryByText("Технический пользователь импорта"),
     ).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/Название обмена/), {
@@ -130,3 +134,65 @@ it.each(["header", "basic"])(
     );
   },
 );
+
+it("enables invoice scheduling on an existing exchange and requires its start", async () => {
+  const source = {
+    id: "id",
+    code: "code",
+    name: "Обмен склада",
+    systemType: "ONE_C",
+    baseUrl: "https://example.test/ERP/hs/docs/",
+    actorUserId: "internal",
+    isActive: true,
+    flows: [
+      {
+        flowCode: "warehouse.receipts",
+        configVersion: 1,
+        config: {},
+        isActive: true,
+        lastSuccessAt: null,
+        lastErrorAt: null,
+        lastErrorCode: null,
+      },
+    ],
+  };
+  vi.mocked(receiptIntegrationApi.sources).mockResolvedValue([source]);
+  vi.mocked(receiptIntegrationApi.configure).mockResolvedValue(source);
+  vi.mocked(receiptIntegrationApi.invoiceSchedule).mockResolvedValue({
+    enabled: false,
+    lastSuccessAt: "2026-11-18T22:30:00Z",
+    latest: null,
+  });
+  render(<ReceiptIntegrationPanel permissions={["integrations.manage"]} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Настроить" }));
+  await screen.findByText("Расписание выключено");
+  expect(
+    await screen.findByText(/Последний успешный импорт/),
+  ).toHaveTextContent(/19\.11\.(?:2026|26).*01:30/);
+  fireEvent.click(
+    screen.getByRole("switch", { name: "Автоматический импорт накладных" }),
+  );
+  expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
+  fireEvent.change(screen.getByLabelText(/Начало первой синхронизации/), {
+    target: { value: "2026-11-18T08:00:00+03:00" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+  await waitFor(() =>
+    expect(receiptIntegrationApi.configure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        flows: [
+          expect.objectContaining({
+            config: {
+              enabled: true,
+              initialFrom: "2026-11-18T08:00:00+03:00",
+              intervalSeconds: 30,
+              periodMinutes: 60,
+              overlapMinutes: 15,
+              timezone: "Europe/Moscow",
+            },
+          }),
+        ],
+      }),
+    ),
+  );
+});

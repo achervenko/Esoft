@@ -64,7 +64,27 @@ export type ReceiptEvent = {
 const base = "/api/integrations";
 const sourcePath = (code: string) =>
   `${base}/sources/${encodeURIComponent(code)}`;
+export type InvoiceScheduleStatus = {
+  enabled: boolean;
+  lastSuccessAt: string | null;
+  latest: {
+    outcome: string;
+    periodFrom: string;
+    periodTo: string;
+    syncedThrough: string | null;
+    startedAt: string;
+    finishedAt: string | null;
+    attempt: number;
+    nextAttemptAt: string | null;
+    errorCode: string | null;
+  } | null;
+};
 export const receiptIntegrationApi = {
+  invoiceSchedule: (code: string, signal?: AbortSignal) =>
+    request<InvoiceScheduleStatus>(
+      `/api/warehouse/integrations/sources/${encodeURIComponent(code)}/invoice-schedule`,
+      { signal },
+    ),
   sources: (signal?: AbortSignal) =>
     request<ReceiptSource[]>(`${base}/sources`, { signal }),
   flows: (signal?: AbortSignal) =>

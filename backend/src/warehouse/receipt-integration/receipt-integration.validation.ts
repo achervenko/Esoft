@@ -1,5 +1,12 @@
 import { BadRequestException } from '@nestjs/common';
+import { IntegrationFailure } from '../../integrations/integration-errors';
 import { receiptSourceVersion } from '../receipts/receipts-import.contract';
+import { readInvoiceSchedule } from './invoice-schedule';
+export function validateReceiptFlowConfig(version: number, config: unknown) {
+  if (version !== 1)
+    throw new IntegrationFailure('FLOW_CONFIG_UNSUPPORTED', true);
+  readInvoiceSchedule(config);
+}
 export function invalid(message: string): never {
   throw new BadRequestException({
     code: 'WAREHOUSE_RECEIPT_INVALID',

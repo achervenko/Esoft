@@ -28,14 +28,18 @@ export function getBusinessTodayDate() {
 }
 
 export function getBusinessDayStart(dateId: string) {
+  return getBusinessHour(dateId, 0);
+}
+
+export function getBusinessHour(dateId: string, hour: number) {
   const [year, month, day] = dateId.split('-').map(Number);
-  const utcMidnight = new Date(Date.UTC(year, month - 1, day));
+  const wallTimeAsUtc = new Date(Date.UTC(year, month - 1, day, hour));
   const offsetMinutes = getTimeZoneOffsetMinutes(
-    utcMidnight,
+    wallTimeAsUtc,
     BUSINESS_TIME_ZONE,
   );
 
-  return new Date(utcMidnight.getTime() - offsetMinutes * 60_000);
+  return new Date(wallTimeAsUtc.getTime() - offsetMinutes * 60_000);
 }
 
 function getTimeZoneOffsetMinutes(value: Date, timeZone: string) {

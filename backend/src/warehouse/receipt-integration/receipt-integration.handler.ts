@@ -15,7 +15,10 @@ import {
   ReceiptImportWarehouseError,
 } from '../receipts/receipt-import.service';
 import { parseSourceReceipt } from '../receipts/receipts-import.contract';
-import { parseReceiptEvent } from './receipt-integration.validation';
+import {
+  parseReceiptEvent,
+  validateReceiptFlowConfig,
+} from './receipt-integration.validation';
 
 export async function applyReceiptIntegrationEvent(
   tx: Prisma.TransactionClient,
@@ -80,14 +83,7 @@ export class WarehouseReceiptIntegrationHandler
     this.registry.registerFlow(this);
   }
   validateConfig(version: number, config: unknown) {
-    if (
-      version !== 1 ||
-      !config ||
-      typeof config !== 'object' ||
-      Array.isArray(config) ||
-      Object.keys(config).length
-    )
-      throw new IntegrationFailure('FLOW_CONFIG_UNSUPPORTED', true);
+    validateReceiptFlowConfig(version, config);
   }
   validateEvent(event: IntegrationEventEnvelope) {
     const parsed = parseReceiptEvent(event);
@@ -99,13 +95,25 @@ export class WarehouseReceiptIntegrationHandler
     this.validateEvent(context.event);
     return this.prisma.$transaction(
       async (tx) => {
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:receipt-sync', context.sourceCode, context.event.objectId])},0))`;
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:receipt-sync', context.event.objectId.toLowerCase()])},0))`;
         await assertTransactionPermission(
           tx,
           context.actorUserId,
           'warehouse.receipts.integration',
           context.sourceCode,
         );
+        const [periodDocument] = await tx.$queryRaw<{ exists: boolean }[]>`
+          SELECT EXISTS (
+            SELECT 1 FROM warehouse_invoice_snapshots s
+
+            WHERE
+              s.invoice_id::text=lower(${context.event.objectId})
+          ) AS "exists"`;
+        if (periodDocument.exists)
+          throw new IntegrationFailure(
+            'ONE_C_INVOICE_ALREADY_TRACKED_BY_PERIOD',
+            false,
+          );
         return applyReceiptIntegrationEvent(tx, this.importer, context);
       },
       { timeout: 20000, maxWait: 5000 },

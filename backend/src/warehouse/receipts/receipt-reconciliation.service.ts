@@ -11,6 +11,11 @@ import {
   receiptProgress,
 } from './receipts.policy';
 import { invalid, record } from './receipts.validation';
+import {
+  assertInvoiceReceiptAvailable,
+  importedInvoiceId,
+  lockInvoiceBeforeReceipt,
+} from './receipt-invoice-policy';
 @Injectable()
 export class WarehouseReceiptReconciliationService {
   constructor(
@@ -35,6 +40,7 @@ export class WarehouseReceiptReconciliationService {
     return this.prisma.$transaction(
       async (tx) => {
         await receiptActor(tx, actor, 'warehouse.receipts.map');
+        const operationId = await lockInvoiceBeforeReceipt(tx, targetId);
         for (const id of [manualId, targetId].sort((a, b) => (a < b ? -1 : 1)))
           await lockReceipt(tx, String(id));
         const target = await tx.warehouseReceipt.findUniqueOrThrow({
@@ -58,6 +64,7 @@ export class WarehouseReceiptReconciliationService {
             'WAREHOUSE_RECEIPT_RECONCILIATION_INVALID',
             'Нужен полностью размещённый ручной приход на том же складе и действующий документ 1С без конфликта.',
           );
+        await assertInvoiceReceiptAvailable(tx, target, operationId);
         if (pairs.length !== manual.lines.length)
           invalid('Нужно сопоставить все строки ручного прихода.');
         for (const pair of pairs) {
@@ -74,6 +81,11 @@ export class WarehouseReceiptReconciliationService {
             receiptConflict(
               'WAREHOUSE_RECEIPT_RECONCILIATION_INVALID',
               'Не совпадают товары или единицы строк.',
+            );
+          if (importedInvoiceId(target) && to.orderSnapshot !== null)
+            receiptConflict(
+              'WAREHOUSE_RECEIPT_RECONCILIATION_INVALID',
+              'Строка заказа требует размещения с учётом резерва.',
             );
           if (from.reconciledToLineId) {
             if (from.reconciledToLineId === to.id) continue;

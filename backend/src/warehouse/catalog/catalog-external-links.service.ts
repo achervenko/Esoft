@@ -7,6 +7,10 @@ import { AuditAction, AuditModule, type Prisma } from '@prisma/client';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { assertTransactionPermission } from '../../auth/transaction-permission';
 import { WarehouseCatalogService } from './catalog.service';
+import {
+  externalOneCUuid,
+  normalizeWarehouseExternalId,
+} from '../warehouse-external-identity';
 import { assertCatalogTransaction } from './catalog.transaction';
 export type ExternalItemIdentity = { sourceSystem: string; externalId: string };
 export type ExternalItemBinding = ExternalItemIdentity & {
@@ -30,9 +34,17 @@ function key(value: string, max: number) {
 function identity(value: ExternalItemIdentity) {
   return {
     sourceSystem: key(value.sourceSystem, 100),
-    externalId: key(value.externalId, 255),
+    externalId: normalizeWarehouseExternalId(key(value.externalId, 255)),
   };
 }
+function linkFilter(
+  value: ExternalItemIdentity,
+): Prisma.WarehouseItemExternalLinkWhereInput {
+  return externalOneCUuid.test(value.externalId)
+    ? { externalId: { equals: value.externalId, mode: 'insensitive' } }
+    : value;
+}
+
 @Injectable()
 export class WarehouseCatalogExternalLinksService {
   constructor(
@@ -51,7 +63,7 @@ export class WarehouseCatalogExternalLinksService {
           const i = identity(v);
           return JSON.stringify([
             'warehouse:item-link',
-            i.sourceSystem,
+            externalOneCUuid.test(i.externalId) ? 'ONE_C' : i.sourceSystem,
             i.externalId,
           ]);
         }),
@@ -75,15 +87,19 @@ export class WarehouseCatalogExternalLinksService {
     ];
     if (!identities.length) return [];
     const links = await tx.warehouseItemExternalLink.findMany({
-      where: { OR: identities },
+      where: { OR: identities.map(linkFilter) },
       select: { sourceSystem: true, externalId: true, itemId: true },
     });
-    return links.map((l) => ({ ...l, itemId: String(l.itemId) }));
+    return links.map((l) => ({
+      ...l,
+      externalId: normalizeWarehouseExternalId(l.externalId),
+      itemId: String(l.itemId),
+    }));
   }
   async find(tx: Prisma.TransactionClient, value: ExternalItemIdentity) {
     assertCatalogTransaction(tx);
-    const found = await tx.warehouseItemExternalLink.findUnique({
-      where: { sourceSystem_externalId: identity(value) },
+    const found = await tx.warehouseItemExternalLink.findFirst({
+      where: linkFilter(identity(value)),
       select: { itemId: true },
     });
     return found ? { itemId: String(found.itemId) } : null;

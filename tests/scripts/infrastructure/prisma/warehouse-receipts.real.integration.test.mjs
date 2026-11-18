@@ -46,6 +46,22 @@ test(
         output: { log() {} },
       });
       assert.equal(result.ok, true, result.stdout + result.stderr);
+      const { rows: schedulerSchema } = await database.query(`
+        SELECT to_regclass('warehouse_invoice_sync_state') IS NOT NULL AS state,
+               to_regclass('idx_warehouse_invoice_sync_runs_finished') IS NOT NULL AS cleanup_index,
+               (SELECT confdeltype FROM pg_constraint
+                WHERE conname='warehouse_invoice_sync_state_flow_fkey') AS delete_rule,
+               EXISTS (SELECT 1 FROM _prisma_migrations
+                       WHERE migration_name LIKE '%warehouse_invoice_schedule') AS separate_migration
+      `);
+      assert.deepEqual(schedulerSchema, [
+        {
+          state: true,
+          cleanup_index: true,
+          delete_rule: "r",
+          separate_migration: false,
+        },
+      ]);
       const prisma = new PrismaClient({
         adapter: new PrismaPg({ connectionString: url }),
       });

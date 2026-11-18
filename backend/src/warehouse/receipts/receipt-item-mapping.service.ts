@@ -1,3 +1,4 @@
+import { externalOneCUuid } from './receipt-warehouse-links';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogService } from '../../audit/audit-log.service';
@@ -42,8 +43,12 @@ export class WarehouseReceiptItemMappingService {
           });
         const sourceSystem = line.receipt.sourceSystem,
           externalId = line.externalItemId;
+        const shared = externalOneCUuid.test(externalId);
+        const itemIdentity = shared
+          ? { equals: externalId, mode: 'insensitive' as const }
+          : externalId;
         await this.links.lockIdentities(tx, [{ sourceSystem, externalId }]);
-        await tx.$queryRaw`SELECT r.id FROM warehouse_receipts r WHERE EXISTS(SELECT 1 FROM warehouse_receipt_lines l WHERE l.receipt_id=r.id AND l.external_item_id=${externalId}) AND r.source_system=${sourceSystem} ORDER BY r.id FOR UPDATE`;
+        await tx.$queryRaw`SELECT r.id FROM warehouse_receipts r WHERE EXISTS(SELECT 1 FROM warehouse_receipt_lines l WHERE l.receipt_id=r.id AND (CASE WHEN ${shared} THEN lower(l.external_item_id)=lower(${externalId}) ELSE l.external_item_id=${externalId} END)) AND r.source='ONE_C' AND (${shared} OR r.source_system=${sourceSystem}) ORDER BY r.id FOR UPDATE`;
         const latest = await tx.warehouseReceiptLine.findUnique({
           where: { id: line.id },
         });
@@ -81,8 +86,8 @@ export class WarehouseReceiptItemMappingService {
           );
         const mismatch = await tx.warehouseReceiptLine.count({
           where: {
-            externalItemId: externalId,
-            receipt: { sourceSystem, source: 'ONE_C' },
+            externalItemId: itemIdentity,
+            receipt: { ...(shared ? {} : { sourceSystem }), source: 'ONE_C' },
             unitSnapshot: { not: item.unit },
           },
         });
@@ -103,8 +108,8 @@ export class WarehouseReceiptItemMappingService {
         );
         await tx.warehouseReceiptLine.updateMany({
           where: {
-            externalItemId: externalId,
-            receipt: { sourceSystem, source: 'ONE_C' },
+            externalItemId: itemIdentity,
+            receipt: { ...(shared ? {} : { sourceSystem }), source: 'ONE_C' },
           },
           data: { itemId: BigInt(item.id) },
         });

@@ -113,6 +113,10 @@ export async function verifyWarehouseSchemaMetadata({ database }) {
       "warehouse_reservations",
       "warehouse_reservation_allocations",
       "warehouse_reservation_requests",
+      "warehouse_invoice_snapshots",
+      "warehouse_invoice_snapshot_versions",
+      "warehouse_invoice_sync_state",
+      "warehouse_invoice_sync_runs",
     ].sort(),
   );
   assert.equal(

@@ -42,6 +42,14 @@ export class IntegrationFlowsService {
       )
         invalid('Некорректные настройки потока.');
       seen.add(flowCode);
+      if (
+        flowCode === 'warehouse.receipts' &&
+        f.config &&
+        typeof f.config === 'object' &&
+        'enabled' in f.config &&
+        f.config.enabled === true
+      )
+        invalid('Включите расписание после создания источника.');
       this.registry.validateFlow(
         flowCode,
         source.systemType,

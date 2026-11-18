@@ -10,7 +10,17 @@ import { Injectable } from '@nestjs/common';
 import { AuditAction } from '@prisma/client';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { receiptHash } from './receipts.validation';
-import { parseSourceReceipt } from './receipts-import.contract';
+import {
+  parseSourceReceipt,
+  type ReceiptImportGroup,
+} from './receipts-import.contract';
+import {
+  existingGroups,
+  findLegacyReceipt,
+  placedGroups,
+  suspend,
+  refreshInvoiceReceiptOrders,
+} from './receipt-invoice-import-data';
 import {
   receiptActor,
   receiptAudit,
@@ -19,6 +29,11 @@ import {
   type Tx,
 } from './receipts.policy';
 import { receiptView, receiptInclude } from './receipts.mapper';
+import {
+  externalOneCUuid,
+  findReceiptWarehouseLinks,
+  lockReceiptWarehouseLink,
+} from './receipt-warehouse-links';
 export class ReceiptImportWarehouseError extends Error {
   constructor(
     readonly code: 'WAREHOUSE_UNMAPPED' | 'WAREHOUSE_INACTIVE',
@@ -28,6 +43,10 @@ export class ReceiptImportWarehouseError extends Error {
   }
 }
 
+type InvoiceOrders = {
+  matches: ReadonlyMap<string, string>;
+};
+
 @Injectable()
 export class WarehouseReceiptImportService {
   constructor(
@@ -35,11 +54,53 @@ export class WarehouseReceiptImportService {
     private readonly links: WarehouseCatalogExternalLinksService,
     private readonly catalog: WarehouseCatalogService,
   ) {}
+  findLegacyInvoiceReceipt(tx: Tx, invoiceId: string) {
+    return findLegacyReceipt(tx, invoiceId);
+  }
+
+  lockInvoiceGroups(tx: Tx, invoiceId: string) {
+    return existingGroups(tx, invoiceId);
+  }
+
+  findPlacedInvoiceGroups(tx: Tx, receipts: ReceiptImportGroup[]) {
+    return placedGroups(tx, receipts);
+  }
+
+  async lockAndReadWarehouseLinks(
+    tx: Tx,
+    sourceCode: string,
+    externalId: string,
+  ) {
+    await lockReceiptWarehouseLink(tx, sourceCode, externalId);
+    return findReceiptWarehouseLinks(tx, sourceCode, externalId);
+  }
+
+  suspendInvoiceGroup(
+    tx: Tx,
+    actorUserId: string,
+    receipt: ReceiptImportGroup,
+    conflict: string | null,
+    invoice: { id: string; status: string },
+  ) {
+    return suspend(this.audit, tx, actorUserId, receipt, conflict, invoice);
+  }
+
+  refreshInvoiceReceiptOrders(tx: Tx, receiptId: bigint) {
+    return refreshInvoiceReceiptOrders(tx, receiptId);
+  }
+
+  lockItemIdentities(tx: Tx, sourceSystem: string, itemIds: readonly string[]) {
+    return this.links.lockIdentities(
+      tx,
+      itemIds.map((externalId) => ({ sourceSystem, externalId })),
+    );
+  }
   async applySnapshot(
     tx: Tx,
     sourceSystem: string,
     value: unknown,
     actor: string,
+    orders?: InvoiceOrders,
   ) {
     const input = parseSourceReceipt(value, '1');
     await receiptActor(
@@ -48,14 +109,26 @@ export class WarehouseReceiptImportService {
       'warehouse.receipts.integration',
       sourceSystem,
     );
+    await this.lockItemIdentities(
+      tx,
+      sourceSystem,
+      input.lines.map((line) => line.item.id),
+    );
+    await lockReceiptWarehouseLink(tx, sourceSystem, input.warehouse.id);
     const identity = {
       source: 'ONE_C',
       sourceSystem,
       sourceOperationId: input.id,
     };
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:receipt', identity])},0))`;
-    const previous = await tx.warehouseReceipt.findUnique({
-      where: { source_sourceSystem_sourceOperationId: identity },
+    const global = !!orders || externalOneCUuid.test(input.id);
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:receipt', global ? input.id.toLowerCase() : identity])},0))`;
+    const previous = await tx.warehouseReceipt.findFirst({
+      where: global
+        ? {
+            source: identity.source,
+            sourceOperationId: { equals: input.id, mode: 'insensitive' },
+          }
+        : identity,
     });
     let revision = previous?.sourceVersion ?? 0n;
     if (
@@ -74,9 +147,16 @@ export class WarehouseReceiptImportService {
       sourceSystem,
       { ...(value as Record<string, unknown>), version: revision.toString() },
       actor,
+      orders,
     );
   }
-  async apply(tx: Tx, sourceSystem: string, value: unknown, actor: string) {
+  async apply(
+    tx: Tx,
+    sourceSystem: string,
+    value: unknown,
+    actor: string,
+    orders?: InvoiceOrders,
+  ) {
     const input = parseSourceReceipt(value);
     await receiptActor(
       tx,
@@ -84,22 +164,42 @@ export class WarehouseReceiptImportService {
       'warehouse.receipts.integration',
       sourceSystem,
     );
+    await this.lockItemIdentities(
+      tx,
+      sourceSystem,
+      input.lines.map((line) => line.item.id),
+    );
+    await lockReceiptWarehouseLink(tx, sourceSystem, input.warehouse.id);
     const identity = {
       source: 'ONE_C',
       sourceSystem,
       sourceOperationId: input.id,
     };
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:receipt', identity])},0))`;
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:warehouse-link', sourceSystem, input.warehouse.id])},0))`;
-    const [warehouseLink] = await tx.$queryRaw<
-      { warehouseId: bigint; isActive: boolean }[]
-    >`
-      SELECT link.warehouse_id AS "warehouseId", w.is_active AS "isActive"
-      FROM warehouse_external_warehouses link JOIN warehouses w ON w.id=link.warehouse_id
-      WHERE link.source_system=${sourceSystem} AND link.external_id=${input.warehouse.id}
-      FOR SHARE OF link, w`;
-    const previous = await tx.warehouseReceipt.findUnique({
-      where: { source_sourceSystem_sourceOperationId: identity },
+    const global = !!orders || externalOneCUuid.test(input.id);
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:receipt', global ? input.id.toLowerCase() : identity])},0))`;
+    const warehouseLinks = await findReceiptWarehouseLinks(
+      tx,
+      sourceSystem,
+      input.warehouse.id,
+    );
+    const [warehouseLink] = warehouseLinks;
+    if (
+      warehouseLink &&
+      warehouseLinks.some(
+        (link) => link.warehouseId !== warehouseLink.warehouseId,
+      )
+    )
+      receiptConflict(
+        'WAREHOUSE_RECEIPT_MAPPING_CONFLICT',
+        'UUID склада 1С связан с разными складами ESoft.',
+      );
+    const previous = await tx.warehouseReceipt.findFirst({
+      where: global
+        ? {
+            source: identity.source,
+            sourceOperationId: { equals: input.id, mode: 'insensitive' },
+          }
+        : identity,
     });
     if (!warehouseLink)
       throw new ReceiptImportWarehouseError('WAREHOUSE_UNMAPPED', !!previous);
@@ -166,7 +266,7 @@ export class WarehouseReceiptImportService {
       actor,
       sourceData,
     );
-    await saveReceiptImportLines(tx, row.id, input, oldLines, bindings);
+    await saveReceiptImportLines(tx, row.id, input, oldLines, bindings, orders);
     if (input.status !== 'CANCELLED') await receiptProgress(tx, row.id);
     await receiptAudit(
       this.audit,

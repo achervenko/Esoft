@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import type { Prisma } from '@prisma/client';
 import {
   Injectable,
   NotFoundException,
@@ -14,11 +13,7 @@ import {
   ORDERS_SYNC_TIMEOUT_MS,
   latestOrdersRun,
 } from './orders.constants';
-import {
-  ordersCollection,
-  ordersPreviousSourceId,
-  readOrders,
-} from './orders-snapshot';
+import { ordersCollection, readOrders } from './orders-snapshot';
 import { applyOrders } from './orders-import';
 @Injectable()
 export class OrdersSyncService {
@@ -36,7 +31,7 @@ export class OrdersSyncService {
             await assertTransactionPermission(tx, actor, 'integrations.manage');
           const [lock] = await tx.$queryRaw<
             { locked: boolean }[]
-          >`SELECT pg_try_advisory_xact_lock(hashtextextended(${`orders:sync:${sourceId}`},0)) AS locked`;
+          >`SELECT pg_try_advisory_xact_lock(hashtextextended(${'orders:sync:ONE_C'},0)) AS locked`;
           if (!lock.locked) return { outcome: 'BUSY' as const };
           // Source and flow settings services take FOR UPDATE on this same source row.
           await tx.$queryRaw`SELECT id FROM integration_sources WHERE id=${sourceId}::uuid FOR SHARE`;
@@ -79,31 +74,10 @@ export class OrdersSyncService {
             requestSignal,
           );
           const completedAt = new Date();
-          const previousSourceId = ordersPreviousSourceId(flow.config);
-          const transferred = previousSourceId
-            ? await this.transferOrders(tx, previousSourceId, sourceId)
-            : false;
           const result = await applyOrders(tx, sourceId, rows, completedAt);
-          if (
-            transferred &&
-            (await tx.customerOrder.count({
-              where: {
-                sourceId,
-                missingChecks: { in: [1, 2] },
-                checkedAt: { lt: completedAt },
-              },
-            }))
-          )
-            throw new IntegrationFailure(
-              'ORDERS_SOURCE_SWITCH_INCOMPLETE',
-              false,
-            );
           await tx.integrationFlow.update({
             where: { sourceId_flowCode: { sourceId, flowCode: ORDERS_FLOW } },
             data: {
-              ...(previousSourceId
-                ? { config: { collectionPath: ordersCollection(flow.config) } }
-                : {}),
               lastSuccessAt: completedAt,
               lastErrorAt: null,
               lastErrorCode: null,
@@ -168,41 +142,6 @@ export class OrdersSyncService {
       }
       throw error;
     }
-  }
-  private async transferOrders(
-    tx: Prisma.TransactionClient,
-    previousSourceId: string,
-    sourceId: string,
-  ) {
-    const [lock] = await tx.$queryRaw<
-      { locked: boolean }[]
-    >`SELECT pg_try_advisory_xact_lock(hashtextextended(${`orders:sync:${previousSourceId}`},0)) AS locked`;
-    if (!lock.locked || previousSourceId === sourceId)
-      throw new IntegrationFailure('ORDERS_SOURCE_SWITCH_INVALID', false);
-    await tx.$queryRaw`SELECT id FROM integration_sources WHERE id=${previousSourceId}::uuid FOR SHARE`;
-    const previous = await tx.integrationFlow.findUnique({
-      where: {
-        sourceId_flowCode: {
-          sourceId: previousSourceId,
-          flowCode: ORDERS_FLOW,
-        },
-      },
-      include: { source: true },
-    });
-    if (!previous || (previous.isActive && previous.source.isActive))
-      throw new IntegrationFailure('ORDERS_SOURCE_SWITCH_INVALID', false);
-    if (
-      !(await tx.customerOrder.count({
-        where: { sourceId: previousSourceId },
-      })) ||
-      (await tx.customerOrder.count({ where: { sourceId } }))
-    )
-      throw new IntegrationFailure('ORDERS_SOURCE_SWITCH_INVALID', false);
-    await tx.customerOrder.updateMany({
-      where: { sourceId: previousSourceId },
-      data: { sourceId },
-    });
-    return true;
   }
   async dueSources() {
     return this.prisma.integrationFlow.findMany({

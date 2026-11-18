@@ -62,10 +62,10 @@ test(
           databaseUrl,
           operation: "deploy",
           output: {
-            log() {
+            async log() {
               lockChecks.push(
-                database.query(
-                  "SELECT pg_try_advisory_lock(hashtext('esoft-package-migrations'), hashtext(current_database())) AS locked",
+                await database.query(
+                  "SELECT pg_try_advisory_xact_lock(hashtext('esoft-package-migrations'), hashtext(current_database())) AS locked",
                 ),
               );
             },

@@ -31,3 +31,38 @@ CREATE TABLE "warehouse_reservation_requests" (
   CONSTRAINT "warehouse_reservation_requests_pkey" PRIMARY KEY ("actor_user_id", "request_key"),
   CONSTRAINT "fk_warehouse_reservation_requests_actor" FOREIGN KEY ("actor_user_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
+
+CREATE TABLE warehouse_invoice_snapshots (
+    source_id UUID NOT NULL REFERENCES integration_sources(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    invoice_id UUID NOT NULL,
+    observed_at TIMESTAMPTZ(6) NOT NULL,
+    received_at TIMESTAMPTZ(6) NOT NULL,
+    payload_hash VARCHAR(64) NOT NULL,
+    payload JSONB NOT NULL,
+    version BIGINT NOT NULL CHECK (version > 0),
+    result JSONB,
+    PRIMARY KEY (invoice_id)
+);
+
+CREATE TABLE warehouse_invoice_snapshot_versions (
+    invoice_id UUID NOT NULL,
+    version BIGINT NOT NULL CHECK (version > 0),
+    detected_at TIMESTAMPTZ(6) NOT NULL,
+    payload_hash VARCHAR(64) NOT NULL,
+    payload JSONB NOT NULL,
+    PRIMARY KEY (invoice_id, version),
+    CONSTRAINT fk_invoice_snapshot_versions_snapshot
+        FOREIGN KEY (invoice_id) REFERENCES warehouse_invoice_snapshots(invoice_id)
+        ON DELETE RESTRICT ON UPDATE RESTRICT
+);
+
+CREATE FUNCTION reject_warehouse_invoice_snapshot_history_mutation() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE EXCEPTION 'Warehouse invoice snapshot history is immutable' USING ERRCODE = '55000';
+END;
+$$;
+
+CREATE TRIGGER warehouse_invoice_snapshot_history_immutable
+    BEFORE UPDATE OR DELETE OR TRUNCATE ON warehouse_invoice_snapshot_versions
+    FOR EACH STATEMENT EXECUTE FUNCTION reject_warehouse_invoice_snapshot_history_mutation();

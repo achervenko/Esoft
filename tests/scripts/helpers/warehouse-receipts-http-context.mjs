@@ -44,6 +44,15 @@ export async function createReceiptHttpContext(c) {
   const { ReceiptIntegrationWarehousesService } = load(
     "warehouse/receipts/receipt-source-warehouses.service.js",
   );
+  const { OneCInvoiceSchedulerService } = load(
+    "warehouse/receipt-integration/one-c-invoice-scheduler.service.js",
+  );
+  const { OneCInvoicePeriodImportService } = load(
+    "warehouse/receipt-integration/one-c-invoice-period-import.service.js",
+  );
+  const { OneCInvoiceDocumentImport } = load(
+    "warehouse/receipt-integration/one-c-invoice-document-import.js",
+  );
   const auth = betterAuth({
     ...c.machineAuth.options,
     database: roleAwarePrismaAdapter(c.prisma, ["warehouse"]),
@@ -124,6 +133,17 @@ export async function createReceiptHttpContext(c) {
       WarehouseReceiptsController,
     ],
     providers: [
+      {
+        provide: OneCInvoiceSchedulerService,
+        useValue: new OneCInvoiceSchedulerService(
+          c.prisma,
+          new OneCInvoicePeriodImportService(
+            c.prisma,
+            c.registry,
+            new OneCInvoiceDocumentImport(c.importer),
+          ),
+        ),
+      },
       {
         provide: ReceiptIntegrationWarehousesService,
         useValue: c.integrationWarehouses,

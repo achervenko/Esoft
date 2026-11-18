@@ -14,7 +14,41 @@ export const code = (expected) => (error) => {
   return true;
 };
 
-export { createIsolatedPostgres as createAdjustmentsTestEnvironment };
+export async function createAdjustmentsTestEnvironment() {
+  const env = await createIsolatedPostgres();
+  try {
+    const root = join(env.root, "adjustments_template");
+    await mkdir(join(root, "backend/prisma"), { recursive: true });
+    await cp(
+      join(project, "backend/prisma/schema"),
+      join(root, "backend/prisma/schema"),
+      { recursive: true },
+    );
+    for (const id of ["core", "orders", "warehouse"])
+      await cp(
+        join(project, "backend/prisma/packages", id),
+        join(root, "backend/prisma/packages", id),
+        { recursive: true },
+      );
+    await writeFile(
+      join(root, "database-packages.json"),
+      '{"modules":["warehouse"]}',
+    );
+    await env.adminQuery("CREATE DATABASE adjustments_template");
+    const url = env.urlFor("adjustments_template");
+    const deploy = await runPackageMigrations({
+      projectRoot: root,
+      databaseUrl: url,
+      operation: "deploy",
+      output: { log() {} },
+    });
+    assert.equal(deploy.ok, true, deploy.stdout + deploy.stderr);
+    return env;
+  } catch (error) {
+    await env.close();
+    throw error;
+  }
+}
 export const load = (path) => require(join(project, "backend/dist/src", path));
 
 export async function withAdjustmentsContext(
@@ -51,32 +85,12 @@ export async function withAdjustmentsContext(
     "storage/storage-file-policy.service.js",
   );
   const { AuditLogService } = load("audit/audit-log.service.js");
-  const root = join(env.root, name);
-  await mkdir(join(root, "backend/prisma"), { recursive: true });
-  await cp(
-    join(project, "backend/prisma/schema"),
-    join(root, "backend/prisma/schema"),
-    { recursive: true },
+  if (!/^[a-z_]+$/.test(name))
+    throw new Error("Invalid adjustments database name");
+  await env.adminQuery(
+    `CREATE DATABASE "${name}" TEMPLATE adjustments_template`,
   );
-  for (const id of ["core", "orders", "warehouse"])
-    await cp(
-      join(project, "backend/prisma/packages", id),
-      join(root, "backend/prisma/packages", id),
-      { recursive: true },
-    );
-  await writeFile(
-    join(root, "database-packages.json"),
-    '{"modules":["warehouse"]}',
-  );
-  await env.database(name);
   const url = env.urlFor(name);
-  const deploy = await runPackageMigrations({
-    projectRoot: root,
-    databaseUrl: url,
-    operation: "deploy",
-    output: { log() {} },
-  });
-  assert.equal(deploy.ok, true, deploy.stdout + deploy.stderr);
   const prisma = new PrismaClient({
     adapter: new PrismaPg({ connectionString: url }),
   });

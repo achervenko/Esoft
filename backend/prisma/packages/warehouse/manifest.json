@@ -8,11 +8,11 @@
   "migrations": [
     {
       "id": "20261016000000_warehouse_init",
-      "sha256": "25df7598ff820ff84ab08f653f9c61e89c2169b962635624ef0938be2bfcd4e0"
+      "sha256": "907377594c1b8f6d3638740d9690f94c6f1e23f57500a8ed625f47a241cbae34"
     },
     {
       "id": "20261108000000_warehouse_reservations",
-      "sha256": "4df4f4fbd3b746638a07bfb24e262d4fe6545d4c96c42c666f927803ec9a1bbc"
+      "sha256": "59d4b76d5ccb54f648e39abd90c9a6e6fdbb0c3d773da064d2c864e2eee72213"
     }
   ]
 }

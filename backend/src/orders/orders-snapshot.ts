@@ -2,7 +2,7 @@ import { IntegrationFailure } from '../integrations/integration-errors';
 import type { IntegrationHttpClient } from '../integrations/integration.contracts';
 import { ORDERS_MAX_PAGES, ORDERS_PAGE_SIZE } from './orders.constants';
 export type OrderSnapshot = {
-  externalId: string | null;
+  externalId: string;
   number: string;
   name: string;
   documentDate: string;
@@ -24,9 +24,7 @@ function text(value: unknown, max: number, empty = false): string {
     invalid();
   return value as string;
 }
-export function orderSnapshot(
-  value: unknown,
-): OrderSnapshot & { externalId: string } {
+export function orderSnapshot(value: unknown): OrderSnapshot {
   if (!value || typeof value !== 'object' || Array.isArray(value)) invalid();
   const r = value as Record<string, unknown>;
   const externalId = text(r.Ref_Key, 36).toLowerCase();
@@ -54,13 +52,7 @@ export function orderSnapshot(
 export function ordersCollection(config: unknown): string {
   if (!config || typeof config !== 'object' || Array.isArray(config)) invalid();
   const r = config as Record<string, unknown>;
-  if (
-    Object.keys(r).some(
-      (k) => k !== 'collectionPath' && k !== 'previousSourceId',
-    )
-  )
-    invalid();
-  ordersPreviousSourceId(r);
+  if (Object.keys(r).some((k) => k !== 'collectionPath')) invalid();
   const path = r.collectionPath ?? 'Document_ЗаказКлиента';
   if (
     typeof path !== 'string' ||
@@ -71,12 +63,6 @@ export function ordersCollection(config: unknown): string {
   )
     invalid();
   return path as string;
-}
-export function ordersPreviousSourceId(config: unknown): string | undefined {
-  const id = (config as Record<string, unknown>).previousSourceId;
-  if (id === undefined) return;
-  if (typeof id === 'string' && uuid.test(id)) return id.toLowerCase();
-  return invalid();
 }
 export async function readOrders(
   client: IntegrationHttpClient,

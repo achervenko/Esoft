@@ -1,7 +1,44 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { code } from "../warehouse-receipts-test-context.mjs";
 
 export async function receiptsImportMapping(c, t) {
+  await t.test(
+    "warehouse UUIDs match within a source regardless of case or name",
+    async () => {
+      const externalId = randomUUID();
+      const link = {
+        externalId: externalId.toUpperCase(),
+        confirmedBy: c.admin.id,
+      };
+      await c.prisma.warehouseExternalWarehouse.create({
+        data: {
+          ...link,
+          sourceSystem: c.sourceSystem + "-other",
+          warehouseId: c.warehouse.id,
+        },
+      });
+      const receipt = await c.ingest(
+        c.source({
+          warehouse: { id: externalId, name: "Renamed warehouse" },
+        }),
+      );
+      assert.equal(receipt.warehouseId, String(c.warehouse.id));
+      assert.equal(receipt.warehouseNameSnapshot, "Renamed warehouse");
+
+      await assert.rejects(
+        c.prisma.warehouseExternalWarehouse.create({
+          data: {
+            ...link,
+            externalId,
+            sourceSystem: c.sourceSystem,
+            warehouseId: c.foreign.id,
+          },
+        }),
+        { code: "P2002" },
+      );
+    },
+  );
   await t.test(
     "direct import rejects unknown and inactive warehouses before any writes or replay",
     async () => {

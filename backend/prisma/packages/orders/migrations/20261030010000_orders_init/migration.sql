@@ -2,7 +2,7 @@ BEGIN;
 CREATE TABLE customer_orders (
  id uuid PRIMARY KEY,
  source_id uuid NOT NULL REFERENCES integration_sources(id) ON DELETE RESTRICT,
- external_id uuid,
+ external_id uuid NOT NULL,
  number varchar(100) NOT NULL,
  name varchar(1000) NOT NULL,
  document_date varchar(19) NOT NULL,
@@ -12,7 +12,7 @@ CREATE TABLE customer_orders (
  missing_checks integer NOT NULL DEFAULT 0 CHECK (missing_checks BETWEEN 0 AND 2),
  checked_at timestamptz NOT NULL,
  changed_at timestamptz NOT NULL,
- CONSTRAINT uq_customer_orders_external UNIQUE(source_id,external_id)
+ CONSTRAINT uq_customer_orders_external_uuid UNIQUE(external_id)
 );
 CREATE INDEX idx_customer_orders_number ON customer_orders(number,id);
 CREATE TABLE customer_order_changes (

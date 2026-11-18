@@ -1,8 +1,8 @@
 model CustomerOrder {
   id String @id @db.Uuid
   sourceId String @map("source_id") @db.Uuid
-  source IntegrationSource @relation(fields:[sourceId],references:[id],onDelete:Restrict)
-  externalId String? @map("external_id") @db.Uuid
+  source IntegrationSource @relation(fields:[sourceId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  externalId String @unique(map:"uq_customer_orders_external_uuid") @map("external_id") @db.Uuid
   number String @db.VarChar(100)
   name String @db.VarChar(1000)
   documentDate String @map("document_date") @db.VarChar(19)
@@ -15,14 +15,14 @@ model CustomerOrder {
   history CustomerOrderChange[]
   reservations WarehouseReservation[]
   receiptLines WarehouseReceiptLine[]
-  @@unique([sourceId,externalId],map:"uq_customer_orders_external")
+
   @@index([number,id],map:"idx_customer_orders_number")
   @@map("customer_orders")
 }
 model CustomerOrderChange {
   id BigInt @id @default(autoincrement())
   orderId String @map("order_id") @db.Uuid
-  order CustomerOrder @relation(fields:[orderId],references:[id],onDelete:Restrict)
+  order CustomerOrder @relation(fields:[orderId],references:[id],onDelete:Restrict,onUpdate:NoAction)
   before Json? @db.JsonB
   after Json @db.JsonB
   observedAt DateTime @map("observed_at") @db.Timestamptz(6)
@@ -32,7 +32,7 @@ model CustomerOrderChange {
 model OrderSyncRun {
   id String @id @db.Uuid
   sourceId String @map("source_id") @db.Uuid
-  source IntegrationSource @relation(fields:[sourceId],references:[id],onDelete:Restrict)
+  source IntegrationSource @relation(fields:[sourceId],references:[id],onDelete:Restrict,onUpdate:NoAction)
   startedAt DateTime @map("started_at") @db.Timestamptz(6)
   finishedAt DateTime @map("finished_at") @db.Timestamptz(6)
   outcome String @db.VarChar(20)
