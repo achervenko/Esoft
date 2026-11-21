@@ -6,6 +6,7 @@ import { stockId } from '../stock/stock.validation';
 import { record, text } from './receipts.validation';
 import { receiptConflict } from './receipts.policy';
 import {
+  externalOneCUuid,
   findReceiptWarehouseLinks,
   lockReceiptWarehouseLink,
   receiptWarehouseExternalId,
@@ -21,18 +22,32 @@ export class ReceiptIntegrationWarehousesService {
   list(code: string, actor: string) {
     return this.prisma.$transaction(async (tx) => {
       await assertTransactionPermission(tx, actor, 'integrations.manage');
-      if (
-        !(await tx.integrationSource.findUnique({
-          where: { code },
-          select: { id: true },
-        }))
-      )
-        throw new NotFoundException();
+      const source = await tx.integrationSource.findUnique({
+        where: { code },
+        select: { id: true },
+      });
+      if (!source) throw new NotFoundException();
+      const observed = await tx.$queryRaw<
+        { externalId: string; name: string }[]
+      >`
+        SELECT DISTINCT ON (warehouse->>'id')
+          warehouse->>'id' AS "externalId", warehouse->>'name' AS name
+        FROM warehouse_invoice_snapshots snapshot
+        CROSS JOIN LATERAL jsonb_array_elements(snapshot.payload->'lines') line
+        CROSS JOIN LATERAL (SELECT line->'warehouse' AS warehouse) data
+        WHERE snapshot.source_id=${source.id}::uuid
+          AND line->'item'->>'type' = 'Товар'
+          AND warehouse->>'id' <> '' AND warehouse->>'name' <> ''
+        ORDER BY warehouse->>'id', snapshot.observed_at DESC, snapshot.invoice_id
+      `;
+      const observedUuids = observed
+        .map(({ externalId }) => externalId)
+        .filter((externalId) => externalOneCUuid.test(externalId));
       const links = await tx.warehouseExternalWarehouse.findMany({
         where: {
           OR: [
             { sourceSystem: code },
-            { externalId: { in: await this.uuidLinks(tx) } },
+            { externalId: { in: observedUuids, mode: 'insensitive' } },
           ],
         },
         include: { warehouse: true },
@@ -44,8 +59,12 @@ export class ReceiptIntegrationWarehousesService {
         select: { id: true, name: true },
       });
       return {
+        observed: observed.map((warehouse) => ({
+          ...warehouse,
+          externalId: receiptWarehouseExternalId(warehouse.externalId),
+        })),
         links: links.map((link) => ({
-          externalId: link.externalId,
+          externalId: receiptWarehouseExternalId(link.externalId),
           warehouseId: String(link.warehouseId),
           warehouseName: link.warehouse.name,
           isActive: link.warehouse.isActive,
@@ -56,13 +75,6 @@ export class ReceiptIntegrationWarehousesService {
         })),
       };
     });
-  }
-
-  private async uuidLinks(tx: import('./receipts.policy').Tx) {
-    const rows = await tx.$queryRaw<{ externalId: string }[]>`
-      SELECT external_id AS "externalId" FROM warehouse_external_warehouses
-      WHERE external_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'`;
-    return rows.map(({ externalId }) => externalId);
   }
 
   save(code: string, value: unknown, actor: string) {

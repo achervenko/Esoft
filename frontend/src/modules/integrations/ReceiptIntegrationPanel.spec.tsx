@@ -13,7 +13,7 @@ import { receiptIntegrationApi } from "../../shared/api/receipt-integration-api"
 vi.mock("../../shared/api/receipt-integration-api", () => ({
   receiptIntegrationApi: {
     sources: vi.fn(),
-    events: vi.fn(),
+    runs: vi.fn(),
     keys: vi.fn(),
     flows: vi.fn(),
     configure: vi.fn(),
@@ -33,9 +33,10 @@ beforeEach(() => {
       incomingActions: ["event:create"],
     },
   ]);
-  vi.mocked(receiptIntegrationApi.events).mockResolvedValue({
+  vi.mocked(receiptIntegrationApi.runs).mockResolvedValue({
     items: [],
     total: 0,
+    limit: 25,
   });
 });
 function render(ui: ReactElement) {
@@ -53,9 +54,7 @@ it("does not load integration data without the admin integration permission", ()
 it("allows configuration but exposes no key generation or secret display", async () => {
   render(<ReceiptIntegrationPanel permissions={["integrations.manage"]} />);
   await screen.findByText("Источники обмена не добавлены.");
-  expect(
-    screen.getByRole("button", { name: "Добавить базу 1С" }),
-  ).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Добавить" })).toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: /Создать ключ|Показать ключ/ }),
   ).not.toBeInTheDocument();
@@ -76,7 +75,7 @@ it.each(["header", "basic"])(
     });
     render(<ReceiptIntegrationPanel permissions={["integrations.manage"]} />);
     await screen.findByText("Источники обмена не добавлены.");
-    fireEvent.click(screen.getByRole("button", { name: "Добавить базу 1С" }));
+    fireEvent.click(screen.getByRole("button", { name: "Добавить" }));
     expect(
       screen.queryByRole("switch", { name: "Автоматический импорт накладных" }),
     ).not.toBeInTheDocument();
@@ -195,4 +194,25 @@ it("enables invoice scheduling on an existing exchange and requires its start", 
       }),
     ),
   );
+});
+
+it("opens the exchange journal for the current Moscow day", async () => {
+  vi.setSystemTime(new Date("2026-11-20T22:00:00Z"));
+  try {
+    render(<ReceiptIntegrationPanel permissions={["integrations.manage"]} />);
+    await screen.findByText("За выбранный период обменов не было.");
+    expect(
+      vi.mocked(receiptIntegrationApi.runs).mock.calls[0][0].toString(),
+    ).toBe("from=2026-11-21&to=2026-11-21&page=1");
+    fireEvent.change(screen.getByLabelText("Дата с"), {
+      target: { value: "2026-11-20" },
+    });
+    await waitFor(() =>
+      expect(
+        vi.mocked(receiptIntegrationApi.runs).mock.lastCall?.[0].get("from"),
+      ).toBe("2026-11-20"),
+    );
+  } finally {
+    vi.useRealTimers();
+  }
 });

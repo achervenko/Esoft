@@ -5,7 +5,9 @@ import { AuditLogService } from '../audit/audit-log.service';
 import { assertTransactionPermission } from '../auth/transaction-permission';
 import { ensureIntegrationActor } from '../auth/system-actors';
 import { IntegrationFlowsService } from './integration-flows.service';
+import { listIntegrationRuns } from './integration-runs';
 import { IntegrationRegistry } from './integration-registry';
+import type { IntegrationScheduleSummary } from './integration.contracts';
 import { encryptSourceAuthorization } from './integration-credentials';
 import { object, text, invalid } from './integration.validation';
 const publicFields = {
@@ -28,13 +30,49 @@ export class IntegrationSourcesService {
     private readonly audit: AuditLogService,
     private readonly flows: IntegrationFlowsService,
   ) {}
+  listRuns(query: unknown, actor: string) {
+    return this.prisma.$transaction(async (tx) => {
+      await assertTransactionPermission(tx, actor, 'integrations.manage');
+      return listIntegrationRuns(
+        tx,
+        query,
+        (code) => !!this.registry.findFlow(code),
+      );
+    });
+  }
   async list(actor: string) {
     return this.prisma.$transaction(async (tx) => {
       await assertTransactionPermission(tx, actor, 'integrations.manage');
-      return tx.integrationSource.findMany({
+      const sources = await tx.integrationSource.findMany({
         select: publicFields,
         orderBy: { createdAt: 'desc' },
       });
+      const flowsByCode = new Map<string, (typeof sources)[number]['flows']>();
+      for (const source of sources) {
+        if (!source.isActive) continue;
+        for (const flow of source.flows) {
+          if (!flow.isActive) continue;
+          const flows = flowsByCode.get(flow.flowCode) ?? [];
+          flows.push(flow);
+          flowsByCode.set(flow.flowCode, flows);
+        }
+      }
+      const summaries = new Map<
+        string,
+        Map<string, IntegrationScheduleSummary>
+      >();
+      for (const [code, flows] of flowsByCode) {
+        const handler = this.registry.findFlow(code);
+        if (handler?.readScheduleSummaries)
+          summaries.set(code, await handler.readScheduleSummaries(tx, flows));
+      }
+      return sources.map((source) => ({
+        ...source,
+        flows: source.flows.map((flow) => ({
+          ...flow,
+          scheduleSummary: summaries.get(flow.flowCode)?.get(source.id) ?? null,
+        })),
+      }));
     });
   }
   async create(value: unknown, actor: string) {

@@ -1,5 +1,7 @@
 import { Badge } from "@chakra-ui/react";
+import { InfoTooltip } from "../../shared/ui/InfoTooltip";
 import type { IntegrationFlow } from "../../shared/api/receipt-integration-api";
+import { invoiceSchedulePresentation } from "./invoice-schedule-presentation";
 
 const explanations: Record<string, string> = {
   INTEGRATION_HTTP_TIMEOUT:
@@ -25,16 +27,16 @@ const explanations: Record<string, string> = {
 
 export function IntegrationFlowStatus({
   flow,
-  sourceActive,
   name,
 }: {
   flow: IntegrationFlow;
-  sourceActive: boolean;
   name: string;
 }) {
-  const disabled = !sourceActive || !flow.isActive;
+  const disabled = !flow.isActive;
+  const schedule = disabled ? null : flow.scheduleSummary;
   const failed =
     !disabled &&
+    !schedule &&
     !!flow.lastErrorCode &&
     (!flow.lastSuccessAt ||
       (!!flow.lastErrorAt &&
@@ -46,30 +48,37 @@ export function IntegrationFlowStatus({
       : flow.lastSuccessAt
         ? "Работает"
         : "Ожидает первого обмена";
+  const status = schedule && invoiceSchedulePresentation(schedule.outcome);
+  const errorCode = schedule
+    ? schedule.errorCode
+    : failed
+      ? flow.lastErrorCode
+      : null;
   return (
-    <div>
-      <span>{name}</span>{" "}
-      <Badge
-        colorPalette={
-          disabled
+    <Badge
+      className={errorCode ? "info-tooltip-tone-inherit" : undefined}
+      colorPalette={
+        status
+          ? status.color
+          : disabled
             ? "gray"
             : failed
               ? "red"
               : flow.lastSuccessAt
                 ? "green"
                 : "yellow"
-        }
-        variant="subtle"
-      >
-        {label}
-      </Badge>
-      {failed && (
-        <small>
-          {explanations[flow.lastErrorCode!] ??
-            "Обмен завершился ошибкой. Проверьте настройки и доступность 1С."}{" "}
-          Код: {flow.lastErrorCode}
-        </small>
+      }
+      variant="subtle"
+    >
+      {status?.label ?? label}
+      {errorCode && (
+        <InfoTooltip
+          label={`Подробности ошибки: ${name}`}
+          reasons={[
+            `${explanations[errorCode] ?? "Обмен завершился ошибкой. Проверьте настройки и доступность 1С."} Код: ${errorCode}`,
+          ]}
+        />
       )}
-    </div>
+    </Badge>
   );
 }

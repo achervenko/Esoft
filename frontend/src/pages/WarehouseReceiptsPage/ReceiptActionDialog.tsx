@@ -9,11 +9,12 @@ import { ReceiptItemMapForm } from "./ReceiptItemMapForm";
 import { ReceiptConflictResolveForm } from "./ReceiptConflictResolveForm";
 import { ReceiptCancelForm } from "./ReceiptCancelForm";
 export type ReceiptAction =
-  | { kind: "place" | "item"; line: ReceiptLine }
+  | { kind: "place" | "item" | "createItem"; line: ReceiptLine }
   | { kind: "resolve" | "cancel" };
 const titles = {
   place: "Разместить товар",
   item: "Сопоставить номенклатуру",
+  createItem: "Создать новую номенклатуру",
   resolve: "Решить конфликт",
   cancel: "Отменить приход",
 };
@@ -42,8 +43,12 @@ export function ReceiptActionDialog({
     >
       {action.kind === "place" ? (
         <ReceiptPlaceForm {...props} line={action.line} actorId={actorId} />
-      ) : action.kind === "item" ? (
-        <ReceiptItemMapForm {...props} line={action.line} />
+      ) : action.kind === "item" || action.kind === "createItem" ? (
+        <ReceiptItemMapForm
+          {...props}
+          line={action.line}
+          create={action.kind === "createItem"}
+        />
       ) : action.kind === "resolve" ? (
         <ReceiptConflictResolveForm
           {...props}

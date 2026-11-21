@@ -194,3 +194,45 @@ it("recovers a placement after closing the dialog even if remaining quantity cha
     vi.mocked(receiptsApi.place).mock.calls[1],
   );
 });
+it("allocates a placement after the server reports an order shortage", async () => {
+  vi.mocked(receiptsApi.place)
+    .mockRejectedValueOnce(
+      new ApiRequestError(
+        "Выберите распределение.",
+        409,
+        "WAREHOUSE_RECEIPT_RESERVATION_ALLOCATION_REQUIRED",
+        { deficitQuantity: "2.5" },
+      ),
+    )
+    .mockResolvedValueOnce({});
+  const onSaved = vi.fn();
+  render(
+    <ReceiptPlaceForm
+      actorId="actor"
+      onSavingChange={vi.fn()}
+      receipt={receipt}
+      line={receipt.lines[0]}
+      onClose={vi.fn()}
+      onSaved={onSaved}
+    />,
+  );
+  await choosePlace();
+  const save = screen.getByRole("button", { name: "Сохранить" });
+  fireEvent.click(save);
+  const restore = await screen.findByLabelText("Закрыть дефицит, шт");
+  expect(restore).toBeRequired();
+  expect(restore).toHaveAccessibleDescription("Дефицит по заказу: 2.5 шт");
+  expect(screen.queryByText("Выберите распределение.")).not.toBeInTheDocument();
+  expect(save).toBeDisabled();
+  fireEvent.change(restore, { target: { value: "3" } });
+  expect(save).toBeDisabled();
+  fireEvent.change(restore, { target: { value: "2,5" } });
+  fireEvent.click(save);
+  await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
+  const [first, second] = vi.mocked(receiptsApi.place).mock.calls;
+  expect(second[2].requestKey).not.toBe(first[2].requestKey);
+  expect(second[2].reservationAllocation).toEqual({
+    restoreQuantity: "2.5",
+    increaseQuantity: "3.5",
+  });
+});

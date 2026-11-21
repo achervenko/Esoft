@@ -36,3 +36,45 @@ export async function lockReservation(
     SELECT pg_advisory_xact_lock(hashtextextended(${`warehouse:reservation:${orderId}:${itemId}`}, 0))
   `;
 }
+
+export function reservationDeficit(reservation: {
+  quantity: Prisma.Decimal;
+  allocations: readonly { quantity: Prisma.Decimal }[];
+}) {
+  return reservation.allocations.reduce(
+    (remaining, allocation) => remaining.minus(allocation.quantity),
+    reservation.quantity,
+  );
+}
+
+export async function readReservationDeficits(
+  tx: Prisma.TransactionClient,
+  pairs: readonly { orderId: string; itemId: bigint }[],
+) {
+  const unique = [
+    ...new Map(
+      pairs.map((pair) => [`${pair.orderId}:${pair.itemId}`, pair]),
+    ).values(),
+  ];
+  const deficits = new Map<string, string>();
+  for (let start = 0; start < unique.length; start += 1000) {
+    const reservations = await tx.warehouseReservation.findMany({
+      where: { OR: unique.slice(start, start + 1000) },
+      select: {
+        orderId: true,
+        itemId: true,
+        quantity: true,
+        allocations: { select: { quantity: true } },
+      },
+    });
+    for (const reservation of reservations) {
+      const deficit = reservationDeficit(reservation);
+      if (deficit.gt(0))
+        deficits.set(
+          `${reservation.orderId}:${reservation.itemId}`,
+          deficit.toString(),
+        );
+    }
+  }
+  return deficits;
+}

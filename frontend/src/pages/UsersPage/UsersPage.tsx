@@ -8,23 +8,24 @@ import { UserAccountsTable } from "./UserAccountsTable";
 import { UserPhotoFormModal } from "./UserPhotoFormModal";
 import { useUsersAdminPage } from "./useUsersAdminPage";
 import "./UsersPage.css";
-import { useState } from "react";
+import { setHashRoute } from "../../lib/hash-router";
 import { hasPermission } from "../../shared/lib/permissions";
 import { IntegrationsPanel } from "../../modules/integrations/IntegrationsPanel";
 import "../../shared/ui/Tabs.css";
 
 type UsersPageProps = {
+  integrationTab?: boolean;
   currentUserId?: string | null;
   onCurrentUserChanged?: () => void;
   userPermissions: readonly string[] | null;
 };
 
 export function UsersPage({
+  integrationTab = false,
   currentUserId,
   onCurrentUserChanged,
   userPermissions,
 }: UsersPageProps) {
-  const [tab, setTab] = useState("accounts");
   const integrationAllowed = hasPermission(
     userPermissions,
     "integrations.manage",
@@ -36,8 +37,8 @@ export function UsersPage({
   });
 
   const activeTab = page.usersManageable
-    ? integrationAllowed
-      ? tab
+    ? integrationAllowed && integrationTab
+      ? "integration"
       : "accounts"
     : "integration";
 
@@ -69,7 +70,7 @@ export function UsersPage({
               role="tab"
               aria-selected={activeTab === "accounts"}
               className={activeTab === "accounts" ? "active" : ""}
-              onClick={() => setTab("accounts")}
+              onClick={() => setHashRoute("#/users")}
             >
               Учётные записи
             </button>
@@ -79,7 +80,7 @@ export function UsersPage({
             role="tab"
             aria-selected={activeTab === "integration"}
             className={activeTab === "integration" ? "active" : ""}
-            onClick={() => setTab("integration")}
+            onClick={() => setHashRoute("#/users?tab=integration")}
           >
             Интеграции
           </button>

@@ -5,6 +5,7 @@ import { WarehouseReservationManager } from '../reservations/reservation-manager
 import {
   assertReadCommitted,
   lockReservation,
+  reservationDeficit,
 } from '../reservations/reservation-common';
 import {
   reservationOrderDto,
@@ -70,11 +71,9 @@ export class WarehouseReceiptOrderPlacementService {
       where: { orderId_itemId: { orderId, itemId: BigInt(input.itemId) } },
       include: { allocations: true },
     });
-    const deficit =
-      current?.allocations.reduce(
-        (remaining, allocation) => remaining.minus(allocation.quantity),
-        current.quantity,
-      ) ?? new Prisma.Decimal(0);
+    const deficit = current
+      ? reservationDeficit(current)
+      : new Prisma.Decimal(0);
     if (deficit.gt(0) && !input.reservationAllocation)
       receiptConflict(
         'WAREHOUSE_RECEIPT_RESERVATION_ALLOCATION_REQUIRED',
@@ -102,6 +101,7 @@ export class WarehouseReceiptOrderPlacementService {
       receiptConflict(
         'WAREHOUSE_RESERVATION_DEFICIT_INSUFFICIENT',
         'Количество восстановления превышает текущий дефицит.',
+        { deficitQuantity: deficit.toString() },
       );
     await this.stock.receiveStock(
       context,

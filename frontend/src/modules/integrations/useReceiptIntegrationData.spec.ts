@@ -12,7 +12,6 @@ vi.mock("../../shared/api/receipt-integration-api", () => ({
   receiptIntegrationApi: {
     sources: vi.fn(),
     flows: vi.fn(),
-    events: vi.fn(),
     keys: vi.fn(),
   },
 }));
@@ -21,27 +20,17 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(receiptIntegrationApi.sources).mockResolvedValue([]);
   vi.mocked(receiptIntegrationApi.flows).mockResolvedValue([]);
-  vi.mocked(receiptIntegrationApi.events).mockResolvedValue({
-    items: [],
-    total: 0,
-  });
 });
-it("reloads the journal with current filters and aborts obsolete requests", async () => {
+it("reloads sources and aborts obsolete requests", async () => {
   const { result, rerender, unmount } = renderHook(
-    ({ page, status, revision }) =>
-      useReceiptIntegrationData(revision, page, status),
-    { initialProps: { page: 1, status: "PENDING", revision: 0 } },
+    (revision) => useReceiptIntegrationData(revision),
+    { initialProps: 0 },
   );
   await waitFor(() => expect(result.current.loading).toBe(false));
   const firstSignal = vi.mocked(receiptIntegrationApi.sources).mock.calls[0][0];
-  rerender({ page: 2, status: "FAILED", revision: 1 });
+  rerender(1);
   await waitFor(() => expect(result.current.loading).toBe(false));
   expect(firstSignal?.aborted).toBe(true);
-  expect(receiptIntegrationApi.events).toHaveBeenLastCalledWith(
-    2,
-    expect.any(AbortSignal),
-    "FAILED",
-  );
   const lastSignal = vi.mocked(receiptIntegrationApi.sources).mock.calls[1][0];
   unmount();
   expect(lastSignal?.aborted).toBe(true);
@@ -85,11 +74,11 @@ it("ignores stale keys after a source change and clears keys on deselection", as
   expect(onError.mock.calls.every(([error]) => error === null)).toBe(true);
 });
 it("reports load errors and allows a successful refresh", async () => {
-  vi.mocked(receiptIntegrationApi.events).mockRejectedValueOnce(
+  vi.mocked(receiptIntegrationApi.sources).mockRejectedValueOnce(
     new Error("Load failed"),
   );
   const { result, rerender } = renderHook(
-    (revision) => useReceiptIntegrationData(revision, 1, "PENDING"),
+    (revision) => useReceiptIntegrationData(revision),
     { initialProps: 0 },
   );
   await waitFor(() => expect(result.current.error).toBeTruthy());

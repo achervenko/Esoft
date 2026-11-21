@@ -66,6 +66,25 @@
 .receipt-placement-totals small {
   font-size: 12px;
 }
+.receipt-placement-item-status {
+  color: var(--color-text, #15171c);
+  font-size: 14px;
+  font-weight: 600;
+}
+.receipt-placement-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.receipt-placement-item-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.receipt-placement-item-actions .admin-primary-button {
+  min-inline-size: min(100%, 220px);
+  justify-content: center;
+}
 .receipt-placement-navigation {
   display: flex;
   gap: 10px;

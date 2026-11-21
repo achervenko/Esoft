@@ -103,7 +103,7 @@ const employeeColumns = (
               onClick={() => onSizes(employee)}
             >
               Размеры
-              {status !== "complete" && (
+              {employee.isActive && status !== "complete" && (
                 <span
                   className={`employee-sizes-dot ${status}`}
                   role="img"

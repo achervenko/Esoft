@@ -11,6 +11,8 @@ import {
 } from '../reservations/reservations.dto';
 import { parseManualReceipt, receiptHash } from './receipts.validation';
 import { receiptView, receiptInclude } from './receipts.mapper';
+import { readPlacementOrders } from './receipt-invoice-policy';
+import { readReservationDeficits } from '../reservations/reservation-common';
 import {
   receiptActor,
   receiptAudit,
@@ -215,7 +217,43 @@ export class WarehouseReceiptsService {
             code: 'WAREHOUSE_RECEIPT_NOT_FOUND',
             message: 'Приход не найден.',
           });
-        return receiptView(row, this.catalog, tx);
+        const receipt = await receiptView(row, this.catalog, tx);
+        if (!['RECEIVED', 'PLACING'].includes(row.status)) return receipt;
+        const items = new Map(
+          row.lines.flatMap(({ id, itemId }) =>
+            itemId === null ? [] : [[id, itemId] as const],
+          ),
+        );
+        const orders = await readPlacementOrders(
+          tx,
+          row,
+          row.lines.filter((line) => items.has(line.id)),
+        );
+        const pairs = orders.flatMap(({ lineId, orderId }) => {
+          const itemId = items.get(lineId);
+          return orderId && itemId !== undefined
+            ? [{ lineId, orderId, itemId }]
+            : [];
+        });
+        const deficits = await readReservationDeficits(
+          tx,
+          pairs.map(({ orderId, itemId }) => ({ orderId, itemId })),
+        );
+        const byLine = new Map(
+          pairs.map(({ lineId, orderId, itemId }) => [
+            String(lineId),
+            deficits.get(`${orderId}:${itemId}`),
+          ]),
+        );
+        return {
+          ...receipt,
+          lines: receipt.lines.map((line) => ({
+            ...line,
+            ...(byLine.get(line.id) && {
+              reservationDeficit: byLine.get(line.id),
+            }),
+          })),
+        };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );

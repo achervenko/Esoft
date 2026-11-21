@@ -15,11 +15,10 @@ import {
 import type { WarehouseItem } from "../../shared/api/warehouse-catalog-api";
 import { ReceiptItemPicker } from "../../shared/warehouse/ReceiptItemPicker";
 export function ReceiptItemMapForm(
-  props: ReceiptActionFormProps & { line: ReceiptLine },
+  props: ReceiptActionFormProps & { line: ReceiptLine; create: boolean },
 ) {
-  const { receipt, line, onClose } = props;
+  const { receipt, line, onClose, create } = props;
   const [item, setItem] = useState<WarehouseItem | null>(null);
-  const [create, setCreate] = useState(false);
   const [article, setArticle] = useState(line.sourceArticle ?? "");
   const [name, setName] = useState(line.name);
   const [unit, setUnit] = useState(line.unit);
@@ -52,17 +51,13 @@ export function ReceiptItemMapForm(
     >
       <fieldset disabled={saving} className="receipt-fields">
         <>
-          <Notice>
-            Единица источника: {line.unit}. Выберите тот же товар с той же
-            единицей. Связь применяется к этому внешнему ID и в других приходах.
-          </Notice>
-          <button
-            type="button"
-            className="admin-secondary-button"
-            onClick={() => setCreate(!create)}
-          >
-            {create ? "Выбрать существующую" : "Создать новую номенклатуру"}
-          </button>
+          {!create && (
+            <Notice>
+              Единица источника: {line.unit}. Выберите тот же товар с той же
+              единицей. Связь применяется к этому внешнему ID и в других
+              приходах.
+            </Notice>
+          )}
           {create ? (
             <>
               <TextField

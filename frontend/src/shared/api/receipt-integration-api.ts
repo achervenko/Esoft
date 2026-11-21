@@ -8,6 +8,7 @@ export type IntegrationFlow = {
   lastSuccessAt: string | null;
   lastErrorAt: string | null;
   lastErrorCode: string | null;
+  scheduleSummary?: { outcome: string | null; errorCode: string | null } | null;
   resultCode?: string | null;
   resultSummary?: {
     documentNumber?: string;
@@ -79,7 +80,26 @@ export type InvoiceScheduleStatus = {
     errorCode: string | null;
   } | null;
 };
+export type IntegrationRun = {
+  id: string;
+  flowCode: string;
+  sourceName: string;
+  startedAt: string;
+  finishedAt: string | null;
+  outcome: string;
+  errorCode: string | null;
+  received: number | null;
+  changed: number | null;
+  processed: number | null;
+  skipped: number | null;
+  errors: number | null;
+};
 export const receiptIntegrationApi = {
+  runs: (filters: URLSearchParams, signal?: AbortSignal) =>
+    request<{ items: IntegrationRun[]; total: number; limit: number }>(
+      `${base}/runs?${filters}`,
+      { signal },
+    ),
   invoiceSchedule: (code: string, signal?: AbortSignal) =>
     request<InvoiceScheduleStatus>(
       `/api/warehouse/integrations/sources/${encodeURIComponent(code)}/invoice-schedule`,

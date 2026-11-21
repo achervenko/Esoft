@@ -10,6 +10,20 @@ export async function verifyReceiptOrderRequests(c, t, context) {
       await f.seed();
       const receipt = await f.create();
       const before = await f.state();
+      const read = () =>
+        request(
+          "GET",
+          "/api/warehouse/receipts/" + receipt.id,
+          200,
+          undefined,
+          "keeper",
+        );
+      assert.equal((await read()).lines[0].reservationDeficit, "4");
+      assert.deepEqual(
+        await f.state(),
+        before,
+        "preview does not change stock or reservations",
+      );
       const missing = await f.place(
         receipt,
         "5",
@@ -34,6 +48,14 @@ export async function verifyReceiptOrderRequests(c, t, context) {
         await f.place(receipt, "5", allocation, c.a, randomUUID(), status);
       assert.deepEqual(await f.state(), before);
       const ordinary = await f.create("1", null);
+      const unlinked = await request(
+        "GET",
+        "/api/warehouse/receipts/" + ordinary.id,
+        200,
+        undefined,
+        "keeper",
+      );
+      assert.equal(unlinked.lines[0].reservationDeficit, undefined);
       await f.place(
         ordinary,
         "1",

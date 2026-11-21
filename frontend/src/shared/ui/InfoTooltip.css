@@ -46,3 +46,19 @@
 .info-tooltip-content li + li {
   margin-top: 4px;
 }
+
+.info-tooltip-tone-inherit .info-tooltip-trigger {
+  flex-basis: 24px;
+  width: 24px;
+  height: 24px;
+  color: inherit;
+  opacity: 0.8;
+}
+
+.info-tooltip-tone-inherit .info-tooltip-trigger:hover,
+.info-tooltip-tone-inherit .info-tooltip-trigger:focus-visible {
+  color: inherit;
+  background: rgba(0, 0, 0, 0.04);
+  outline-color: currentColor;
+  opacity: 1;
+}

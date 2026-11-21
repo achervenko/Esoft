@@ -103,6 +103,11 @@ export class IntegrationsController {
   ) {
     return this.keys.revoke(code, id, session.user.id);
   }
+  @Get('runs')
+  @RequirePermission('integrations.manage')
+  listRuns(@Query() query: unknown, @Session() session: UserSession<Auth>) {
+    return this.sources.listRuns(query, session.user.id);
+  }
   @Get('events')
   @RequirePermission('integrations.manage')
   listEvents(@Query() query: unknown, @Session() session: UserSession<Auth>) {

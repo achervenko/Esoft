@@ -10,6 +10,7 @@ export type TextFieldProps = Omit<
   label: string;
   error?: string;
   warning?: string;
+  hint?: string;
   inputRef?: Ref<HTMLInputElement>;
   selectOnFocus?: boolean;
   value: string;
@@ -19,6 +20,7 @@ export type TextFieldProps = Omit<
 export function TextField({
   error,
   warning,
+  hint,
   inputRef,
   label,
   fieldClassName,
@@ -38,6 +40,7 @@ export function TextField({
       required={required}
       error={error}
       warning={warning}
+      hint={hint}
     >
       <input
         {...inputProps}

@@ -145,6 +145,7 @@ export function AppRouteContent({
       ) : null}
       {appRoute.kind === "users" ? (
         <UsersPage
+          integrationTab={appRoute.integrationTab}
           currentUserId={user?.id ?? null}
           onCurrentUserChanged={onUserRefresh}
           userPermissions={user?.permissions ?? null}

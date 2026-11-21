@@ -1,4 +1,5 @@
 import type { WarehouseReceipt, WarehouseReceiptLine } from '@prisma/client';
+import { reservationUuid } from '../reservations/reservation-common';
 import { lockInvoiceSnapshot } from '../invoice-snapshot-lock';
 import { receiptConflict, type Tx } from './receipts.policy';
 
@@ -54,37 +55,83 @@ export async function assertInvoiceReceiptAvailable(
     );
 }
 
+type PlacementOrderLine = Pick<
+  WarehouseReceiptLine,
+  'id' | 'orderId' | 'orderSnapshot'
+>;
+type PlacementOrderReceipt = Pick<
+  WarehouseReceipt,
+  'source' | 'sourceOperationId'
+>;
+
+function placementOrderReference(
+  receipt: PlacementOrderReceipt,
+  line: PlacementOrderLine,
+) {
+  if (!importedInvoiceId(receipt))
+    return receipt.source === 'MANUAL' && line.orderId
+      ? { orderId: line.orderId }
+      : null;
+  const snapshot = line.orderSnapshot;
+  if (snapshot === null) return null;
+  if (
+    typeof snapshot !== 'object' ||
+    Array.isArray(snapshot) ||
+    typeof snapshot.id !== 'string' ||
+    !reservationUuid.test(snapshot.id)
+  )
+    return { invalid: true } as const;
+  return { externalId: snapshot.id.toLowerCase() };
+}
+
+export async function readPlacementOrders(
+  tx: Tx,
+  receipt: PlacementOrderReceipt,
+  lines: readonly PlacementOrderLine[],
+) {
+  const references = lines.map((line) => ({
+    lineId: line.id,
+    reference: placementOrderReference(receipt, line),
+  }));
+  const externalIds = [
+    ...new Set(
+      references.flatMap(({ reference }) =>
+        reference?.externalId ? [reference.externalId] : [],
+      ),
+    ),
+  ];
+  const orders = new Map<string, string>();
+  for (let start = 0; start < externalIds.length; start += 1000) {
+    const batch = await tx.customerOrder.findMany({
+      where: { externalId: { in: externalIds.slice(start, start + 1000) } },
+      select: { id: true, externalId: true },
+    });
+    for (const order of batch) orders.set(order.externalId, order.id);
+  }
+  return references.map(({ lineId, reference }) => ({
+    lineId,
+    orderId: reference?.externalId
+      ? (orders.get(reference.externalId) ?? null)
+      : (reference?.orderId ?? null),
+    error: reference?.invalid
+      ? 'Не удалось сопоставить заказ 1С.'
+      : reference?.externalId && !orders.has(reference.externalId)
+        ? 'Заказ 1С ещё не синхронизирован.'
+        : null,
+  }));
+}
+
 export async function invoicePlacementOrder(
   tx: Tx,
   receipt: WarehouseReceipt,
   line: WarehouseReceiptLine,
 ) {
-  if (!importedInvoiceId(receipt))
-    return receipt.source === 'MANUAL' ? line.orderId : null;
-  if (line.orderSnapshot === null) return null;
-  const snapshot = line.orderSnapshot;
-  if (
-    typeof snapshot !== 'object' ||
-    Array.isArray(snapshot) ||
-    typeof snapshot.id !== 'string'
-  )
-    receiptConflict(
-      'WAREHOUSE_RECEIPT_ORDER_UNRESOLVED',
-      'Не удалось сопоставить заказ 1С.',
-    );
-  const order = await tx.customerOrder.findUnique({
-    where: { externalId: snapshot.id },
-    select: { id: true },
-  });
-  if (!order)
-    receiptConflict(
-      'WAREHOUSE_RECEIPT_ORDER_UNRESOLVED',
-      'Заказ 1С ещё не синхронизирован.',
-    );
-  if (line.orderId !== order.id)
+  const [{ orderId, error }] = await readPlacementOrders(tx, receipt, [line]);
+  if (error) receiptConflict('WAREHOUSE_RECEIPT_ORDER_UNRESOLVED', error);
+  if (orderId && line.orderId !== orderId)
     await tx.warehouseReceiptLine.update({
       where: { id: line.id },
-      data: { orderId: order.id },
+      data: { orderId },
     });
-  return order.id;
+  return orderId;
 }

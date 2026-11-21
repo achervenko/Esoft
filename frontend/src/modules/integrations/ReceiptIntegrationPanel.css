@@ -20,3 +20,15 @@
   display: grid;
   gap: 10px;
 }
+
+.integration-flow-statuses > div {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+}
+
+.integration-run-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: 12px;
+}

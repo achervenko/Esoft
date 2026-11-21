@@ -20,8 +20,24 @@ import {
 } from "./useReceiptActionForm";
 import { ApiRequestError } from "../../shared/api/api-error";
 import { useReceiptSubmission } from "./useReceiptSubmission";
-import { quantityError } from "./receipt-utils";
+import { quantityError, quantityMilli } from "./receipt-utils";
 import { useReceiptStorage } from "./useReceiptStorage";
+function requiresAllocation(error: ApiRequestError) {
+  return (
+    error.status === 409 &&
+    (error.code === "WAREHOUSE_RECEIPT_RESERVATION_ALLOCATION_REQUIRED" ||
+      error.code === "WAREHOUSE_RESERVATION_DEFICIT_INSUFFICIENT")
+  );
+}
+
+function fromMillis(value: bigint) {
+  const fraction = (value % 1000n)
+    .toString()
+    .padStart(3, "0")
+    .replace(/0+$/, "");
+  return value / 1000n + (fraction ? "." + fraction : "");
+}
+
 export function ReceiptPlaceForm(
   props: ReceiptActionFormProps & {
     line: ReceiptLine;
@@ -43,22 +59,51 @@ export function ReceiptPlaceForm(
   const [remaining, setRemaining] = useState(line.remaining);
   const [placementBlocked, setPlacementBlocked] = useState(false);
   const [placementError, setPlacementError] = useState<string | null>(null);
-  const submission = useReceiptSubmission<{
-    storageLocationId: string;
-    quantity: string;
-  }>(actorId, `place:${receipt.id}:${line.id}`);
+  const [reportedDeficit, setDeficit] = useState<string>();
+  const deficit = reportedDeficit ?? line.reservationDeficit ?? null;
+  const [restore, setRestore] = useState("");
+  const submission = useReceiptSubmission<
+    Omit<Parameters<typeof receiptsApi.place>[2], "requestKey">
+  >(actorId, `place:${receipt.id}:${line.id}`);
   const { saving, error, submit } = useReceiptActionForm(props);
   const amountError = !submission.pending
     ? quantityError(quantity, remaining)
     : null;
+  const restored = quantityMilli(restore);
+  const amount = quantityMilli(quantity);
+  const maxRestore = deficit === null ? null : quantityMilli(deficit);
+  const validAllocation =
+    restored !== null &&
+    amount !== null &&
+    maxRestore !== null &&
+    restored <= amount &&
+    restored <= maxRestore;
+  const increase = validAllocation ? fromMillis(amount - restored) : null;
+  const allocation = submission.pending?.body.reservationAllocation;
   const disabled =
-    placementBlocked || remaining === "0" || !locationId || !!amountError;
+    placementBlocked ||
+    remaining === "0" ||
+    !locationId ||
+    !!amountError ||
+    (deficit !== null && !validAllocation);
   const place = async () => {
     setPlacementError(null);
     try {
       await submission.submit(
-        { storageLocationId: locationId, quantity: quantity.replace(",", ".") },
+        {
+          storageLocationId: locationId,
+          quantity: quantity.replace(",", "."),
+          ...(increase === null
+            ? {}
+            : {
+                reservationAllocation: {
+                  restoreQuantity: restore.replace(",", "."),
+                  increaseQuantity: increase,
+                },
+              }),
+        },
         (value) => receiptsApi.place(receipt.id, line.id, value),
+        requiresAllocation,
       );
     } catch (err) {
       if (
@@ -92,13 +137,29 @@ export function ReceiptPlaceForm(
       throw err;
     }
   };
+  const handleAllocationError = (error: unknown) => {
+    if (!(error instanceof ApiRequestError) || !requiresAllocation(error))
+      return false;
+    const { details } = error;
+    if (
+      !details ||
+      typeof details !== "object" ||
+      !("deficitQuantity" in details) ||
+      typeof details.deficitQuantity !== "string" ||
+      quantityMilli(details.deficitQuantity) === null
+    )
+      return false;
+    setDeficit(details.deficitQuantity);
+    setRestore("");
+    return true;
+  };
   return (
     <form
       className="admin-form"
       onSubmit={(e) => {
         e.preventDefault();
         if (props.disabled || (disabled && !submission.pending)) return;
-        void submit(() => place());
+        void submit(place, handleAllocationError);
       }}
     >
       <fieldset
@@ -144,6 +205,26 @@ export function ReceiptPlaceForm(
           <small className="receipt-hint">
             Осталось разместить: {remaining} {line.unit}
           </small>
+          {(deficit !== null || allocation) && (
+            <TextField
+              label={`Закрыть дефицит, ${line.unit}`}
+              fieldClassName="form-field-wide"
+              required
+              hint={
+                deficit !== null
+                  ? `Дефицит по заказу: ${deficit} ${line.unit}`
+                  : undefined
+              }
+              inputMode="decimal"
+              value={allocation?.restoreQuantity ?? restore}
+              onChange={setRestore}
+              error={
+                !allocation && restore !== "" && !validAllocation
+                  ? "Введите количество в пределах дефицита и размещаемого количества."
+                  : undefined
+              }
+            />
+          )}
         </>
       </fieldset>
       {hints.error && (
@@ -178,7 +259,7 @@ export function ReceiptPlaceForm(
         <AdminFormActions
           isSaving={saving}
           onClose={onClose}
-          submitDisabled={disabled && !submission.pending}
+          submitDisabled={!!props.disabled || (disabled && !submission.pending)}
         />
       )}
     </form>

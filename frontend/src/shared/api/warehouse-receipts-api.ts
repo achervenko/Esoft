@@ -32,6 +32,7 @@ export type ReceiptLine = {
   quantity: string;
   placed: string;
   remaining: string;
+  reservationDeficit?: string;
   sourceType: string;
   reconciledToLineId: string | null;
   mappingStatus: "MAPPED" | "UNMAPPED";
@@ -100,7 +101,15 @@ export const receiptsApi = {
   place: (
     id: string,
     lineId: string,
-    body: { requestKey: string; storageLocationId: string; quantity: string },
+    body: {
+      requestKey: string;
+      storageLocationId: string;
+      quantity: string;
+      reservationAllocation?: {
+        restoreQuantity: string;
+        increaseQuantity: string;
+      };
+    },
   ) => post(`${base}/${id}/lines/${lineId}/placements`, body),
   mapItem: (
     id: string,

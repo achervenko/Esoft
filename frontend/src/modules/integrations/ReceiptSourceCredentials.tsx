@@ -1,16 +1,13 @@
 import { AdminTextField as TextField } from "../../shared/ui/AdminFormControls";
 import { SelectField } from "../../shared/ui/SelectField";
-import { Notice } from "../../shared/ui/Notice";
 import type { useReceiptSourceForm } from "./useReceiptSourceForm";
 
 type Props = ReturnType<typeof useReceiptSourceForm>["credentials"] & {
   editing: boolean;
-  baseUrl: string;
 };
 
 export function ReceiptSourceCredentials({
   editing,
-  baseUrl,
   authMode,
   changeAuthMode,
   basic,
@@ -72,18 +69,6 @@ export function ReceiptSourceCredentials({
           autoComplete="new-password"
           maxLength={2000}
         />
-      )}
-      {editing && (
-        <Notice>
-          Оставьте поля доступа пустыми, чтобы сохранить текущие данные.
-        </Notice>
-      )}
-      {!basic && <Notice>Введите заголовок целиком, например Bearer …</Notice>}
-      {/^http:\/\//i.test(baseUrl.trim()) && (
-        <Notice>
-          При подключении к 1С по HTTP данные доступа передаются без шифрования.
-          Используйте HTTPS, если он настроен на сервере 1С.
-        </Notice>
       )}
     </>
   );

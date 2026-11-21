@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { WarehouseItemIdentity } from "../../shared/warehouse/WarehouseItemIdentity";
-import { MapPin } from "lucide-react";
+import { Link2, MapPin, Plus } from "lucide-react";
 import type {
   Receipt,
   ReceiptLine,
@@ -39,7 +39,7 @@ export function ReceiptPlacementStepper({
   saving: boolean;
   onSavingChange: (value: boolean) => void;
   onSaved: () => void;
-  onMap: (line: ReceiptLine) => void;
+  onMap: (line: ReceiptLine, mode: "match" | "create") => void;
   onExit: () => void;
 }) {
   const lines = receipt.lines;
@@ -165,18 +165,36 @@ export function ReceiptPlacementStepper({
               </div>
             </dl>
             {!line.itemId && (
-              <Notice>
-                Номенклатура не сопоставлена.
-                {canMap && receipt.source === "ONE_C" && (
-                  <button
-                    className="admin-secondary-button"
-                    disabled={saving}
-                    onClick={() => onMap(line)}
-                  >
-                    Сопоставить
-                  </button>
+              <div>
+                {canMap && receipt.source === "ONE_C" ? (
+                  <div className="receipt-placement-item-actions">
+                    {hasPermission(permissions, "warehouse.catalog.manage") && (
+                      <button
+                        type="button"
+                        className="admin-primary-button"
+                        disabled={saving}
+                        onClick={() => onMap(line, "create")}
+                      >
+                        <Plus size={16} aria-hidden="true" />
+                        Создать
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="admin-secondary-button"
+                      disabled={saving}
+                      onClick={() => onMap(line, "match")}
+                    >
+                      <Link2 size={16} aria-hidden="true" />
+                      Сопоставить
+                    </button>
+                  </div>
+                ) : (
+                  <p className="receipt-placement-item-status" role="status">
+                    Номенклатура не сопоставлена
+                  </p>
                 )}
-              </Notice>
+              </div>
             )}
             {line.sourceType !== "GOODS" && (
               <Notice>Тип «{line.sourceType}» нельзя разместить.</Notice>

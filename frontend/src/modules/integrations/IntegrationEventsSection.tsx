@@ -29,8 +29,8 @@ export function IntegrationEventsSection({
 }) {
   return (
     <section className="admin-card">
-      <header className="admin-page-header">
-        <h3>Журнал событий</h3>
+      <header>
+        <h2>Журнал событий</h2>
         <button
           className="admin-secondary-button"
           onClick={reload}

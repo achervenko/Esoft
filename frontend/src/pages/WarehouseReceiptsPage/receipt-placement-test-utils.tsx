@@ -34,10 +34,12 @@ export function Controlled({
   value = twoLines,
   onMap = vi.fn(),
   onExit = vi.fn(),
+  granted = permissions,
 }: {
   value?: Receipt;
   onMap?: () => void;
   onExit?: () => void;
+  granted?: readonly string[];
 }) {
   const [position, setPosition] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -45,7 +47,7 @@ export function Controlled({
     <ReceiptPlacementStepper
       receipt={value}
       actorId="actor"
-      permissions={permissions}
+      permissions={granted}
       position={position}
       onPositionChange={setPosition}
       saving={saving}

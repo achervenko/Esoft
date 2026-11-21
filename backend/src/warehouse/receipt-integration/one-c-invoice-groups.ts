@@ -13,6 +13,7 @@ export function groupInvoiceLinesByWarehouse(invoice: Invoice) {
     }
   >();
   for (const line of invoice.lines) {
+    if (line.item.type !== 'Товар') continue;
     const warehouseId = line.warehouse.id;
     const group = groups.get(warehouseId);
     if (group) group.lines.push(line);

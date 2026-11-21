@@ -14,7 +14,10 @@ export function useReceiptActionForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lock = useRef(false);
-  const submit = async (run: () => Promise<unknown>) => {
+  const submit = async (
+    run: () => Promise<unknown>,
+    onError?: (error: unknown) => boolean,
+  ) => {
     if (lock.current) return;
     lock.current = true;
     setSaving(true);
@@ -24,7 +27,7 @@ export function useReceiptActionForm({
       await run();
       onSaved();
     } catch (error) {
-      setError(getApiErrorMessage(error));
+      if (!onError?.(error)) setError(getApiErrorMessage(error));
     } finally {
       lock.current = false;
       setSaving(false);

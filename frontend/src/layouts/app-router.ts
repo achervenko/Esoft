@@ -49,7 +49,7 @@ type AppRouteBase =
   | { kind: "production-calendar" }
   | { kind: "profile" }
   | { kind: "search" }
-  | { kind: "users" };
+  | { kind: "users"; integrationTab: boolean };
 
 export type AppRoute = AppRouteBase | { kind: "unknown" };
 
@@ -220,8 +220,8 @@ export function resolveAppRoute(route: string): AppRoute {
     return { kind: "search" };
   }
 
-  if (route === "#/users") {
-    return { kind: "users" };
+  if (route === "#/users" || route === "#/users?tab=integration") {
+    return { kind: "users", integrationTab: route !== "#/users" };
   }
 
   return { kind: "unknown" };

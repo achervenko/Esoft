@@ -15,6 +15,7 @@ it("suggests the source article for creation and submits the user's correction",
   vi.mocked(receiptsApi.mapItem).mockResolvedValue({});
   render(
     <ReceiptItemMapForm
+      create
       onSavingChange={vi.fn()}
       receipt={receipt}
       line={{
@@ -26,9 +27,6 @@ it("suggests the source article for creation and submits the user's correction",
       onClose={vi.fn()}
       onSaved={vi.fn()}
     />,
-  );
-  fireEvent.click(
-    screen.getByRole("button", { name: "Создать новую номенклатуру" }),
   );
   const input = screen.getByLabelText("Канонический артикул");
   expect(input).toHaveValue("SIM-АIR-01");

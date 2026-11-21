@@ -115,19 +115,3 @@
   padding-block: 2px;
   padding-right: 2px;
 }
-
-.ppe-norm-coverage-badge .info-tooltip-trigger {
-  flex-basis: 24px;
-  width: 24px;
-  height: 24px;
-  color: inherit;
-  opacity: 0.8;
-}
-
-.ppe-norm-coverage-badge .info-tooltip-trigger:hover,
-.ppe-norm-coverage-badge .info-tooltip-trigger:focus-visible {
-  color: inherit;
-  background: rgba(0, 0, 0, 0.04);
-  outline-color: currentColor;
-  opacity: 1;
-}

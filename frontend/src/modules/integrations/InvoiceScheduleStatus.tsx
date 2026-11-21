@@ -6,14 +6,7 @@ import {
 import { Notice } from "../../shared/ui/Notice";
 import { formatBusinessDateTime } from "../../shared/lib/business-date";
 
-const outcomes: Record<string, string> = {
-  RUNNING: "Выполняется",
-  SUCCESS: "Завершён",
-  PARTIAL_FAILURE: "Частично обработан",
-  FAILED: "Ошибка",
-  BLOCKED: "Требуется проверить настройки",
-  INTERRUPTED: "Прерван",
-};
+import { invoiceSchedulePresentation } from "./invoice-schedule-presentation";
 
 export function InvoiceScheduleStatus({ code }: { code: string }) {
   const [status, setStatus] = useState<Status | null>(null);
@@ -49,7 +42,7 @@ export function InvoiceScheduleStatus({ code }: { code: string }) {
       {latest && (
         <>
           <div>
-            {outcomes[latest.outcome] ?? latest.outcome} ·{" "}
+            {invoiceSchedulePresentation(latest.outcome).label} ·{" "}
             {formatBusinessDateTime(latest.periodFrom)} —{" "}
             {formatBusinessDateTime(latest.periodTo)}
           </div>

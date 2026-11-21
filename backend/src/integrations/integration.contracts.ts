@@ -33,6 +33,10 @@ export interface IntegrationFlowHandler {
   readonly configVersions: readonly number[];
   readonly incomingActions: readonly string[];
   readonly actorPermissions?: readonly string[];
+  readScheduleSummaries?(
+    tx: Prisma.TransactionClient,
+    flows: readonly { sourceId: string; config: Prisma.JsonValue }[],
+  ): Promise<Map<string, IntegrationScheduleSummary>>;
   validateConfig(version: number, config: unknown): void;
   validateEvent(event: IntegrationEventEnvelope): void;
   handle(
@@ -44,4 +48,10 @@ export type IntegrationSkipResult = {
   outcome: 'SKIPPED';
   code: string;
   summary: Record<string, string>;
+};
+import type { Prisma } from '@prisma/client';
+
+export type IntegrationScheduleSummary = {
+  outcome: string | null;
+  errorCode: string | null;
 };

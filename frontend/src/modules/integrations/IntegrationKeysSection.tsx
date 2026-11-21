@@ -58,8 +58,10 @@ export function IntegrationKeysSection({
           onCreated={reload}
         />
       )}
-      <section className="admin-card admin-form">
-        <h3>Входящие API-ключи</h3>
+      <section className="admin-card">
+        <header>
+          <h2>Входящие API-ключи</h2>
+        </header>
         <SelectField
           label="Источник"
           value={selected}

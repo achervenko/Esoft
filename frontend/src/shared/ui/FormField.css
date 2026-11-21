@@ -226,3 +226,10 @@
 .gender-field:disabled .gender-toggle-segment {
   cursor: default;
 }
+
+.form-field-hint {
+  padding-inline-start: var(--optical-inset-modal);
+  color: var(--color-text-muted, #697386);
+  font-size: 12px;
+  line-height: 1.35;
+}

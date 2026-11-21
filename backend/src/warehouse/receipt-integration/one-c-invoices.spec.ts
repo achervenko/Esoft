@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { IntegrationFailure } from '../../integrations/integration-errors';
 import { readOneCInvoices } from './one-c-invoices';
+import { groupInvoiceLinesByWarehouse } from './one-c-invoice-groups';
 
 const period = {
   dateFrom: '2026-11-14T07:00:00',
@@ -64,6 +65,70 @@ it('normalizes line identities and empty orders while retaining the document dat
     },
   ]);
 });
+
+it('retains services and work without warehouses and groups only goods', async () => {
+  const raw = invoice();
+  const service = {
+    ...raw.lines[0],
+    row_no: 2,
+    item_type: 'Услуга',
+    warehouse_id: '',
+    warehouse_name: '',
+    item_unit: '',
+  };
+  const work = { ...service, row_no: 3, item_type: 'Работа' };
+  const getJson = jest.fn().mockResolvedValue(
+    page(1, 2, [
+      { ...raw, lines: [...raw.lines, service, work] },
+      { ...invoice(), lines: [service, work] },
+    ]),
+  );
+  const [mixed, nonStock] = await readOneCInvoices({ getJson }, period);
+  expect(mixed.lines.map(({ item }) => item.type)).toEqual([
+    'Товар',
+    'Услуга',
+    'Работа',
+  ]);
+  expect(
+    groupInvoiceLinesByWarehouse(mixed).map(({ lines }) =>
+      lines.map(({ rowNumber }) => rowNumber),
+    ),
+  ).toEqual([[1]]);
+  expect(nonStock.lines).toHaveLength(2);
+  expect(groupInvoiceLinesByWarehouse(nonStock)).toEqual([]);
+});
+
+it.each(['Товар', 'Неизвестный'])(
+  'rejects a missing warehouse for goods or an unknown type (%s)',
+  async (item_type) => {
+    const raw = invoice();
+    const getJson = jest.fn().mockResolvedValue(
+      page(1, 1, [
+        {
+          ...raw,
+          lines: [
+            {
+              ...raw.lines[0],
+              item_type,
+              warehouse_id: '',
+              warehouse_name: '',
+            },
+          ],
+        },
+      ]),
+    );
+    await expect(readOneCInvoices({ getJson }, period)).rejects.toMatchObject({
+      code: 'ONE_C_INVOICES_RESPONSE_INVALID',
+      ...(item_type === 'Неизвестный'
+        ? {
+            publicMessage: expect.stringContaining(
+              `${raw.number}, строка 1`,
+            ) as unknown,
+          }
+        : {}),
+    });
+  },
+);
 
 it('reads start=51 after 50 documents and returns the same snapshot on replay', async () => {
   const documents = Array.from({ length: 51 }, invoice);

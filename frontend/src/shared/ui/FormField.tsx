@@ -17,6 +17,7 @@ export type FormFieldProps = {
   required?: boolean;
   error?: string;
   warning?: string;
+  hint?: string;
   hideLabel?: boolean;
   className?: string;
 };
@@ -27,10 +28,12 @@ export function FormField({
   required = false,
   error,
   warning,
+  hint,
   hideLabel = false,
   className = "",
 }: FormFieldProps) {
   const errorId = useId();
+  const hintId = useId();
   const labelId = useId();
   const message = error || warning;
   const [retainedMessage, setRetainedMessage] = useState<{
@@ -82,11 +85,20 @@ export function FormField({
             : {}),
           "aria-invalid": error ? true : child.props["aria-invalid"],
           "aria-describedby":
-            [child.props["aria-describedby"], error || warning ? errorId : null]
+            [
+              child.props["aria-describedby"],
+              hint ? hintId : null,
+              error || warning ? errorId : null,
+            ]
               .filter(Boolean)
               .join(" ") || undefined,
         });
       })}
+      {hint && (
+        <small id={hintId} className="form-field-hint">
+          {hint}
+        </small>
+      )}
       {message || retainedMessage ? (
         <small
           id={errorId}

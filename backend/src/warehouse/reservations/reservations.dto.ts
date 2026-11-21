@@ -1,4 +1,5 @@
 import { AuditAction, AuditModule, Prisma } from '@prisma/client';
+import { reservationDeficit } from './reservation-common';
 import { CLOSED_ORDER_STATUS } from '../../orders/orders.constants';
 import {
   warehouseItemSummaryDto,
@@ -46,10 +47,8 @@ export function reservationDto(
     include: typeof reservationInclude;
   }>,
 ) {
-  const covered = row.allocations.reduce(
-    (sum, entry) => sum.plus(entry.quantity),
-    new Prisma.Decimal(0),
-  );
+  const deficit = reservationDeficit(row);
+  const covered = row.quantity.minus(deficit);
   const order = reservationOrderDto(row.order);
   return {
     id: row.id,
@@ -57,7 +56,7 @@ export function reservationDto(
     item: warehouseItemSummaryDto(row.item),
     quantity: row.quantity.toString(),
     coveredQuantity: covered.toString(),
-    deficitQuantity: row.quantity.minus(covered).toString(),
+    deficitQuantity: deficit.toString(),
     allocations: row.allocations.map((entry) => ({
       id: entry.id,
       location: locationWithWarehouseDto(entry.location),

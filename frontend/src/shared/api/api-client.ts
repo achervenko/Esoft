@@ -30,6 +30,7 @@ export async function request<T>(path: string, init: ApiRequestInit = {}) {
       errorBody?.message ?? "Не удалось выполнить запрос.",
       response.status,
       errorBody?.code,
+      errorBody?.details,
     );
   }
 
@@ -60,5 +61,9 @@ async function readJsonResponse(response: Response) {
     return null;
   }
 
-  return JSON.parse(responseText) as { code?: string; message?: string };
+  return JSON.parse(responseText) as {
+    code?: string;
+    message?: string;
+    details?: unknown;
+  };
 }

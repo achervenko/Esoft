@@ -7,6 +7,7 @@ import type {
   IntegrationFlowContext,
   IntegrationFlowHandler,
   IntegrationEventEnvelope,
+  IntegrationScheduleSummary,
 } from '../../integrations/integration.contracts';
 import { IntegrationFailure } from '../../integrations/integration-errors';
 import { assertTransactionPermission } from '../../auth/transaction-permission';
@@ -19,6 +20,7 @@ import {
   parseReceiptEvent,
   validateReceiptFlowConfig,
 } from './receipt-integration.validation';
+import { readInvoiceSchedule } from './invoice-schedule';
 
 export async function applyReceiptIntegrationEvent(
   tx: Prisma.TransactionClient,
@@ -81,6 +83,30 @@ export class WarehouseReceiptIntegrationHandler
   ) {}
   onModuleInit() {
     this.registry.registerFlow(this);
+  }
+  async readScheduleSummaries(
+    tx: Prisma.TransactionClient,
+    flows: readonly { sourceId: string; config: Prisma.JsonValue }[],
+  ) {
+    const summaries = new Map<string, IntegrationScheduleSummary>();
+    for (const flow of flows) {
+      if (readInvoiceSchedule(flow.config).enabled)
+        summaries.set(flow.sourceId, { outcome: null, errorCode: null });
+    }
+    if (!summaries.size) return summaries;
+    const states = await tx.warehouseInvoiceSyncState.findMany({
+      where: {
+        sourceId: { in: [...summaries.keys()] },
+        flowCode: this.flowCode,
+      },
+      select: { sourceId: true, lastOutcome: true, lastErrorCode: true },
+    });
+    for (const state of states)
+      summaries.set(state.sourceId, {
+        outcome: state.lastOutcome,
+        errorCode: state.lastErrorCode,
+      });
+    return summaries;
   }
   validateConfig(version: number, config: unknown) {
     validateReceiptFlowConfig(version, config);

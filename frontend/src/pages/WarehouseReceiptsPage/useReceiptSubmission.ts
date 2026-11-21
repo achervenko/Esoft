@@ -51,6 +51,7 @@ export function useReceiptSubmission<T>(
     async submit<R>(
       body: T,
       send: (value: T & { requestKey: string }) => Promise<R>,
+      confirmsRejection?: (error: ApiRequestError) => boolean,
     ) {
       if (!actorId)
         throw new Error(
@@ -79,11 +80,11 @@ export function useReceiptSubmission<T>(
         // A first definitive rejection cannot have committed. After an uncertain
         // response, even a permission error cannot prove the original outcome.
         if (
-          !retry &&
           error instanceof ApiRequestError &&
           error.status >= 400 &&
           error.status < 500 &&
-          error.status !== 408
+          error.status !== 408 &&
+          (!retry || confirmsRejection?.(error))
         ) {
           sessionStorage.removeItem(storageKey);
           current.current = null;

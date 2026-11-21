@@ -57,7 +57,7 @@ export function createNormColumns({
           summary.status !== "complete" || Boolean(summary.reasons?.length);
         return (
           <span
-            className={`ppe-badge ppe-norm-coverage-badge ${className}${showInfo ? " ppe-norm-coverage-with-info" : ""}`}
+            className={`ppe-badge ppe-norm-coverage-badge ${className}${showInfo ? " ppe-norm-coverage-with-info info-tooltip-tone-inherit" : ""}`}
           >
             {label}
             {showInfo && (

@@ -1,5 +1,6 @@
 import { request } from "./api-client";
 export type ReceiptWarehouseLinks = {
+  observed: { externalId: string; name: string }[];
   links: {
     externalId: string;
     warehouseId: string;

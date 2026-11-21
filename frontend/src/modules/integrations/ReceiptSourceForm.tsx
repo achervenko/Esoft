@@ -68,11 +68,7 @@ export function ReceiptSourceForm({
             onChange={setUrl}
             maxLength={2000}
           />
-          <ReceiptSourceCredentials
-            {...credentials}
-            editing={!!source}
-            baseUrl={baseUrl}
-          />
+          <ReceiptSourceCredentials {...credentials} editing={!!source} />
           <SelectField
             label="Обмены"
             multiple

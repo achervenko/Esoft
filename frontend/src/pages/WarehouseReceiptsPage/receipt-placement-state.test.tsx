@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { Controlled, receipt, twoLines } from "./receipt-placement-test-utils";
+import { permissions } from "./receipts-test-context";
 
 it("locks navigation during a placement request", () => {
   render(<Controlled />);
@@ -22,9 +23,36 @@ it("shows mapping instead of placement for an unknown item", () => {
       onMap={onMap}
     />,
   );
+  expect(
+    screen.queryByRole("button", { name: "Создать" }),
+  ).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Сопоставить" }));
   expect(onMap).toHaveBeenCalledOnce();
+  expect(onMap).toHaveBeenCalledWith(
+    expect.objectContaining({ itemId: null }),
+    "match",
+  );
   expect(screen.getByRole("button", { name: "Разместить" })).toBeDisabled();
+});
+
+it("opens creation directly when the user can manage the catalog", () => {
+  const onMap = vi.fn();
+  render(
+    <Controlled
+      value={{ ...receipt, lines: [{ ...receipt.lines[0], itemId: null }] }}
+      granted={[...permissions, "warehouse.catalog.manage"]}
+      onMap={onMap}
+    />,
+  );
+  const create = screen.getByRole("button", {
+    name: "Создать",
+  });
+  expect(create).toHaveClass("admin-primary-button");
+  fireEvent.click(create);
+  expect(onMap).toHaveBeenCalledWith(
+    expect.objectContaining({ itemId: null }),
+    "create",
+  );
 });
 
 it("does not call a fully placed line complete while a request still needs recovery", () => {

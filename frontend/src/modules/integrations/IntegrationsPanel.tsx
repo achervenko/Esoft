@@ -6,10 +6,7 @@ export function IntegrationsPanel({
   permissions: readonly string[] | null;
 }) {
   return (
-    <section className="admin-form" aria-label="Интеграции">
-      <header className="admin-page-header">
-        <h2>Интеграции</h2>
-      </header>
+    <section aria-label="Интеграции">
       <ReceiptIntegrationPanel permissions={permissions} />
     </section>
   );

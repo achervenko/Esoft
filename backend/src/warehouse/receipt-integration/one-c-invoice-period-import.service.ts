@@ -105,10 +105,7 @@ export class OneCInvoicePeriodImportService {
     const documents = results.map((document) =>
       document.outcome === 'PROCESSED' &&
       document.groups.some(
-        ({ status }) =>
-          status === 'UNMAPPED' ||
-          status === 'INACTIVE' ||
-          status === 'AMBIGUOUS',
+        ({ status }) => status === 'INACTIVE' || status === 'AMBIGUOUS',
       )
         ? {
             ...document,

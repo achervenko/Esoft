@@ -107,7 +107,12 @@ export function ReceiptDetails({
             saving={placing || query.loading || !!query.error}
             onSavingChange={setPlacing}
             onSaved={saved}
-            onMap={(line) => setAction({ kind: "item", line })}
+            onMap={(line, mode) =>
+              setAction({
+                kind: mode === "create" ? "createItem" : "item",
+                line,
+              })
+            }
           />
           {actionsOpen && (
             <AdminModal title="Действия" onClose={() => setActionsOpen(false)}>

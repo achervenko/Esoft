@@ -63,31 +63,31 @@ export async function verifyReceiptPeriodHistory(c, fixture) {
     c.registry,
     importer,
   );
-  const incomplete = await retry.importPeriod(a.code, period);
-  assert.equal(incomplete.outcome, "FAILED");
+  const imported = await retry.importPeriod(a.code, period);
+  assert.equal(imported.outcome, "SUCCESS");
+  assert.equal(imported.errorCount, 0);
   assert.equal(
-    incomplete.documents[0].code,
-    "ONE_C_INVOICE_WAREHOUSE_GROUPS_PENDING",
-  );
-  assert.equal(
-    incomplete.documents[0].groups.filter(({ status }) => status === "IMPORTED")
+    imported.documents[0].groups.filter(({ status }) => status === "IMPORTED")
       .length,
     2,
   );
   assert.equal(
-    incomplete.documents[0].groups.filter(({ status }) => status === "UNMAPPED")
+    imported.documents[0].groups.filter(({ status }) => status === "UNMAPPED")
       .length,
     1,
   );
   assert.equal(lost, true);
   const first = await receipts();
   assert.equal(first.length, 2);
+  let lostApplyCommit = false;
   const lostBusinessCommit = new OneCInvoicePeriodImportService(
     {
       $transaction: async (...args) => {
         const committed = await c.prisma.$transaction(...args);
-        if (committed?.outcome === "PROCESSED")
+        if (committed?.outcome === "PROCESSED") {
+          lostApplyCommit = true;
           throw new Error("Lost business COMMIT acknowledgement");
+        }
         return committed;
       },
       $queryRaw: c.prisma.$queryRaw.bind(c.prisma),
@@ -98,8 +98,9 @@ export async function verifyReceiptPeriodHistory(c, fixture) {
   );
   assert.equal(
     (await lostBusinessCommit.importPeriod(b.code, period)).outcome,
-    "FAILED",
+    "SUCCESS",
   );
+  assert.equal(lostApplyCommit, true);
   await Promise.all([run(a), run(b)]);
   assert.deepEqual(
     (await receipts()).map(({ id }) => id),
@@ -110,7 +111,7 @@ export async function verifyReceiptPeriodHistory(c, fixture) {
   const { OneCInvoiceSchedulerService } = loadReceiptPeriod(
     "one-c-invoice-scheduler.service.js",
   );
-  const scheduled = await createSource("Period pending warehouse");
+  const scheduled = await createSource("Period with untracked warehouse");
   await c.coreSources.configureFlow(
     scheduled.code,
     "warehouse.receipts",
@@ -123,19 +124,57 @@ export async function verifyReceiptPeriodHistory(c, fixture) {
   );
   const scheduler = new OneCInvoiceSchedulerService(c.prisma, service);
   const signal = new AbortController().signal;
+  const summaries = async () =>
+    new Map(
+      (await c.coreSources.list(c.admin.id)).map(({ code, flows }) => [
+        code,
+        flows.find(({ flowCode }) => flowCode === "warehouse.receipts")
+          ?.scheduleSummary,
+      ]),
+    );
+  const before = await summaries();
+  assert.deepEqual(before.get(scheduled.code), {
+    outcome: null,
+    errorCode: null,
+  });
+  assert.equal(before.get(a.code), null);
   await scheduler.run(scheduled.id, signal, new Date("2026-11-14T00:00:00Z"));
-  const pending = (await scheduler.status(scheduled.code, c.admin.id)).latest;
-  assert.equal(pending.outcome, "FAILED");
-  assert.equal(pending.syncedThrough, null);
-  assert.equal(pending.errorCode, "ONE_C_INVOICE_WAREHOUSE_GROUPS_PENDING");
-  assert.ok(pending.nextAttemptAt);
-  await bind(warehouses[2]);
-  await scheduler.run(scheduled.id, signal, pending.nextAttemptAt);
   const completed = (await scheduler.status(scheduled.code, c.admin.id)).latest;
   assert.equal(completed.outcome, "SUCCESS");
-  assert.deepEqual(completed.periodFrom, pending.periodFrom);
-  assert.deepEqual(completed.periodTo, pending.periodTo);
-  assert.deepEqual(completed.syncedThrough, pending.periodTo);
+  assert.ok(completed.periodTo);
+  assert.deepEqual(completed.syncedThrough, completed.periodTo);
+  assert.deepEqual((await summaries()).get(scheduled.code), {
+    outcome: "SUCCESS",
+    errorCode: null,
+  });
+  const stateKey = { sourceId: scheduled.id, flowCode: "warehouse.receipts" };
+  for (const outcome of ["FAILED", "PARTIAL_FAILURE", "BLOCKED"]) {
+    await c.prisma.warehouseInvoiceSyncState.update({
+      where: { sourceId_flowCode: stateKey },
+      data: { lastOutcome: outcome, lastErrorCode: "TEST_ERROR" },
+    });
+    assert.deepEqual((await summaries()).get(scheduled.code), {
+      outcome,
+      errorCode: "TEST_ERROR",
+    });
+  }
+  await c.prisma.warehouseInvoiceSyncState.update({
+    where: { sourceId_flowCode: stateKey },
+    data: { lastOutcome: "SUCCESS", lastErrorCode: null },
+  });
+  await c.coreSources.configureFlow(
+    scheduled.code,
+    "warehouse.receipts",
+    { isActive: true, configVersion: 1, config: {} },
+    c.admin.id,
+  );
+  assert.equal((await summaries()).get(scheduled.code), null);
+  assert.deepEqual(
+    (await receipts()).map(({ id }) => id),
+    first.map(({ id }) => id),
+  );
+  await bind(warehouses[2]);
+  await service.reprocess(b.code, invoice.id);
   const recovered = await receipts();
   assert.equal(recovered.length, 3);
   assert.equal(recovered[2].externalWarehouseId, warehouses[2]);
