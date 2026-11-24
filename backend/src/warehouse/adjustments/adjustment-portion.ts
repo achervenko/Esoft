@@ -48,3 +48,63 @@ export async function assertAdjustmentPortion(
       message: 'Выбранная часть остатка изменилась. Обновите данные.',
     });
 }
+
+export async function resolveShortageAllocations(
+  tx: Prisma.TransactionClient,
+  input: AdjustmentInput,
+  before: Prisma.Decimal,
+) {
+  if (!input.shortageAllocations) return [];
+  if (input.mode !== 'ACTUAL' || !before.gt(input.actualQuantity))
+    throw new ConflictException({
+      code: 'WAREHOUSE_ADJUSTMENT_SHORTAGE_INVALID',
+      message: 'Распределение по резервам допустимо только при недостаче.',
+    });
+  const allocations = await tx.warehouseReservationAllocation.findMany({
+    where: {
+      locationId: BigInt(input.locationId),
+      reservation: { itemId: BigInt(input.itemId) },
+    },
+    select: {
+      reservationId: true,
+      quantity: true,
+      reservation: { select: { orderId: true } },
+    },
+  });
+  const covered = allocations.reduce(
+    (sum, row) => sum.plus(row.quantity),
+    new Prisma.Decimal(0),
+  );
+  const required = Prisma.Decimal.max(0, covered.minus(input.actualQuantity));
+  const total = input.shortageAllocations.reduce(
+    (sum, row) => sum.plus(row.quantity),
+    new Prisma.Decimal(0),
+  );
+  const byId = new Map(allocations.map((row) => [row.reservationId, row]));
+  const resolved = input.shortageAllocations.map((row) => ({
+    row,
+    allocation: byId.get(row.reservationId),
+  }));
+  if (
+    total.lt(required) ||
+    resolved.some(
+      ({ row, allocation }) =>
+        !allocation ||
+        !allocation.quantity.eq(row.expectedQuantity) ||
+        allocation.quantity.lt(row.quantity),
+    )
+  )
+    throw new ConflictException({
+      code: 'WAREHOUSE_ADJUSTMENT_STALE_PORTION',
+      message:
+        'Распределение недостачи не соответствует текущим резервам. Обновите данные.',
+    });
+  // Reservation locks are acquired in order ID order for the same item.
+  return resolved
+    .sort((a, b) =>
+      a.allocation!.reservation.orderId.localeCompare(
+        b.allocation!.reservation.orderId,
+      ),
+    )
+    .map(({ row }) => row);
+}

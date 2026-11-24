@@ -62,12 +62,23 @@ export async function receiptsPlacement(c, t) {
       );
       assert.equal((await receipts.findOne(r.id)).lines[0].placed, "4");
       const r2 = await manual("2"),
-        key = randomUUID();
+        key = randomUUID(),
+        before = await quantity();
       const same = await Promise.all([
         place(r2, "2", c.location.id, key),
         place(r2, "2", c.location.id, key),
       ]);
       assert.equal(same[0].id, same[1].id);
+      assert.equal((await place(r2, "2", c.location.id, key)).id, same[0].id);
+      const stored = await receipts.findOne(r2.id);
+      assert.equal(stored.status, "PLACED");
+      assert.equal(stored.lines[0].placements.length, 1);
+      assert.equal(stored.lines[0].placed, "2");
+      const { Prisma } = await import("@prisma/client");
+      assert.equal(
+        await quantity(),
+        new Prisma.Decimal(before).plus(2).toString(),
+      );
     },
   );
   await t.test(

@@ -3,6 +3,7 @@ import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { ReceiptConflictResolveForm } from "./ReceiptConflictResolveForm";
 import { receiptsApi } from "../../shared/api/warehouse-receipts-api";
 import { render } from "./receipts-test-render";
+import { ApiRequestError } from "../../shared/api/api-error";
 import { receipt } from "./receipts-test-context";
 vi.mock("../../shared/api/warehouse-receipts-api", () => ({
   receiptsApi: { resolve: vi.fn() },
@@ -60,6 +61,7 @@ it("offers cancellation only when the conflict supports it", async () => {
   fireEvent.change(screen.getByLabelText("Обоснование"), {
     target: { value: "Отмена подтверждена" },
   });
+  fireEvent.click(screen.getByRole("checkbox"));
   fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
   await waitFor(() =>
     expect(receiptsApi.resolve).toHaveBeenCalledWith(receipt.id, {
@@ -70,37 +72,53 @@ it("offers cancellation only when the conflict supports it", async () => {
   );
 });
 
-it("requires performed corrections when agreeing our error with 1C", async () => {
-  vi.mocked(receiptsApi.resolve).mockResolvedValue({});
+it("shows item-level shortages and allows retry after updating stock", async () => {
+  vi.mocked(receiptsApi.resolve)
+    .mockRejectedValueOnce(
+      new ApiRequestError(
+        "На складе недостаточно товара для принятия отмены.",
+        409,
+        "WAREHOUSE_RECEIPT_CANCELLATION_STOCK_INSUFFICIENT",
+        {
+          shortages: [
+            {
+              itemId: "1",
+              name: "Подшипник",
+              unit: "шт",
+              required: "5",
+              physical: "4",
+              shortage: "1",
+            },
+          ],
+        },
+      ),
+    )
+    .mockResolvedValueOnce({});
+  const onSaved = vi.fn();
   render(
     <ReceiptConflictResolveForm
-      canReconcileStock
       receipt={{ ...receipt, conflict: "SOURCE_CANCELLED_AFTER_PLACEMENT" }}
       onClose={vi.fn()}
-      onSaved={vi.fn()}
+      onSaved={onSaved}
       onSavingChange={vi.fn()}
     />,
   );
   fireEvent.click(screen.getByRole("button", { name: "Решение" }));
   fireEvent.click(
-    await screen.findByRole("option", {
-      name: "Согласовать с 1С после корректировки",
-    }),
+    await screen.findByRole("option", { name: "Принять отмену 1С" }),
   );
   fireEvent.change(screen.getByLabelText("Обоснование"), {
-    target: { value: "Факт исправлен" },
+    target: { value: "Подтверждаю" },
   });
-  expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
-  fireEvent.change(screen.getByLabelText("Номера проведённых корректировок"), {
-    target: { value: "12, 13" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
-  await waitFor(() =>
-    expect(receiptsApi.resolve).toHaveBeenCalledWith(receipt.id, {
-      action: "RECONCILE_CANCELLATION",
-      reason: "Факт исправлен",
-      sourceVersion: "2",
-      adjustmentIds: ["12", "13"],
-    }),
-  );
+  const save = screen.getByRole("button", { name: "Сохранить" });
+  expect(save).toBeDisabled();
+  fireEvent.click(screen.getByRole("checkbox"));
+  fireEvent.click(save);
+  expect(
+    await screen.findByText(
+      /Подшипник · требуется 5 шт, в наличии 4 шт, не хватает 1 шт/,
+    ),
+  ).toBeVisible();
+  fireEvent.click(save);
+  await waitFor(() => expect(onSaved).toHaveBeenCalledOnce());
 });

@@ -9,6 +9,7 @@ import { ChecklistsModule } from './checklists/checklists.module';
 import { DictionariesAdminModule } from './dictionaries-admin/dictionaries-admin.module';
 import { EventsModule } from './events/events.module';
 import { HealthModule } from './health/health.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { SearchModule } from './search/search.module';
 import { SetupModule } from './setup/setup.module';
 import { UsersAdminModule } from './users-admin/users-admin.module';
@@ -27,6 +28,7 @@ const optionalModules = loadOptionalModules(loadActiveModules(projectRoot));
     DictionariesAdminModule,
     EventsModule,
     HealthModule,
+    NotificationsModule,
     SearchModule,
     SetupModule,
     UsersAdminModule,

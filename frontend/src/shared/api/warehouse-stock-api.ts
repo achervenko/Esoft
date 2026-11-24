@@ -81,6 +81,11 @@ export type StockAdjustmentInput = {
         expectedQuantity: string;
         actualQuantity: string;
       };
+      shortageAllocations?: {
+        reservationId: string;
+        quantity: string;
+        expectedQuantity: string;
+      }[];
       actualQuantity: string;
       expectedQuantity: string;
     }

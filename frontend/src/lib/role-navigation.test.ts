@@ -52,6 +52,12 @@ it("keeps profile as the default route for storekeeper", () => {
     ).toBe(false);
 });
 
+it("opens the shared dashboard for users with notification access", () => {
+  expect(canAccessWorkspaceRoute(["notifications.read"], "#/dashboard")).toBe(
+    true,
+  );
+});
+
 it.each(
   ["ppe_specialist", "accounting_specialist"].flatMap((role) =>
     ["#/ppe/employees/1", "#/ppe/positions/1"].map((route) => [role, route]),
@@ -211,3 +217,19 @@ it("allows integration administrators to reach the users workspace independently
     true,
   );
 });
+
+it.each([
+  "#/warehouse/receipts/671",
+  "#/orders/00000000-0000-4000-8000-000000000001",
+])(
+  "returns to the dashboard only for a valid notification return on %s",
+  (route) => {
+    expect(resolveAppRoute(route + "?returnTo=%23%2Fdashboard")).toMatchObject({
+      returnTo: "#/dashboard",
+    });
+    expect(resolveAppRoute(route)).not.toHaveProperty("returnTo");
+    expect(
+      resolveAppRoute(route + "?returnTo=https%3A%2F%2Fexample.com"),
+    ).not.toHaveProperty("returnTo");
+  },
+);

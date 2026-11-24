@@ -4,6 +4,7 @@ import { WarehouseCatalogModule } from '../catalog/catalog.module';
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { AuditModule } from '../../audit/audit.module';
+import { WarehouseNotificationsModule } from '../warehouse-notifications.module';
 import { WarehouseStockModule } from '../stock/stock.module';
 import { WarehouseReceiptsController } from './receipts.controller';
 import { WarehouseReceiptsService } from './receipts.service';
@@ -19,6 +20,7 @@ import { WarehouseReceiptOrderPlacementService } from './receipt-order-placement
   imports: [
     PrismaModule,
     AuditModule,
+    WarehouseNotificationsModule,
     WarehouseStockModule,
     WarehouseCatalogModule,
     WarehouseReservationsModule,

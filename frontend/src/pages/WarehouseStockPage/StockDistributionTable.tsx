@@ -1,5 +1,5 @@
 import "./StockDistributionTable.css";
-import { Forklift, Pencil } from "lucide-react";
+import { ClipboardCheck, Forklift, Pencil } from "lucide-react";
 import { AppTable } from "../../shared/ui/AppTable";
 import type { StockDistribution } from "../../shared/api/warehouse-stock-api";
 import { formatStockQuantity, quantityMillis } from "./stock-page.utils";
@@ -15,6 +15,7 @@ export type StockDistributionActions = {
   onAdjust: (
     balance: StockDistribution["locations"][number],
     reservationId?: string,
+    wholeLocation?: boolean,
   ) => void;
 };
 export function StockDistributionTable({
@@ -59,10 +60,22 @@ export function StockDistributionTable({
                 reservation,
               })),
           ];
-          return rows.map(({ quantity, reservation }) => (
+          return rows.map(({ quantity, reservation }, index) => (
             <tr key={`${b.balanceId}:${reservation?.reservationId ?? "free"}`}>
               <td>
                 {b.location.name}
+                {canAdjust && index === 0 && !!b.reservations?.length && (
+                  <button
+                    type="button"
+                    className="stock-adjust-button"
+                    aria-label={`Пересчитать место: ${b.location.name}`}
+                    title="Пересчитать весь остаток на месте"
+                    disabled={loading || !!error}
+                    onClick={() => onAdjust(b, undefined, true)}
+                  >
+                    <ClipboardCheck size={16} aria-hidden="true" />
+                  </button>
+                )}
                 {!b.location.isActive && (
                   <small className="stock-inactive">Место неактивно</small>
                 )}

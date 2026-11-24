@@ -4,7 +4,6 @@ import { ReceiptDetails } from "./ReceiptDetails";
 import { receiptsApi } from "../../shared/api/warehouse-receipts-api";
 import { receipt, permissions } from "./receipts-test-context";
 import { render } from "./receipts-test-render";
-import { formatBusinessDateTime } from "../../shared/lib/business-date";
 vi.mock("../../shared/api/warehouse-receipts-api", () => ({
   receiptsApi: { get: vi.fn(), reconciliationCandidates: vi.fn() },
 }));
@@ -16,7 +15,7 @@ beforeEach(() => {
     items: [],
   });
 });
-it("shows the last received version time rather than the record creation time", async () => {
+it("shows document date and warehouse icons without the received timestamp", async () => {
   vi.mocked(receiptsApi.get).mockResolvedValue(receipt);
   render(
     <ReceiptDetails
@@ -26,15 +25,14 @@ it("shows the last received version time rather than the record creation time", 
       onBack={vi.fn()}
     />,
   );
-  fireEvent.click(await screen.findByRole("button", { name: "Действия" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Информация о приходе" }),
+  );
   expect(
-    await screen.findByText(
-      `Получен: ${formatBusinessDateTime(receipt.receivedAt)}`,
-    ),
+    screen.getByRole("img", { name: "Дата накладной" }),
   ).toBeInTheDocument();
-  expect(
-    screen.queryByText(`Получен: ${formatBusinessDateTime(receipt.createdAt)}`),
-  ).not.toBeInTheDocument();
+  expect(screen.getByRole("img", { name: "Склад" })).toBeInTheDocument();
+  expect(screen.queryByText(/Получен:/)).not.toBeInTheDocument();
 });
 it("does not offer warehouse mapping for an unmapped 1C receipt even with mapping permission", async () => {
   vi.mocked(receiptsApi.get).mockResolvedValue({
@@ -51,8 +49,8 @@ it("does not offer warehouse mapping for an unmapped 1C receipt even with mappin
     />,
   );
   await screen.findByRole("heading", { name: receipt.documentNumber! });
-  fireEvent.click(screen.getByRole("button", { name: "Действия" }));
-  await screen.findByText("Склад: Не сопоставлен");
+  fireEvent.click(screen.getByRole("button", { name: "Информация о приходе" }));
+  await screen.findByText("Не сопоставлен");
   expect(
     screen.queryByRole("button", { name: "Выбрать склад ESoft" }),
   ).not.toBeInTheDocument();
@@ -120,7 +118,9 @@ it("blocks placement during a conflict and hides admin resolution from a keeper"
       actorId="actor"
       onBack={vi.fn()}
       id={receipt.id}
-      permissions={permissions.filter((p) => p !== "integrations.manage")}
+      permissions={permissions.filter(
+        (p) => p !== "warehouse.receipts.resolve",
+      )}
     />,
   );
   expect(await screen.findByText("Требуется решение")).toBeInTheDocument();
@@ -128,8 +128,10 @@ it("blocks placement during a conflict and hides admin resolution from a keeper"
   expect(
     screen.queryByRole("button", { name: "Разобрать конфликт" }),
   ).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Действия" }));
-  expect(screen.getByRole("dialog", { name: "Действия" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Информация о приходе" }));
+  expect(
+    screen.getByRole("dialog", { name: "Информация о приходе" }),
+  ).toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "Связать с ручным приходом" }),
   ).not.toBeInTheDocument();

@@ -15,15 +15,21 @@ import "./OrdersPage.css";
 export function OrdersPage({
   userPermissions,
   orderId,
+  returnTo,
 }: {
   userPermissions: readonly string[] | null;
   orderId?: string;
+  returnTo?: "#/dashboard";
 }) {
   if (!hasPermission(userPermissions, "orders.read"))
     return (
       <Notice tone="error">Недостаточно прав для просмотра заказов.</Notice>
     );
-  return orderId ? <OrderDetails key={orderId} id={orderId} /> : <OrdersList />;
+  return orderId ? (
+    <OrderDetails key={orderId} id={orderId} returnTo={returnTo} />
+  ) : (
+    <OrdersList />
+  );
 }
 function OrdersList() {
   const [filtersOpen, setFiltersOpen] = useState(false);

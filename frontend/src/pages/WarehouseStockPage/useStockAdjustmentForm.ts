@@ -9,6 +9,14 @@ import {
   getApiErrorMessage,
 } from "../../shared/api/api-error";
 import { quantityMillis, transferRequestKey } from "./stock-page.utils";
+function quantityString(value: bigint) {
+  const fraction = (value % 1000n)
+    .toString()
+    .padStart(3, "0")
+    .replace(/0+$/, "");
+  return String(value / 1000n) + (fraction ? "." + fraction : "");
+}
+
 export type StockAdjustmentFormProps = {
   actorId?: string | null;
   data: StockDistribution;
@@ -85,6 +93,51 @@ export function useStockAdjustmentForm(
   const amount = quantityMillis(normalized);
   const before = quantityMillis(portion?.quantity ?? balanceQuantity)!;
   const delta = amount === null ? 0n : amount - before;
+  const reservations =
+    actual && !portion ? (actual.balance.reservations ?? []) : [];
+  const [allocationDrafts, setAllocationDrafts] = useState<
+    Record<string, string>
+  >({});
+  const allocations =
+    delta < 0n && amount !== null
+      ? reservations.map((row) => {
+          const current = quantityMillis(row.quantity) ?? 0n;
+          const value =
+            allocationDrafts[row.reservationId] ??
+            (reservations.length === 1 && amount < current
+              ? quantityString(amount)
+              : row.quantity);
+          const remaining = quantityMillis(value.trim().replace(",", "."));
+          return {
+            ...row,
+            value,
+            remaining,
+            reduction: remaining === null ? 0n : current - remaining,
+          };
+        })
+      : [];
+  const reservedAfter = allocations.reduce(
+    (sum, row) => sum + (row.remaining ?? 0n),
+    0n,
+  );
+  const allocationValid =
+    allocations.every((row) => row.remaining !== null && row.reduction >= 0n) &&
+    (amount === null || reservedAfter <= amount);
+  const freeAfter =
+    allocations.length && amount !== null && allocationValid
+      ? quantityString(amount - reservedAfter)
+      : null;
+  const reductions = allocations.flatMap((row) =>
+    row.reduction > 0n
+      ? [
+          {
+            reservationId: row.reservationId,
+            expectedQuantity: row.quantity,
+            quantity: quantityString(row.reduction),
+          },
+        ]
+      : [],
+  );
   const locked = saving || uploading || !!pending;
   const onSavingChange = actual?.onSavingChange;
   useEffect(() => {
@@ -106,14 +159,9 @@ export function useStockAdjustmentForm(
             expectedQuantity: balanceQuantity,
             actualQuantity:
               portion && amount !== null
-                ? (() => {
-                    const physical = quantityMillis(balanceQuantity)! + delta;
-                    return `${physical / 1000n}.${(physical % 1000n).toString().padStart(3, "0")}`.replace(
-                      /\.?0+$/,
-                      "",
-                    );
-                  })()
+                ? quantityString(quantityMillis(balanceQuantity)! + delta)
                 : normalized,
+            ...(reductions.length ? { shortageAllocations: reductions } : {}),
             ...(portion
               ? {
                   portion: {
@@ -193,11 +241,18 @@ export function useStockAdjustmentForm(
       !!locationId &&
       amount !== null &&
       delta !== 0n &&
+      allocationValid &&
       !!reason.trim() &&
       !!attachment);
   return {
     quantity,
     setQuantity,
+    allocations,
+    freeAfter,
+    allocationValid,
+    setAllocation: (id: string, value: string) =>
+      setAllocationDrafts((current) => ({ ...current, [id]: value })),
+
     reason,
     setReason,
     attachment,

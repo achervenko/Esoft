@@ -84,7 +84,10 @@ export function canAccessWorkspaceRoute(permissions: unknown, route: string) {
   if (path === "#/my-checklists" || /^#\/my-checklists\/[1-9]\d*$/.test(path))
     return hasPermission(permissions, "checklists.work");
   if (path === "#/dashboard")
-    return hasPermission(permissions, "equipment.progress.read");
+    return (
+      hasPermission(permissions, "equipment.progress.read") ||
+      hasPermission(permissions, "notifications.read")
+    );
   if (path === "#/equipment" || /^#\/equipment\/[1-9]\d*$/.test(path))
     return canReadEquipment(permissions);
   return false;

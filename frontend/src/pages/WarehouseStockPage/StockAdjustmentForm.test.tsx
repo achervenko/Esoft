@@ -234,3 +234,78 @@ it("corrects the selected reserved row rather than the complete physical balance
     portion: { reservationId, expectedQuantity: "1", actualQuantity: "0" },
   });
 });
+
+it("counts the whole location and submits one adjustment with the chosen reserve split", async () => {
+  vi.mocked(warehouseStockApi.adjust).mockResolvedValue({});
+  const first = "11111111-1111-4111-8111-111111111112";
+  const second = "11111111-1111-4111-8111-111111111113";
+  vi.mocked(warehouseStockApi.distribution).mockResolvedValue({
+    ...distribution,
+    locations: [
+      {
+        ...distribution.locations[0],
+        quantity: "10",
+        freeQuantity: "3",
+        reservedQuantity: "7",
+        reservations: [
+          {
+            reservationId: first,
+            order: { id: first, number: "101", name: "" },
+            quantity: "4",
+          },
+          {
+            reservationId: second,
+            order: { id: second, number: "102", name: "" },
+            quantity: "3",
+          },
+        ],
+      },
+    ],
+  });
+  render(
+    <StockDistributionModal
+      actorId="test-actor"
+      position={position}
+      canTransfer
+      canAdjust
+      onClose={vi.fn()}
+      onChanged={vi.fn()}
+    />,
+  );
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Пересчитать место: Угол ангара",
+    }),
+  );
+  fireEvent.change(screen.getByLabelText(/Фактически на месте/), {
+    target: { value: "6" },
+  });
+  fireEvent.change(screen.getByLabelText("Причина"), {
+    target: { value: "Пересчёт" },
+  });
+  await attach();
+  const save = screen.getByRole("button", { name: "Сохранить" });
+  expect(save).toBeDisabled();
+  fireEvent.change(screen.getByLabelText("Оставить в резерве заказа 101"), {
+    target: { value: "3" },
+  });
+  expect(save).toBeEnabled();
+  fireEvent.change(screen.getByLabelText("Оставить в резерве заказа 102"), {
+    target: { value: "2" },
+  });
+  expect(
+    screen.getByText("Свободный остаток после пересчёта: 1 шт"),
+  ).toBeVisible();
+  fireEvent.click(save);
+  await waitFor(() => expect(warehouseStockApi.adjust).toHaveBeenCalledOnce());
+  expect(warehouseStockApi.adjust).toHaveBeenCalledWith(
+    expect.objectContaining({
+      expectedQuantity: "10",
+      actualQuantity: "6",
+      shortageAllocations: [
+        { reservationId: first, expectedQuantity: "4", quantity: "1" },
+        { reservationId: second, expectedQuantity: "3", quantity: "1" },
+      ],
+    }),
+  );
+});

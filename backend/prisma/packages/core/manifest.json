@@ -22,6 +22,10 @@
     {
       "id": "20261111000000_storage_upload_request",
       "sha256": "85f46c2d6c31b7d46eeb6638fde55e299ab1398bb6e5c3eaf2af899391f07a42"
+    },
+    {
+      "id": "20261121000000_notifications",
+      "sha256": "d038db3b2670d55e1632c6eef31842ac924a2d423ae52ca3e30091de58ef5407"
     }
   ]
 }

@@ -24,6 +24,16 @@ export async function createReceiptTestDomain(prisma, audit) {
   const { WarehouseReceiptImportService } = load(
     "warehouse/receipts/receipt-import.service.js",
   );
+  const { NotificationsService } = load(
+    "notifications/notifications.service.js",
+  );
+  const notifications = new NotificationsService(prisma);
+  const { WarehouseNotificationsService } = load(
+    "warehouse/warehouse-notifications.service.js",
+  );
+  const warehouseNotifications = new WarehouseNotificationsService(
+    notifications,
+  );
   const { WarehouseStockService } = load("warehouse/stock/stock.service.js"),
     { WarehouseStockQueryService } = load(
       "warehouse/stock/stock-query.service.js",
@@ -100,6 +110,7 @@ export async function createReceiptTestDomain(prisma, audit) {
         stock,
         new WarehouseReservationManager(audit, stock),
       ),
+      warehouseNotifications,
     ),
     itemMapping = new WarehouseReceiptItemMappingService(
       prisma,
@@ -107,12 +118,22 @@ export async function createReceiptTestDomain(prisma, audit) {
       catalog,
       links,
     ),
-    reconciliation = new WarehouseReceiptReconciliationService(prisma, audit),
+    reconciliation = new WarehouseReceiptReconciliationService(
+      prisma,
+      audit,
+      warehouseNotifications,
+    ),
     conflictResolution = new WarehouseReceiptConflictResolutionService(
       prisma,
       audit,
+      warehouseNotifications,
     ),
-    importer = new WarehouseReceiptImportService(audit, links, catalog);
+    importer = new WarehouseReceiptImportService(
+      audit,
+      links,
+      catalog,
+      warehouseNotifications,
+    );
   const { ReceiptIntegrationWarehousesService } = load(
     "warehouse/receipts/receipt-source-warehouses.service.js",
   );
@@ -122,6 +143,7 @@ export async function createReceiptTestDomain(prisma, audit) {
   );
   const queries = new WarehouseReceiptsQueryService(prisma);
   return {
+    stock,
     catalog,
     links,
     usage,
@@ -141,6 +163,8 @@ export async function createReceiptTestDomain(prisma, audit) {
     reconciliation,
     conflictResolution,
     importer,
+    notifications,
+    warehouseNotifications,
     integrationWarehouses,
     queries,
   };

@@ -1,4 +1,5 @@
 model User {
+  notificationRecipients NotificationRecipient[]
   integrationSources IntegrationSource[]
   integrationSourceActors IntegrationSourceActor[]
   apiKeys ApiKey[]

@@ -43,5 +43,5 @@ export const permissions = [
   "warehouse.receipts.place",
   "warehouse.receipts.map",
   "warehouse.catalog.links.manage",
-  "integrations.manage",
+  "warehouse.receipts.resolve",
 ];

@@ -20,12 +20,14 @@ export function ContextMenu({
   x,
   y,
   label,
+  className,
   items,
   onClose,
 }: {
   x: number;
   y: number;
   label: string;
+  className?: string;
   items: ContextMenuItem[];
   onClose: () => void;
 }) {
@@ -69,7 +71,9 @@ export function ContextMenu({
       role="menu"
       tabIndex={-1}
       aria-label={label}
-      className="app-context-menu"
+      className={
+        className ? `app-context-menu ${className}` : "app-context-menu"
+      }
       style={position}
       onKeyDown={(event) => {
         if (event.key === "Escape") {

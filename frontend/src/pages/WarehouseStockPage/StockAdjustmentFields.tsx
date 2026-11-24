@@ -45,6 +45,33 @@ export function StockAdjustmentFields({
             Введите неотрицательное количество, до трёх знаков после запятой.
           </Notice>
         )}
+        {!form.pending && form.allocations.length > 0 && (
+          <>
+            {form.allocations.map((row) => (
+              <AdminTextField
+                key={row.reservationId}
+                label={`Оставить в резерве заказа ${row.order.number}`}
+                hint={`Обеспечено на месте: ${row.quantity} ${unit}`}
+                value={row.value}
+                onChange={(value) =>
+                  form.setAllocation(row.reservationId, value)
+                }
+                required
+                inputMode="decimal"
+              />
+            ))}
+            {form.allocationValid ? (
+              <p>
+                Свободный остаток после пересчёта: {form.freeAfter} {unit}
+              </p>
+            ) : (
+              <Notice tone="error">
+                Укажите, сколько оставить в каждом резерве. Сумма не должна
+                превышать фактический остаток.
+              </Notice>
+            )}
+          </>
+        )}
         <AdminTextareaField
           label="Причина"
           value={reason}

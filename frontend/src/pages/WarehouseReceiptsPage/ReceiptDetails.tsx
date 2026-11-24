@@ -2,12 +2,10 @@ import { useReceiptPosition } from "./useReceiptPosition";
 import { AdminModal } from "../../shared/ui/AdminModal";
 import "../../shared/ui/PageActions.css";
 import { useState } from "react";
+import { CalendarDays, Info, Warehouse } from "lucide-react";
 import { receiptsApi } from "../../shared/api/warehouse-receipts-api";
 import { hasPermission } from "../../shared/lib/permissions";
-import {
-  formatBusinessDateTime,
-  formatCalendarDate,
-} from "../../shared/lib/business-date";
+import { formatCalendarDate } from "../../shared/lib/business-date";
 import { LoadingIndicator } from "../../shared/ui/LoadingIndicator";
 import { Notice } from "../../shared/ui/Notice";
 import { ReceiptPlacementStepper } from "./ReceiptPlacementStepper";
@@ -22,7 +20,7 @@ const conflicts: Record<string, string> = {
   SOURCE_WAREHOUSE_CHANGED_AFTER_PLACEMENT:
     "1С изменила склад после размещения товара.",
   SOURCE_REPOSTED_AFTER_SETTLEMENT:
-    "1С повторно провела приход после согласования отмены и корректировки остатков. Старые размещения не подтверждают новую приёмку. Приход остаётся отменённым; для новой поставки оформите отдельный приход.",
+    "1С повторно провела приход после принятия отмены. Старые размещения не подтверждают новую приёмку. Приход остаётся отменённым; для новой поставки оформите отдельный приход.",
 };
 export function ReceiptDetails({
   id,
@@ -44,7 +42,7 @@ export function ReceiptDetails({
   const r = query.data;
   const canMap = hasPermission(permissions, "warehouse.receipts.map");
   const canManage = hasPermission(permissions, "warehouse.receipts.manage");
-  const canResolve = hasPermission(permissions, "integrations.manage");
+  const canResolve = hasPermission(permissions, "warehouse.receipts.resolve");
   const saved = () => {
     setAction(null);
     setReconcile(null);
@@ -62,11 +60,14 @@ export function ReceiptDetails({
           ← Назад
         </button>
         <button
-          className="admin-secondary-button"
+          type="button"
+          className="admin-icon-button"
+          aria-label="Информация о приходе"
+          title="Информация о приходе"
           disabled={!r || placing}
           onClick={() => setActionsOpen(true)}
         >
-          Действия
+          <Info size={18} aria-hidden="true" />
         </button>
       </div>
       <LoadingIndicator loading={query.loading && !r} />
@@ -83,12 +84,15 @@ export function ReceiptDetails({
             </div>
           </header>
           {r.conflict && (
-            <Notice tone="error">
-              <strong>Требуется решение</strong>
-              <p>{conflicts[r.conflict] ?? r.conflict}</p>
-              <p>Размещение приостановлено. Физические остатки сохранены.</p>
+            <Notice tone="error" className="receipt-conflict-notice">
+              <div className="receipt-conflict-message">
+                <strong>Требуется решение</strong>
+                <p>{conflicts[r.conflict] ?? r.conflict}</p>
+                <p>Размещение приостановлено. Физические остатки сохранены.</p>
+              </div>
               {canResolve && (
                 <button
+                  type="button"
                   className="admin-secondary-button"
                   onClick={() => setAction({ kind: "resolve" })}
                 >
@@ -115,58 +119,39 @@ export function ReceiptDetails({
             }
           />
           {actionsOpen && (
-            <AdminModal title="Действия" onClose={() => setActionsOpen(false)}>
+            <AdminModal
+              title="Информация о приходе"
+              onClose={() => setActionsOpen(false)}
+            >
               <div className="admin-form receipt-actions-content">
-                <details className="receipt-action-section">
-                  <summary>Подробности прихода</summary>
+                <div className="receipt-action-summary">
                   <p>
-                    Дата накладной:{" "}
+                    <CalendarDays
+                      size={18}
+                      role="img"
+                      aria-label="Дата накладной"
+                    />
                     {r.documentDate
                       ? formatCalendarDate(r.documentDate)
                       : "Без даты"}
                   </p>
-                  <strong>
-                    Склад: {r.warehouseNameSnapshot ?? "Не сопоставлен"}
-                  </strong>
-                  <small className="receipt-hint">
-                    Получен: {formatBusinessDateTime(r.receivedAt)}
-                  </small>
-
-                  {!!r.settlementAdjustments?.length && (
-                    <p>
-                      Согласовано с 1С после корректировок:{" "}
-                      {r.settlementAdjustments
-                        .map((a) => `№${a.id}`)
-                        .join(", ")}
-                    </p>
-                  )}
-                  {r.comment && (
-                    <section className="admin-card">
-                      <h2>Комментарий</h2>
-                      <p>{r.comment}</p>
-                    </section>
-                  )}
-                  {r.source === "ONE_C" && (
-                    <details className="admin-card">
-                      <summary>Снимок документа и редакции</summary>
-                      <h3>Применённый снимок</h3>
-                      <pre className="receipt-source-document">
-                        {JSON.stringify(r.sourceDocument, null, 2)}
-                      </pre>
-                      {r.pendingSourceDocument !== null && (
-                        <>
-                          <h3>
-                            Предложенное изменение · редакция ESoft{" "}
-                            {r.sourceVersion}
-                          </h3>
-                          <pre className="receipt-source-document">
-                            {JSON.stringify(r.pendingSourceDocument, null, 2)}
-                          </pre>
-                        </>
-                      )}
-                    </details>
-                  )}
-                </details>
+                  <p>
+                    <Warehouse size={18} role="img" aria-label="Склад" />
+                    {r.warehouseNameSnapshot ?? "Не сопоставлен"}
+                  </p>
+                </div>
+                {!!r.settlementAdjustments?.length && (
+                  <p>
+                    Согласовано с 1С после корректировок:{" "}
+                    {r.settlementAdjustments.map((a) => `№${a.id}`).join(", ")}
+                  </p>
+                )}
+                {r.comment && (
+                  <section className="admin-card">
+                    <h2>Комментарий</h2>
+                    <p>{r.comment}</p>
+                  </section>
+                )}
                 {r.source === "ONE_C" &&
                   canMap &&
                   r.warehouseId &&
@@ -206,10 +191,6 @@ export function ReceiptDetails({
               actorId={actorId}
               receipt={r}
               action={action}
-              canReconcileStock={hasPermission(
-                permissions,
-                "warehouse.adjustments.manage",
-              )}
               onClose={() => setAction(null)}
               onSaved={saved}
             />

@@ -25,6 +25,7 @@ export function parseAdjustment(value: unknown) {
     'attachments',
     'requestKey',
     'portion',
+    'shortageAllocations',
   ];
   if (Object.keys(input).some((field) => !fields.includes(field)))
     adjustmentBadRequest('Неизвестное поле корректировки.');
@@ -93,8 +94,47 @@ export function parseAdjustment(value: unknown) {
       actualQuantity: stockQuantity(row.actualQuantity, true).toString(),
     };
   }
+  let shortageAllocations:
+    | { reservationId: string; quantity: string; expectedQuantity: string }[]
+    | undefined;
+  if (input.shortageAllocations !== undefined) {
+    if (
+      portion ||
+      input.actualQuantity === undefined ||
+      !Array.isArray(input.shortageAllocations) ||
+      !input.shortageAllocations.length ||
+      input.shortageAllocations.length > 500
+    )
+      adjustmentBadRequest('Укажите распределение недостачи по резервам.');
+    shortageAllocations = input.shortageAllocations
+      .map((entry: unknown) => {
+        if (
+          !entry ||
+          typeof entry !== 'object' ||
+          Array.isArray(entry) ||
+          Object.keys(entry).some(
+            (key) =>
+              !['reservationId', 'quantity', 'expectedQuantity'].includes(key),
+          )
+        )
+          adjustmentBadRequest('Некорректное распределение недостачи.');
+        const row = entry as Record<string, unknown>;
+        return {
+          reservationId: uuid(row.reservationId),
+          quantity: stockQuantity(row.quantity).toString(),
+          expectedQuantity: stockQuantity(row.expectedQuantity).toString(),
+        };
+      })
+      .sort((a, b) => a.reservationId.localeCompare(b.reservationId));
+    if (
+      new Set(shortageAllocations.map(({ reservationId }) => reservationId))
+        .size !== shortageAllocations.length
+    )
+      adjustmentBadRequest('Резервы в распределении не должны повторяться.');
+  }
   const common = {
     ...(portion ? { portion } : {}),
+    ...(shortageAllocations ? { shortageAllocations } : {}),
     itemId,
     locationId,
     requestKey,

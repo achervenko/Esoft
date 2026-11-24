@@ -1,0 +1,30 @@
+model Notification {
+  id         String                  @id @db.Uuid
+  eventKey   String                  @unique(map: "uq_notifications_event_key") @map("event_key") @db.VarChar(255)
+  requestHash String                 @map("request_hash") @db.VarChar(64)
+  type       String                  @db.VarChar(100)
+  title      String                  @db.VarChar(255)
+  body       String                  @db.Text
+  targetPath String?                 @map("target_path") @db.VarChar(2000)
+  occurredAt DateTime                @map("occurred_at") @db.Timestamptz(3)
+  createdAt  DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  actionKey  String?                 @map("action_key") @db.VarChar(255)
+  resolvedAt DateTime?               @map("resolved_at") @db.Timestamptz(3)
+  recipients NotificationRecipient[]
+
+  @@index([occurredAt, id], map: "idx_notifications_occurred")
+  @@map("notifications")
+}
+
+model NotificationRecipient {
+  notificationId String       @map("notification_id") @db.Uuid
+  userId         String       @map("user_id")
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveredAt    DateTime?    @map("delivered_at") @db.Timestamptz(3)
+  readAt         DateTime?    @map("read_at") @db.Timestamptz(3)
+
+  @@id([notificationId, userId])
+  @@index([userId, readAt], map: "idx_notification_recipients_user_read")
+  @@map("notification_recipients")
+}

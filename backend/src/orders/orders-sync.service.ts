@@ -1,6 +1,10 @@
+import { ACTIVE_MODULES } from '../config/active-modules.module';
+import { WarehouseNotificationsService } from '../warehouse/warehouse-notifications.service';
 import { randomUUID } from 'node:crypto';
 import {
   Injectable,
+  Inject,
+  Optional,
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
@@ -20,6 +24,11 @@ export class OrdersSyncService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly registry: IntegrationRegistry,
+    @Optional()
+    @Inject(ACTIVE_MODULES)
+    private readonly activeModules?: readonly string[],
+    @Optional()
+    private readonly warehouseNotifications?: WarehouseNotificationsService,
   ) {}
   async sync(sourceId: string, actor?: string, signal?: AbortSignal) {
     const startedAt = new Date();
@@ -74,7 +83,16 @@ export class OrdersSyncService {
             requestSignal,
           );
           const completedAt = new Date();
-          const result = await applyOrders(tx, sourceId, rows, completedAt);
+          const result = await applyOrders(
+            tx,
+            sourceId,
+            rows,
+            completedAt,
+            this.activeModules?.includes('warehouse') &&
+              this.warehouseNotifications
+              ? (id) => this.warehouseNotifications!.order(tx, id)
+              : undefined,
+          );
           await tx.integrationFlow.update({
             where: { sourceId_flowCode: { sourceId, flowCode: ORDERS_FLOW } },
             data: {

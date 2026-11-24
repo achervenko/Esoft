@@ -17,11 +17,13 @@ export function WarehouseReceiptsPage({
   userPermissions,
   actorId = null,
   receiptId,
+  returnTo,
   creating = false,
 }: {
   userPermissions: readonly string[] | null;
   actorId?: string | null;
   receiptId?: string;
+  returnTo?: "#/dashboard";
   creating?: boolean;
 }) {
   const [savedPreferences, setSavedPreferences] = useState({
@@ -38,7 +40,7 @@ export function WarehouseReceiptsPage({
         <Notice tone="error">Недостаточно прав для просмотра приходов.</Notice>
       </section>
     );
-  const back = () => setHashRoute("#/warehouse/receipts");
+  const back = () => setHashRoute(returnTo ?? "#/warehouse/receipts");
   return (
     <section className="admin-page warehouse-receipts-page">
       {receiptId ? (

@@ -41,10 +41,13 @@ export function AppRouteContent({
       {appRoute.kind === "orders" ? (
         <OrdersPage
           orderId={appRoute.orderId}
+          returnTo={appRoute.returnTo}
           userPermissions={user?.permissions ?? null}
         />
       ) : null}
-      {appRoute.kind === "dashboard" ? <DashboardPage /> : null}
+      {appRoute.kind === "dashboard" ? (
+        <DashboardPage permissions={user?.permissions ?? null} />
+      ) : null}
       {appRoute.kind === "calendar" ? (
         <CalendarPage
           initialDate={appRoute.date}
@@ -89,6 +92,7 @@ export function AppRouteContent({
           actorId={user?.id ?? null}
           userPermissions={user?.permissions ?? null}
           receiptId={appRoute.receiptId}
+          returnTo={appRoute.returnTo}
           creating={appRoute.creating}
         />
       ) : null}

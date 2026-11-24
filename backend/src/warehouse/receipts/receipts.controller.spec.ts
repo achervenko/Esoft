@@ -103,21 +103,28 @@ describe('Receipts HTTP permissions', () => {
     method: 'POST',
     path: '/api/warehouse/receipts/1/resolve-conflict',
   };
-  it('allows admin to resolve conflicts', async () => {
-    expect((await http.request(resolveOperation, 'admin')).status).toBe(201);
-    expect(service.resolve).toHaveBeenCalledTimes(1);
-  });
-  it.each(['storekeeper', 'engineer', 'operator', 'auditor'])(
+  it.each(['admin', 'storekeeper'])(
+    'allows %s to resolve conflicts',
+    async (role) => {
+      expect((await http.request(resolveOperation, role)).status).toBe(201);
+      expect(service.resolve).toHaveBeenCalledTimes(1);
+    },
+  );
+  it.each(['engineer', 'operator', 'auditor'])(
     'denies conflict resolution for %s',
     async (role) => {
       expect((await http.request(resolveOperation, role)).status).toBe(403);
       expect(service.resolve).not.toHaveBeenCalled();
     },
   );
-  it('requires integrations.manage even when receipt manage and map are granted', async () => {
+  it('requires warehouse.receipts.resolve even with access to integration settings', async () => {
     const mock = jest
       .spyOn(permissions, 'getUserPermissions')
-      .mockReturnValue(['warehouse.receipts.manage', 'warehouse.receipts.map']);
+      .mockReturnValue([
+        'integrations.manage',
+        'warehouse.receipts.manage',
+        'warehouse.receipts.map',
+      ]);
     try {
       expect((await http.request(resolveOperation, 'admin')).status).toBe(403);
       expect(service.resolve).not.toHaveBeenCalled();

@@ -13,6 +13,7 @@ export function LoadMore({
   onLoadMore,
   onRetry,
   showCount = true,
+  showButton = true,
 }: {
   shown: number;
   total: number;
@@ -23,6 +24,7 @@ export function LoadMore({
   onLoadMore: () => void;
   onRetry: () => void;
   showCount?: boolean;
+  showButton?: boolean;
 }) {
   const sentinel = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -73,7 +75,7 @@ export function LoadMore({
             Повторить загрузку
           </button>
         </Notice>
-      ) : hasMore ? (
+      ) : hasMore && showButton ? (
         <button
           type="button"
           className="admin-secondary-button"

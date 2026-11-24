@@ -1,3 +1,4 @@
+import { WarehouseNotificationsService } from '../warehouse-notifications.service';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogService } from '../../audit/audit-log.service';
@@ -21,6 +22,7 @@ export class WarehouseReceiptReconciliationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly notifications: WarehouseNotificationsService,
   ) {}
   reconcile(receiptValue: string, value: unknown, actor: string) {
     const b = record(value, ['manualReceiptId', 'lines']);
@@ -107,6 +109,7 @@ export class WarehouseReceiptReconciliationService {
           });
         }
         await receiptProgress(tx, targetId);
+        await this.notifications.receipt(tx, targetId);
         await receiptAudit(
           this.audit,
           tx,

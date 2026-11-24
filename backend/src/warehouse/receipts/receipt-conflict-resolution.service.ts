@@ -1,4 +1,4 @@
-import { stockId } from '../stock/stock.validation';
+import { WarehouseNotificationsService } from '../warehouse-notifications.service';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogService } from '../../audit/audit-log.service';
@@ -8,125 +8,167 @@ import {
   receiptActor,
   receiptAudit,
   receiptConflict,
+  type Tx,
 } from './receipts.policy';
+import { lockStockBalances } from '../stock/stock-locks';
+import {
+  readReservedQuantities,
+  readStockGroupQuantities,
+  stockGroupKey,
+} from '../stock/stock-quantities';
+import { lockWarehouse } from '../storage-structure/storage-structure.policy';
 import { invalid, record, text } from './receipts.validation';
+
+async function checkCancellationStock(
+  tx: Tx,
+  id: bigint,
+  warehouseId: bigint | null,
+) {
+  if (warehouseId === null) invalid('Для прихода не указан склад.');
+  await lockWarehouse(tx, warehouseId);
+  const required = await tx.$queryRaw<
+    { itemId: bigint; name: string; unit: string; quantity: Prisma.Decimal }[]
+  >`
+    SELECT i.id AS "itemId", i.name, i.unit, SUM(p.quantity) AS quantity
+    FROM warehouse_receipt_lines expected
+    JOIN warehouse_receipt_lines actual
+      ON actual.id = expected.id OR actual.reconciled_to_line_id = expected.id
+    JOIN warehouse_receipt_placements p ON p.receipt_line_id = actual.id
+    JOIN warehouse_items i ON i.id = actual.item_id
+    WHERE expected.receipt_id = ${id}
+    GROUP BY i.id
+    ORDER BY i.id`;
+  const locations = await tx.warehouseStorageLocation.findMany({
+    where: { warehouseId },
+    select: { id: true },
+  });
+  const locationIds = locations.map(({ id }) => String(id));
+  const withoutBalances: { itemId: bigint; storageLocationId: bigint }[] = [];
+  for (const { itemId } of required) {
+    if (!locationIds.length) break;
+    const locked = await lockStockBalances(tx, String(itemId), locationIds);
+    for (const storageLocationId of locked.locationIds)
+      if (!locked.balances.has(storageLocationId))
+        withoutBalances.push({ itemId, storageLocationId });
+  }
+
+  const groups = required.map(({ itemId }) => ({ itemId, warehouseId }));
+  const totals = await readStockGroupQuantities(tx, groups);
+  // Location creation can run under the same warehouse SHARE lock.
+  if (
+    await tx.warehouseStorageLocation.findFirst({
+      where: { warehouseId, id: { notIn: locations.map(({ id }) => id) } },
+      select: { id: true },
+    })
+  )
+    receiptConflict(
+      'WAREHOUSE_RECEIPT_CANCELLATION_LOCATIONS_CHANGED',
+      'Список мест хранения изменился. Повторите подтверждение отмены.',
+    );
+  const shortages = required.flatMap(({ itemId, name, unit, quantity }) => {
+    const total = totals.get(stockGroupKey({ itemId, warehouseId }));
+    const physical = new Prisma.Decimal(total?.quantity ?? 0);
+    return physical.lt(quantity)
+      ? [
+          {
+            itemId: String(itemId),
+            name,
+            unit,
+            required: quantity.toString(),
+            physical: physical.toString(),
+            shortage: quantity.minus(physical).toString(),
+          },
+        ]
+      : [];
+  });
+  if (shortages.length)
+    receiptConflict(
+      'WAREHOUSE_RECEIPT_CANCELLATION_STOCK_INSUFFICIENT',
+      'На складе недостаточно товара для принятия отмены.',
+      { shortages },
+    );
+  if (
+    [...totals.values()].some(
+      ({ reservationMismatch }) => reservationMismatch,
+    ) ||
+    [...(await readReservedQuantities(tx, withoutBalances)).values()].some(
+      (quantity) => quantity.gt(0),
+    )
+  )
+    receiptConflict(
+      'WAREHOUSE_RESERVATION_STOCK_MISMATCH',
+      'Физический остаток не покрывает размещённые резервы.',
+    );
+}
+
 @Injectable()
 export class WarehouseReceiptConflictResolutionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditLogService,
+    private readonly notifications: WarehouseNotificationsService,
   ) {}
   resolve(receiptValue: string, value: unknown, actor: string) {
-    const b = record(value, [
-        'action',
-        'reason',
-        'sourceVersion',
-        'adjustmentIds',
-      ]),
-      reason = text(b.reason, 4000),
-      version = text(b.sourceVersion, 30);
-    if (
-      ![
-        'KEEP_CURRENT',
-        'ACCEPT_CANCELLATION',
-        'RECONCILE_CANCELLATION',
-      ].includes(String(b.action))
-    )
+    const b = record(value, ['action', 'reason', 'sourceVersion']);
+    const reason = text(b.reason, 4000);
+    const version = text(b.sourceVersion, 30);
+    if (b.action !== 'KEEP_CURRENT' && b.action !== 'ACCEPT_CANCELLATION')
       invalid('Неизвестное решение конфликта.');
-    const reconcile = b.action === 'RECONCILE_CANCELLATION';
-    if (
-      reconcile &&
-      (!Array.isArray(b.adjustmentIds) ||
-        b.adjustmentIds.length < 1 ||
-        b.adjustmentIds.length > 100)
-    )
-      invalid('Укажите от 1 до 100 проведённых корректировок.');
-    if (!reconcile && b.adjustmentIds !== undefined)
-      invalid('Корректировки допустимы только для согласования отмены.');
-    const adjustmentIds = reconcile
-      ? (b.adjustmentIds as unknown[]).map((id) => stockId(id, 'adjustmentId'))
-      : [];
-    if (new Set(adjustmentIds.map(String)).size !== adjustmentIds.length)
-      invalid('Корректировки не должны повторяться.');
-    return this.prisma.$transaction(async (tx) => {
-      await receiptActor(tx, actor, 'integrations.manage');
-      const id = await lockReceipt(tx, receiptValue);
-      const r = await tx.warehouseReceipt.findUniqueOrThrow({ where: { id } });
-      if (
-        !r.conflict ||
-        !r.pendingPayload ||
-        r.sourceVersion?.toString() !== version
-      )
-        receiptConflict(
-          'WAREHOUSE_RECEIPT_CONFLICT_STALE',
-          'Конфликт уже изменён или отсутствует.',
-        );
-      if (
-        b.action !== 'KEEP_CURRENT' &&
-        r.conflict !== 'SOURCE_CANCELLED_AFTER_PLACEMENT'
-      )
-        invalid('Текущий конфликт не является отменой.');
-      if (reconcile) {
-        await receiptActor(tx, actor, 'warehouse.adjustments.manage');
-        const adjustments = await tx.$queryRaw<
-          {
-            id: bigint;
-            resolved_receipt_id: bigint | null;
-            related: boolean;
-            created_at: Date;
-          }[]
-        >`
-          SELECT a.id, a.resolved_receipt_id, a.created_at,
-            EXISTS(SELECT 1 FROM warehouse_receipt_placements p JOIN warehouse_receipt_lines l ON l.id=p.receipt_line_id
-              WHERE p.storage_location_id=b.storage_location_id AND l.item_id=b.item_id
-              AND (l.receipt_id=${id} OR l.reconciled_to_line_id IN (SELECT id FROM warehouse_receipt_lines WHERE receipt_id=${id}))) AS related
-          FROM warehouse_stock_adjustments a JOIN warehouse_balances b ON b.id=a.balance_id
-          WHERE a.id IN (${Prisma.join(adjustmentIds)}) FOR UPDATE OF a`;
+    return this.prisma.$transaction(
+      async (tx) => {
+        await receiptActor(tx, actor, 'warehouse.receipts.resolve');
+        const id = await lockReceipt(tx, receiptValue);
+        const r = await tx.warehouseReceipt.findUniqueOrThrow({
+          where: { id },
+        });
         if (
-          adjustments.length !== adjustmentIds.length ||
-          adjustments.some(
-            (a) =>
-              a.resolved_receipt_id !== null ||
-              !a.related ||
-              a.created_at < r.receivedAt,
-          )
+          !r.conflict ||
+          !r.pendingPayload ||
+          r.sourceVersion?.toString() !== version
         )
           receiptConflict(
-            'WAREHOUSE_RECEIPT_ADJUSTMENT_INVALID',
-            'Корректировка должна относиться к размещённому товару и месту, быть проведена после получения конфликта и не использоваться ранее для согласования.',
+            'WAREHOUSE_RECEIPT_CONFLICT_STALE',
+            'Конфликт уже изменён или отсутствует.',
           );
-        await tx.warehouseStockAdjustment.updateMany({
-          where: { id: { in: adjustmentIds }, resolvedReceiptId: null },
-          data: { resolvedReceiptId: id },
+        if (
+          b.action !== 'KEEP_CURRENT' &&
+          r.conflict !== 'SOURCE_CANCELLED_AFTER_PLACEMENT'
+        )
+          invalid('Текущий конфликт не является отменой.');
+        if (b.action === 'ACCEPT_CANCELLATION')
+          await checkCancellationStock(tx, id, r.warehouseId);
+        await receiptAudit(
+          this.audit,
+          tx,
+          actor,
+          id,
+          'Ручное решение конфликта',
+          {
+            action: String(b.action),
+            reason,
+            sourceVersion: version,
+            ...(b.action === 'KEEP_CURRENT'
+              ? { rejectedSource: r.pendingPayload }
+              : { acceptedSource: r.pendingPayload }),
+          },
+        );
+        await tx.warehouseReceipt.update({
+          where: { id },
+          data: {
+            conflict: null,
+            pendingPayload: Prisma.DbNull,
+            ...(b.action !== 'KEEP_CURRENT'
+              ? { status: 'CANCELLED', sourcePayload: r.pendingPayload }
+              : {}),
+          },
         });
-      }
-      await receiptAudit(
-        this.audit,
-        tx,
-        actor,
-        id,
-        'Ручное решение конфликта',
-        {
-          action: String(b.action),
-          reason,
-          sourceVersion: version,
-          ...(reconcile ? { adjustmentIds: adjustmentIds.map(String) } : {}),
-          ...(b.action === 'KEEP_CURRENT'
-            ? { rejectedSource: r.pendingPayload }
-            : { acceptedSource: r.pendingPayload }),
-        },
-      );
-      await tx.warehouseReceipt.update({
-        where: { id },
-        data: {
-          conflict: null,
-          pendingPayload: Prisma.DbNull,
-          ...(b.action !== 'KEEP_CURRENT'
-            ? { status: 'CANCELLED', sourcePayload: r.pendingPayload }
-            : {}),
-        },
-      });
-      return { id: String(id) };
-    });
+        await this.notifications.receipt(tx, id);
+        return { id: String(id) };
+      },
+      {
+        timeout: 15000,
+        isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+      },
+    );
   }
 }

@@ -9,6 +9,7 @@ import { WarehouseCatalogService } from '../catalog/catalog.service';
 import { Injectable } from '@nestjs/common';
 import { AuditAction } from '@prisma/client';
 import { AuditLogService } from '../../audit/audit-log.service';
+import { WarehouseNotificationsService } from '../warehouse-notifications.service';
 import { receiptHash } from './receipts.validation';
 import {
   parseSourceReceipt,
@@ -53,6 +54,7 @@ export class WarehouseReceiptImportService {
     private readonly audit: AuditLogService,
     private readonly links: WarehouseCatalogExternalLinksService,
     private readonly catalog: WarehouseCatalogService,
+    private readonly notifications: WarehouseNotificationsService,
   ) {}
   findLegacyInvoiceReceipt(tx: Tx, invoiceId: string) {
     return findLegacyReceipt(tx, invoiceId);
@@ -75,14 +77,15 @@ export class WarehouseReceiptImportService {
     return findReceiptWarehouseLinks(tx, sourceCode, externalId);
   }
 
-  suspendInvoiceGroup(
+  async suspendInvoiceGroup(
     tx: Tx,
     actorUserId: string,
     receipt: ReceiptImportGroup,
     conflict: string | null,
     invoice: { id: string; status: string },
   ) {
-    return suspend(this.audit, tx, actorUserId, receipt, conflict, invoice);
+    await suspend(this.audit, tx, actorUserId, receipt, conflict, invoice);
+    await this.notifications.receipt(tx, receipt.id);
   }
 
   refreshInvoiceReceiptOrders(tx: Tx, receiptId: bigint) {
@@ -121,7 +124,9 @@ export class WarehouseReceiptImportService {
       sourceOperationId: input.id,
     };
     const global = !!orders || externalOneCUuid.test(input.id);
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:receipt', global ? input.id.toLowerCase() : identity])},0))`;
+    await tx.$queryRaw`
+      SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:receipt', global ? input.id.toLowerCase() : identity])}, 0))
+    `;
     const previous = await tx.warehouseReceipt.findFirst({
       where: global
         ? {
@@ -176,7 +181,9 @@ export class WarehouseReceiptImportService {
       sourceOperationId: input.id,
     };
     const global = !!orders || externalOneCUuid.test(input.id);
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:receipt', global ? input.id.toLowerCase() : identity])},0))`;
+    await tx.$queryRaw`
+      SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:receipt', global ? input.id.toLowerCase() : identity])}, 0))
+    `;
     const warehouseLinks = await findReceiptWarehouseLinks(
       tx,
       sourceSystem,
@@ -255,6 +262,7 @@ export class WarehouseReceiptImportService {
         'Конфликт версии прихода',
         { code: conflict, source: input },
       );
+      await this.notifications.receipt(tx, row.id);
       return receiptView(row, this.catalog, tx);
     }
     const row = await saveReceiptImportDocument(
@@ -276,6 +284,11 @@ export class WarehouseReceiptImportService {
       previous ? 'Обновление документа 1С' : 'Получение документа 1С',
       input,
       previous ? AuditAction.UPDATE : AuditAction.CREATE,
+    );
+    await this.notifications.receipt(
+      tx,
+      row.id,
+      !previous && input.lines.some(({ item }) => item.type === 'GOODS'),
     );
     return receiptView(
       await tx.warehouseReceipt.findUniqueOrThrow({

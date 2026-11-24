@@ -95,7 +95,7 @@ export const receiptsApi = {
     }[];
     lines: ((
       { itemId: string; draftId?: never } | { draftId: string; itemId?: never }
-    ) & { quantity: string })[];
+    ) & { quantity: string; orderId?: string })[];
   }) => post<Receipt>(base, body),
   cancel: (id: string) => post(`${base}/${id}/cancel`, {}),
   place: (
@@ -128,8 +128,7 @@ export const receiptsApi = {
   resolve: (
     id: string,
     body: {
-      action: "KEEP_CURRENT" | "ACCEPT_CANCELLATION" | "RECONCILE_CANCELLATION";
-      adjustmentIds?: string[];
+      action: "KEEP_CURRENT" | "ACCEPT_CANCELLATION";
       reason: string;
       sourceVersion: string;
     },

@@ -1,3 +1,6 @@
+import { PrismaModule } from '../prisma/prisma.module';
+import { WarehouseNotificationsModule } from './warehouse-notifications.module';
+import { WarehouseNotificationsReconciler } from './warehouse-notifications-reconciler';
 import { WarehouseReceiptIntegrationModule } from './receipt-integration/receipt-integration.module';
 import { WarehouseTransfersModule } from './transfers/transfers.module';
 import { Module } from '@nestjs/common';
@@ -12,6 +15,8 @@ import { WarehouseReservationsModule } from './reservations/reservations.module'
 
 @Module({
   imports: [
+    PrismaModule,
+    WarehouseNotificationsModule,
     WarehouseStorageStructureModule,
     WarehouseStockModule,
     WarehouseCatalogModule,
@@ -23,6 +28,7 @@ import { WarehouseReservationsModule } from './reservations/reservations.module'
     WarehouseTransfersModule,
     WarehouseReservationsModule,
   ],
+  providers: [WarehouseNotificationsReconciler],
   // Preserve the existing Stock, IssueSheets and Receipts injection API for importing modules.
   exports: [
     WarehouseStockModule,

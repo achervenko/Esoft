@@ -1,10 +1,36 @@
-.receipt-placement {
+.receipt-placement,
+.receipt-conflict-notice {
   width: min(100%, 640px);
   margin-inline: auto;
+  min-width: 0;
+}
+.receipt-conflict-notice > svg {
+  width: 32px;
+  height: 32px;
+}
+.receipt-conflict-notice > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px 16px;
+}
+.receipt-conflict-message {
+  flex: 1 1 220px;
+  min-width: 0;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.receipt-conflict-message p {
+  margin: 0;
+}
+.receipt-conflict-message strong {
+  font-weight: 700;
+}
+.receipt-placement {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  min-width: 0;
 }
 .receipt-placement-progress {
   display: flex;
@@ -269,22 +295,19 @@
 .receipt-actions-content {
   gap: 14px;
 }
-.receipt-action-section {
-  border: 1px solid var(--color-border-subtle, #e3e6eb);
-  border-radius: 8px;
-  font-size: 14px;
+.receipt-action-summary {
+  display: grid;
+  gap: 8px;
   overflow-wrap: anywhere;
 }
-.receipt-action-section > summary {
-  padding: 14px;
-  cursor: pointer;
-  font-weight: 700;
+.receipt-action-summary > p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
 }
-.receipt-action-section > :not(summary) {
-  margin: 0 14px 14px;
-}
-.receipt-action-section > .receipt-hint {
-  font-size: 13px;
+.receipt-action-summary svg {
+  flex-shrink: 0;
 }
 .receipt-actions-content > .receipt-actions:empty {
   display: none;

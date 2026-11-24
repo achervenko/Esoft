@@ -17,8 +17,13 @@
   width: 38px;
   min-width: 38px;
   height: 38px;
-  padding: 0;
   justify-content: center;
+}
+.admin-secondary-button.stock-transfer-icon-button {
+  padding: 0;
+}
+.stock-transfer-icon-button > svg {
+  flex-shrink: 0;
 }
 .stock-transfer-action-column {
   width: 1%;

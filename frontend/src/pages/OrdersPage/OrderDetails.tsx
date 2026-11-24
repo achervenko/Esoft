@@ -55,13 +55,19 @@ function HistoryRow({ row }: { row: OrderChange }) {
     </li>
   );
 }
-export function OrderDetails({ id }: { id: string }) {
+export function OrderDetails({
+  id,
+  returnTo = "#/orders",
+}: {
+  id: string;
+  returnTo?: string;
+}) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const query = useOrdersQuery((signal) => ordersApi.detail(id, signal), [id]);
   const row = query.data;
   return (
     <section className="admin-page orders-page">
-      <a className="page-back-button orders-back-link" href="#/orders">
+      <a className="page-back-button orders-back-link" href={returnTo}>
         <ArrowLeft size={18} aria-hidden="true" />
         Назад
       </a>

@@ -8,7 +8,7 @@ import {
 type EquipmentEditTab = "details" | "documents";
 
 type AppRouteBase =
-  | { kind: "orders"; orderId?: string }
+  | { kind: "orders"; orderId?: string; returnTo?: "#/dashboard" }
   | { kind: "dashboard" }
   | { date: string | null; kind: "calendar" }
   | { kind: "checklist-admin" }
@@ -18,7 +18,12 @@ type AppRouteBase =
   | { kind: "warehouse-catalog" }
   | { kind: "warehouse-stock" }
   | { kind: "warehouse-reservations" }
-  | { kind: "warehouse-receipts"; receiptId?: string; creating?: boolean }
+  | {
+      kind: "warehouse-receipts";
+      receiptId?: string;
+      creating?: boolean;
+      returnTo?: "#/dashboard";
+    }
   | {
       kind: "ppe";
       tab: "issue" | "journal" | "norms" | "catalog";
@@ -73,13 +78,17 @@ function parsePositiveParamId(value: string | null) {
 
 export function resolveAppRoute(route: string): AppRoute {
   const receiptPath = route.split("?")[0];
+  const back =
+    getHashRouteParam(route, "returnTo") === "#/dashboard"
+      ? { returnTo: "#/dashboard" as const }
+      : {};
   if (receiptPath === "#/warehouse/reservations")
     return { kind: "warehouse-reservations" };
   if (receiptPath === "#/orders") return { kind: "orders" };
   const orderMatch = receiptPath.match(
     /^#\/orders\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
   );
-  if (orderMatch) return { kind: "orders", orderId: orderMatch[1] };
+  if (orderMatch) return { kind: "orders", orderId: orderMatch[1], ...back };
   if (receiptPath === "#/warehouse/receipts")
     return { kind: "warehouse-receipts" };
   if (receiptPath === "#/warehouse/receipts/new")
@@ -88,7 +97,7 @@ export function resolveAppRoute(route: string): AppRoute {
     /^#\/warehouse\/receipts\/([1-9]\d{0,18})$/,
   );
   if (receiptMatch && BigInt(receiptMatch[1]) <= 9223372036854775807n)
-    return { kind: "warehouse-receipts", receiptId: receiptMatch[1] };
+    return { kind: "warehouse-receipts", receiptId: receiptMatch[1], ...back };
   if (route.split("?")[0] === "#/warehouse/stock")
     return { kind: "warehouse-stock" };
   if (

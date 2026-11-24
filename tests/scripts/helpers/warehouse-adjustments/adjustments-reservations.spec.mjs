@@ -168,4 +168,98 @@ export async function verify(run) {
       assert.equal(r.allocations[0].quantity.toString(), "6");
     },
   );
+  await run(
+    "one count consumes free stock first and reduces multiple reserves atomically",
+    async (c) => {
+      const { prisma, admin, item, location, adjustments, request, quantity } =
+        c;
+      const { manager, first, second } = await createReservationFixture({
+        ...c,
+        actor: admin,
+      });
+      const [a, b] = await prisma.$transaction(async (tx) => {
+        const context = { tx, actorUserId: admin.id };
+        const reserve = (order, amount) =>
+          manager.reserve(context, {
+            itemId: String(item.id),
+            locationId: String(location.id),
+            orderId: order.id,
+            quantity: amount,
+          });
+        return [
+          (await reserve(first, "10")).reservation,
+          (await reserve(second, "7")).reservation,
+        ];
+      });
+      const before = await quantity();
+      const payload = await request({
+        type: undefined,
+        quantity: undefined,
+        expectedQuantity: before,
+        actualQuantity: "14",
+        shortageAllocations: [
+          { reservationId: a.id, expectedQuantity: "10", quantity: "2" },
+          { reservationId: b.id, expectedQuantity: "7", quantity: "2" },
+        ],
+      });
+      const state = async () => {
+        const rows = await prisma.warehouseReservation.findMany({
+          where: { id: { in: [a.id, b.id] } },
+          include: { allocations: true },
+          orderBy: { quantity: "desc" },
+        });
+        return rows.map(({ quantity, allocations }) => [
+          quantity.toString(),
+          allocations[0].quantity.toString(),
+        ]);
+      };
+      await assert.rejects(
+        adjustments.adjustStock(
+          {
+            ...payload,
+            shortageAllocations: [
+              { ...payload.shortageAllocations[0], quantity: "2" },
+            ],
+          },
+          admin.id,
+        ),
+        code("WAREHOUSE_ADJUSTMENT_STALE_PORTION"),
+      );
+      await assert.rejects(
+        adjustments.adjustStock(
+          {
+            ...payload,
+            shortageAllocations: [
+              payload.shortageAllocations[0],
+              { ...payload.shortageAllocations[1], expectedQuantity: "8" },
+            ],
+          },
+          admin.id,
+        ),
+        code("WAREHOUSE_ADJUSTMENT_STALE_PORTION"),
+      );
+      assert.equal(await quantity(), before);
+      assert.deepEqual(await state(), [
+        ["10", "10"],
+        ["7", "7"],
+      ]);
+      assert.equal(await prisma.warehouseStockAdjustment.count(), 0);
+
+      const applied = await adjustments.adjustStock(payload, admin.id);
+      const replay = await adjustments.adjustStock(
+        {
+          ...payload,
+          shortageAllocations: [...payload.shortageAllocations].reverse(),
+        },
+        admin.id,
+      );
+      assert.deepEqual(replay, applied);
+      assert.equal(await quantity(), "14");
+      assert.deepEqual(await state(), [
+        ["10", "8"],
+        ["7", "5"],
+      ]);
+      assert.equal(await prisma.warehouseStockAdjustment.count(), 1);
+    },
+  );
 }

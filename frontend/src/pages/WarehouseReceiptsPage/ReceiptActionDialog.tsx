@@ -24,10 +24,8 @@ export function ReceiptActionDialog({
   action,
   onClose,
   onSaved,
-  canReconcileStock = false,
 }: {
   actorId: string | null;
-  canReconcileStock?: boolean;
   receipt: Receipt;
   action: ReceiptAction;
   onClose: () => void;
@@ -50,10 +48,7 @@ export function ReceiptActionDialog({
           create={action.kind === "createItem"}
         />
       ) : action.kind === "resolve" ? (
-        <ReceiptConflictResolveForm
-          {...props}
-          canReconcileStock={canReconcileStock}
-        />
+        <ReceiptConflictResolveForm {...props} />
       ) : (
         <ReceiptCancelForm {...props} />
       )}

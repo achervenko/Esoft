@@ -74,7 +74,7 @@ export class WarehouseReceiptsController {
     return this.reconciliation.reconcile(id, body, session.user.id);
   }
   @Post(':id/resolve-conflict')
-  @RequirePermission('integrations.manage')
+  @RequirePermission('warehouse.receipts.resolve')
   resolve(
     @Param('id') id: string,
     @Body() body: unknown,

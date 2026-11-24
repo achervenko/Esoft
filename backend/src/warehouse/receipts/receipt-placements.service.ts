@@ -1,3 +1,4 @@
+import { WarehouseNotificationsService } from '../warehouse-notifications.service';
 import { WarehouseCatalogService } from '../catalog/catalog.service';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -30,6 +31,7 @@ export class WarehouseReceiptPlacementsService {
     private readonly audit: AuditLogService,
     private readonly catalog: WarehouseCatalogService,
     private readonly orderPlacements: WarehouseReceiptOrderPlacementService,
+    private readonly notifications: WarehouseNotificationsService,
   ) {}
   place(
     receiptValue: string,
@@ -52,7 +54,9 @@ export class WarehouseReceiptPlacementsService {
     return this.prisma.$transaction(
       async (tx) => {
         await receiptActor(tx, actor, 'warehouse.receipts.place');
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:placement', actor, input.requestKey])},0))`;
+        await tx.$queryRaw`
+          SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(${JSON.stringify(['warehouse:placement', actor, input.requestKey])}, 0))
+        `;
         const previous = await tx.warehouseReceiptPlacement.findUnique({
           where: {
             createdByUserId_requestKey: {
@@ -172,6 +176,7 @@ export class WarehouseReceiptPlacementsService {
           },
         });
         await receiptProgress(tx, receiptId);
+        await this.notifications.receipt(tx, receiptId);
         const dto = placementDto(row);
         await receiptAudit(
           this.audit,

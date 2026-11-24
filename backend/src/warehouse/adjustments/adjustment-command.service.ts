@@ -1,4 +1,7 @@
-import { assertAdjustmentPortion } from './adjustment-portion';
+import {
+  assertAdjustmentPortion,
+  resolveShortageAllocations,
+} from './adjustment-portion';
 import { changeReservationCoverage } from '../reservations/reservation-coverage';
 import { ConflictException, Injectable } from '@nestjs/common';
 import { AuditAction, AuditModule, Prisma } from '@prisma/client';
@@ -90,6 +93,11 @@ export class WarehouseStockAdjustmentCommandService {
             },
           });
         await assertAdjustmentPortion(tx, input, before);
+        const shortageAllocations = await resolveShortageAllocations(
+          tx,
+          input,
+          before,
+        );
         const delta =
           input.mode === 'ACTUAL'
             ? new Prisma.Decimal(input.actualQuantity).minus(before)
@@ -127,6 +135,13 @@ export class WarehouseStockAdjustmentCommandService {
             this.audit,
             { ...context, comment: input.reason },
             coverage,
+            'REDUCE_COVERAGE',
+          );
+        for (const allocation of shortageAllocations)
+          await changeReservationCoverage(
+            this.audit,
+            { ...context, comment: input.reason },
+            { ...allocation, locationId: input.locationId },
             'REDUCE_COVERAGE',
           );
         const balance =
@@ -181,6 +196,9 @@ export class WarehouseStockAdjustmentCommandService {
         });
         const snapshot = {
           ...(input.portion ? { portion: input.portion } : {}),
+          ...(input.shortageAllocations
+            ? { shortageAllocations: input.shortageAllocations }
+            : {}),
           type,
           itemId: input.itemId,
           article: balance.item.article,

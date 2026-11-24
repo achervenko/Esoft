@@ -37,9 +37,9 @@ export function StockDistributionModal({
   const [source, setSource] = useState<StockDistributionSource | null>(
     restored?.kind === "transfer" ? restored.source : null,
   );
-  const [adjusting, setAdjusting] = useState<StockDistributionSource | null>(
-    null,
-  );
+  const [adjusting, setAdjusting] = useState<
+    (StockDistributionSource & { wholeLocation?: boolean }) | null
+  >(null);
   const [transferSaving, setTransferSaving] = useState(false);
   const [consolidating, setConsolidating] = useState(
     restored?.kind === "consolidation",
@@ -53,16 +53,20 @@ export function StockDistributionModal({
           actorId={actorId}
           data={data}
           balance={adjusting.balance}
-          portion={{
-            ...(adjusting.reservationId
-              ? { reservationId: adjusting.reservationId }
-              : {}),
-            quantity: adjusting.reservationId
-              ? (adjusting.balance.reservations?.find(
-                  (r) => r.reservationId === adjusting.reservationId,
-                )?.quantity ?? "0")
-              : adjusting.balance.freeQuantity,
-          }}
+          portion={
+            adjusting.wholeLocation
+              ? undefined
+              : {
+                  ...(adjusting.reservationId
+                    ? { reservationId: adjusting.reservationId }
+                    : {}),
+                  quantity: adjusting.reservationId
+                    ? (adjusting.balance.reservations?.find(
+                        (r) => r.reservationId === adjusting.reservationId,
+                      )?.quantity ?? "0")
+                    : adjusting.balance.freeQuantity,
+                }
+          }
           onSavingChange={setTransferSaving}
           onClose={() => setAdjusting(null)}
           onSaved={() => {
@@ -134,8 +138,8 @@ export function StockDistributionModal({
           setSource(next);
           refresh();
         }}
-        onAdjust={(balance, reservationId) =>
-          setAdjusting({ balance, reservationId })
+        onAdjust={(balance, reservationId, wholeLocation) =>
+          setAdjusting({ balance, reservationId, wholeLocation })
         }
         refresh={refresh}
         onConsolidate={() => setConsolidating(true)}
@@ -148,7 +152,9 @@ export function StockDistributionModal({
       className="stock-transfer-modal"
       title={
         adjusting
-          ? "Исправить количество"
+          ? adjusting.wholeLocation
+            ? "Пересчитать место хранения"
+            : "Исправить количество"
           : consolidating
             ? "Переместить всё"
             : source

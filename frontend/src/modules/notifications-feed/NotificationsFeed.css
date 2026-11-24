@@ -1,0 +1,109 @@
+.notifications-feed,
+.notifications-feed-list {
+  display: grid;
+  gap: 12px;
+}
+.notifications-feed-loading {
+  display: contents;
+}
+.notifications-feed .notifications-feed-mark-all {
+  justify-self: end;
+  width: 40px;
+  min-height: 40px;
+  border-color: transparent;
+  background: transparent;
+  padding: 0;
+}
+.notifications-feed-mark-all:hover:not(:disabled) {
+  background: #e9edf2;
+}
+.notifications-feed-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  gap: 0;
+}
+.notifications-feed-list > li:not(:last-child) .notifications-feed-card {
+  margin-bottom: 12px;
+}
+.notifications-feed-slot {
+  display: flow-root;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .notifications-feed-entering {
+    display: grid;
+    grid-template-rows: 1fr;
+    animation: notifications-feed-expand 200ms ease-out;
+  }
+  .notifications-feed-entering .notifications-feed-slot {
+    min-height: 0;
+    animation: notifications-feed-reveal 140ms ease-out 200ms both;
+  }
+}
+@keyframes notifications-feed-expand {
+  from {
+    grid-template-rows: 0fr;
+    overflow: clip;
+  }
+  to {
+    grid-template-rows: 1fr;
+    overflow: clip;
+  }
+}
+@keyframes notifications-feed-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.notifications-feed-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border-subtle, #e3e6eb);
+  border-radius: var(--radius-control, 8px);
+  background: #f9fafb;
+  color: inherit;
+  text-align: start;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.notifications-feed-card:hover,
+.notifications-feed-card:focus-visible {
+  background: #f2f4f7;
+}
+.notifications-feed-card-content {
+  display: grid;
+  gap: 4px;
+}
+.notifications-feed-card time {
+  white-space: nowrap;
+}
+.notifications-feed :is(time, small) {
+  color: var(--color-text-muted, #697386);
+  font-size: 13px;
+}
+.app-context-menu.notifications-feed-context-menu {
+  width: max-content;
+  padding: 4px;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgb(21 23 28 / 14%);
+}
+.app-context-menu.notifications-feed-context-menu button {
+  gap: 10px;
+  padding-inline: 12px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+.notifications-feed-context-menu button svg {
+  flex-shrink: 0;
+  color: var(--color-text-muted, #697386);
+}

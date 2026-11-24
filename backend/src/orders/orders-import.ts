@@ -3,6 +3,7 @@ import { isDeepStrictEqual } from 'node:util';
 import type { Prisma, CustomerOrder } from '@prisma/client';
 import { IntegrationFailure } from '../integrations/integration-errors';
 import type { OrderSnapshot } from './orders-snapshot';
+import { CLOSED_ORDER_STATUS } from './orders.constants';
 export function storedSnapshot(row: CustomerOrder) {
   return {
     externalId: row.externalId,
@@ -20,6 +21,7 @@ export async function applyOrders(
   sourceId: string,
   rows: OrderSnapshot[],
   observedAt: Date,
+  onClosedStatusChanged?: (id: string) => Promise<void>,
 ) {
   let changed = 0;
   const receivedIds = new Set<string>();
@@ -73,6 +75,11 @@ export async function applyOrders(
         },
       });
     byExternalId.set(saved.externalId, saved);
+    if (
+      (previous?.status === CLOSED_ORDER_STATUS) !==
+      (saved.status === CLOSED_ORDER_STATUS)
+    )
+      await onClosedStatusChanged?.(id);
     await tx.customerOrderChange.create({
       data: { orderId: id, ...(before ? { before } : {}), after, observedAt },
     });

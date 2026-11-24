@@ -11,6 +11,9 @@
   color: var(--color-text-muted, #697386);
   margin-top: 4px;
 }
+.select-dropdown-menu button .receipt-conflict-adjustment-option {
+  font-weight: 400;
+}
 .receipt-fields {
   border: 0;
   padding: 0;
@@ -19,6 +22,21 @@
   flex-direction: column;
   gap: 16px;
   min-width: 0;
+}
+.receipt-cancellation-confirmation {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.receipt-cancellation-confirmation > input {
+  appearance: auto;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: #111;
 }
 .receipt-grid {
   display: grid;
@@ -36,12 +54,6 @@
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
-}
-.receipt-source-document {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  max-height: 360px;
-  overflow: auto;
 }
 @media (max-width: 760px) {
   .receipt-grid {

@@ -68,14 +68,14 @@ export async function receiptImportConflict(
     conflict = 'SOURCE_WAREHOUSE_CHANGED_AFTER_PLACEMENT';
   if (hasPlacements && input.status === 'CANCELLED')
     conflict = 'SOURCE_CANCELLED_AFTER_PLACEMENT';
-  if (
-    previous &&
-    input.status === 'POSTED' &&
-    (await tx.warehouseStockAdjustment.count({
-      where: { resolvedReceiptId: previous.id },
-    })) > 0
-  )
-    // Historical placements cannot fulfil a new receipt after stock settlement.
-    conflict = 'SOURCE_REPOSTED_AFTER_SETTLEMENT';
+  if (previous && hasPlacements && input.status === 'POSTED') {
+    // Resolution may have committed while the importer acquired the receipt lock.
+    const current = await tx.warehouseReceipt.findUniqueOrThrow({
+      where: { id: previous.id },
+      select: { status: true },
+    });
+    if (current.status === 'CANCELLED')
+      conflict = 'SOURCE_REPOSTED_AFTER_SETTLEMENT';
+  }
   return conflict;
 }

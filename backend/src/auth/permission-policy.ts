@@ -7,7 +7,9 @@ import optionalModuleIds from '../../prisma/module-catalog.json';
 
 // Modules declare their actions; auth binds those action IDs to roles.
 // String bindings avoid importing optional module implementation files into auth.
+const personalPermissions = ['notifications.read'] as const;
 const equipmentReader = [
+  ...personalPermissions,
   'users.profile.read',
   'equipment.read',
   'files.read',
@@ -48,6 +50,7 @@ export const ROLE_PERMISSIONS = {
     'warehouse.transfers.manage',
     'warehouse.receipts.read',
     'warehouse.receipts.manage',
+    'warehouse.receipts.resolve',
     'warehouse.receipts.place',
     'warehouse.receipts.map',
     'warehouse.receipts.integration',
@@ -74,6 +77,7 @@ export const ROLE_PERMISSIONS = {
   operator: equipmentReader,
   auditor: equipmentReader,
   ppe_specialist: [
+    ...personalPermissions,
     'users.profile.read',
     'ppe.read',
     'ppe.employee-sizes.manage',
@@ -81,6 +85,7 @@ export const ROLE_PERMISSIONS = {
     'search.read',
   ],
   accounting_specialist: [
+    ...personalPermissions,
     'users.profile.read',
     'ppe.read',
     'ppe.catalog.manage',
@@ -88,11 +93,13 @@ export const ROLE_PERMISSIONS = {
     'search.read',
   ],
   storekeeper: [
+    ...personalPermissions,
     'warehouse.reservations.read',
     'warehouse.transfers.read',
     'warehouse.transfers.manage',
     'warehouse.receipts.read',
     'warehouse.receipts.manage',
+    'warehouse.receipts.resolve',
     'warehouse.receipts.place',
     'warehouse.receipts.map',
     'warehouse.catalog.manage',

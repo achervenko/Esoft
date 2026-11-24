@@ -1,7 +1,8 @@
-import { randomUUID } from "node:crypto";
 import assert from "node:assert/strict";
 import { code } from "../warehouse-receipts-test-context.mjs";
 import { createRequire } from "node:module";
+import { setTimeout as delay } from "node:timers/promises";
+import { createReservationFixture } from "../warehouse-reservation-fixture.mjs";
 const { AuditLogService } = createRequire(import.meta.url)(
   "../../../../backend/dist/src/audit/audit-log.service.js",
 );
@@ -44,7 +45,7 @@ export async function receiptsImportCancellation(c, t) {
           reason: "Остаток оставлен для отдельной корректировки",
           sourceVersion: "2",
         },
-        c.admin.id,
+        c.keeper.id,
       );
       const accepted = await c.receipts.findOne(r.id);
       assert.equal(accepted.status, "CANCELLED");
@@ -63,7 +64,7 @@ export async function receiptsImportCancellation(c, t) {
           entityType: "warehouse_receipt",
           entityStringId: r.id,
           fieldName: "Ручное решение конфликта",
-          userId: c.admin.id,
+          userId: c.keeper.id,
         },
       });
       const decision = JSON.parse(audit.newValue);
@@ -88,88 +89,93 @@ export async function receiptsImportCancellation(c, t) {
     },
   );
   await t.test(
-    "admin settlement links fact corrections atomically without changing stock twice",
+    "accepts cancellation under Stock locks without mutating stock, reserves, or placements",
     async () => {
-      const doc = c.source();
-      let receipt = await c.mapped(doc);
-      await c.place(receipt, "2");
-      receipt = await c.ingest({ ...doc, version: "2", status: "CANCELLED" });
-      const placements = await c.prisma.warehouseReceiptPlacement.findMany({
-        where: { receiptLineId: BigInt(receipt.lines[0].id) },
-      });
-      const balance = await c.prisma.warehouseBalance.findUniqueOrThrow({
-        where: {
-          itemId_storageLocationId: {
-            itemId: BigInt(receipt.lines[0].itemId),
-            storageLocationId: placements[0].storageLocationId,
-          },
-        },
-      });
-      const adjustment = await c.prisma.warehouseStockAdjustment.create({
+      const first = await c.prisma.warehouseItem.create({
         data: {
-          balanceId: balance.id,
-          type: "WRITE_OFF",
-          quantity: "2",
-          quantityBefore: balance.quantity,
-          quantityAfter: balance.quantity.minus(2),
-          reason: "Исправление факта после отмены",
-          requestKey: randomUUID(),
-          requestHash: "a".repeat(64),
-          createdByUserId: c.admin.id,
+          article: c.namespace + "cancel-first",
+          name: "First item",
+          unit: "шт",
         },
       });
-      await c.prisma.warehouseBalance.update({
-        where: { id: balance.id },
-        data: { quantity: adjustment.quantityAfter },
+      const second = await c.prisma.warehouseItem.create({
+        data: {
+          article: c.namespace + "cancel-second",
+          name: "Second item",
+          unit: "шт",
+        },
       });
-      const before = await c.quantity();
-      const body = {
-        action: "RECONCILE_CANCELLATION",
-        sourceVersion: "2",
-        reason: "Ошибка приёмки исправлена по факту",
-        adjustmentIds: [String(adjustment.id)],
+      const template = c.source().lines[0];
+      const firstLine = {
+        ...template,
+        order: undefined,
+        quantity: "2",
+        item: { ...template.item, id: first.article },
       };
-      await assert.rejects(
-        c.conflictResolution.resolve(receipt.id, body, c.keeper.id),
-        code("FORBIDDEN"),
-      );
-      const { WarehouseReceiptConflictResolutionService } = createRequire(
-        import.meta.url,
-      )(
-        "../../../../backend/dist/src/warehouse/receipts/receipt-conflict-resolution.service.js",
-      );
-      const failing = new WarehouseReceiptConflictResolutionService(c.prisma, {
-        writeFieldChanges: async () => {
-          throw Error("audit failed");
-        },
+      const doc = c.source({
+        lines: [
+          firstLine,
+          { ...firstLine, id: "line-2", quantity: "3" },
+          {
+            ...firstLine,
+            id: "line-3",
+            item: { ...template.item, id: second.article },
+          },
+        ],
       });
-      await assert.rejects(
-        failing.resolve(receipt.id, body, c.admin.id),
-        /audit failed/,
+      const initial = await c.ingest(doc);
+      await c.itemMapping.mapItem(
+        initial.id,
+        initial.lines[0].id,
+        { itemId: String(first.id) },
+        c.keeper.id,
       );
-      assert.equal(
-        (
-          await c.prisma.warehouseStockAdjustment.findUniqueOrThrow({
-            where: { id: adjustment.id },
-          })
-        ).resolvedReceiptId,
-        null,
+      await c.itemMapping.mapItem(
+        initial.id,
+        initial.lines[2].id,
+        { itemId: String(second.id) },
+        c.keeper.id,
       );
-      assert.equal(
-        (
-          await c.prisma.warehouseReceipt.findUniqueOrThrow({
-            where: { id: BigInt(receipt.id) },
-          })
-        ).conflict,
-        "SOURCE_CANCELLED_AFTER_PLACEMENT",
+      const mapped = await c.receipts.findOne(initial.id);
+      const [linkedLine, ...directLines] = mapped.lines;
+      const manual = await c.manual(linkedLine.quantity, {
+        lines: [{ itemId: String(first.id), quantity: linkedLine.quantity }],
+      });
+      await c.place(manual, linkedLine.quantity);
+      await c.reconciliation.reconcile(
+        mapped.id,
+        {
+          manualReceiptId: manual.id,
+          lines: [
+            { manualLineId: manual.lines[0].id, receiptLineId: linkedLine.id },
+          ],
+        },
+        c.keeper.id,
       );
+      for (const line of directLines)
+        await c.placements.place(
+          mapped.id,
+          line.id,
+          c.placement(line.quantity),
+          c.keeper.id,
+        );
+
+      const cancelled = { ...doc, version: "2", status: "CANCELLED" };
+      const receipt = await c.ingest(cancelled);
+      const body = {
+        action: "ACCEPT_CANCELLATION",
+        reason: "Отмена подтверждена",
+        sourceVersion: receipt.sourceVersion,
+      };
+      const resolve = () =>
+        c.conflictResolution.resolve(receipt.id, body, c.keeper.id);
       await assert.rejects(
         c.conflictResolution.resolve(
           receipt.id,
-          { ...body, adjustmentIds: ["9223372036854775807"] },
-          c.admin.id,
+          body,
+          c.namespace + "missing-user",
         ),
-        code("WAREHOUSE_RECEIPT_ADJUSTMENT_INVALID"),
+        code("FORBIDDEN"),
       );
       await assert.rejects(
         c.conflictResolution.resolve(
@@ -179,22 +185,176 @@ export async function receiptsImportCancellation(c, t) {
         ),
         code("WAREHOUSE_RECEIPT_CONFLICT_STALE"),
       );
-      await c.conflictResolution.resolve(receipt.id, body, c.admin.id);
-      const accepted = await c.receipts.findOne(receipt.id);
-      assert.equal(accepted.status, "CANCELLED");
-      assert.equal(accepted.conflict, null);
-      assert.equal(accepted.settlementAdjustments[0].id, String(adjustment.id));
-      assert.equal(await c.quantity(), before);
+      const stockTx = (work) =>
+        c.prisma.$transaction((tx) => work({ tx, actorUserId: c.admin.id }), {
+          timeout: 15000,
+        });
+      await stockTx((ctx) =>
+        c.stock.moveStock(
+          ctx,
+          String(first.id),
+          String(c.location.id),
+          String(c.target.id),
+          "5",
+        ),
+      );
+      const reservations = await createReservationFixture({
+        ...c,
+        actor: c.admin,
+        id: String(second.id),
+        loc: String,
+        transaction: stockTx,
+      });
+      await reservations.reserve(reservations.input(c.location.id, "1"));
+      const stockBefore = async () =>
+        c.prisma.warehouseBalance.findMany({
+          where: { itemId: { in: [first.id, second.id] } },
+          orderBy: { id: "asc" },
+        });
+      const reservesBefore = () =>
+        c.prisma.warehouseReservationAllocation.findMany({
+          where: { reservation: { itemId: { in: [first.id, second.id] } } },
+          orderBy: { id: "asc" },
+        });
+
+      const held = Promise.withResolvers();
+      const release = Promise.withResolvers();
+      const issuing = stockTx(async (ctx) => {
+        try {
+          const [{ pid }] = await ctx.tx
+            .$queryRaw`SELECT pg_backend_pid() AS pid`;
+          await c.stock.issueStock(
+            ctx,
+            String(first.id),
+            String(c.target.id),
+            "1",
+          );
+          held.resolve(pid);
+          await release.promise;
+        } catch (error) {
+          held.reject(error);
+          throw error;
+        }
+      });
+      const blocker = await held.promise;
+      const rejected = assert.rejects(resolve(), (error) => {
+        code("WAREHOUSE_RECEIPT_CANCELLATION_STOCK_INSUFFICIENT")(error);
+        assert.deepEqual(error.response.details.shortages, [
+          {
+            itemId: String(first.id),
+            name: first.name,
+            unit: first.unit,
+            required: "5",
+            physical: "4",
+            shortage: "1",
+          },
+        ]);
+        return true;
+      });
+      try {
+        let waiting = false;
+        for (let attempt = 0; attempt < 100 && !waiting; attempt++) {
+          [{ waiting }] = await c.prisma.$queryRaw`
+            SELECT EXISTS (
+              SELECT 1 FROM pg_stat_activity
+              WHERE datname = current_database()
+                AND ${blocker}::integer = ANY(pg_blocking_pids(pid))
+                AND query LIKE '%pg_advisory_xact_lock%'
+            ) AS waiting`;
+          if (!waiting) await delay(20);
+        }
+        assert.equal(
+          waiting,
+          true,
+          "Cancellation must wait for Stock to commit",
+        );
+      } finally {
+        release.resolve();
+        await Promise.all([issuing, rejected]);
+      }
       assert.equal(
-        await c.prisma.warehouseReceiptPlacement.count({
-          where: { receiptLineId: BigInt(receipt.lines[0].id) },
-        }),
-        1,
+        (await c.receipts.findOne(receipt.id)).conflict,
+        receipt.conflict,
+      );
+      await stockTx((ctx) =>
+        c.stock.receiveStock(ctx, String(first.id), String(c.target.id), "1"),
+      );
+      await stockTx((ctx) =>
+        c.stock.issueStock(ctx, String(second.id), String(c.location.id), "1"),
+      );
+      await assert.rejects(resolve(), (error) => {
+        code("WAREHOUSE_RECEIPT_CANCELLATION_STOCK_INSUFFICIENT")(error);
+        assert.equal(
+          error.response.details.shortages[0].itemId,
+          String(second.id),
+        );
+        return true;
+      });
+      await stockTx((ctx) =>
+        c.stock.receiveStock(
+          ctx,
+          String(second.id),
+          String(c.location.id),
+          "1",
+        ),
+      );
+      const [allocation] = await reservesBefore();
+      // Simulate already inconsistent data to exercise the cancellation guard.
+      await c.prisma.warehouseReservationAllocation.update({
+        where: { id: allocation.id },
+        data: { quantity: "3" },
+      });
+      try {
+        await assert.rejects(
+          resolve(),
+          code("WAREHOUSE_RESERVATION_STOCK_MISMATCH"),
+        );
+      } finally {
+        await c.prisma.warehouseReservationAllocation.update({
+          where: { id: allocation.id },
+          data: { quantity: allocation.quantity },
+        });
+      }
+
+      const { WarehouseReceiptConflictResolutionService } = createRequire(
+        import.meta.url,
+      )(
+        "../../../../backend/dist/src/warehouse/receipts/receipt-conflict-resolution.service.js",
+      );
+      const failing = new WarehouseReceiptConflictResolutionService(
+        c.prisma,
+        {
+          writeFieldChanges: async () => {
+            throw Error("audit failed");
+          },
+        },
+        c.warehouseNotifications,
       );
       await assert.rejects(
-        c.conflictResolution.resolve(receipt.id, body, c.admin.id),
-        code("WAREHOUSE_RECEIPT_CONFLICT_STALE"),
+        failing.resolve(receipt.id, body, c.admin.id),
+        /audit failed/,
       );
+      assert.equal(
+        (await c.receipts.findOne(receipt.id)).conflict,
+        receipt.conflict,
+      );
+      const balances = await stockBefore();
+      const reserves = await reservesBefore();
+      assert.equal(reserves.length, 1);
+      const results = await Promise.allSettled([resolve(), resolve()]);
+      assert.equal(
+        results.filter(({ status }) => status === "fulfilled").length,
+        1,
+      );
+      code("WAREHOUSE_RECEIPT_CONFLICT_STALE")(
+        results.find(({ status }) => status === "rejected").reason,
+      );
+      const accepted = await c.receipts.findOne(receipt.id);
+      assert.equal(accepted.status, "CANCELLED");
+      assert.deepEqual(accepted.lines, receipt.lines);
+      assert.deepEqual(await stockBefore(), balances);
+      assert.deepEqual(await reservesBefore(), reserves);
+      assert.equal((await c.ingest(cancelled)).conflict, null);
       const snapshot = (value) =>
         c.prisma.$transaction((tx) =>
           c.importer.applySnapshot(tx, c.sourceSystem, value, c.admin.id),
@@ -205,7 +365,7 @@ export async function receiptsImportCancellation(c, t) {
       assert.equal(reposted.sourceDocument.status, "CANCELLED");
       assert.equal(reposted.pendingSourceDocument.status, "POSTED");
       assert.deepEqual(reposted.lines, accepted.lines);
-      assert.equal(await c.quantity(), before);
+      assert.deepEqual(await stockBefore(), balances);
       await assert.rejects(
         c.place(reposted),
         code("WAREHOUSE_RECEIPT_BLOCKED"),
@@ -239,11 +399,11 @@ export async function receiptsImportCancellation(c, t) {
       assert.equal(kept.conflict, null);
       assert.equal(kept.pendingSourceDocument, null);
       assert.equal(kept.sourceVersion, reposted.sourceVersion);
-      assert.equal(await c.quantity(), before);
+      assert.deepEqual(await stockBefore(), balances);
       const changed = await snapshot({ ...doc, number: "Reposted updated" });
       assert.equal(changed.conflict, "SOURCE_REPOSTED_AFTER_SETTLEMENT");
       assert.equal(changed.status, "CANCELLED");
-      assert.equal(await c.quantity(), before);
+      assert.deepEqual(await stockBefore(), balances);
     },
   );
 }
